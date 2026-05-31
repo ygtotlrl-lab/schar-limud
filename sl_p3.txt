@@ -1,670 +1,263 @@
 ﻿<script>
-// ===== SUPABASE =====
-var SB = supabase.createClient(
-  'https://kxbtskqobynewvnckaaz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'
-);
+var SB = supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg');
+var SB_PROJECT='kxbtskqobynewvnckaaz';
+var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
+var CUR_USER=null,SYNC_INT=null,DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
+var _settingsUnlocked=false,_confirmCb=null,_dashChart=null;
+var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
+var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
+function fmt(n){return Number(n||0).toLocaleString('he-IL');}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
+function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
+function monthLabel(y,m){return MONTH_HE[m]+' '+(m>=8?y:y+1);}
+function openModal(id){document.getElementById(id).classList.remove('hidden');}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
+var _sdData={},_sdSelected={};
+function sdSetOptions(k,o){_sdData[k]=o;}
+function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).style.display='block';}
+function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).style.display='block';}
+function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" onmousedown="sdSelect(\''+k+'\','+x.id+',\''+x.label.replace(/'/g,"\\'")+'\'">'+x.label+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
+function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
+function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
+var SETUP_SQL=[
+"CREATE TABLE IF NOT EXISTS public.sl_users (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW())",
+"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_users TO anon,authenticated,service_role",
+"GRANT USAGE,SELECT ON SEQUENCE public.sl_users_id_seq TO anon,authenticated,service_role",
+"ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY",
+"DO $x$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE tablename='sl_users' AND policyname='sl_users_all') THEN CREATE POLICY sl_users_all ON public.sl_users FOR ALL USING(true) WITH CHECK(true);END IF;END $x$",
+"CREATE TABLE IF NOT EXISTS public.sl_students (id SERIAL PRIMARY KEY, name TEXT NOT NULL, active BOOLEAN DEFAULT true, handled_months JSONB DEFAULT '[]', card_settings JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW())",
+"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_students TO anon,authenticated,service_role",
+"GRANT USAGE,SELECT ON SEQUENCE public.sl_students_id_seq TO anon,authenticated,service_role",
+"ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY",
+"DO $x$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE tablename='sl_students' AND policyname='sl_students_all') THEN CREATE POLICY sl_students_all ON public.sl_students FOR ALL USING(true) WITH CHECK(true);END IF;END $x$",
+"CREATE TABLE IF NOT EXISTS public.sl_transactions (id SERIAL PRIMARY KEY, student_id INTEGER REFERENCES public.sl_students(id) ON DELETE CASCADE, date DATE NOT NULL, amount NUMERIC(10,2) NOT NULL, payment_method TEXT, note TEXT, created_at TIMESTAMPTZ DEFAULT NOW())",
+"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_transactions TO anon,authenticated,service_role",
+"GRANT USAGE,SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon,authenticated,service_role",
+"ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY",
+"DO $x$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE tablename='sl_transactions' AND policyname='sl_transactions_all') THEN CREATE POLICY sl_transactions_all ON public.sl_transactions FOR ALL USING(true) WITH CHECK(true);END IF;END $x$",
+"CREATE TABLE IF NOT EXISTS public.sl_settings (key TEXT PRIMARY KEY, value TEXT)",
+"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_settings TO anon,authenticated,service_role",
+"ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY",
+"DO $x$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE tablename='sl_settings' AND policyname='sl_settings_all') THEN CREATE POLICY sl_settings_all ON public.sl_settings FOR ALL USING(true) WITH CHECK(true);END IF;END $x$",
+"CREATE TABLE IF NOT EXISTS public.sl_lists (id SERIAL PRIMARY KEY, category TEXT NOT NULL, value TEXT NOT NULL)",
+"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_lists TO anon,authenticated,service_role",
+"GRANT USAGE,SELECT ON SEQUENCE public.sl_lists_id_seq TO anon,authenticated,service_role",
+"ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY",
+"DO $x$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE tablename='sl_lists' AND policyname='sl_lists_all') THEN CREATE POLICY sl_lists_all ON public.sl_lists FOR ALL USING(true) WITH CHECK(true);END IF;END $x$",
+"INSERT INTO public.sl_users(username,password) VALUES('admin','admin') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_settings(key,value) VALUES('default_tuition','2000') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_settings(key,value) VALUES('admin_pass','admin') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','מזומן') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','העברה בנקאית') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','ביט') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה א') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה ב') ON CONFLICT DO NOTHING",
+"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה ג') ON CONFLICT DO NOTHING"
+];
 
-// ===== STATE =====
-var STUDENTS = [];
-var TRANSACTIONS = [];
-var SETTINGS = {};
-var LISTS = {};
-var CUR_USER = null;
-var SYNC_INT = null;
-var DASH_YEAR = null;
-var SC_STUDENT_ID = null;
-var SC_YEAR = null;
-var _settingsUnlocked = false;
-var _confirmCb = null;
-var _dashChart = null;
-
-var YEAR_MONTHS = [8,9,10,11,0,1,2,3,4,5,6,7];
-var MONTH_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-
-// ===== UTILS =====
-function toast(msg, dur) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._tid);
-  t._tid = setTimeout(function(){ t.classList.remove('show'); }, dur || 2400);
+async function runMgmtSQL(pat,sql){
+  var r=await fetch('https://api.supabase.com/v1/projects/'+SB_PROJECT+'/database/query',{method:'POST',headers:{'Authorization':'Bearer '+pat,'Content-Type':'application/json'},body:JSON.stringify({query:sql})});
+  if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+': '+t.substring(0,200));}
+  return r.json();
 }
 
-function fmt(n) { return Number(n || 0).toLocaleString('he-IL'); }
-
-function todayStr() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+async function doSetup(){
+  var pat=document.getElementById('setup-pat').value.trim();
+  if(!pat){document.getElementById('setup-err').textContent='נא להזין Personal Access Token';return;}
+  var btn=document.getElementById('setup-btn'),prog=document.getElementById('setup-prog');
+  btn.disabled=true;prog.style.display='block';
+  var errors=[];
+  for(var i=0;i<SETUP_SQL.length;i++){
+    prog.textContent='מגדיר... ('+(i+1)+'/'+SETUP_SQL.length+')';
+    try{await runMgmtSQL(pat,SETUP_SQL[i]);}catch(e){
+      var msg=e.message||'';
+      if(msg.indexOf('already exists')===-1&&msg.indexOf('duplicate')===-1)errors.push('שלב '+(i+1)+': '+msg.substring(0,80));
+    }
+  }
+  prog.style.display='none';
+  if(errors.length){document.getElementById('setup-err').innerHTML='<b>שגיאות:</b><br>'+errors.join('<br>');btn.disabled=false;return;}
+  document.getElementById('setup-err').style.color='var(--green)';
+  document.getElementById('setup-err').textContent='✅ ההגדרה הושלמה! טוען את האפליקציה...';
+  setTimeout(function(){location.reload();},1500);
 }
 
-function acadYearOf(dateStr) {
-  var d = new Date(dateStr + 'T00:00:00');
-  return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+function showSetupScreen(){
+  var box=document.querySelector('.auth-box');
+  box.innerHTML='<div style="font-size:1.2rem;font-weight:900;color:var(--navy);margin-bottom:4px">&#9881; הגדרה ראשונית</div>'+
+    '<div style="font-size:.8rem;color:var(--text3);margin-bottom:20px">יש ליצור את טבלאות הנתונים</div>'+
+    '<div style="font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:5px;text-align:right">Personal Access Token:</div>'+
+    '<input id="setup-pat" type="password" placeholder="sbp_..." style="width:100%;border:2px solid var(--border);border-radius:9px;padding:10px 12px;font-size:.82rem;direction:ltr;font-family:monospace;margin-bottom:4px;outline:none">'+
+    '<div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;text-align:right">&#8592; <a href="https://supabase.com/dashboard/account/tokens" target="_blank" style="color:var(--navy)">supabase.com/dashboard/account/tokens</a> &mdash; צור טוקן והדבק</div>'+
+    '<button id="setup-btn" class="auth-btn" onclick="doSetup()">&#9654; צור טבלאות ומשתמש admin</button>'+
+    '<div id="setup-prog" style="display:none;font-size:.8rem;color:var(--text2);margin-top:10px;text-align:center"></div>'+
+    '<div id="setup-err" style="font-size:.78rem;color:var(--red);margin-top:8px;min-height:16px"></div>'+
+    '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">'+
+    '<div style="font-size:.72rem;color:var(--text3);margin-bottom:6px">לחלופין: <a href="https://supabase.com/dashboard/project/'+SB_PROJECT+'/sql/new" target="_blank" style="color:var(--navy)">SQL Editor</a> &#8592; הרץ את supabase-setup.sql</div>'+
+    '<button class="auth-btn" style="background:var(--text3);margin-top:4px" onclick="location.reload()">&#8635; רענן לאחר הרצה ידנית</button>';
 }
 
-function acadYearLabel(y) {
-  var m = {2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};
-  return (m[y] || y) + '–' + (m[y+1] || (y+1));
+async function ensureSetup(){
+  try{
+    var r=await SB.from('sl_users').select('id').limit(1);
+    if(r.error){var m=(r.error.message||'')+(r.error.code||'');if(m.indexOf('42P01')!==-1||m.indexOf('sl_users')!==-1||m.indexOf('does not exist')!==-1){showSetupScreen();return false;}}
+    return true;
+  }catch(e){showSetupScreen();return false;}
 }
 
-function monthLabel(year, month) {
-  var calYear = month >= 8 ? year : year + 1;
-  return MONTH_HE[month] + ' ' + calYear;
-}
-
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-function toggleAcc(key) {
-  var body = document.getElementById('acc-' + key);
-  var icon = document.getElementById('acc-icon-' + key);
-  var open = body.classList.toggle('open');
-  icon.innerHTML = open ? '&#9650;' : '&#9660;';
-}
-
-// ===== SEARCHABLE DROPDOWN =====
-var _sdData = {};
-var _sdSelected = {};
-
-function sdSetOptions(key, opts) { _sdData[key] = opts; }
-
-function sdOpen(key) {
-  sdRenderList(key, document.getElementById('sd-input-' + key).value);
-  document.getElementById('sd-list-' + key).style.display = 'block';
-}
-
-function sdFilter(key) {
-  var q = document.getElementById('sd-input-' + key).value;
-  if (!q) { document.getElementById('sd-val-' + key).value = ''; _sdSelected[key] = null; }
-  sdRenderList(key, q);
-  document.getElementById('sd-list-' + key).style.display = 'block';
-}
-
-function sdRenderList(key, q) {
-  var list = document.getElementById('sd-list-' + key);
-  var opts = (_sdData[key] || []).filter(function(o){ return !q || o.label.indexOf(q) !== -1; });
-  list.innerHTML = opts.length
-    ? opts.map(function(o){
-        return '<div class="sd-opt" onmousedown="sdSelect(\'' + key + '\',' + o.id + ',\'' + o.label.replace(/'/g, "\\'") + '\')">' + o.label + '</div>';
-      }).join('')
-    : '<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';
-}
-
-function sdSelect(key, id, label) {
-  document.getElementById('sd-input-' + key).value = label;
-  document.getElementById('sd-val-' + key).value = id;
-  document.getElementById('sd-list-' + key).style.display = 'none';
-  _sdSelected[key] = { id: id, label: label };
-  if (key === 'sc') selectStudent(id);
-  if (key === 'txnfilter') renderTxnLog();
-}
-
-function sdBlur(key) {
-  setTimeout(function(){
-    var el = document.getElementById('sd-list-' + key);
-    if (el) el.style.display = 'none';
-  }, 160);
-}
-
-// ===== AUTH =====
-function showAuthErr(msg) {
-  document.getElementById('auth-err').textContent = msg;
-  document.getElementById('auth-spinner').style.display = 'none';
-  document.getElementById('auth-btn').disabled = false;
-}
-function startAuthLoad() {
-  document.getElementById('auth-err').textContent = '';
-  document.getElementById('auth-spinner').style.display = 'block';
-  document.getElementById('auth-btn').disabled = true;
-}
-
-async function doLogin() {
-  var user = document.getElementById('au-user').value.trim();
-  var pass = document.getElementById('au-pass').value;
-  if (!user || !pass) { showAuthErr('נא למלא שם משתמש וסיסמה'); return; }
+function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').style.display='none';document.getElementById('auth-btn').disabled=false;}
+function startAuthLoad(){document.getElementById('auth-err').textContent='';document.getElementById('auth-spinner').style.display='block';document.getElementById('auth-btn').disabled=true;}
+async function doLogin(){
+  var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
+  if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
   startAuthLoad();
-  try {
-    var r = await SB.from('sl_users').select('*').eq('username', user).eq('password', pass).maybeSingle();
-    if (r.error) throw r.error;
-    if (!r.data) { showAuthErr('שם משתמש או סיסמה שגויים'); return; }
-    CUR_USER = r.data;
-    document.getElementById('auth-spinner').style.display = 'none';
-    enterApp();
-  } catch(e) { showAuthErr('שגיאה: ' + (e.message || e)); }
+  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr('שם משתמש או סיסמה שגויים');return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
 }
-
-function doLogout() {
-  CUR_USER = null;
-  _settingsUnlocked = false;
-  if (SYNC_INT) { clearInterval(SYNC_INT); SYNC_INT = null; }
-  document.getElementById('main-app').classList.add('hidden');
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('au-pass').value = '';
-}
-
-async function enterApp() {
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('main-app').classList.remove('hidden');
-  document.getElementById('nav-username').textContent = CUR_USER.username;
-  await syncAll();
-  SYNC_INT = setInterval(syncAll, 3000);
-}
-
-// ===== SYNC =====
-async function syncAll() {
-  try {
-    var results = await Promise.all([
-      SB.from('sl_students').select('*').order('name'),
-      SB.from('sl_transactions').select('*').order('date'),
-      SB.from('sl_settings').select('*'),
-      SB.from('sl_lists').select('*').order('value')
-    ]);
-    if (results[0].data) STUDENTS = results[0].data;
-    if (results[1].data) TRANSACTIONS = results[1].data;
-    if (results[2].data) {
-      SETTINGS = {};
-      results[2].data.forEach(function(r){ SETTINGS[r.key] = r.value; });
-    }
-    if (results[3].data) {
-      LISTS = {};
-      results[3].data.forEach(function(r){
-        if (!LISTS[r.category]) LISTS[r.category] = [];
-        LISTS[r.category].push({ id: r.id, value: r.value });
-      });
-    }
+function doLogout(){CUR_USER=null;_settingsUnlocked=false;if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+async function enterApp(){document.getElementById('auth-screen').classList.add('hidden');document.getElementById('main-app').classList.remove('hidden');document.getElementById('nav-username').textContent=CUR_USER.username;await syncAll();SYNC_INT=setInterval(syncAll,3000);}
+async function syncAll(){
+  try{
+    var rs=await Promise.all([SB.from('sl_students').select('*').order('name'),SB.from('sl_transactions').select('*').order('date'),SB.from('sl_settings').select('*'),SB.from('sl_lists').select('*').order('value')]);
+    if(rs[0].data)STUDENTS=rs[0].data;
+    if(rs[1].data)TRANSACTIONS=rs[1].data;
+    if(rs[2].data){SETTINGS={};rs[2].data.forEach(function(r){SETTINGS[r.key]=r.value;});}
+    if(rs[3].data){LISTS={};rs[3].data.forEach(function(r){if(!LISTS[r.category])LISTS[r.category]=[];LISTS[r.category].push({id:r.id,value:r.value});});}
     refreshUI();
-  } catch(e) { console.error('[sync]', e); }
+  }catch(e){console.error('[sync]',e);}
+}
+function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();if(_settingsUnlocked)renderSettingsLists();}
+function updateDropdowns(){
+  var active=STUDENTS.filter(function(s){return s.active;});
+  var toOpts=function(a){return a.map(function(s){return{id:s.id,label:s.name};});};
+  sdSetOptions('student',toOpts(active));sdSetOptions('sc',toOpts(STUDENTS));sdSetOptions('txnfilter',[{id:0,label:'כולם'}].concat(toOpts(STUDENTS)));
+  var methods=LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
+  sel.innerHTML='<option value="">-- בחר --</option>';methods.forEach(function(m){sel.innerHTML+='<option value="'+m.value+'">'+m.value+'</option>';});if(cur)sel.value=cur;
+  var dt=document.getElementById('txn-date');if(!dt.value)dt.value=todayStr();
+  var amt=document.getElementById('txn-amount');if(!amt.value)amt.value=SETTINGS['default_tuition']||'2000';
 }
 
-function refreshUI() {
-  updateDropdowns();
-  renderDash();
-  renderTxnLog();
-  if (SC_STUDENT_ID) renderStudentCard();
-  if (_settingsUnlocked) renderSettingsLists();
-}
-
-function updateDropdowns() {
-  var active = STUDENTS.filter(function(s){ return s.active; });
-  var all = STUDENTS;
-  var toOpts = function(arr){ return arr.map(function(s){ return { id: s.id, label: s.name }; }); };
-  sdSetOptions('student', toOpts(active));
-  sdSetOptions('sc', toOpts(all));
-  sdSetOptions('txnfilter', [{ id: 0, label: 'כולם' }].concat(toOpts(all)));
-
-  var methods = LISTS['payment_methods'] || [];
-  var sel = document.getElementById('txn-method');
-  var cur = sel.value;
-  sel.innerHTML = '<option value="">-- בחר --</option>';
-  methods.forEach(function(m){ sel.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
-  if (cur) sel.value = cur;
-
-  var dtEl = document.getElementById('txn-date');
-  if (!dtEl.value) dtEl.value = todayStr();
-
-  var amtEl = document.getElementById('txn-amount');
-  if (!amtEl.value) amtEl.value = SETTINGS['default_tuition'] || '2000';
-}
-
-// ===== DASHBOARD =====
-function getAcadYears() {
-  var years = {};
-  TRANSACTIONS.forEach(function(t){ years[acadYearOf(t.date)] = 1; });
-  years[acadYearOf(todayStr())] = 1;
-  return Object.keys(years).map(Number).sort();
-}
-
-function dashPrevYear() { DASH_YEAR--; renderDash(); }
-function dashNextYear() { DASH_YEAR++; renderDash(); }
-
-function renderDash() {
-  if (DASH_YEAR === null) DASH_YEAR = acadYearOf(todayStr());
-  document.getElementById('dash-year-label').textContent = acadYearLabel(DASH_YEAR);
-
-  var activeSt = STUDENTS.filter(function(s){ return s.active; });
-  var monthlyBySt = {};
-  activeSt.forEach(function(s){ monthlyBySt[s.id] = calcDistribution(s.id, DASH_YEAR); });
-
-  // Header
-  var hdr = '<tr><th>חודש</th>';
-  activeSt.forEach(function(s){ hdr += '<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis">' + s.name + '</th>'; });
-  hdr += '<th>סה"כ</th></tr>';
-  document.getElementById('dash-thead').innerHTML = hdr;
-
-  var chartTotals = [];
-  var chartLabels = [];
-  var rows = '';
-
+function getAcadYears(){var y={};TRANSACTIONS.forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;return Object.keys(y).map(Number).sort();}
+function dashPrevYear(){DASH_YEAR--;renderDash();}
+function dashNextYear(){DASH_YEAR++;renderDash();}
+function renderDash(){
+  if(DASH_YEAR===null)DASH_YEAR=acadYearOf(todayStr());
+  document.getElementById('dash-year-label').textContent=acadYearLabel(DASH_YEAR);
+  var act=STUDENTS.filter(function(s){return s.active;}),dist={};
+  act.forEach(function(s){dist[s.id]=calcDistribution(s.id,DASH_YEAR);});
+  var hdr='<tr><th>חודש</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.name+'</th>';});hdr+='<th>סה"כ</th></tr>';
+  document.getElementById('dash-thead').innerHTML=hdr;
+  var chartD=[],rows='';
   YEAR_MONTHS.forEach(function(m){
-    chartLabels.push(MONTH_HE[m]);
-    var rowTotal = 0;
-    var cells = '';
-    activeSt.forEach(function(s){
-      var dist = monthlyBySt[s.id];
-      var paid = dist[m] ? dist[m].paid : 0;
-      rowTotal += paid;
-      var cls = paid > 0 ? (paid >= dist[m].req ? 'color:var(--green)' : 'color:var(--yellow)') : 'color:var(--text3)';
-      cells += '<td class="num" style="cursor:pointer;' + cls + '" onclick="showDashMonth(' + DASH_YEAR + ',' + m + ')">' + (paid ? fmt(paid) : '—') + '</td>';
-    });
-    chartTotals.push(rowTotal);
-    rows += '<tr>';
-    rows += '<td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth(' + DASH_YEAR + ',' + m + ')">' + MONTH_HE[m] + '</td>';
-    rows += cells;
-    rows += '<td class="num" style="font-weight:700">' + (rowTotal ? fmt(rowTotal) : '—') + '</td>';
-    rows += '</tr>';
+    var rt=0,cells='';
+    act.forEach(function(s){var i=dist[s.id][m]||{req:0,paid:0};rt+=i.paid;var st=i.paid>=i.req&&i.req>0?'color:var(--green)':i.paid>0?'color:var(--yellow)':'color:var(--text3)';cells+='<td class="num" style="cursor:pointer;'+st+'" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(i.paid?fmt(i.paid):'—')+'</td>';});
+    chartD.push(rt);
+    rows+='<tr><td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE[m]+'</td>'+cells+'<td class="num" style="font-weight:700">'+(rt?fmt(rt):'—')+'</td></tr>';
   });
-
-  var grandTotal = chartTotals.reduce(function(a, b){ return a + b; }, 0);
-  rows += '<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>';
-  activeSt.forEach(function(s){
-    var t = YEAR_MONTHS.reduce(function(acc, m){ return acc + (monthlyBySt[s.id][m] ? monthlyBySt[s.id][m].paid : 0); }, 0);
-    rows += '<td class="num">' + (t ? fmt(t) : '—') + '</td>';
-  });
-  rows += '<td class="num">' + fmt(grandTotal) + '</td></tr>';
-
-  document.getElementById('dash-tbody').innerHTML = rows;
-
-  // Chart
-  if (_dashChart) _dashChart.destroy();
-  var ctx = document.getElementById('dash-chart').getContext('2d');
-  _dashChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: chartLabels,
-      datasets: [{ label: 'גבייה (&#8362;)', data: chartTotals,
-        backgroundColor: 'rgba(30,58,95,0.75)', borderColor: 'rgba(30,58,95,1)',
-        borderWidth: 1, borderRadius: 4 }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { ticks: { font: { family: 'Heebo' }, callback: function(v){ return '₪' + v.toLocaleString(); } } },
-        x: { ticks: { font: { family: 'Heebo' }, maxRotation: 45 } }
-      }
-    }
-  });
+  var grand=chartD.reduce(function(a,b){return a+b;},0);
+  rows+='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>';
+  act.forEach(function(s){var t=YEAR_MONTHS.reduce(function(a,m){return a+(dist[s.id][m]?dist[s.id][m].paid:0);},0);rows+='<td class="num">'+(t?fmt(t):'—')+'</td>';});
+  rows+='<td class="num">'+fmt(grand)+'</td></tr>';
+  document.getElementById('dash-tbody').innerHTML=rows;
+  if(_dashChart)_dashChart.destroy();
+  var ctx=document.getElementById('dash-chart').getContext('2d');
+  _dashChart=new Chart(ctx,{type:'bar',data:{labels:YEAR_MONTHS.map(function(m){return MONTH_HE[m];}),datasets:[{label:'גבייה',data:chartD,backgroundColor:'rgba(30,58,95,0.75)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{family:'Heebo'},callback:function(v){return String.fromCharCode(8362)+v.toLocaleString();}}},x:{ticks:{font:{family:'Heebo'},maxRotation:45}}}}});
 }
-
-function showDashMonth(year, month) {
-  var calYear = month >= 8 ? year : year + 1;
-  document.getElementById('dash-month-title').textContent = MONTH_HE[month] + ' ' + calYear;
-  document.getElementById('dash-month-card').style.display = 'block';
-
-  var activeSt = STUDENTS.filter(function(s){ return s.active; });
-  var html = '';
-  activeSt.forEach(function(s){
-    var dist = calcDistribution(s.id, year);
-    var info = dist[month] || { paid: 0, req: 0 };
-    var balance = info.paid - info.req;
-    var cls = balance >= 0 ? 'amt-green' : (info.paid > 0 ? 'amt-yellow' : 'amt-red');
-    html += '<div class="st-row">';
-    html += '<span class="st-name">' + s.name + '</span>';
-    html += '<span class="st-paid ' + cls + '">' + fmt(info.paid) + '</span>';
-    html += '<span class="st-total">(' + fmt(info.req) + ')</span>';
-    html += '</div>';
-  });
-  document.getElementById('dash-month-list').innerHTML = html || '<div class="empty">אין נתונים</div>';
+function showDashMonth(year,month){
+  document.getElementById('dash-month-title').textContent=MONTH_HE[month]+' '+(month>=8?year:year+1);
+  document.getElementById('dash-month-card').style.display='block';
+  var act=STUDENTS.filter(function(s){return s.active;}),html='',tot=0;
+  act.forEach(function(s){var d=calcDistribution(s.id,year),i=d[month]||{paid:0,req:0},b=i.paid-i.req;tot+=i.paid;var c=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';html+='<div class="st-row"><span class="st-name">'+s.name+'</span><span class="st-paid '+c+'">'+fmt(i.paid)+'</span><span class="st-total">('+fmt(i.req)+')</span></div>';});
+  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">סה"כ: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span></div>';
+  document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
-
-function closeDashMonth() { document.getElementById('dash-month-card').style.display = 'none'; }
-
-// ===== DISTRIBUTION LOGIC =====
-function calcDistribution(studentId, year) {
-  var student = STUDENTS.find(function(s){ return s.id === studentId; });
-  if (!student) return {};
-  var defT = parseInt(SETTINGS['default_tuition'] || 2000);
-  var cs = student.card_settings || {};
-  var stuT = cs.monthly_tuition ? parseInt(cs.monthly_tuition) : defT;
-
-  var txns = TRANSACTIONS.filter(function(t){
-    return t.student_id === studentId && acadYearOf(t.date) === year;
-  }).sort(function(a, b){ return a.date > b.date ? 1 : a.date < b.date ? -1 : 0; });
-
-  var pool = txns.reduce(function(sum, t){ return sum + parseFloat(t.amount); }, 0);
-
-  var result = {};
-  YEAR_MONTHS.forEach(function(m){
-    result[m] = { req: stuT, paid: 0 };
-    if (pool <= 0) return;
-    if (pool >= stuT) { result[m].paid = stuT; pool -= stuT; }
-    else { result[m].paid = Math.round(pool * 100) / 100; pool = 0; }
-  });
+function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
+function calcDistribution(sid,year){
+  var s=STUDENTS.find(function(x){return x.id===sid;});if(!s)return{};
+  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var txns=TRANSACTIONS.filter(function(t){return t.student_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
+  var pool=txns.reduce(function(s,t){return s+parseFloat(t.amount);},0),result={};
+  YEAR_MONTHS.forEach(function(m){result[m]={req:stuT,paid:0};if(pool<=0)return;if(pool>=stuT){result[m].paid=stuT;pool-=stuT;}else{result[m].paid=Math.round(pool*100)/100;pool=0;}});
   return result;
 }
 
-// ===== TRANSACTION ENTRY =====
-async function saveTxn() {
-  var stId = parseInt(document.getElementById('sd-val-student').value);
-  var date = document.getElementById('txn-date').value;
-  var amount = parseFloat(document.getElementById('txn-amount').value);
-  var method = document.getElementById('txn-method').value;
-  var note = document.getElementById('txn-note').value.trim();
-
-  if (!stId) { toast('נא לבחור תלמיד'); return; }
-  if (!date) { toast('נא לבחור תאריך'); return; }
-  if (!amount || amount <= 0) { toast('נא להזין סכום תקין'); return; }
-
-  try {
-    var r = await SB.from('sl_transactions').insert({
-      student_id: stId, date: date, amount: amount,
-      payment_method: method || null, note: note || null
-    });
-    if (r.error) throw r.error;
-    toast('תשלום נשמר ✓');
-    document.getElementById('txn-amount').value = SETTINGS['default_tuition'] || '2000';
-    document.getElementById('txn-note').value = '';
-    await syncAll();
-  } catch(e) { toast('שגיאה: ' + (e.message || e)); }
+async function saveTxn(){
+  var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
+  if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
+  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null});if(r.error)throw r.error;toast('תשלום נשמר ✓');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast('שגיאה: '+(e.message||e));}
+}
+function renderTxnLog(){
+  var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
+  var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
+  if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
+  var html=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+t.date+'</span><span style="font-weight:600">'+(st?st.name:'#'+t.student_id)+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('');
+  document.getElementById('txn-log').innerHTML=html||'<div class="empty">אין תשלומים</div>';
+}
+async function deleteTxn(id){showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){var r=await SB.from('sl_transactions').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('תשלום נמחק');await syncAll();});}
+function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
+function renderStudentCard(){
+  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+  var cs=s.card_settings||{};
+  document.getElementById('sc-name').textContent=s.name;
+  document.getElementById('sc-meta').textContent=cs.section?cs.section+(s.active?' • פעיל':' • לא פעיל'):(s.active?'פעיל':'לא פעיל');
+  var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
+  document.getElementById('sc-edit-name').value=s.name;
+  document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
+  var secSel=document.getElementById('sc-edit-section');secSel.innerHTML='<option value="">-- ללא --</option>';
+  (LISTS['sections']||[]).forEach(function(sec){secSel.innerHTML+='<option value="'+sec.value+'"'+(cs.section===sec.value?' selected':'')+'>'+sec.value+'</option>';});
+  renderScYearTabs();renderScAnnual();
+}
+function renderScYearTabs(){
+  var y={};TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;
+  var sorted=Object.keys(y).map(Number).sort();if(!SC_YEAR||!y[SC_YEAR])SC_YEAR=acadYearOf(todayStr());
+  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===SC_YEAR?' active':'')+'" onclick="scSelectYear('+yr+')">'+acadYearLabel(yr)+'</button>';}).join('');
+}
+function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
+function renderScAnnual(){
+  if(!SC_STUDENT_ID||!SC_YEAR)return;
+  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var dist=calcDistribution(SC_STUDENT_ID,SC_YEAR),rows='',tReq=0,tPaid=0;
+  YEAR_MONTHS.forEach(function(m){var i=dist[m]||{req:stuT,paid:0},b=i.paid-i.req;tReq+=i.req;tPaid+=i.paid;var bc=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';});
+  document.getElementById('sc-annual-tbody').innerHTML=rows;
+  var tb=tPaid-tReq;document.getElementById('sc-annual-tfoot').innerHTML='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tReq)+'</td><td class="paid-cell">'+fmt(tPaid)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+t.date+'</span><span style="flex:1">'+(t.note||'—')+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+}
+async function toggleStudentActive(){var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
+async function saveStudentSettings(){
+  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
+  if(!name){toast('שם חובה');return;}
+  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;}),cs=Object.assign({},(s&&s.card_settings)||{});
+  if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
+  if(section)cs.section=section;else delete cs.section;
+  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);
+  if(r.error){toast('שגיאה: '+r.error.message);return;}toast('הגדרות נשמרו ✓');await syncAll();
 }
 
-function renderTxnLog() {
-  var filterId = parseInt(document.getElementById('sd-val-txnfilter').value) || 0;
-  var txns = TRANSACTIONS.slice().sort(function(a, b){ return a.date > b.date ? -1 : 1; }).slice(0, 60);
-  if (filterId) txns = txns.filter(function(t){ return t.student_id === filterId; });
-
-  var html = '';
-  txns.forEach(function(t){
-    var st = STUDENTS.find(function(s){ return s.id === t.student_id; });
-    var stName = st ? st.name : '#' + t.student_id;
-    html += '<div class="txn-row">';
-    html += '<span style="color:var(--text3);font-size:.78rem">' + t.date + '</span>';
-    html += '<span style="font-weight:600">' + stName + '</span>';
-    html += '<span style="font-weight:700;color:var(--green)">₪' + fmt(t.amount) + '</span>';
-    html += '<span class="pill">' + (t.payment_method || '—') + '</span>';
-    html += '<button class="btn sm danger" onclick="deleteTxn(' + t.id + ')">✕</button>';
-    html += '</div>';
-  });
-  document.getElementById('txn-log').innerHTML = html || '<div class="empty">אין תשלומים</div>';
+function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
+function unlockSettings(){var p=document.getElementById('set-pass-input').value;if(p!==(SETTINGS['admin_pass']||'admin')){document.getElementById('set-pass-err').textContent='סיסמה שגויה';return;}_settingsUnlocked=true;document.getElementById('settings-lock').style.display='none';document.getElementById('settings-main').style.display='block';document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';document.getElementById('set-pass-err').textContent='';renderSettingsLists();}
+async function saveDefaultTuition(){var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נשמר ✓');await syncAll();}
+async function changeAdminPass(){var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('סיסמה שונתה ✓');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
+function renderSettingsLists(){
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){return'<div class="set-list-item"><span style="font-weight:600">'+s.name+'</span><span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
-
-async function deleteTxn(id) {
-  showConfirm('מחיקת תשלום', 'למחוק תשלום זה?', async function(){
-    var r = await SB.from('sl_transactions').delete().eq('id', id);
-    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-    toast('תשלום נמחק');
-    await syncAll();
-  });
-}
-
-// ===== STUDENT CARD =====
-function selectStudent(id) {
-  SC_STUDENT_ID = parseInt(id);
-  SC_YEAR = null;
-  document.getElementById('sc-main').style.display = 'block';
-  renderStudentCard();
-}
-
-function renderStudentCard() {
-  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
-  if (!s) return;
-
-  document.getElementById('sc-name').textContent = s.name;
-  var cs = s.card_settings || {};
-  document.getElementById('sc-meta').textContent = cs.section || (s.active ? 'פעיל' : 'לא פעיל');
-
-  var tog = document.getElementById('sc-active-tog');
-  tog.textContent = s.active ? 'פעיל ✓' : 'לא פעיל';
-  tog.className = 'sc-tog ' + (s.active ? 'tog-act-on' : 'tog-act-off');
-
-  document.getElementById('sc-edit-name').value = s.name;
-  document.getElementById('sc-edit-tuition').value = cs.monthly_tuition || '';
-
-  var secSel = document.getElementById('sc-edit-section');
-  var sections = LISTS['sections'] || [];
-  secSel.innerHTML = '<option value="">-- ללא --</option>';
-  sections.forEach(function(sec){
-    secSel.innerHTML += '<option value="' + sec.value + '"' + (cs.section === sec.value ? ' selected' : '') + '>' + sec.value + '</option>';
-  });
-
-  renderScYearTabs();
-  renderScAnnual();
-}
-
-function renderScYearTabs() {
-  var years = {};
-  TRANSACTIONS.filter(function(t){ return t.student_id === SC_STUDENT_ID; })
-    .forEach(function(t){ years[acadYearOf(t.date)] = 1; });
-  years[acadYearOf(todayStr())] = 1;
-  var sortedYears = Object.keys(years).map(Number).sort();
-  if (!SC_YEAR || !years[SC_YEAR]) SC_YEAR = acadYearOf(todayStr());
-
-  document.getElementById('sc-year-tabs').innerHTML = sortedYears.map(function(y){
-    return '<button class="ytab' + (y === SC_YEAR ? ' active' : '') + '" onclick="scSelectYear(' + y + ')">' + acadYearLabel(y) + '</button>';
-  }).join('');
-}
-
-function scSelectYear(y) {
-  SC_YEAR = y;
-  renderScYearTabs();
-  renderScAnnual();
-}
-
-function renderScAnnual() {
-  if (!SC_STUDENT_ID || !SC_YEAR) return;
-  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
-  if (!s) return;
-  var cs = s.card_settings || {};
-  var defT = parseInt(SETTINGS['default_tuition'] || 2000);
-  var stuT = cs.monthly_tuition ? parseInt(cs.monthly_tuition) : defT;
-  var dist = calcDistribution(SC_STUDENT_ID, SC_YEAR);
-
-  var rows = '';
-  var totalReq = 0, totalPaid = 0;
-  YEAR_MONTHS.forEach(function(m){
-    var info = dist[m] || { req: stuT, paid: 0 };
-    var bal = info.paid - info.req;
-    totalReq += info.req;
-    totalPaid += info.paid;
-    var balCls = bal >= 0 ? 'amt-green' : (info.paid > 0 ? 'amt-yellow' : 'amt-red');
-    rows += '<tr>';
-    rows += '<td style="white-space:nowrap">' + monthLabel(SC_YEAR, m) + '</td>';
-    rows += '<td class="req-cell">' + fmt(info.req) + '</td>';
-    rows += '<td class="paid-cell">' + fmt(info.paid) + '</td>';
-    rows += '<td class="' + balCls + '" style="text-align:center">' + (bal >= 0 ? '+' : '') + fmt(bal) + '</td>';
-    rows += '</tr>';
-  });
-  document.getElementById('sc-annual-tbody').innerHTML = rows;
-
-  var tBal = totalPaid - totalReq;
-  var tCls = tBal >= 0 ? 'amt-green' : 'amt-red';
-  document.getElementById('sc-annual-tfoot').innerHTML =
-    '<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>' +
-    '<td class="req-cell">' + fmt(totalReq) + '</td>' +
-    '<td class="paid-cell">' + fmt(totalPaid) + '</td>' +
-    '<td class="' + tCls + '" style="text-align:center">' + (tBal >= 0 ? '+' : '') + fmt(tBal) + '</td></tr>';
-
-  var yearTxns = TRANSACTIONS.filter(function(t){
-    return t.student_id === SC_STUDENT_ID && acadYearOf(t.date) === SC_YEAR;
-  }).sort(function(a, b){ return a.date > b.date ? -1 : 1; });
-
-  var txnHtml = '';
-  yearTxns.forEach(function(t){
-    txnHtml += '<div class="txn-row">';
-    txnHtml += '<span style="color:var(--text3);font-size:.78rem">' + t.date + '</span>';
-    txnHtml += '<span style="flex:1">' + (t.note || '—') + '</span>';
-    txnHtml += '<span style="font-weight:700;color:var(--green)">₪' + fmt(t.amount) + '</span>';
-    txnHtml += '<span class="pill">' + (t.payment_method || '—') + '</span>';
-    txnHtml += '<button class="btn sm danger" onclick="deleteTxn(' + t.id + ')">✕</button>';
-    txnHtml += '</div>';
-  });
-  document.getElementById('sc-txn-list').innerHTML = txnHtml || '<div class="empty">אין תשלומים בשנה זו</div>';
-}
-
-async function toggleStudentActive() {
-  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
-  if (!s) return;
-  var r = await SB.from('sl_students').update({ active: !s.active }).eq('id', SC_STUDENT_ID);
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  toast(!s.active ? 'תלמיד הופעל' : 'תלמיד הושהה');
-  await syncAll();
-}
-
-async function saveStudentSettings() {
-  var name = document.getElementById('sc-edit-name').value.trim();
-  var tuition = document.getElementById('sc-edit-tuition').value;
-  var section = document.getElementById('sc-edit-section').value;
-  if (!name) { toast('שם חובה'); return; }
-
-  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
-  var cs = Object.assign({}, s ? (s.card_settings || {}) : {});
-  if (tuition) cs.monthly_tuition = parseInt(tuition); else delete cs.monthly_tuition;
-  if (section) cs.section = section; else delete cs.section;
-
-  var r = await SB.from('sl_students').update({ name: name, card_settings: cs }).eq('id', SC_STUDENT_ID);
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  toast('הגדרות נשמרו ✓');
-  await syncAll();
-}
-
-// ===== SETTINGS =====
-function showPanel(key, btn) {
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-  document.getElementById('panel-' + key).classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (key === 'settings') {
-    document.getElementById('settings-lock').style.display = _settingsUnlocked ? 'none' : 'block';
-    document.getElementById('settings-main').style.display = _settingsUnlocked ? 'block' : 'none';
-    if (_settingsUnlocked) renderSettingsLists();
-  }
-}
-
-function unlockSettings() {
-  var pass = document.getElementById('set-pass-input').value;
-  var adminPass = SETTINGS['admin_pass'] || 'admin';
-  if (pass !== adminPass) { document.getElementById('set-pass-err').textContent = 'סיסמה שגויה'; return; }
-  _settingsUnlocked = true;
-  document.getElementById('settings-lock').style.display = 'none';
-  document.getElementById('settings-main').style.display = 'block';
-  document.getElementById('set-def-tuition').value = SETTINGS['default_tuition'] || '2000';
-  document.getElementById('set-pass-err').textContent = '';
-  renderSettingsLists();
-}
-
-async function saveDefaultTuition() {
-  var val = document.getElementById('set-def-tuition').value;
-  if (!val || isNaN(val)) { toast('ערך לא תקין'); return; }
-  var r = await SB.from('sl_settings').upsert({ key: 'default_tuition', value: val });
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  toast('נשמר ✓');
-  await syncAll();
-}
-
-async function changeAdminPass() {
-  var p1 = document.getElementById('set-new-pass').value;
-  var p2 = document.getElementById('set-new-pass2').value;
-  if (!p1) { toast('נא להזין סיסמה'); return; }
-  if (p1 !== p2) { toast('הסיסמאות אינן תואמות'); return; }
-  var r = await SB.from('sl_settings').upsert({ key: 'admin_pass', value: p1 });
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  toast('סיסמה שונתה ✓');
-  document.getElementById('set-new-pass').value = '';
-  document.getElementById('set-new-pass2').value = '';
-  await syncAll();
-}
-
-function renderSettingsLists() {
-  var stHtml = STUDENTS.map(function(s){
-    return '<div class="set-list-item">' +
-      '<span style="font-weight:600">' + s.name + '</span>' +
-      '<span class="badge ' + (s.active ? 'green' : 'gray') + '">' + (s.active ? 'פעיל' : 'לא פעיל') + '</span>' +
-      '<button class="btn sm danger" onclick="deleteStudent(' + s.id + ')">✕ מחק</button>' +
-      '</div>';
-  }).join('');
-  document.getElementById('set-students-list').innerHTML = stHtml || '<div class="empty">אין תלמידים</div>';
-  renderListItems('payment_methods', 'set-methods-list');
-  renderListItems('sections', 'set-sections-list');
-}
-
-function renderListItems(cat, elId) {
-  var items = LISTS[cat] || [];
-  var html = items.map(function(item){
-    return '<div class="set-list-item">' +
-      '<span>' + item.value + '</span>' +
-      '<button class="btn sm danger" onclick="deleteListItem(' + item.id + ')">✕</button>' +
-      '</div>';
-  }).join('');
-  document.getElementById(elId).innerHTML = html || '<div class="empty">ריק</div>';
-}
-
-async function addListItem(cat) {
-  var val = prompt('הזן ערך חדש:');
-  if (!val || !val.trim()) return;
-  var r = await SB.from('sl_lists').insert({ category: cat, value: val.trim() });
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  toast('נוסף ✓');
-  await syncAll();
-}
-
-async function deleteListItem(id) {
-  showConfirm('מחיקה', 'למחוק פריט זה?', async function(){
-    var r = await SB.from('sl_lists').delete().eq('id', id);
-    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-    toast('נמחק ✓');
-    await syncAll();
-  });
-}
-
-function openAddStudent() {
-  var secSel = document.getElementById('new-st-section');
-  var sections = LISTS['sections'] || [];
-  secSel.innerHTML = '<option value="">-- ללא --</option>';
-  sections.forEach(function(s){ secSel.innerHTML += '<option value="' + s.value + '">' + s.value + '</option>'; });
-  document.getElementById('new-st-name').value = '';
-  document.getElementById('new-st-tuition').value = '';
-  openModal('modal-add-student');
-}
-
-async function saveNewStudent() {
-  var name = document.getElementById('new-st-name').value.trim();
-  var tuition = document.getElementById('new-st-tuition').value;
-  var section = document.getElementById('new-st-section').value;
-  if (!name) { toast('שם חובה'); return; }
-  var cs = {};
-  if (tuition) cs.monthly_tuition = parseInt(tuition);
-  if (section) cs.section = section;
-  var r = await SB.from('sl_students').insert({ name: name, active: true, card_settings: cs });
-  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-  closeModal('modal-add-student');
-  toast('תלמיד נוסף ✓');
-  await syncAll();
-}
-
-async function deleteStudent(id) {
-  var s = STUDENTS.find(function(x){ return x.id === id; });
-  showConfirm('מחיקת תלמיד', 'למחוק את ' + (s ? s.name : 'תלמיד') + '?\nכל התשלומים שלו יימחקו גם כן.', async function(){
-    var r = await SB.from('sl_students').delete().eq('id', id);
-    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
-    if (SC_STUDENT_ID === id) { SC_STUDENT_ID = null; document.getElementById('sc-main').style.display = 'none'; document.getElementById('sd-input-sc').value = ''; document.getElementById('sd-val-sc').value = ''; }
-    toast('תלמיד נמחק');
-    await syncAll();
-  });
-}
-
-// ===== CONFIRM MODAL =====
-function showConfirm(title, msg, cb) {
-  document.getElementById('modal-confirm-title').textContent = title;
-  document.getElementById('modal-confirm-msg').textContent = msg;
-  _confirmCb = cb;
-  document.getElementById('modal-confirm-ok').onclick = function(){
-    closeModal('modal-confirm');
-    if (_confirmCb) _confirmCb();
-  };
-  openModal('modal-confirm');
-}
-
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', function(){
+function renderListItems(cat,elId){var items=LISTS[cat]||[];document.getElementById(elId).innerHTML=items.map(function(i){return'<div class="set-list-item"><span>'+i.value+'</span><button class="btn sm danger" onclick="deleteListItem('+i.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">ריק</div>';}
+async function addListItem(cat){var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נוסף ✓');await syncAll();}
+async function deleteListItem(id){showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נמחק ✓');await syncAll();});}
+function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+s.value+'">'+s.value+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';openModal('modal-add-student');}
+async function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('תלמיד נוסף ✓');await syncAll();}
+async function deleteStudent(id){var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? כל התשלומים יימחקו גם כן.',async function(){var r=await SB.from('sl_students').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('תלמיד נמחק');await syncAll();});}
+function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
+document.addEventListener('DOMContentLoaded',async function(){
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
-  document.getElementById('au-user').focus();
+  var ok=await ensureSetup();
+  if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
 });
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/schar-limud/sw.js').catch(function(){});
-}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/schar-limud/sw.js').catch(function(){});
 </script>
 </body>
 </html>
