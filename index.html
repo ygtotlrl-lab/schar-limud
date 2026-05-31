@@ -1,0 +1,1058 @@
+﻿<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>שכר לימוד</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<meta name="theme-color" content="#1e3a5f">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Heebo',sans-serif;background:#f0f2f5;color:#1a2332;direction:rtl;min-height:100vh;font-size:14px}
+:root{--navy:#1e3a5f;--navy2:#2a4f7f;--navy3:#0f2040;--accent:#c9a84c;--green:#1a7f4b;--greenl:#d4f0e3;--yellow:#b78a00;--yellowl:#fff8d4;--red:#b91c1c;--redl:#fee2e2;--border:#d8dde6;--bgsec:#f8f9fb;--text:#1a2332;--text2:#4a5568;--text3:#8a9ab0;--card:#ffffff;--shadow:0 2px 8px rgba(0,0,0,.08);--radius:12px}
+#app{max-width:800px;margin:0 auto;padding-bottom:80px}
+#auth-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--navy3),var(--navy),var(--navy2));display:flex;align-items:center;justify-content:center;z-index:9999}
+#auth-screen.hidden{display:none}
+.auth-box{background:#fff;border-radius:18px;padding:40px 32px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);text-align:center}
+.auth-title{font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:4px}
+.auth-sub{font-size:.85rem;color:var(--text3);margin-bottom:24px}
+.auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;text-align:right}
+.auth-field label{font-size:.8rem;font-weight:600;color:var(--text2)}
+.auth-field input{border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-family:Heebo;font-size:.95rem;outline:none;transition:border .2s;width:100%}
+.auth-field input:focus{border-color:var(--navy)}
+.auth-btn{width:100%;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:13px;font-family:Heebo;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background .2s}
+.auth-btn:hover{background:var(--navy2)}
+.auth-btn:disabled{opacity:.6;cursor:default}
+.auth-spinner{display:none;margin:10px auto 0;width:26px;height:26px;border:3px solid #dde3ef;border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
+.auth-err{color:var(--red);font-size:.82rem;margin-top:8px;min-height:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#topnav{position:sticky;top:0;z-index:100;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-title{font-size:1.1rem;font-weight:700}
+.nav-user{font-size:.78rem;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:8px}
+.nav-logout{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:7px;padding:4px 10px;font-family:Heebo;font-size:.75rem;cursor:pointer}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.07)}
+.tab-btn{flex:1;background:none;border:none;padding:10px 4px 8px;font-family:Heebo;font-size:10px;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s}
+.tab-btn .ti{font-size:1.3rem;line-height:1}
+.tab-btn.active{color:var(--navy);font-weight:700}
+.panel{display:none;padding:16px}
+.panel.active{display:block}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+.card-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.card-hdr h3{font-size:.95rem;font-weight:700;color:var(--navy)}
+.card-body{padding:16px}
+.btn{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-family:Heebo;font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap}
+.btn:hover{background:var(--navy2)}
+.btn.out{background:none;border:2px solid var(--navy);color:var(--navy)}
+.btn.out:hover{background:var(--navy);color:#fff}
+.btn.danger{background:var(--red)}
+.btn.danger:hover{background:#991b1b}
+.btn.sm{padding:5px 10px;font-size:.78rem}
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.tbl th{background:var(--navy);color:#fff;padding:8px 10px;text-align:right;font-weight:600;font-size:.78rem;white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bgsec)}
+.tbl td.num{text-align:center;font-weight:600}
+.frm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.frm-row label{font-size:.8rem;font-weight:600;color:var(--text2)}
+.frm-row input,.frm-row select,.frm-row textarea{border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s;background:#fff}
+.frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:var(--navy)}
+.frm-row textarea{resize:vertical;min-height:70px}
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.72rem;font-weight:700}
+.badge.green{background:var(--greenl);color:var(--green)}
+.badge.red{background:var(--redl);color:var(--red)}
+.badge.gray{background:#e5e7eb;color:#4b5563}
+.month-nav{display:flex;align-items:center;gap:10px}
+.month-nav button{background:var(--bgsec);border:2px solid var(--border);border-radius:8px;width:34px;height:34px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.month-nav button:hover{border-color:var(--navy)}
+.month-nav .m-label{font-weight:700;font-size:.95rem;color:var(--navy);min-width:110px;text-align:center}
+.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.st-row:last-child{border-bottom:none}
+.st-row:hover{background:var(--bgsec)}
+.st-row.handled .st-name{font-weight:700}
+.st-row.unhandled{opacity:.65}
+.st-name{font-size:.9rem}
+.st-paid{font-size:.88rem;font-weight:600;min-width:65px;text-align:center}
+.st-total{font-size:.75rem;color:var(--text3);min-width:80px;text-align:center}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy3);color:#fff;padding:10px 20px;border-radius:10px;font-size:.85rem;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.hidden{display:none}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:16px}
+.modal .ma{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+.acc-hdr:hover{background:var(--bgsec)}
+.acc-hdr span{font-size:.85rem;font-weight:600;color:var(--navy)}
+.acc-body{display:none;padding:14px}
+.acc-body.open{display:block}
+.year-tabs{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ytab{background:var(--bgsec);border:2px solid var(--border);border-radius:8px;padding:5px 14px;font-family:Heebo;font-size:.82rem;cursor:pointer;transition:all .2s}
+.ytab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sd-wrap{position:relative}
+.sd-list{position:absolute;top:100%;right:0;left:0;background:#fff;border:2px solid var(--navy);border-top:none;border-radius:0 0 9px 9px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.sd-opt{padding:8px 12px;cursor:pointer;font-size:.88rem}
+.sd-opt:hover{background:var(--navy);color:#fff}
+.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);font-size:.82rem}
+.txn-row:last-child{border-bottom:none}
+.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px}
+.set-list-item:last-child{border-bottom:none}
+.sc-hdr{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:20px 16px}
+.sc-name{font-size:1.3rem;font-weight:900}
+.sc-meta{font-size:.8rem;opacity:.75;margin-top:4px}
+.sc-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sc-tog{border:none;border-radius:8px;padding:6px 14px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer}
+.tog-act-on{background:#d4f0e3;color:var(--green)}
+.tog-act-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.8)}
+.tog-hnd-on{background:#fff3cd;color:#92610a}
+.tog-hnd-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.8)}
+.amt-green{color:var(--green);font-weight:700}
+.amt-yellow{color:var(--yellow);font-weight:700}
+.amt-red{color:var(--red);font-weight:700}
+.paid-cell{color:var(--green);font-weight:700;text-align:center}
+.req-cell{text-align:center}
+.empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.9rem}
+.pill{display:inline-block;padding:1px 7px;border-radius:12px;font-size:.72rem;background:var(--bgsec);color:var(--text2);border:1px solid var(--border)}
+@media(max-width:480px){.txn-row{grid-template-columns:65px 1fr auto auto}.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}.st-row{grid-template-columns:1fr auto}.st-total{display:none}}
+</style>
+</head>
+<body>﻿<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-title">שכר לימוד</div>
+    <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
+    <div class="auth-field">
+      <label>שם משתמש</label>
+      <input id="au-user" type="text" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label>סיסמה</label>
+      <input id="au-pass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="doLogin()">כניסה</button>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-spinner" id="auth-spinner"></div>
+  </div>
+</div>
+
+<div id="main-app" class="hidden">
+  <div id="topnav">
+    <span class="nav-title">שכר לימוד</span>
+    <span class="nav-user">
+      <span id="nav-username"></span>
+      <button class="nav-logout" onclick="doLogout()">יציאה</button>
+    </span>
+  </div>
+
+  <div id="app">
+    <!-- Panel 1: Dashboard -->
+    <div id="panel-dash" class="panel active">
+      <div class="card">
+        <div class="card-hdr">
+          <h3>לוח שנתי</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn sm out" onclick="dashPrevYear()">&#9664;</button>
+            <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
+            <button class="btn sm out" onclick="dashNextYear()">&#9654;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl" id="dash-table">
+            <thead id="dash-thead"></thead>
+            <tbody id="dash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
+        <div class="card-body"><canvas id="dash-chart" height="160"></canvas></div>
+      </div>
+      <div class="card" id="dash-month-card" style="display:none">
+        <div class="card-hdr">
+          <h3 id="dash-month-title">פירוט חודש</h3>
+          <button class="btn sm out" onclick="closeDashMonth()">סגור</button>
+        </div>
+        <div id="dash-month-list"></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Transaction Entry -->
+    <div id="panel-txn" class="panel">
+      <div class="card">
+        <div class="card-hdr"><h3>הוספת תשלום</h3></div>
+        <div class="card-body">
+          <div class="frm-row">
+            <label>תלמיד</label>
+            <div class="sd-wrap" id="sd-wrap-student">
+              <input id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
+              <div class="sd-list" id="sd-list-student" style="display:none"></div>
+              <input type="hidden" id="sd-val-student">
+            </div>
+          </div>
+          <div class="frm-row">
+            <label>תאריך</label>
+            <input id="txn-date" type="date">
+          </div>
+          <div class="frm-row">
+            <label>סכום (&#8362;)</label>
+            <input id="txn-amount" type="number" min="0" step="1" placeholder="0">
+          </div>
+          <div class="frm-row">
+            <label>אמצעי תשלום</label>
+            <select id="txn-method">
+              <option value="">-- בחר --</option>
+            </select>
+          </div>
+          <div class="frm-row">
+            <label>הערה</label>
+            <textarea id="txn-note" placeholder="הערה אופציונלית..."></textarea>
+          </div>
+          <button class="btn" style="width:100%" onclick="saveTxn()">שמור תשלום</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <h3>יומן תשלומים</h3>
+          <div class="sd-wrap" id="sd-wrap-txnfilter" style="width:160px">
+            <input id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
+            <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
+            <input type="hidden" id="sd-val-txnfilter">
+          </div>
+        </div>
+        <div id="txn-log"></div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Student Card -->
+    <div id="panel-student" class="panel">
+      <div class="card">
+        <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
+        <div class="card-body" style="padding-bottom:12px">
+          <div class="sd-wrap" id="sd-wrap-sc">
+            <input id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
+            <div class="sd-list" id="sd-list-sc" style="display:none"></div>
+            <input type="hidden" id="sd-val-sc">
+          </div>
+        </div>
+      </div>
+      <div id="sc-main" style="display:none">
+        <div class="card">
+          <div class="sc-hdr">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+              <div>
+                <div class="sc-name" id="sc-name"></div>
+                <div class="sc-meta" id="sc-meta"></div>
+              </div>
+              <button class="sc-tog tog-act-off" id="sc-active-tog" onclick="toggleStudentActive()">פעיל</button>
+            </div>
+          </div>
+          <div class="acc-hdr" onclick="toggleAcc('sc-settings')">
+            <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
+          </div>
+          <div class="acc-body" id="acc-sc-settings">
+            <div class="frm-row">
+              <label>שם</label>
+              <input id="sc-edit-name" type="text">
+            </div>
+            <div class="frm-row">
+              <label>שכ"ל חודשי (ריק = ברירת מחדל)</label>
+              <input id="sc-edit-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל">
+            </div>
+            <div class="frm-row">
+              <label>סעיף</label>
+              <select id="sc-edit-section"></select>
+            </div>
+            <button class="btn" onclick="saveStudentSettings()">שמור</button>
+          </div>
+          <div class="acc-hdr" onclick="toggleAcc('sc-annual')" style="border-top:1px solid var(--border)">
+            <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
+          </div>
+          <div class="acc-body" id="acc-sc-annual">
+            <div class="year-tabs" id="sc-year-tabs"></div>
+            <div style="overflow-x:auto">
+              <table class="tbl" id="sc-annual-table">
+                <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
+                <tbody id="sc-annual-tbody"></tbody>
+                <tfoot id="sc-annual-tfoot"></tfoot>
+              </table>
+            </div>
+            <div style="margin-top:12px">
+              <div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:6px;padding:0 4px">תשלומים בשנה זו</div>
+              <div id="sc-txn-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Settings -->
+    <div id="panel-settings" class="panel">
+      <div id="settings-lock" class="card">
+        <div class="card-hdr"><h3>&#128274; כניסה להגדרות</h3></div>
+        <div class="card-body">
+          <div class="frm-row">
+            <label>סיסמת מנהל</label>
+            <input id="set-pass-input" type="password" placeholder="סיסמה" onkeydown="if(event.key==='Enter')unlockSettings()">
+          </div>
+          <div id="set-pass-err" style="color:var(--red);font-size:.82rem;margin-bottom:8px;min-height:16px"></div>
+          <button class="btn" onclick="unlockSettings()">כניסה</button>
+        </div>
+      </div>
+      <div id="settings-main" style="display:none">
+        <div class="card">
+          <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
+          <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="set-def-tuition" type="number" min="0" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
+            <button class="btn" onclick="saveDefaultTuition()">שמור</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>שינוי סיסמת מנהל</h3></div>
+          <div class="card-body">
+            <div class="frm-row"><label>סיסמה חדשה</label><input id="set-new-pass" type="password"></div>
+            <div class="frm-row"><label>אישור סיסמה</label><input id="set-new-pass2" type="password"></div>
+            <button class="btn" onclick="changeAdminPass()">שנה סיסמה</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>&#128100; תלמידים</h3>
+            <button class="btn sm" onclick="openAddStudent()">+ הוסף</button>
+          </div>
+          <div id="set-students-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>אמצעי תשלום</h3>
+            <button class="btn sm" onclick="addListItem('payment_methods')">+ הוסף</button>
+          </div>
+          <div id="set-methods-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>סעיפים</h3>
+            <button class="btn sm" onclick="addListItem('sections')">+ הוסף</button>
+          </div>
+          <div id="set-sections-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabbar">
+    <button class="tab-btn active" id="tab-dash" onclick="showPanel('dash',this)">
+      <span class="ti">&#128202;</span><span>לוח בקרה</span>
+    </button>
+    <button class="tab-btn" id="tab-txn" onclick="showPanel('txn',this)">
+      <span class="ti">&#128179;</span><span>תשלום</span>
+    </button>
+    <button class="tab-btn" id="tab-student" onclick="showPanel('student',this)">
+      <span class="ti">&#128100;</span><span>תלמיד</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="showPanel('settings',this)">
+      <span class="ti">&#9881;</span><span>הגדרות</span>
+    </button>
+  </div>
+</div>
+
+<!-- Modal: Add Student -->
+<div class="modal-overlay hidden" id="modal-add-student">
+  <div class="modal">
+    <h3>הוספת תלמיד</h3>
+    <div class="frm-row"><label>שם</label><input id="new-st-name" type="text" placeholder="שם התלמיד"></div>
+    <div class="frm-row"><label>שכ"ל חודשי (ריק = ברירת מחדל)</label><input id="new-st-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל"></div>
+    <div class="frm-row"><label>סעיף</label><select id="new-st-section"></select></div>
+    <div class="ma">
+      <button class="btn out" onclick="closeModal('modal-add-student')">ביטול</button>
+      <button class="btn" onclick="saveNewStudent()">הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm -->
+<div class="modal-overlay hidden" id="modal-confirm">
+  <div class="modal">
+    <h3 id="modal-confirm-title">אישור</h3>
+    <p id="modal-confirm-msg" style="font-size:.9rem;color:var(--text2);margin-bottom:0"></p>
+    <div class="ma">
+      <button class="btn out" onclick="closeModal('modal-confirm')">ביטול</button>
+      <button class="btn danger" id="modal-confirm-ok">אישור</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>﻿<script>
+// ===== SUPABASE =====
+var SB = supabase.createClient(
+  'https://kxbtskqobynewvnckaaz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'
+);
+
+// ===== STATE =====
+var STUDENTS = [];
+var TRANSACTIONS = [];
+var SETTINGS = {};
+var LISTS = {};
+var CUR_USER = null;
+var SYNC_INT = null;
+var DASH_YEAR = null;
+var SC_STUDENT_ID = null;
+var SC_YEAR = null;
+var _settingsUnlocked = false;
+var _confirmCb = null;
+var _dashChart = null;
+
+var YEAR_MONTHS = [8,9,10,11,0,1,2,3,4,5,6,7];
+var MONTH_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+// ===== UTILS =====
+function toast(msg, dur) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function(){ t.classList.remove('show'); }, dur || 2400);
+}
+
+function fmt(n) { return Number(n || 0).toLocaleString('he-IL'); }
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function acadYearOf(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+}
+
+function acadYearLabel(y) {
+  var m = {2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};
+  return (m[y] || y) + '–' + (m[y+1] || (y+1));
+}
+
+function monthLabel(year, month) {
+  var calYear = month >= 8 ? year : year + 1;
+  return MONTH_HE[month] + ' ' + calYear;
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+function toggleAcc(key) {
+  var body = document.getElementById('acc-' + key);
+  var icon = document.getElementById('acc-icon-' + key);
+  var open = body.classList.toggle('open');
+  icon.innerHTML = open ? '&#9650;' : '&#9660;';
+}
+
+// ===== SEARCHABLE DROPDOWN =====
+var _sdData = {};
+var _sdSelected = {};
+
+function sdSetOptions(key, opts) { _sdData[key] = opts; }
+
+function sdOpen(key) {
+  sdRenderList(key, document.getElementById('sd-input-' + key).value);
+  document.getElementById('sd-list-' + key).style.display = 'block';
+}
+
+function sdFilter(key) {
+  var q = document.getElementById('sd-input-' + key).value;
+  if (!q) { document.getElementById('sd-val-' + key).value = ''; _sdSelected[key] = null; }
+  sdRenderList(key, q);
+  document.getElementById('sd-list-' + key).style.display = 'block';
+}
+
+function sdRenderList(key, q) {
+  var list = document.getElementById('sd-list-' + key);
+  var opts = (_sdData[key] || []).filter(function(o){ return !q || o.label.indexOf(q) !== -1; });
+  list.innerHTML = opts.length
+    ? opts.map(function(o){
+        return '<div class="sd-opt" onmousedown="sdSelect(\'' + key + '\',' + o.id + ',\'' + o.label.replace(/'/g, "\\'") + '\')">' + o.label + '</div>';
+      }).join('')
+    : '<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';
+}
+
+function sdSelect(key, id, label) {
+  document.getElementById('sd-input-' + key).value = label;
+  document.getElementById('sd-val-' + key).value = id;
+  document.getElementById('sd-list-' + key).style.display = 'none';
+  _sdSelected[key] = { id: id, label: label };
+  if (key === 'sc') selectStudent(id);
+  if (key === 'txnfilter') renderTxnLog();
+}
+
+function sdBlur(key) {
+  setTimeout(function(){
+    var el = document.getElementById('sd-list-' + key);
+    if (el) el.style.display = 'none';
+  }, 160);
+}
+
+// ===== AUTH =====
+function showAuthErr(msg) {
+  document.getElementById('auth-err').textContent = msg;
+  document.getElementById('auth-spinner').style.display = 'none';
+  document.getElementById('auth-btn').disabled = false;
+}
+function startAuthLoad() {
+  document.getElementById('auth-err').textContent = '';
+  document.getElementById('auth-spinner').style.display = 'block';
+  document.getElementById('auth-btn').disabled = true;
+}
+
+async function doLogin() {
+  var user = document.getElementById('au-user').value.trim();
+  var pass = document.getElementById('au-pass').value;
+  if (!user || !pass) { showAuthErr('נא למלא שם משתמש וסיסמה'); return; }
+  startAuthLoad();
+  try {
+    var r = await SB.from('sl_users').select('*').eq('username', user).eq('password', pass).maybeSingle();
+    if (r.error) throw r.error;
+    if (!r.data) { showAuthErr('שם משתמש או סיסמה שגויים'); return; }
+    CUR_USER = r.data;
+    document.getElementById('auth-spinner').style.display = 'none';
+    enterApp();
+  } catch(e) { showAuthErr('שגיאה: ' + (e.message || e)); }
+}
+
+function doLogout() {
+  CUR_USER = null;
+  _settingsUnlocked = false;
+  if (SYNC_INT) { clearInterval(SYNC_INT); SYNC_INT = null; }
+  document.getElementById('main-app').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('au-pass').value = '';
+}
+
+async function enterApp() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  document.getElementById('nav-username').textContent = CUR_USER.username;
+  await syncAll();
+  SYNC_INT = setInterval(syncAll, 3000);
+}
+
+// ===== SYNC =====
+async function syncAll() {
+  try {
+    var results = await Promise.all([
+      SB.from('sl_students').select('*').order('name'),
+      SB.from('sl_transactions').select('*').order('date'),
+      SB.from('sl_settings').select('*'),
+      SB.from('sl_lists').select('*').order('value')
+    ]);
+    if (results[0].data) STUDENTS = results[0].data;
+    if (results[1].data) TRANSACTIONS = results[1].data;
+    if (results[2].data) {
+      SETTINGS = {};
+      results[2].data.forEach(function(r){ SETTINGS[r.key] = r.value; });
+    }
+    if (results[3].data) {
+      LISTS = {};
+      results[3].data.forEach(function(r){
+        if (!LISTS[r.category]) LISTS[r.category] = [];
+        LISTS[r.category].push({ id: r.id, value: r.value });
+      });
+    }
+    refreshUI();
+  } catch(e) { console.error('[sync]', e); }
+}
+
+function refreshUI() {
+  updateDropdowns();
+  renderDash();
+  renderTxnLog();
+  if (SC_STUDENT_ID) renderStudentCard();
+  if (_settingsUnlocked) renderSettingsLists();
+}
+
+function updateDropdowns() {
+  var active = STUDENTS.filter(function(s){ return s.active; });
+  var all = STUDENTS;
+  var toOpts = function(arr){ return arr.map(function(s){ return { id: s.id, label: s.name }; }); };
+  sdSetOptions('student', toOpts(active));
+  sdSetOptions('sc', toOpts(all));
+  sdSetOptions('txnfilter', [{ id: 0, label: 'כולם' }].concat(toOpts(all)));
+
+  var methods = LISTS['payment_methods'] || [];
+  var sel = document.getElementById('txn-method');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">-- בחר --</option>';
+  methods.forEach(function(m){ sel.innerHTML += '<option value="' + m.value + '">' + m.value + '</option>'; });
+  if (cur) sel.value = cur;
+
+  var dtEl = document.getElementById('txn-date');
+  if (!dtEl.value) dtEl.value = todayStr();
+
+  var amtEl = document.getElementById('txn-amount');
+  if (!amtEl.value) amtEl.value = SETTINGS['default_tuition'] || '2000';
+}
+
+// ===== DASHBOARD =====
+function getAcadYears() {
+  var years = {};
+  TRANSACTIONS.forEach(function(t){ years[acadYearOf(t.date)] = 1; });
+  years[acadYearOf(todayStr())] = 1;
+  return Object.keys(years).map(Number).sort();
+}
+
+function dashPrevYear() { DASH_YEAR--; renderDash(); }
+function dashNextYear() { DASH_YEAR++; renderDash(); }
+
+function renderDash() {
+  if (DASH_YEAR === null) DASH_YEAR = acadYearOf(todayStr());
+  document.getElementById('dash-year-label').textContent = acadYearLabel(DASH_YEAR);
+
+  var activeSt = STUDENTS.filter(function(s){ return s.active; });
+  var monthlyBySt = {};
+  activeSt.forEach(function(s){ monthlyBySt[s.id] = calcDistribution(s.id, DASH_YEAR); });
+
+  // Header
+  var hdr = '<tr><th>חודש</th>';
+  activeSt.forEach(function(s){ hdr += '<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis">' + s.name + '</th>'; });
+  hdr += '<th>סה"כ</th></tr>';
+  document.getElementById('dash-thead').innerHTML = hdr;
+
+  var chartTotals = [];
+  var chartLabels = [];
+  var rows = '';
+
+  YEAR_MONTHS.forEach(function(m){
+    chartLabels.push(MONTH_HE[m]);
+    var rowTotal = 0;
+    var cells = '';
+    activeSt.forEach(function(s){
+      var dist = monthlyBySt[s.id];
+      var paid = dist[m] ? dist[m].paid : 0;
+      rowTotal += paid;
+      var cls = paid > 0 ? (paid >= dist[m].req ? 'color:var(--green)' : 'color:var(--yellow)') : 'color:var(--text3)';
+      cells += '<td class="num" style="cursor:pointer;' + cls + '" onclick="showDashMonth(' + DASH_YEAR + ',' + m + ')">' + (paid ? fmt(paid) : '—') + '</td>';
+    });
+    chartTotals.push(rowTotal);
+    rows += '<tr>';
+    rows += '<td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth(' + DASH_YEAR + ',' + m + ')">' + MONTH_HE[m] + '</td>';
+    rows += cells;
+    rows += '<td class="num" style="font-weight:700">' + (rowTotal ? fmt(rowTotal) : '—') + '</td>';
+    rows += '</tr>';
+  });
+
+  var grandTotal = chartTotals.reduce(function(a, b){ return a + b; }, 0);
+  rows += '<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>';
+  activeSt.forEach(function(s){
+    var t = YEAR_MONTHS.reduce(function(acc, m){ return acc + (monthlyBySt[s.id][m] ? monthlyBySt[s.id][m].paid : 0); }, 0);
+    rows += '<td class="num">' + (t ? fmt(t) : '—') + '</td>';
+  });
+  rows += '<td class="num">' + fmt(grandTotal) + '</td></tr>';
+
+  document.getElementById('dash-tbody').innerHTML = rows;
+
+  // Chart
+  if (_dashChart) _dashChart.destroy();
+  var ctx = document.getElementById('dash-chart').getContext('2d');
+  _dashChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chartLabels,
+      datasets: [{ label: 'גבייה (&#8362;)', data: chartTotals,
+        backgroundColor: 'rgba(30,58,95,0.75)', borderColor: 'rgba(30,58,95,1)',
+        borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { font: { family: 'Heebo' }, callback: function(v){ return '₪' + v.toLocaleString(); } } },
+        x: { ticks: { font: { family: 'Heebo' }, maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+function showDashMonth(year, month) {
+  var calYear = month >= 8 ? year : year + 1;
+  document.getElementById('dash-month-title').textContent = MONTH_HE[month] + ' ' + calYear;
+  document.getElementById('dash-month-card').style.display = 'block';
+
+  var activeSt = STUDENTS.filter(function(s){ return s.active; });
+  var html = '';
+  activeSt.forEach(function(s){
+    var dist = calcDistribution(s.id, year);
+    var info = dist[month] || { paid: 0, req: 0 };
+    var balance = info.paid - info.req;
+    var cls = balance >= 0 ? 'amt-green' : (info.paid > 0 ? 'amt-yellow' : 'amt-red');
+    html += '<div class="st-row">';
+    html += '<span class="st-name">' + s.name + '</span>';
+    html += '<span class="st-paid ' + cls + '">' + fmt(info.paid) + '</span>';
+    html += '<span class="st-total">(' + fmt(info.req) + ')</span>';
+    html += '</div>';
+  });
+  document.getElementById('dash-month-list').innerHTML = html || '<div class="empty">אין נתונים</div>';
+}
+
+function closeDashMonth() { document.getElementById('dash-month-card').style.display = 'none'; }
+
+// ===== DISTRIBUTION LOGIC =====
+function calcDistribution(studentId, year) {
+  var student = STUDENTS.find(function(s){ return s.id === studentId; });
+  if (!student) return {};
+  var defT = parseInt(SETTINGS['default_tuition'] || 2000);
+  var cs = student.card_settings || {};
+  var stuT = cs.monthly_tuition ? parseInt(cs.monthly_tuition) : defT;
+
+  var txns = TRANSACTIONS.filter(function(t){
+    return t.student_id === studentId && acadYearOf(t.date) === year;
+  }).sort(function(a, b){ return a.date > b.date ? 1 : a.date < b.date ? -1 : 0; });
+
+  var pool = txns.reduce(function(sum, t){ return sum + parseFloat(t.amount); }, 0);
+
+  var result = {};
+  YEAR_MONTHS.forEach(function(m){
+    result[m] = { req: stuT, paid: 0 };
+    if (pool <= 0) return;
+    if (pool >= stuT) { result[m].paid = stuT; pool -= stuT; }
+    else { result[m].paid = Math.round(pool * 100) / 100; pool = 0; }
+  });
+  return result;
+}
+
+// ===== TRANSACTION ENTRY =====
+async function saveTxn() {
+  var stId = parseInt(document.getElementById('sd-val-student').value);
+  var date = document.getElementById('txn-date').value;
+  var amount = parseFloat(document.getElementById('txn-amount').value);
+  var method = document.getElementById('txn-method').value;
+  var note = document.getElementById('txn-note').value.trim();
+
+  if (!stId) { toast('נא לבחור תלמיד'); return; }
+  if (!date) { toast('נא לבחור תאריך'); return; }
+  if (!amount || amount <= 0) { toast('נא להזין סכום תקין'); return; }
+
+  try {
+    var r = await SB.from('sl_transactions').insert({
+      student_id: stId, date: date, amount: amount,
+      payment_method: method || null, note: note || null
+    });
+    if (r.error) throw r.error;
+    toast('תשלום נשמר ✓');
+    document.getElementById('txn-amount').value = SETTINGS['default_tuition'] || '2000';
+    document.getElementById('txn-note').value = '';
+    await syncAll();
+  } catch(e) { toast('שגיאה: ' + (e.message || e)); }
+}
+
+function renderTxnLog() {
+  var filterId = parseInt(document.getElementById('sd-val-txnfilter').value) || 0;
+  var txns = TRANSACTIONS.slice().sort(function(a, b){ return a.date > b.date ? -1 : 1; }).slice(0, 60);
+  if (filterId) txns = txns.filter(function(t){ return t.student_id === filterId; });
+
+  var html = '';
+  txns.forEach(function(t){
+    var st = STUDENTS.find(function(s){ return s.id === t.student_id; });
+    var stName = st ? st.name : '#' + t.student_id;
+    html += '<div class="txn-row">';
+    html += '<span style="color:var(--text3);font-size:.78rem">' + t.date + '</span>';
+    html += '<span style="font-weight:600">' + stName + '</span>';
+    html += '<span style="font-weight:700;color:var(--green)">₪' + fmt(t.amount) + '</span>';
+    html += '<span class="pill">' + (t.payment_method || '—') + '</span>';
+    html += '<button class="btn sm danger" onclick="deleteTxn(' + t.id + ')">✕</button>';
+    html += '</div>';
+  });
+  document.getElementById('txn-log').innerHTML = html || '<div class="empty">אין תשלומים</div>';
+}
+
+async function deleteTxn(id) {
+  showConfirm('מחיקת תשלום', 'למחוק תשלום זה?', async function(){
+    var r = await SB.from('sl_transactions').delete().eq('id', id);
+    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+    toast('תשלום נמחק');
+    await syncAll();
+  });
+}
+
+// ===== STUDENT CARD =====
+function selectStudent(id) {
+  SC_STUDENT_ID = parseInt(id);
+  SC_YEAR = null;
+  document.getElementById('sc-main').style.display = 'block';
+  renderStudentCard();
+}
+
+function renderStudentCard() {
+  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
+  if (!s) return;
+
+  document.getElementById('sc-name').textContent = s.name;
+  var cs = s.card_settings || {};
+  document.getElementById('sc-meta').textContent = cs.section || (s.active ? 'פעיל' : 'לא פעיל');
+
+  var tog = document.getElementById('sc-active-tog');
+  tog.textContent = s.active ? 'פעיל ✓' : 'לא פעיל';
+  tog.className = 'sc-tog ' + (s.active ? 'tog-act-on' : 'tog-act-off');
+
+  document.getElementById('sc-edit-name').value = s.name;
+  document.getElementById('sc-edit-tuition').value = cs.monthly_tuition || '';
+
+  var secSel = document.getElementById('sc-edit-section');
+  var sections = LISTS['sections'] || [];
+  secSel.innerHTML = '<option value="">-- ללא --</option>';
+  sections.forEach(function(sec){
+    secSel.innerHTML += '<option value="' + sec.value + '"' + (cs.section === sec.value ? ' selected' : '') + '>' + sec.value + '</option>';
+  });
+
+  renderScYearTabs();
+  renderScAnnual();
+}
+
+function renderScYearTabs() {
+  var years = {};
+  TRANSACTIONS.filter(function(t){ return t.student_id === SC_STUDENT_ID; })
+    .forEach(function(t){ years[acadYearOf(t.date)] = 1; });
+  years[acadYearOf(todayStr())] = 1;
+  var sortedYears = Object.keys(years).map(Number).sort();
+  if (!SC_YEAR || !years[SC_YEAR]) SC_YEAR = acadYearOf(todayStr());
+
+  document.getElementById('sc-year-tabs').innerHTML = sortedYears.map(function(y){
+    return '<button class="ytab' + (y === SC_YEAR ? ' active' : '') + '" onclick="scSelectYear(' + y + ')">' + acadYearLabel(y) + '</button>';
+  }).join('');
+}
+
+function scSelectYear(y) {
+  SC_YEAR = y;
+  renderScYearTabs();
+  renderScAnnual();
+}
+
+function renderScAnnual() {
+  if (!SC_STUDENT_ID || !SC_YEAR) return;
+  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
+  if (!s) return;
+  var cs = s.card_settings || {};
+  var defT = parseInt(SETTINGS['default_tuition'] || 2000);
+  var stuT = cs.monthly_tuition ? parseInt(cs.monthly_tuition) : defT;
+  var dist = calcDistribution(SC_STUDENT_ID, SC_YEAR);
+
+  var rows = '';
+  var totalReq = 0, totalPaid = 0;
+  YEAR_MONTHS.forEach(function(m){
+    var info = dist[m] || { req: stuT, paid: 0 };
+    var bal = info.paid - info.req;
+    totalReq += info.req;
+    totalPaid += info.paid;
+    var balCls = bal >= 0 ? 'amt-green' : (info.paid > 0 ? 'amt-yellow' : 'amt-red');
+    rows += '<tr>';
+    rows += '<td style="white-space:nowrap">' + monthLabel(SC_YEAR, m) + '</td>';
+    rows += '<td class="req-cell">' + fmt(info.req) + '</td>';
+    rows += '<td class="paid-cell">' + fmt(info.paid) + '</td>';
+    rows += '<td class="' + balCls + '" style="text-align:center">' + (bal >= 0 ? '+' : '') + fmt(bal) + '</td>';
+    rows += '</tr>';
+  });
+  document.getElementById('sc-annual-tbody').innerHTML = rows;
+
+  var tBal = totalPaid - totalReq;
+  var tCls = tBal >= 0 ? 'amt-green' : 'amt-red';
+  document.getElementById('sc-annual-tfoot').innerHTML =
+    '<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>' +
+    '<td class="req-cell">' + fmt(totalReq) + '</td>' +
+    '<td class="paid-cell">' + fmt(totalPaid) + '</td>' +
+    '<td class="' + tCls + '" style="text-align:center">' + (tBal >= 0 ? '+' : '') + fmt(tBal) + '</td></tr>';
+
+  var yearTxns = TRANSACTIONS.filter(function(t){
+    return t.student_id === SC_STUDENT_ID && acadYearOf(t.date) === SC_YEAR;
+  }).sort(function(a, b){ return a.date > b.date ? -1 : 1; });
+
+  var txnHtml = '';
+  yearTxns.forEach(function(t){
+    txnHtml += '<div class="txn-row">';
+    txnHtml += '<span style="color:var(--text3);font-size:.78rem">' + t.date + '</span>';
+    txnHtml += '<span style="flex:1">' + (t.note || '—') + '</span>';
+    txnHtml += '<span style="font-weight:700;color:var(--green)">₪' + fmt(t.amount) + '</span>';
+    txnHtml += '<span class="pill">' + (t.payment_method || '—') + '</span>';
+    txnHtml += '<button class="btn sm danger" onclick="deleteTxn(' + t.id + ')">✕</button>';
+    txnHtml += '</div>';
+  });
+  document.getElementById('sc-txn-list').innerHTML = txnHtml || '<div class="empty">אין תשלומים בשנה זו</div>';
+}
+
+async function toggleStudentActive() {
+  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
+  if (!s) return;
+  var r = await SB.from('sl_students').update({ active: !s.active }).eq('id', SC_STUDENT_ID);
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  toast(!s.active ? 'תלמיד הופעל' : 'תלמיד הושהה');
+  await syncAll();
+}
+
+async function saveStudentSettings() {
+  var name = document.getElementById('sc-edit-name').value.trim();
+  var tuition = document.getElementById('sc-edit-tuition').value;
+  var section = document.getElementById('sc-edit-section').value;
+  if (!name) { toast('שם חובה'); return; }
+
+  var s = STUDENTS.find(function(x){ return x.id === SC_STUDENT_ID; });
+  var cs = Object.assign({}, s ? (s.card_settings || {}) : {});
+  if (tuition) cs.monthly_tuition = parseInt(tuition); else delete cs.monthly_tuition;
+  if (section) cs.section = section; else delete cs.section;
+
+  var r = await SB.from('sl_students').update({ name: name, card_settings: cs }).eq('id', SC_STUDENT_ID);
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  toast('הגדרות נשמרו ✓');
+  await syncAll();
+}
+
+// ===== SETTINGS =====
+function showPanel(key, btn) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('panel-' + key).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (key === 'settings') {
+    document.getElementById('settings-lock').style.display = _settingsUnlocked ? 'none' : 'block';
+    document.getElementById('settings-main').style.display = _settingsUnlocked ? 'block' : 'none';
+    if (_settingsUnlocked) renderSettingsLists();
+  }
+}
+
+function unlockSettings() {
+  var pass = document.getElementById('set-pass-input').value;
+  var adminPass = SETTINGS['admin_pass'] || 'admin';
+  if (pass !== adminPass) { document.getElementById('set-pass-err').textContent = 'סיסמה שגויה'; return; }
+  _settingsUnlocked = true;
+  document.getElementById('settings-lock').style.display = 'none';
+  document.getElementById('settings-main').style.display = 'block';
+  document.getElementById('set-def-tuition').value = SETTINGS['default_tuition'] || '2000';
+  document.getElementById('set-pass-err').textContent = '';
+  renderSettingsLists();
+}
+
+async function saveDefaultTuition() {
+  var val = document.getElementById('set-def-tuition').value;
+  if (!val || isNaN(val)) { toast('ערך לא תקין'); return; }
+  var r = await SB.from('sl_settings').upsert({ key: 'default_tuition', value: val });
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  toast('נשמר ✓');
+  await syncAll();
+}
+
+async function changeAdminPass() {
+  var p1 = document.getElementById('set-new-pass').value;
+  var p2 = document.getElementById('set-new-pass2').value;
+  if (!p1) { toast('נא להזין סיסמה'); return; }
+  if (p1 !== p2) { toast('הסיסמאות אינן תואמות'); return; }
+  var r = await SB.from('sl_settings').upsert({ key: 'admin_pass', value: p1 });
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  toast('סיסמה שונתה ✓');
+  document.getElementById('set-new-pass').value = '';
+  document.getElementById('set-new-pass2').value = '';
+  await syncAll();
+}
+
+function renderSettingsLists() {
+  var stHtml = STUDENTS.map(function(s){
+    return '<div class="set-list-item">' +
+      '<span style="font-weight:600">' + s.name + '</span>' +
+      '<span class="badge ' + (s.active ? 'green' : 'gray') + '">' + (s.active ? 'פעיל' : 'לא פעיל') + '</span>' +
+      '<button class="btn sm danger" onclick="deleteStudent(' + s.id + ')">✕ מחק</button>' +
+      '</div>';
+  }).join('');
+  document.getElementById('set-students-list').innerHTML = stHtml || '<div class="empty">אין תלמידים</div>';
+  renderListItems('payment_methods', 'set-methods-list');
+  renderListItems('sections', 'set-sections-list');
+}
+
+function renderListItems(cat, elId) {
+  var items = LISTS[cat] || [];
+  var html = items.map(function(item){
+    return '<div class="set-list-item">' +
+      '<span>' + item.value + '</span>' +
+      '<button class="btn sm danger" onclick="deleteListItem(' + item.id + ')">✕</button>' +
+      '</div>';
+  }).join('');
+  document.getElementById(elId).innerHTML = html || '<div class="empty">ריק</div>';
+}
+
+async function addListItem(cat) {
+  var val = prompt('הזן ערך חדש:');
+  if (!val || !val.trim()) return;
+  var r = await SB.from('sl_lists').insert({ category: cat, value: val.trim() });
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  toast('נוסף ✓');
+  await syncAll();
+}
+
+async function deleteListItem(id) {
+  showConfirm('מחיקה', 'למחוק פריט זה?', async function(){
+    var r = await SB.from('sl_lists').delete().eq('id', id);
+    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+    toast('נמחק ✓');
+    await syncAll();
+  });
+}
+
+function openAddStudent() {
+  var secSel = document.getElementById('new-st-section');
+  var sections = LISTS['sections'] || [];
+  secSel.innerHTML = '<option value="">-- ללא --</option>';
+  sections.forEach(function(s){ secSel.innerHTML += '<option value="' + s.value + '">' + s.value + '</option>'; });
+  document.getElementById('new-st-name').value = '';
+  document.getElementById('new-st-tuition').value = '';
+  openModal('modal-add-student');
+}
+
+async function saveNewStudent() {
+  var name = document.getElementById('new-st-name').value.trim();
+  var tuition = document.getElementById('new-st-tuition').value;
+  var section = document.getElementById('new-st-section').value;
+  if (!name) { toast('שם חובה'); return; }
+  var cs = {};
+  if (tuition) cs.monthly_tuition = parseInt(tuition);
+  if (section) cs.section = section;
+  var r = await SB.from('sl_students').insert({ name: name, active: true, card_settings: cs });
+  if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+  closeModal('modal-add-student');
+  toast('תלמיד נוסף ✓');
+  await syncAll();
+}
+
+async function deleteStudent(id) {
+  var s = STUDENTS.find(function(x){ return x.id === id; });
+  showConfirm('מחיקת תלמיד', 'למחוק את ' + (s ? s.name : 'תלמיד') + '?\nכל התשלומים שלו יימחקו גם כן.', async function(){
+    var r = await SB.from('sl_students').delete().eq('id', id);
+    if (r.error) { toast('שגיאה: ' + r.error.message); return; }
+    if (SC_STUDENT_ID === id) { SC_STUDENT_ID = null; document.getElementById('sc-main').style.display = 'none'; document.getElementById('sd-input-sc').value = ''; document.getElementById('sd-val-sc').value = ''; }
+    toast('תלמיד נמחק');
+    await syncAll();
+  });
+}
+
+// ===== CONFIRM MODAL =====
+function showConfirm(title, msg, cb) {
+  document.getElementById('modal-confirm-title').textContent = title;
+  document.getElementById('modal-confirm-msg').textContent = msg;
+  _confirmCb = cb;
+  document.getElementById('modal-confirm-ok').onclick = function(){
+    closeModal('modal-confirm');
+    if (_confirmCb) _confirmCb();
+  };
+  openModal('modal-confirm');
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+  document.getElementById('au-user').focus();
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/schar-limud/sw.js').catch(function(){});
+}
+</script>
+</body>
+</html>

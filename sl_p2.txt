@@ -1,0 +1,265 @@
+﻿<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-title">שכר לימוד</div>
+    <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
+    <div class="auth-field">
+      <label>שם משתמש</label>
+      <input id="au-user" type="text" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label>סיסמה</label>
+      <input id="au-pass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="doLogin()">כניסה</button>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-spinner" id="auth-spinner"></div>
+  </div>
+</div>
+
+<div id="main-app" class="hidden">
+  <div id="topnav">
+    <span class="nav-title">שכר לימוד</span>
+    <span class="nav-user">
+      <span id="nav-username"></span>
+      <button class="nav-logout" onclick="doLogout()">יציאה</button>
+    </span>
+  </div>
+
+  <div id="app">
+    <!-- Panel 1: Dashboard -->
+    <div id="panel-dash" class="panel active">
+      <div class="card">
+        <div class="card-hdr">
+          <h3>לוח שנתי</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn sm out" onclick="dashPrevYear()">&#9664;</button>
+            <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
+            <button class="btn sm out" onclick="dashNextYear()">&#9654;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl" id="dash-table">
+            <thead id="dash-thead"></thead>
+            <tbody id="dash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
+        <div class="card-body"><canvas id="dash-chart" height="160"></canvas></div>
+      </div>
+      <div class="card" id="dash-month-card" style="display:none">
+        <div class="card-hdr">
+          <h3 id="dash-month-title">פירוט חודש</h3>
+          <button class="btn sm out" onclick="closeDashMonth()">סגור</button>
+        </div>
+        <div id="dash-month-list"></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Transaction Entry -->
+    <div id="panel-txn" class="panel">
+      <div class="card">
+        <div class="card-hdr"><h3>הוספת תשלום</h3></div>
+        <div class="card-body">
+          <div class="frm-row">
+            <label>תלמיד</label>
+            <div class="sd-wrap" id="sd-wrap-student">
+              <input id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
+              <div class="sd-list" id="sd-list-student" style="display:none"></div>
+              <input type="hidden" id="sd-val-student">
+            </div>
+          </div>
+          <div class="frm-row">
+            <label>תאריך</label>
+            <input id="txn-date" type="date">
+          </div>
+          <div class="frm-row">
+            <label>סכום (&#8362;)</label>
+            <input id="txn-amount" type="number" min="0" step="1" placeholder="0">
+          </div>
+          <div class="frm-row">
+            <label>אמצעי תשלום</label>
+            <select id="txn-method">
+              <option value="">-- בחר --</option>
+            </select>
+          </div>
+          <div class="frm-row">
+            <label>הערה</label>
+            <textarea id="txn-note" placeholder="הערה אופציונלית..."></textarea>
+          </div>
+          <button class="btn" style="width:100%" onclick="saveTxn()">שמור תשלום</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <h3>יומן תשלומים</h3>
+          <div class="sd-wrap" id="sd-wrap-txnfilter" style="width:160px">
+            <input id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
+            <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
+            <input type="hidden" id="sd-val-txnfilter">
+          </div>
+        </div>
+        <div id="txn-log"></div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Student Card -->
+    <div id="panel-student" class="panel">
+      <div class="card">
+        <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
+        <div class="card-body" style="padding-bottom:12px">
+          <div class="sd-wrap" id="sd-wrap-sc">
+            <input id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
+            <div class="sd-list" id="sd-list-sc" style="display:none"></div>
+            <input type="hidden" id="sd-val-sc">
+          </div>
+        </div>
+      </div>
+      <div id="sc-main" style="display:none">
+        <div class="card">
+          <div class="sc-hdr">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+              <div>
+                <div class="sc-name" id="sc-name"></div>
+                <div class="sc-meta" id="sc-meta"></div>
+              </div>
+              <button class="sc-tog tog-act-off" id="sc-active-tog" onclick="toggleStudentActive()">פעיל</button>
+            </div>
+          </div>
+          <div class="acc-hdr" onclick="toggleAcc('sc-settings')">
+            <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
+          </div>
+          <div class="acc-body" id="acc-sc-settings">
+            <div class="frm-row">
+              <label>שם</label>
+              <input id="sc-edit-name" type="text">
+            </div>
+            <div class="frm-row">
+              <label>שכ"ל חודשי (ריק = ברירת מחדל)</label>
+              <input id="sc-edit-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל">
+            </div>
+            <div class="frm-row">
+              <label>סעיף</label>
+              <select id="sc-edit-section"></select>
+            </div>
+            <button class="btn" onclick="saveStudentSettings()">שמור</button>
+          </div>
+          <div class="acc-hdr" onclick="toggleAcc('sc-annual')" style="border-top:1px solid var(--border)">
+            <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
+          </div>
+          <div class="acc-body" id="acc-sc-annual">
+            <div class="year-tabs" id="sc-year-tabs"></div>
+            <div style="overflow-x:auto">
+              <table class="tbl" id="sc-annual-table">
+                <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
+                <tbody id="sc-annual-tbody"></tbody>
+                <tfoot id="sc-annual-tfoot"></tfoot>
+              </table>
+            </div>
+            <div style="margin-top:12px">
+              <div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:6px;padding:0 4px">תשלומים בשנה זו</div>
+              <div id="sc-txn-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Settings -->
+    <div id="panel-settings" class="panel">
+      <div id="settings-lock" class="card">
+        <div class="card-hdr"><h3>&#128274; כניסה להגדרות</h3></div>
+        <div class="card-body">
+          <div class="frm-row">
+            <label>סיסמת מנהל</label>
+            <input id="set-pass-input" type="password" placeholder="סיסמה" onkeydown="if(event.key==='Enter')unlockSettings()">
+          </div>
+          <div id="set-pass-err" style="color:var(--red);font-size:.82rem;margin-bottom:8px;min-height:16px"></div>
+          <button class="btn" onclick="unlockSettings()">כניסה</button>
+        </div>
+      </div>
+      <div id="settings-main" style="display:none">
+        <div class="card">
+          <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
+          <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="set-def-tuition" type="number" min="0" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
+            <button class="btn" onclick="saveDefaultTuition()">שמור</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>שינוי סיסמת מנהל</h3></div>
+          <div class="card-body">
+            <div class="frm-row"><label>סיסמה חדשה</label><input id="set-new-pass" type="password"></div>
+            <div class="frm-row"><label>אישור סיסמה</label><input id="set-new-pass2" type="password"></div>
+            <button class="btn" onclick="changeAdminPass()">שנה סיסמה</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>&#128100; תלמידים</h3>
+            <button class="btn sm" onclick="openAddStudent()">+ הוסף</button>
+          </div>
+          <div id="set-students-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>אמצעי תשלום</h3>
+            <button class="btn sm" onclick="addListItem('payment_methods')">+ הוסף</button>
+          </div>
+          <div id="set-methods-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>סעיפים</h3>
+            <button class="btn sm" onclick="addListItem('sections')">+ הוסף</button>
+          </div>
+          <div id="set-sections-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabbar">
+    <button class="tab-btn active" id="tab-dash" onclick="showPanel('dash',this)">
+      <span class="ti">&#128202;</span><span>לוח בקרה</span>
+    </button>
+    <button class="tab-btn" id="tab-txn" onclick="showPanel('txn',this)">
+      <span class="ti">&#128179;</span><span>תשלום</span>
+    </button>
+    <button class="tab-btn" id="tab-student" onclick="showPanel('student',this)">
+      <span class="ti">&#128100;</span><span>תלמיד</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="showPanel('settings',this)">
+      <span class="ti">&#9881;</span><span>הגדרות</span>
+    </button>
+  </div>
+</div>
+
+<!-- Modal: Add Student -->
+<div class="modal-overlay hidden" id="modal-add-student">
+  <div class="modal">
+    <h3>הוספת תלמיד</h3>
+    <div class="frm-row"><label>שם</label><input id="new-st-name" type="text" placeholder="שם התלמיד"></div>
+    <div class="frm-row"><label>שכ"ל חודשי (ריק = ברירת מחדל)</label><input id="new-st-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל"></div>
+    <div class="frm-row"><label>סעיף</label><select id="new-st-section"></select></div>
+    <div class="ma">
+      <button class="btn out" onclick="closeModal('modal-add-student')">ביטול</button>
+      <button class="btn" onclick="saveNewStudent()">הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm -->
+<div class="modal-overlay hidden" id="modal-confirm">
+  <div class="modal">
+    <h3 id="modal-confirm-title">אישור</h3>
+    <p id="modal-confirm-msg" style="font-size:.9rem;color:var(--text2);margin-bottom:0"></p>
+    <div class="ma">
+      <button class="btn out" onclick="closeModal('modal-confirm')">ביטול</button>
+      <button class="btn danger" id="modal-confirm-ok">אישור</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
