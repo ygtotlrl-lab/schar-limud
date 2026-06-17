@@ -24,6 +24,7 @@ git push https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/schar-limud.git main
 1. node --check לפני כל push — חובה
 2. GitHub חוסם push עם טוקן גולמי בקובץ — שמור תמיד כ-TOKEN_IN_MEMORY
 3. Supabase: כל טבלה חדשה — GRANT מפורש ל-anon, authenticated, service_role + RLS
+4. **מקור אמת יחיד = `index.html`** — זה הקובץ ש-Pages מגיש ושאליו מצביע `start_url` במניפסט. כל עדכון קוד נכנס לכאן בלבד. אסור ליצור קבצי HTML כפולים של האפליקציה. (אין כאן מנגנון אוטו-אפדייט פנימי — בניגוד ל-yoman-avoda.)
 
 ## הגדרת Supabase — פעם ראשונה בלבד
 הרץ supabase-setup.sql ב-Supabase SQL Editor:
