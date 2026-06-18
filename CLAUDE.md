@@ -3,12 +3,12 @@
 ## סביבת עבודה
 - ריפו: `ygtotlrl-lab/schar-limud`
 - Pages: `https://ygtotlrl-lab.github.io/schar-limud/`
-- טוקן: `TOKEN_IN_MEMORY`
+- טוקן: מאוחסן ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ. `git push`/`clone` מושכים אותו אוטומטית דרך GCM.
 - קובץ ראשי: `index.html`
 - Supabase: `kxbtskqobynewvnckaaz`
 
 ## התחלת סשן — חובה
-git clone https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/schar-limud.git /tmp/schar-limud
+git clone https://github.com/ygtotlrl-lab/schar-limud.git /tmp/schar-limud
 cd /tmp/schar-limud
 git config user.email "dev@yeshiva.com" && git config user.name "Dev"
 
@@ -18,7 +18,7 @@ node --check index.html (extract scripts and check syntax)
 ## Push
 cd /tmp/schar-limud
 git add . && git commit -m "תיאור השינוי"
-git push https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/schar-limud.git main
+git push origin main   # GCM מספק את הטוקן אוטומטית — אין טוקן בפקודה
 
 ## כללים קריטיים
 1. node --check לפני כל push — חובה
