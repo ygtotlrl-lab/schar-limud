@@ -1,4 +1,4 @@
-const CACHE = 'schar-limud-v2';
+const CACHE = 'schar-limud-v3';
 const ASSETS = [
   '/schar-limud/',
   '/schar-limud/index.html',
@@ -15,6 +15,9 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
+});
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
