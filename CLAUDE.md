@@ -56,6 +56,7 @@ git push -u origin <שם-הענף>   # דחיפה לענף העבודה — לא
 3. Supabase: כל טבלה חדשה — GRANT מפורש ל-anon, authenticated, service_role + RLS
 4. **מקור אמת יחיד = `index.html`** — זה הקובץ ש-Pages מגיש ושאליו מצביע `start_url` במניפסט. כל עדכון קוד נכנס לכאן בלבד. אסור ליצור קבצי HTML כפולים של האפליקציה. (אין כאן מנגנון אוטו-אפדייט פנימי — בניגוד ל-yoman-avoda. אין יותר sl_p1/p2/p3.txt + gen.py — index.html נערך ישירות. הרענון הוא דרך ה-Service Worker.)
 5. **`sl_transactions` = כספים** — מחיקה היא soft-delete (`deleted=true`+`deleted_at`+`deleted_by`), לעולם לא מחיקה פיזית. כל שליפה/סיכום מסננת `deleted=false`. הוספה ממלאת `created_by`.
+6. **`sl_students` = גם soft-delete** (יולי 2026, `migrations/002`) — `deleteStudent` הריץ `DELETE` פיזי, ועל `sl_transactions` מוגדר `ON DELETE CASCADE`: מחיקת תלמיד השמידה פיזית את **כל היסטוריית הכספים שלו**, בעקיפה של כלל 5. מעכשיו התלמיד מסומן `deleted=true` והתנועות נשארות. הסינון נעשה בנקודה אחת — ב-`syncAll`, בדיוק כמו `TRANSACTIONS` — ולכן כל 11 הקוראים של `STUDENTS` מקבלים אותו אוטומטית. **אין להחזיר `.delete()` על אף אחת מהטבלאות האלה.**
 
 ## הגדרת Supabase — פעם ראשונה בלבד
 הרץ supabase-setup.sql ב-Supabase SQL Editor:
