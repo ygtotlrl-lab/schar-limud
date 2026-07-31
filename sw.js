@@ -1,4 +1,4 @@
-const CACHE = 'schar-limud-v5';
+const CACHE = 'schar-limud-v6';
 const ASSETS = [
   '/schar-limud/',
   '/schar-limud/index.html',
