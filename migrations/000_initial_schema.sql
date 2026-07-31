@@ -12,8 +12,9 @@
 --    כל שינוי סכימה נכנס כאן **וגם** כמיגרציית שדרוג נפרדת (00N_) עבור
 --    התקנות קיימות. הרצה חוזרת בטוחה — הכל IF NOT EXISTS.
 --
--- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים.
--- שתיהן כבר מוכלות כאן, ולכן על התקנה טרייה הן no-op.
+-- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
+-- 003 = ON DELETE RESTRICT על sl_transactions. שלושתן כבר מוכלות כאן,
+-- ולכן על התקנה טרייה הן no-op.
 -- ============================================================
 
 -- ---------- משתמשים ----------
@@ -59,9 +60,11 @@ CREATE INDEX IF NOT EXISTS sl_students_active_idx
 
 -- ---------- תשלומים (כספים) ----------
 -- מחיקה = soft-delete בלבד. כל שליפה/סיכום באפליקציה מסננת deleted = false.
+-- ON DELETE RESTRICT (ראה migrations/003) — רשת ביטחון ברמת המסד: מחיקה
+-- פיזית של תלמיד תיכשל במקום להשמיד בשקט את כל היסטוריית הכספים שלו.
 CREATE TABLE IF NOT EXISTS public.sl_transactions (
   id             SERIAL PRIMARY KEY,
-  student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE CASCADE,
+  student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE RESTRICT,
   date           DATE NOT NULL,
   amount         NUMERIC(10,2) NOT NULL,
   payment_method TEXT,
@@ -86,6 +89,38 @@ CREATE POLICY "sl_transactions_all" ON public.sl_transactions FOR ALL USING (tru
 CREATE INDEX IF NOT EXISTS sl_transactions_active_idx
   ON public.sl_transactions (student_id, date)
   WHERE deleted = false;
+-- שדרוג התקנה שנוצרה לפני 003 (האילוץ הישן היה ON DELETE CASCADE).
+-- מדלג בשקט אם יש תנועות יתומות — הרצה חוזרת של הקובץ הזה לא אמורה
+-- להיכשל אף פעם. לטיפול מלא ביתומים ראה migrations/003.
+DO $$
+DECLARE
+  orphans bigint;
+  del_action text;
+BEGIN
+  SELECT confdeltype INTO del_action
+  FROM pg_constraint
+  WHERE conname = 'sl_transactions_student_id_fkey'
+    AND conrelid = 'public.sl_transactions'::regclass;
+
+  IF del_action IS NULL OR del_action = 'r' THEN RETURN; END IF;
+
+  SELECT COUNT(*) INTO orphans
+  FROM public.sl_transactions t
+  LEFT JOIN public.sl_students s ON s.id = t.student_id
+  WHERE t.student_id IS NOT NULL AND s.id IS NULL;
+
+  IF orphans > 0 THEN
+    RAISE NOTICE 'דילוג על החלפת האילוץ ל-RESTRICT: % תנועות יתומות. ראה migrations/003.', orphans;
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.sl_transactions
+    DROP CONSTRAINT IF EXISTS sl_transactions_student_id_fkey;
+  ALTER TABLE public.sl_transactions
+    ADD CONSTRAINT sl_transactions_student_id_fkey
+    FOREIGN KEY (student_id) REFERENCES public.sl_students(id)
+    ON DELETE RESTRICT;
+END $$;
 
 -- ---------- הגדרות ----------
 CREATE TABLE IF NOT EXISTS public.sl_settings (

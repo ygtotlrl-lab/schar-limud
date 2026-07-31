@@ -26,20 +26,7 @@ CREATE INDEX IF NOT EXISTS sl_students_active_idx
 -- ============================================================
 
 -- ============================================================
--- אופציונלי — רשת ביטחון נוספת (לא חובה לתיקון, החלט בנפרד):
--- כל עוד ה-FK מוגדר ON DELETE CASCADE, כל DELETE ידני על sl_students
--- (מה-Dashboard, מ-SQL Editor, או מקוד עתידי) עדיין ישמיד את התנועות.
--- הקוד כבר לא מריץ DELETE, אז זה לא נדרש — אבל אם תרצה לחסום את זה
--- ברמת המסד, הרץ את הבלוק הבא. שים לב: הוא מחליף את האילוץ הקיים,
--- ולכן כדאי לוודא קודם שאין תנועות יתומות:
---   SELECT COUNT(*) FROM public.sl_transactions t
---   LEFT JOIN public.sl_students s ON s.id = t.student_id
---   WHERE s.id IS NULL;
---
--- ALTER TABLE public.sl_transactions
---   DROP CONSTRAINT IF EXISTS sl_transactions_student_id_fkey;
--- ALTER TABLE public.sl_transactions
---   ADD CONSTRAINT sl_transactions_student_id_fkey
---   FOREIGN KEY (student_id) REFERENCES public.sl_students(id)
---   ON DELETE RESTRICT;
+-- רשת הביטחון שהייתה כאן כבלוק מוער — ON DELETE RESTRICT במקום CASCADE —
+-- הועברה למיגרציה משלה: **migrations/003_transactions_fk_restrict.sql**,
+-- עם בדיקת יתומים לפני ההחלפה. אין להריץ אותה מכאן.
 -- ============================================================
