@@ -13,7 +13,7 @@
 <!-- גרסאות CDN נעוצות במדויק. עם `@2` / `@4` צפים כל שחרור בצד הספק נכנס
      לאפליקציה בלי שינוי קוד ובלי בדיקה — ושבירה כזו אינה ניתנת לשחזור
      (הקוד בריפו לא השתנה). @2.39.3 הוא בדיוק מה שרץ בייצור ב-hanhala. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -85,12 +85,6 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:999px;font-size:.84rem;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
-#update-banner{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);width:calc(100% - 24px);max-width:500px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.15);padding:10px 14px;display:flex;align-items:center;gap:10px;direction:rtl;z-index:10000;opacity:0;pointer-events:none;transition:all .3s}
-#update-banner.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
-.ub-text{flex:1;font-size:.86rem;font-weight:600;color:#1a1a1a}
-.ub-btn{background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
-.ub-btn:hover{background:#8dd95e}
-.ub-close{background:none;border:none;color:var(--text3);font-size:1rem;cursor:pointer;padding:2px 6px;line-height:1}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-overlay.hidden{display:none}
@@ -396,12 +390,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
   </div>
 </div>
 
-<div id="toast"></div>
-<div id="update-banner">
-  <span class="ub-text">🔄 גרסה חדשה זמינה</span>
-  <button class="ub-btn" onclick="slApplyUpdate()">עדכן עכשיו</button>
-  <button class="ub-close" onclick="slDismissUpdate()" aria-label="סגור">✕</button>
-</div>﻿<script>
+<div id="toast"></div>﻿<script>
 var SB = supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg');
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -410,10 +399,53 @@ var _settingsUnlocked=false,_confirmCb=null,_dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
-// ===== מצב רשת: זיהוי ניתוק + הודעה ברורה (האפליקציה מקוונת בעיצובה) =====
-function slIsNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1; }
-function slGuardOnline(){ if(!navigator.onLine){ toast('אין חיבור לאינטרנט — הפעולה לא בוצעה',3000); return false; } return true; }
-function slErrMsg(e){ return slIsNetErr(e) ? 'אין חיבור לאינטרנט — הפעולה לא בוצעה' : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+// ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
+// **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
+// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
+var MSG_SAVED     = '✅ נשמר בהצלחה';
+var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
+// ===== מצב רשת: עוזרים משותפים לשלושת הפרויקטים (סבב 8) =====
+// אותם שמות ואותה התנהגות ב-hanhala-ruchanit, schar-limud ו-yoman-avoda:
+// isNetErr / withTimeout / guardOnline / errMsg. אין לתת להם קידומת פרויקט.
+function isNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1||m.indexOf('timeout')!==-1; }
+function guardOnline(){ if(!navigator.onLine){ toast(MSG_OFFLINE,3000); return false; } return true; }
+function errMsg(e){ return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+// ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
+// localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
+// הזו כל קורא של getDeviceId מפיל את הפונקציה שקראה לו.
+var _deviceIdMem = null;
+function getDeviceId() {
+  try {
+    var id = localStorage.getItem('sl_device_id');
+    if (!id) {
+      id = _deviceIdMem || _randDeviceId();
+      localStorage.setItem('sl_device_id', id);
+    }
+    _deviceIdMem = id;
+    return id;
+  } catch (e) {
+    if (!_deviceIdMem) _deviceIdMem = _randDeviceId();
+    return _deviceIdMem;
+  }
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+// supabase-js לא מטיל timeout משלו: ברשת "חצי מחוברת" ה-fetch לא מצליח ולא
+// נכשל, והממתין נתקע לנצח. עוטפים בו פעולות שהמשתמש ממתין להן.
+var NET_TIMEOUT_MS = 8000;
+function withTimeout(p, ms){
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise(function(_, reject){
+      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
+    })
+  ]);
+}
 // ===== נעילה אוטומטית אחרי 5 דקות ללא פעילות =====
 var _slLockTimer=null, SL_LOCK_MS=5*60*1000;
 function slResetLock(){ clearTimeout(_slLockTimer); if(!CUR_USER) return; _slLockTimer=setTimeout(function(){ toast('🔒 ננעל עקב חוסר פעילות'); doLogout(); }, SL_LOCK_MS); }
@@ -717,7 +749,7 @@ async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
   if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
   startAuthLoad();
-  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr('שם משתמש או סיסמה שגויים');return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
+  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr(MSG_BAD_LOGIN);return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
 }
 function doLogout(){CUR_USER=null;_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 async function enterApp(){document.getElementById('auth-screen').classList.add('hidden');document.getElementById('main-app').classList.remove('hidden');document.getElementById('nav-username').textContent=CUR_USER.username;await syncAll();SYNC_INT=setInterval(syncAll,3000);slResetLock();slMaybeDailyBackup();}
@@ -748,7 +780,7 @@ async function syncAll(){
     }else if(_syncWarned){_syncWarned=false;toast('☁️ החיבור לנתונים חזר');}
   }catch(e){
     console.error('[sync]',e);
-    if(!_syncWarned){_syncWarned=true;toast(slErrMsg(e),4000);}
+    if(!_syncWarned){_syncWarned=true;toast(errMsg(e),4000);}
   }finally{_syncBusy=false;}
 }
 function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();if(_settingsUnlocked)renderSettingsLists();}
@@ -805,10 +837,10 @@ function calcDistribution(sid,year){
 }
 
 async function saveTxn(){
-  if(!slGuardOnline())return;
+  if(!guardOnline())return;
   var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
-  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)});if(r.error)throw r.error;toast('תשלום נשמר ✓');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(slErrMsg(e));}
+  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)});if(r.error)throw r.error;toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(errMsg(e));}
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
@@ -816,7 +848,7 @@ function renderTxnLog(){
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
   document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+esc(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
-async function deleteTxn(id){if(!slGuardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(slErrMsg(r.error));return;}toast('תשלום נמחק');await syncAll();}catch(e){toast(slErrMsg(e));}});}
+async function deleteTxn(id){if(!guardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}toast('✅ תשלום נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
@@ -846,32 +878,32 @@ function renderScAnnual(){
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
   document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="flex:1">'+esc(t.note||'—')+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+esc(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
-async function toggleStudentActive(){if(!slGuardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
-async function saveStudentSettings(){if(!slGuardOnline())return;
+async function toggleStudentActive(){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
+async function saveStudentSettings(){if(!guardOnline())return;
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;}),cs=Object.assign({},(s&&s.card_settings)||{});
   if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
-  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('הגדרות נשמרו ✓');await syncAll();
+  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ הגדרות נשמרו');await syncAll();
 }
 
 function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
 function unlockSettings(){var p=document.getElementById('set-pass-input').value;if(p!==(SETTINGS['admin_pass']||'admin')){document.getElementById('set-pass-err').textContent='סיסמה שגויה';return;}_settingsUnlocked=true;document.getElementById('settings-lock').style.display='none';document.getElementById('settings-main').style.display='block';document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';document.getElementById('set-pass-err').textContent='';renderSettingsLists();}
-async function saveDefaultTuition(){if(!slGuardOnline())return;var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נשמר ✓');await syncAll();}
-async function changeAdminPass(){if(!slGuardOnline())return;var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('סיסמה שונתה ✓');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
+async function saveDefaultTuition(){if(!guardOnline())return;var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast(MSG_SAVED);await syncAll();}
+async function changeAdminPass(){if(!guardOnline())return;var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ סיסמה שונתה');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
 function renderSettingsLists(){
   document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span><span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){return'<div class="set-list-item"><span>'+esc(i.value)+'</span><button class="btn sm danger" onclick="deleteListItem('+i.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">ריק</div>';}
-async function addListItem(cat){if(!slGuardOnline())return;var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נוסף ✓');await syncAll();}
-async function deleteListItem(id){if(!slGuardOnline())return;showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נמחק ✓');await syncAll();});}
+async function addListItem(cat){if(!guardOnline())return;var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נוסף');await syncAll();}
+async function deleteListItem(id){if(!guardOnline())return;showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
 function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!slGuardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('תלמיד נוסף ✓');await syncAll();}
+async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
-async function deleteStudent(id){if(!slGuardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(slErrMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('תלמיד נמחק');await syncAll();}catch(e){toast(slErrMsg(e));}});}
+async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
 document.addEventListener('DOMContentLoaded',async function(){
   document.getElementById('auth-screen').classList.remove('hidden');
@@ -880,39 +912,83 @@ document.addEventListener('DOMContentLoaded',async function(){
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
 });
 // ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
-var _slSwReg=null,_slRefreshing=false,_slUserClickedUpdate=false;
-function slShowUpdateBanner(){var b=document.getElementById('update-banner');if(b)b.classList.add('show');}
-function slDismissUpdate(){var b=document.getElementById('update-banner');if(b)b.classList.remove('show');}
-function slApplyUpdate(){
-  _slUserClickedUpdate=true;
-  if(_slSwReg&&_slSwReg.waiting){
-    _slSwReg.waiting.postMessage({type:'SKIP_WAITING'});
-    // fallback: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
-    setTimeout(function(){if(!_slRefreshing){_slRefreshing=true;location.reload();}},1500);
-  }else{
-    // ה-sw כאן מפעיל skipWaiting אוטומטית ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
-    _slRefreshing=true;location.reload();
-  }
-}
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',function(){
-    // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
-    if(!_slUserClickedUpdate||_slRefreshing)return;
-    _slRefreshing=true;location.reload();
-  });
-  navigator.serviceWorker.register('/schar-limud/sw.js').then(function(reg){
-    _slSwReg=reg;
-    if(reg.waiting&&navigator.serviceWorker.controller)slShowUpdateBanner();
-    reg.addEventListener('updatefound',function(){
-      var nw=reg.installing;
-      if(!nw)return;
-      nw.addEventListener('statechange',function(){
-        if((nw.state==='installed'||nw.state==='activated')&&navigator.serviceWorker.controller)slShowUpdateBanner();
-      });
+// דפוס משותף לשלושת הפרויקטים (סבב 8), לפי המימוש של hanhala-ruchanit:
+// הבאנר נבנה ב-JS (לא HTML סטטי), מזהה 'sw-update-banner', שמירה על עותק
+// יחיד, והתנאי הוא **state === 'installed' בלבד**. 'activated' היה מיותר —
+// statechange עובר תמיד דרך 'installed' לפני 'activating'/'activated',
+// והמאזין מחובר כבר ב-updatefound, כך שהוא תופס את המעבר הראשון.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    var userAccepted = false;
+    var reloaded = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
+      if (!userAccepted || reloaded) return;
+      reloaded = true;
+      location.reload();
     });
-    reg.update().catch(function(){});
-    setInterval(function(){reg.update().catch(function(){});},30*60*1000);
-  }).catch(function(){});
+
+    function showUpdateBanner(reg) {
+      if (document.getElementById('sw-update-banner')) return;
+      var bar = document.createElement('div');
+      bar.id = 'sw-update-banner';
+      bar.setAttribute('dir', 'rtl');
+      bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:16px;font-family:Heebo,sans-serif;font-size:.86rem;font-weight:600;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.15);direction:rtl;white-space:nowrap;max-width:calc(100vw - 24px)';
+      var txt = document.createElement('span');
+      txt.textContent = '🔄 גרסה חדשה זמינה';
+      var btn = document.createElement('button');
+      btn.textContent = 'עדכן עכשיו';
+      btn.style.cssText = 'background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer';
+      btn.onclick = function() {
+        userAccepted = true;
+        btn.disabled = true;
+        btn.textContent = 'מעדכן...';
+        if (reg.waiting) {
+          reg.waiting.postMessage({type: 'SKIP_WAITING'});
+          // גיבוי: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
+          setTimeout(function() {
+            if (!reloaded) { reloaded = true; location.reload(); }
+          }, 1500);
+        } else {
+          // ה-sw מפעיל skipWaiting ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
+          reloaded = true;
+          location.reload();
+        }
+      };
+      var close = document.createElement('button');
+      close.textContent = '✕';
+      close.setAttribute('aria-label', 'סגור');
+      close.style.cssText = 'background:none;border:none;color:#8a97b0;font-size:1rem;cursor:pointer;padding:2px 6px;font-family:Heebo,sans-serif;line-height:1';
+      close.onclick = function() { if (bar.parentNode) bar.parentNode.removeChild(bar); };
+      bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
+      document.body.appendChild(bar);
+    }
+
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      console.log('SW registered:', reg.scope);
+
+      if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
+
+      reg.addEventListener('updatefound', function() {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function() {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(reg);
+          }
+        });
+      });
+
+      function checkForUpdate() {
+        try { reg.update().catch(function() {}); } catch (e) {}
+      }
+      checkForUpdate();
+      setInterval(checkForUpdate, 30 * 60 * 1000);
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
+  });
 }
 </script>
 </body>
