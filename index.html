@@ -10,8 +10,11 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <meta name="theme-color" content="#c9a84c">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<!-- גרסאות CDN נעוצות במדויק. עם `@2` / `@4` צפים כל שחרור בצד הספק נכנס
+     לאפליקציה בלי שינוי קוד ובלי בדיקה — ושבירה כזו אינה ניתנת לשחזור
+     (הקוד בריפו לא השתנה). @2.39.3 הוא בדיוק מה שרץ בייצור ב-hanhala. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:rtl;min-height:100vh;font-size:14px}
@@ -82,12 +85,6 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:999px;font-size:.84rem;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
-#update-banner{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);width:calc(100% - 24px);max-width:500px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.15);padding:10px 14px;display:flex;align-items:center;gap:10px;direction:rtl;z-index:10000;opacity:0;pointer-events:none;transition:all .3s}
-#update-banner.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
-.ub-text{flex:1;font-size:.86rem;font-weight:600;color:#1a1a1a}
-.ub-btn{background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
-.ub-btn:hover{background:#8dd95e}
-.ub-close{background:none;border:none;color:var(--text3);font-size:1rem;cursor:pointer;padding:2px 6px;line-height:1}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-overlay.hidden{display:none}
@@ -393,12 +390,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
   </div>
 </div>
 
-<div id="toast"></div>
-<div id="update-banner">
-  <span class="ub-text">🔄 גרסה חדשה זמינה</span>
-  <button class="ub-btn" onclick="slApplyUpdate()">עדכן עכשיו</button>
-  <button class="ub-close" onclick="slDismissUpdate()" aria-label="סגור">✕</button>
-</div>﻿<script>
+<div id="toast"></div>﻿<script>
 var SB = supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg');
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -407,26 +399,90 @@ var _settingsUnlocked=false,_confirmCb=null,_dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
-// ===== מצב רשת: זיהוי ניתוק + הודעה ברורה (האפליקציה מקוונת בעיצובה) =====
-function slIsNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1; }
-function slGuardOnline(){ if(!navigator.onLine){ toast('אין חיבור לאינטרנט — הפעולה לא בוצעה',3000); return false; } return true; }
-function slErrMsg(e){ return slIsNetErr(e) ? 'אין חיבור לאינטרנט — הפעולה לא בוצעה' : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+// ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
+// **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
+// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
+var MSG_SAVED     = '✅ נשמר בהצלחה';
+var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
+// ===== מצב רשת: עוזרים משותפים לשלושת הפרויקטים (סבב 8) =====
+// אותם שמות ואותה התנהגות ב-hanhala-ruchanit, schar-limud ו-yoman-avoda:
+// isNetErr / withTimeout / guardOnline / errMsg. אין לתת להם קידומת פרויקט.
+function isNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1||m.indexOf('timeout')!==-1; }
+function guardOnline(){ if(!navigator.onLine){ toast(MSG_OFFLINE,3000); return false; } return true; }
+function errMsg(e){ return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+// ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
+// localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
+// הזו כל קורא של getDeviceId מפיל את הפונקציה שקראה לו.
+var _deviceIdMem = null;
+function getDeviceId() {
+  try {
+    var id = localStorage.getItem('sl_device_id');
+    if (!id) {
+      id = _deviceIdMem || _randDeviceId();
+      localStorage.setItem('sl_device_id', id);
+    }
+    _deviceIdMem = id;
+    return id;
+  } catch (e) {
+    if (!_deviceIdMem) _deviceIdMem = _randDeviceId();
+    return _deviceIdMem;
+  }
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+// supabase-js לא מטיל timeout משלו: ברשת "חצי מחוברת" ה-fetch לא מצליח ולא
+// נכשל, והממתין נתקע לנצח. עוטפים בו פעולות שהמשתמש ממתין להן.
+var NET_TIMEOUT_MS = 8000;
+function withTimeout(p, ms){
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise(function(_, reject){
+      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
+    })
+  ]);
+}
 // ===== נעילה אוטומטית אחרי 5 דקות ללא פעילות =====
 var _slLockTimer=null, SL_LOCK_MS=5*60*1000;
 function slResetLock(){ clearTimeout(_slLockTimer); if(!CUR_USER) return; _slLockTimer=setTimeout(function(){ toast('🔒 ננעל עקב חוסר פעילות'); doLogout(); }, SL_LOCK_MS); }
 ['click','keydown','touchstart','scroll'].forEach(function(ev){ document.addEventListener(ev, function(){ if(CUR_USER) slResetLock(); }, {passive:true}); });
+// ===== בריחת HTML =====
+// כל ערך שמקורו בנתוני משתמש (שם תלמיד, הערה, ערך רשימה, אמצעי תשלום)
+// נכנס ל-innerHTML גולמי בכל הקובץ. שם עם גרש שובר מחרוזות ושם עם מרכאה
+// כפולה שובר מאפיינים — בדיוק סוג הבאג שהשבית את בחירת התלמיד. **כל הזרקה
+// של ערך כזה ל-HTML חייבת לעבור כאן.**
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
 // ===== גיבוי יומי (פעם ביום) של טבלאות sl_* לתוך kv_backup =====
+// הדגל נכתב **אחרי** הצלחה, לא לפניה: קודם הוא נכתב ראשון, ולכן גיבוי שנכשל
+// (רשת / kv_backup חסרה / הרשאה) דילג בשקט על יממה שלמה. _slBackupRunning
+// מחליף את תפקיד הנעילה שהכתיבה-מראש מילאה. **אין להחזיר את הכתיבה-מראש.**
+var _slBackupRunning=false;
 async function slMaybeDailyBackup(){
+  if(_slBackupRunning) return;
+  var today=new Date().toISOString().slice(0,10);
+  try{ if(localStorage.getItem('sl_last_backup')===today) return; }catch(eL){}
+  _slBackupRunning=true;
   try{
-    var today=new Date().toISOString().slice(0,10);
-    if(localStorage.getItem('sl_last_backup')===today) return;
-    localStorage.setItem('sl_last_backup',today);
-    var tables=['sl_students','sl_transactions','sl_settings','sl_lists'];
+    var tables=['sl_students','sl_transactions','sl_settings','sl_lists'],ok=true;
     for(var i=0;i<tables.length;i++){
       var res=await SB.from(tables[i]).select('*');
-      if(!res.error && Array.isArray(res.data)){ await SB.from('kv_backup').insert({key:tables[i], value:JSON.stringify(res.data)}); }
+      if(!res||res.error||!Array.isArray(res.data)){ ok=false; continue; }
+      // supabase-js לא זורק — גם ה-insert חייב בדיקת error מפורשת
+      var ins=await SB.from('kv_backup').insert({key:tables[i], value:JSON.stringify(res.data)});
+      if(!ins||ins.error) ok=false;
     }
+    if(ok){ try{ localStorage.setItem('sl_last_backup',today); }catch(eS){} }
+    else console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בכניסה הבאה');
   }catch(e){ /* גיבוי לא חוסם ולא שובר */ }
+  _slBackupRunning=false;
 }
 function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -440,45 +496,200 @@ var _sdData={},_sdSelected={};
 function sdSetOptions(k,o){_sdData[k]=o;}
 function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).style.display='block';}
 function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).style.display='block';}
-function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" onmousedown="sdSelect(\''+k+'\','+x.id+',\''+x.label.replace(/'/g,"\\'")+'\'">'+x.label+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
+// ה-label עבר עד היום דרך `replace(/'/g,"\\'")` לתוך מחרוזת JS שבתוך מאפיין
+// onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
+// data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
+// קוד JS מורכב בתוך HTML.
+function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
+function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),parseInt(el.getAttribute('data-id')),el.getAttribute('data-label'));}
 function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
-// ===== SETUP SQL (for display only — run manually in Supabase SQL Editor) =====
-var SETUP_SQL_TEXT = "-- שכר לימוד — Supabase setup\n" +
-"-- הרץ בכרטיסייה חדשה: https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new\n\n" +
-"CREATE TABLE IF NOT EXISTS public.sl_users (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW());\n" +
-"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_users TO anon,authenticated,service_role;\n" +
-"GRANT USAGE,SELECT ON SEQUENCE public.sl_users_id_seq TO anon,authenticated,service_role;\n" +
-"ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;\n" +
-"CREATE POLICY \"sl_users_all\" ON public.sl_users FOR ALL USING (true) WITH CHECK (true);\n\n" +
-"CREATE TABLE IF NOT EXISTS public.sl_students (id SERIAL PRIMARY KEY, name TEXT NOT NULL, active BOOLEAN DEFAULT true, handled_months JSONB DEFAULT '[]', card_settings JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW());\n" +
-"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_students TO anon,authenticated,service_role;\n" +
-"GRANT USAGE,SELECT ON SEQUENCE public.sl_students_id_seq TO anon,authenticated,service_role;\n" +
-"ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;\n" +
-"CREATE POLICY \"sl_students_all\" ON public.sl_students FOR ALL USING (true) WITH CHECK (true);\n\n" +
-"CREATE TABLE IF NOT EXISTS public.sl_transactions (id SERIAL PRIMARY KEY, student_id INTEGER REFERENCES public.sl_students(id) ON DELETE CASCADE, date DATE NOT NULL, amount NUMERIC(10,2) NOT NULL, payment_method TEXT, note TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\n" +
-"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_transactions TO anon,authenticated,service_role;\n" +
-"GRANT USAGE,SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon,authenticated,service_role;\n" +
-"ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;\n" +
-"CREATE POLICY \"sl_transactions_all\" ON public.sl_transactions FOR ALL USING (true) WITH CHECK (true);\n\n" +
-"CREATE TABLE IF NOT EXISTS public.sl_settings (key TEXT PRIMARY KEY, value TEXT);\n" +
-"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_settings TO anon,authenticated,service_role;\n" +
-"ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY;\n" +
-"CREATE POLICY \"sl_settings_all\" ON public.sl_settings FOR ALL USING (true) WITH CHECK (true);\n\n" +
-"CREATE TABLE IF NOT EXISTS public.sl_lists (id SERIAL PRIMARY KEY, category TEXT NOT NULL, value TEXT NOT NULL);\n" +
-"GRANT SELECT,INSERT,UPDATE,DELETE ON public.sl_lists TO anon,authenticated,service_role;\n" +
-"GRANT USAGE,SELECT ON SEQUENCE public.sl_lists_id_seq TO anon,authenticated,service_role;\n" +
-"ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY;\n" +
-"CREATE POLICY \"sl_lists_all\" ON public.sl_lists FOR ALL USING (true) WITH CHECK (true);\n\n" +
-"INSERT INTO public.sl_users(username,password) VALUES('admin','admin') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_settings(key,value) VALUES('default_tuition','2000') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_settings(key,value) VALUES('admin_pass','admin') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','מזומן') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','העברה בנקאית') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('payment_methods','ביט') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה א') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה ב') ON CONFLICT DO NOTHING;\n" +
-"INSERT INTO public.sl_lists(category,value) VALUES('sections','כיתה ג') ON CONFLICT DO NOTHING;";
+// ===== סכימת ההגדרה הראשונית =====
+// מקור האמת היחיד לסכימה הוא migrations/000_initial_schema.sql. מסך ההגדרה
+// מושך אותו ב-fetch מאותו origin; המחרוזת המוטבעת שלמטה היא **גיבוי בלבד**
+// לשעה שה-fetch נכשל, והיא מיוצרת אוטומטית מאותו קובץ.
+// tools/sync-setup-sql.py נכשל אם השניים נפרדו — הרץ אותו לפני כל push.
+var SETUP_SQL_URL = './migrations/000_initial_schema.sql';
+// >>> BEGIN GENERATED SQL FALLBACK — נוצר מ-migrations/000_initial_schema.sql, לא לערוך ביד
+var SETUP_SQL_FALLBACK = `-- ============================================================
+-- שכר לימוד — הסכימה המלאה (מקור האמת היחיד)
+-- שם המיגרציה: initial_schema
+-- הרץ ב-Supabase SQL Editor (פרויקט kxbtskqobynewvnckaaz):
+--   https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new
+-- ============================================================
+-- ⚠️ הקובץ הזה הוא **מקור האמת היחיד** לסכימה.
+--    * \`supabase-setup.sql\` בשורש הריפו מפנה לכאן ואינו מכיל סכימה.
+--    * \`index.html\` מושך את הקובץ הזה ב-fetch ומציג אותו במסך ההגדרה
+--      הראשונית; יש בו עותק-גיבוי מוטבע לשעת חירום בלבד, ו-
+--      \`tools/check-sql-sync.py\` נכשל אם הוא נפרד מהקובץ הזה.
+--    כל שינוי סכימה נכנס כאן **וגם** כמיגרציית שדרוג נפרדת (00N_) עבור
+--    התקנות קיימות. הרצה חוזרת בטוחה — הכל IF NOT EXISTS.
+--
+-- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
+-- 003 = ON DELETE RESTRICT על sl_transactions. שלושתן כבר מוכלות כאן,
+-- ולכן על התקנה טרייה הן no-op.
+-- ============================================================
+
+-- ---------- משתמשים ----------
+CREATE TABLE IF NOT EXISTS public.sl_users (
+  id         SERIAL PRIMARY KEY,
+  username   TEXT UNIQUE NOT NULL,
+  password   TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
+ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sl_users_all" ON public.sl_users;
+CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK (true);
+
+-- ---------- תלמידים ----------
+-- מחיקה כאן היא soft-delete בלבד (ראה migrations/002): מחיקה פיזית הפעילה
+-- ON DELETE CASCADE על sl_transactions והשמידה את כל היסטוריית הכספים.
+CREATE TABLE IF NOT EXISTS public.sl_students (
+  id             SERIAL PRIMARY KEY,
+  name           TEXT NOT NULL,
+  active         BOOLEAN DEFAULT true,
+  handled_months JSONB DEFAULT '[]',
+  card_settings  JSONB DEFAULT '{}',
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  deleted        BOOLEAN NOT NULL DEFAULT false,
+  deleted_at     TIMESTAMPTZ,
+  deleted_by     TEXT
+);
+-- שדרוג התקנה שנוצרה לפני 002
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated, service_role;
+ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sl_students_all" ON public.sl_students;
+CREATE POLICY "sl_students_all" ON public.sl_students FOR ALL USING (true) WITH CHECK (true);
+CREATE INDEX IF NOT EXISTS sl_students_active_idx
+  ON public.sl_students (name)
+  WHERE deleted = false;
+
+-- ---------- תשלומים (כספים) ----------
+-- מחיקה = soft-delete בלבד. כל שליפה/סיכום באפליקציה מסננת deleted = false.
+-- ON DELETE RESTRICT (ראה migrations/003) — רשת ביטחון ברמת המסד: מחיקה
+-- פיזית של תלמיד תיכשל במקום להשמיד בשקט את כל היסטוריית הכספים שלו.
+CREATE TABLE IF NOT EXISTS public.sl_transactions (
+  id             SERIAL PRIMARY KEY,
+  student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE RESTRICT,
+  date           DATE NOT NULL,
+  amount         NUMERIC(10,2) NOT NULL,
+  payment_method TEXT,
+  note           TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  created_by     TEXT,
+  deleted        BOOLEAN NOT NULL DEFAULT false,
+  deleted_at     TIMESTAMPTZ,
+  deleted_by     TEXT
+);
+-- שדרוג התקנה שנוצרה לפני 001
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS deleted_by TEXT,
+  ADD COLUMN IF NOT EXISTS created_by TEXT;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
+ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sl_transactions_all" ON public.sl_transactions;
+CREATE POLICY "sl_transactions_all" ON public.sl_transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE INDEX IF NOT EXISTS sl_transactions_active_idx
+  ON public.sl_transactions (student_id, date)
+  WHERE deleted = false;
+-- שדרוג התקנה שנוצרה לפני 003 (האילוץ הישן היה ON DELETE CASCADE).
+-- מדלג בשקט אם יש תנועות יתומות — הרצה חוזרת של הקובץ הזה לא אמורה
+-- להיכשל אף פעם. לטיפול מלא ביתומים ראה migrations/003.
+DO $$
+DECLARE
+  orphans bigint;
+  del_action text;
+BEGIN
+  SELECT confdeltype INTO del_action
+  FROM pg_constraint
+  WHERE conname = 'sl_transactions_student_id_fkey'
+    AND conrelid = 'public.sl_transactions'::regclass;
+
+  IF del_action IS NULL OR del_action = 'r' THEN RETURN; END IF;
+
+  SELECT COUNT(*) INTO orphans
+  FROM public.sl_transactions t
+  LEFT JOIN public.sl_students s ON s.id = t.student_id
+  WHERE t.student_id IS NOT NULL AND s.id IS NULL;
+
+  IF orphans > 0 THEN
+    RAISE NOTICE 'דילוג על החלפת האילוץ ל-RESTRICT: % תנועות יתומות. ראה migrations/003.', orphans;
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.sl_transactions
+    DROP CONSTRAINT IF EXISTS sl_transactions_student_id_fkey;
+  ALTER TABLE public.sl_transactions
+    ADD CONSTRAINT sl_transactions_student_id_fkey
+    FOREIGN KEY (student_id) REFERENCES public.sl_students(id)
+    ON DELETE RESTRICT;
+END $$;
+
+-- ---------- הגדרות ----------
+CREATE TABLE IF NOT EXISTS public.sl_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_settings TO anon, authenticated, service_role;
+ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sl_settings_all" ON public.sl_settings;
+CREATE POLICY "sl_settings_all" ON public.sl_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- ---------- רשימות (אמצעי תשלום, שיעורות) ----------
+CREATE TABLE IF NOT EXISTS public.sl_lists (
+  id       SERIAL PRIMARY KEY,
+  category TEXT NOT NULL,
+  value    TEXT NOT NULL
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_lists TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.sl_lists_id_seq TO anon, authenticated, service_role;
+ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sl_lists_all" ON public.sl_lists;
+CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK (true);
+
+-- ---------- נתוני פתיחה ----------
+INSERT INTO public.sl_users (username, password) VALUES ('admin', 'admin') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_settings (key, value) VALUES ('default_tuition', '2000') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_settings (key, value) VALUES ('admin_pass', 'admin') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'מזומן') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'העברה בנקאית') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'ביט') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה א') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ב') ON CONFLICT DO NOTHING;
+INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ג') ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- שחזור רשומה שנמחקה בטעות (הרצה ידנית לפי id):
+--   UPDATE public.sl_transactions SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<TXN_ID>;
+--   UPDATE public.sl_students     SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<STUDENT_ID>;
+-- ============================================================
+`;
+// <<< END GENERATED SQL FALLBACK
+
+// מושך את מקור האמת; נופל לעותק המוטבע רק אם המשיכה נכשלה, ואז מסמן זאת
+// בראש הטקסט כדי שלא תורץ סכימה ישנה בלי שאיש ידע.
+async function loadSetupSql(){
+  try{
+    var r = await fetch(SETUP_SQL_URL, {cache:'no-store'});
+    if(r && r.ok){
+      var t = await r.text();
+      // שמירה מפני דף שגיאה של Pages שחוזר עם 200
+      if(t && t.indexOf('sl_transactions') !== -1) return t;
+    }
+  }catch(e){}
+  return '-- \u26a0\ufe0f \u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05d4\u05d9\u05d4 \u05dc\u05de\u05e9\u05d5\u05da \u05d0\u05ea migrations/000_initial_schema.sql \u2014 \u05de\u05d5\u05e6\u05d2 \u05e2\u05d5\u05ea\u05e7 \u05d2\u05d9\u05d1\u05d5\u05d9 \u05de\u05d5\u05d8\u05d1\u05e2.\n'
+       + '-- \u05d5\u05d3\u05d0 \u05de\u05d5\u05dc \u05d4\u05e7\u05d5\u05d1\u05e5 \u05e9\u05d1\u05e8\u05d9\u05e4\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e8\u05e6\u05d4.\n\n' + SETUP_SQL_FALLBACK;
+}
 
 var _setupPollInt = null;
 
@@ -513,7 +724,9 @@ function showSetupScreen(){
     '<textarea id="setup-sql-ta" readonly dir="ltr" style="width:100%;height:130px;font-size:.6rem;direction:ltr;text-align:left;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;resize:none;background:#f8f9fb;color:#2d3748"></textarea>'+
     '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8594; &#9313; פתח SQL Editor &#8594; &#9314; הדבק והרץ (F5) &#8594; &#9315; חזור לכאן</div>'+
     '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
-  document.getElementById('setup-sql-ta').value = SETUP_SQL_TEXT;
+  var ta = document.getElementById('setup-sql-ta');
+  ta.value = '-- טוען את הסכימה...';
+  loadSetupSql().then(function(t){ var el = document.getElementById('setup-sql-ta'); if(el) el.value = t; });
   startSetupPoll();
 }
 
@@ -536,18 +749,39 @@ async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
   if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
   startAuthLoad();
-  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr('שם משתמש או סיסמה שגויים');return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
+  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr(MSG_BAD_LOGIN);return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
 }
 function doLogout(){CUR_USER=null;_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 async function enterApp(){document.getElementById('auth-screen').classList.add('hidden');document.getElementById('main-app').classList.remove('hidden');document.getElementById('nav-username').textContent=CUR_USER.username;await syncAll();SYNC_INT=setInterval(syncAll,3000);slResetLock();slMaybeDailyBackup();}
+// שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
+// **חובה לשחרר ב-finally** ולא בסוף ה-try — כשל אחד שמשאיר את הדגל דלוק
+// מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
+var _syncBusy=false,_syncWarned=false;
+var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 async function syncAll(){
+  if(_syncBusy) return;
+  _syncBusy=true;
   try{
     var rs=await Promise.all([SB.from('sl_students').select('*').order('name'),SB.from('sl_transactions').select('*').order('date'),SB.from('sl_settings').select('*'),SB.from('sl_lists').select('*').order('value')]);
-    if(rs[0].data)STUDENTS=rs[0].data;if(rs[1].data)TRANSACTIONS=rs[1].data.filter(function(t){return !t.deleted;});
-    if(rs[2].data){SETTINGS={};rs[2].data.forEach(function(r){SETTINGS[r.key]=r.value;});}
-    if(rs[3].data){LISTS={};rs[3].data.forEach(function(r){if(!LISTS[r.category])LISTS[r.category]=[];LISTS[r.category].push({id:r.id,value:r.value});});}
+    // supabase-js לא זורק בכשל — הוא מחזיר {data:null,error:{...}}. לכן ה-catch
+    // כאן היה קוד מת, ושאילתה שנכשלה השאירה נתונים ישנים על המסך בלי משוב.
+    var errs=[];
+    for(var i=0;i<rs.length;i++){ if(!rs[i]||rs[i].error) errs.push(SYNC_LABELS[i]); }
+    // רק תוצאות תקינות נכתבות — מקטגוריה שנכשלה עדיף להשאיר את הישן מלרוקן
+    if(rs[0]&&!rs[0].error&&rs[0].data)STUDENTS=rs[0].data.filter(function(s){return !s.deleted;});
+    if(rs[1]&&!rs[1].error&&rs[1].data)TRANSACTIONS=rs[1].data.filter(function(t){return !t.deleted;});
+    if(rs[2]&&!rs[2].error&&rs[2].data){SETTINGS={};rs[2].data.forEach(function(r){SETTINGS[r.key]=r.value;});}
+    if(rs[3]&&!rs[3].error&&rs[3].data){LISTS={};rs[3].data.forEach(function(r){if(!LISTS[r.category])LISTS[r.category]=[];LISTS[r.category].push({id:r.id,value:r.value});});}
     refreshUI();
-  }catch(e){console.error('[sync]',e);}
+    // אזהרה פעם אחת ולא כל 3 שניות, וטוסט התאוששות כשהחיבור חוזר
+    if(errs.length){
+      console.error('[sync] נכשלו:',errs.join(', '));
+      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג עלול להיות לא מעודכן',4000);}
+    }else if(_syncWarned){_syncWarned=false;toast('☁️ החיבור לנתונים חזר');}
+  }catch(e){
+    console.error('[sync]',e);
+    if(!_syncWarned){_syncWarned=true;toast(errMsg(e),4000);}
+  }finally{_syncBusy=false;}
 }
 function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();if(_settingsUnlocked)renderSettingsLists();}
 function updateDropdowns(){
@@ -555,7 +789,7 @@ function updateDropdowns(){
   var toOpts=function(a){return a.map(function(s){return{id:s.id,label:s.name};});};
   sdSetOptions('student',toOpts(act));sdSetOptions('sc',toOpts(STUDENTS));sdSetOptions('txnfilter',[{id:0,label:'כולם'}].concat(toOpts(STUDENTS)));
   var ml=LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
-  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+m.value+'">'+m.value+'</option>';});if(cur)sel.value=cur;
+  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.value)+'">'+esc(m.value)+'</option>';});if(cur)sel.value=cur;
   var dt=document.getElementById('txn-date');if(!dt.value)dt.value=todayStr();
   var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'2000';
 }
@@ -567,7 +801,7 @@ function renderDash(){
   document.getElementById('dash-year-label').textContent=acadYearLabel(DASH_YEAR);
   var act=STUDENTS.filter(function(s){return s.active;}),dist={};
   act.forEach(function(s){dist[s.id]=calcDistribution(s.id,DASH_YEAR);});
-  var hdr='<tr><th>חודש</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.name+'</th>';});hdr+='<th>סה"כ</th></tr>';
+  var hdr='<tr><th>חודש</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+'</th>';});hdr+='<th>סה"כ</th></tr>';
   document.getElementById('dash-thead').innerHTML=hdr;
   var cD=[],rows='';
   YEAR_MONTHS.forEach(function(m){
@@ -588,7 +822,7 @@ function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=MONTH_HE[month]+' '+(month>=8?year:year+1);
   document.getElementById('dash-month-card').style.display='block';
   var act=STUDENTS.filter(function(s){return s.active;}),html='',tot=0;
-  act.forEach(function(s){var d=calcDistribution(s.id,year),i=d[month]||{paid:0,req:0},b=i.paid-i.req;tot+=i.paid;var c=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';html+='<div class="st-row"><span class="st-name">'+s.name+'</span><span class="st-paid '+c+'">'+fmt(i.paid)+'</span><span class="st-total">('+fmt(i.req)+')</span></div>';});
+  act.forEach(function(s){var d=calcDistribution(s.id,year),i=d[month]||{paid:0,req:0},b=i.paid-i.req;tot+=i.paid;var c=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(i.paid)+'</span><span class="st-total">('+fmt(i.req)+')</span></div>';});
   html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">סה"כ: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
@@ -603,18 +837,18 @@ function calcDistribution(sid,year){
 }
 
 async function saveTxn(){
-  if(!slGuardOnline())return;
+  if(!guardOnline())return;
   var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
-  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)});if(r.error)throw r.error;toast('תשלום נשמר ✓');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(slErrMsg(e));}
+  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)});if(r.error)throw r.error;toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(errMsg(e));}
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+t.date+'</span><span style="font-weight:600">'+(st?st.name:'#'+t.student_id)+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+esc(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
-async function deleteTxn(id){if(!slGuardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(slErrMsg(r.error));return;}toast('תשלום נמחק');await syncAll();}catch(e){toast(slErrMsg(e));}});}
+async function deleteTxn(id){if(!guardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}toast('✅ תשלום נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
@@ -624,7 +858,7 @@ function renderStudentCard(){
   var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   var ss=document.getElementById('sc-edit-section');ss.innerHTML='<option value="">-- ללא --</option>';
-  (LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+sec.value+'"'+(cs.section===sec.value?' selected':'')+'>'+sec.value+'</option>';});
+  (LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+esc(sec.value)+'"'+(cs.section===sec.value?' selected':'')+'>'+esc(sec.value)+'</option>';});
   renderScYearTabs();renderScAnnual();
 }
 function renderScYearTabs(){
@@ -642,32 +876,34 @@ function renderScAnnual(){
   document.getElementById('sc-annual-tbody').innerHTML=rows;
   var tb=tP-tR;document.getElementById('sc-annual-tfoot').innerHTML='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+t.date+'</span><span style="flex:1">'+(t.note||'—')+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="flex:1">'+esc(t.note||'—')+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+esc(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
-async function toggleStudentActive(){if(!slGuardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
-async function saveStudentSettings(){if(!slGuardOnline())return;
+async function toggleStudentActive(){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
+async function saveStudentSettings(){if(!guardOnline())return;
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;}),cs=Object.assign({},(s&&s.card_settings)||{});
   if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
-  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('הגדרות נשמרו ✓');await syncAll();
+  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ הגדרות נשמרו');await syncAll();
 }
 
 function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
 function unlockSettings(){var p=document.getElementById('set-pass-input').value;if(p!==(SETTINGS['admin_pass']||'admin')){document.getElementById('set-pass-err').textContent='סיסמה שגויה';return;}_settingsUnlocked=true;document.getElementById('settings-lock').style.display='none';document.getElementById('settings-main').style.display='block';document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';document.getElementById('set-pass-err').textContent='';renderSettingsLists();}
-async function saveDefaultTuition(){if(!slGuardOnline())return;var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נשמר ✓');await syncAll();}
-async function changeAdminPass(){if(!slGuardOnline())return;var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('סיסמה שונתה ✓');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
+async function saveDefaultTuition(){if(!guardOnline())return;var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast(MSG_SAVED);await syncAll();}
+async function changeAdminPass(){if(!guardOnline())return;var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ סיסמה שונתה');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
 function renderSettingsLists(){
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){return'<div class="set-list-item"><span style="font-weight:600">'+s.name+'</span><span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span><span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
-function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){return'<div class="set-list-item"><span>'+i.value+'</span><button class="btn sm danger" onclick="deleteListItem('+i.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">ריק</div>';}
-async function addListItem(cat){if(!slGuardOnline())return;var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נוסף ✓');await syncAll();}
-async function deleteListItem(id){if(!slGuardOnline())return;showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('נמחק ✓');await syncAll();});}
-function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+s.value+'">'+s.value+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!slGuardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('תלמיד נוסף ✓');await syncAll();}
-async function deleteStudent(id){if(!slGuardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? כל התשלומים יימחקו גם כן.',async function(){var r=await SB.from('sl_students').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('תלמיד נמחק');await syncAll();});}
+function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){return'<div class="set-list-item"><span>'+esc(i.value)+'</span><button class="btn sm danger" onclick="deleteListItem('+i.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">ריק</div>';}
+async function addListItem(cat){if(!guardOnline())return;var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נוסף');await syncAll();}
+async function deleteListItem(id){if(!guardOnline())return;showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
+function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';openModal('modal-add-student');}
+async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
+// מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
+// sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
+async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
 document.addEventListener('DOMContentLoaded',async function(){
   document.getElementById('auth-screen').classList.remove('hidden');
@@ -676,39 +912,83 @@ document.addEventListener('DOMContentLoaded',async function(){
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
 });
 // ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
-var _slSwReg=null,_slRefreshing=false,_slUserClickedUpdate=false;
-function slShowUpdateBanner(){var b=document.getElementById('update-banner');if(b)b.classList.add('show');}
-function slDismissUpdate(){var b=document.getElementById('update-banner');if(b)b.classList.remove('show');}
-function slApplyUpdate(){
-  _slUserClickedUpdate=true;
-  if(_slSwReg&&_slSwReg.waiting){
-    _slSwReg.waiting.postMessage({type:'SKIP_WAITING'});
-    // fallback: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
-    setTimeout(function(){if(!_slRefreshing){_slRefreshing=true;location.reload();}},1500);
-  }else{
-    // ה-sw כאן מפעיל skipWaiting אוטומטית ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
-    _slRefreshing=true;location.reload();
-  }
-}
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',function(){
-    // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
-    if(!_slUserClickedUpdate||_slRefreshing)return;
-    _slRefreshing=true;location.reload();
-  });
-  navigator.serviceWorker.register('/schar-limud/sw.js').then(function(reg){
-    _slSwReg=reg;
-    if(reg.waiting&&navigator.serviceWorker.controller)slShowUpdateBanner();
-    reg.addEventListener('updatefound',function(){
-      var nw=reg.installing;
-      if(!nw)return;
-      nw.addEventListener('statechange',function(){
-        if((nw.state==='installed'||nw.state==='activated')&&navigator.serviceWorker.controller)slShowUpdateBanner();
-      });
+// דפוס משותף לשלושת הפרויקטים (סבב 8), לפי המימוש של hanhala-ruchanit:
+// הבאנר נבנה ב-JS (לא HTML סטטי), מזהה 'sw-update-banner', שמירה על עותק
+// יחיד, והתנאי הוא **state === 'installed' בלבד**. 'activated' היה מיותר —
+// statechange עובר תמיד דרך 'installed' לפני 'activating'/'activated',
+// והמאזין מחובר כבר ב-updatefound, כך שהוא תופס את המעבר הראשון.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    var userAccepted = false;
+    var reloaded = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
+      if (!userAccepted || reloaded) return;
+      reloaded = true;
+      location.reload();
     });
-    reg.update().catch(function(){});
-    setInterval(function(){reg.update().catch(function(){});},30*60*1000);
-  }).catch(function(){});
+
+    function showUpdateBanner(reg) {
+      if (document.getElementById('sw-update-banner')) return;
+      var bar = document.createElement('div');
+      bar.id = 'sw-update-banner';
+      bar.setAttribute('dir', 'rtl');
+      bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:16px;font-family:Heebo,sans-serif;font-size:.86rem;font-weight:600;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.15);direction:rtl;white-space:nowrap;max-width:calc(100vw - 24px)';
+      var txt = document.createElement('span');
+      txt.textContent = '🔄 גרסה חדשה זמינה';
+      var btn = document.createElement('button');
+      btn.textContent = 'עדכן עכשיו';
+      btn.style.cssText = 'background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer';
+      btn.onclick = function() {
+        userAccepted = true;
+        btn.disabled = true;
+        btn.textContent = 'מעדכן...';
+        if (reg.waiting) {
+          reg.waiting.postMessage({type: 'SKIP_WAITING'});
+          // גיבוי: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
+          setTimeout(function() {
+            if (!reloaded) { reloaded = true; location.reload(); }
+          }, 1500);
+        } else {
+          // ה-sw מפעיל skipWaiting ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
+          reloaded = true;
+          location.reload();
+        }
+      };
+      var close = document.createElement('button');
+      close.textContent = '✕';
+      close.setAttribute('aria-label', 'סגור');
+      close.style.cssText = 'background:none;border:none;color:#8a97b0;font-size:1rem;cursor:pointer;padding:2px 6px;font-family:Heebo,sans-serif;line-height:1';
+      close.onclick = function() { if (bar.parentNode) bar.parentNode.removeChild(bar); };
+      bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
+      document.body.appendChild(bar);
+    }
+
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      console.log('SW registered:', reg.scope);
+
+      if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
+
+      reg.addEventListener('updatefound', function() {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function() {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner(reg);
+          }
+        });
+      });
+
+      function checkForUpdate() {
+        try { reg.update().catch(function() {}); } catch (e) {}
+      }
+      checkForUpdate();
+      setInterval(checkForUpdate, 30 * 60 * 1000);
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
+  });
 }
 </script>
 </body>
