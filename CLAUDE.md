@@ -163,6 +163,18 @@ https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql
   אותו URL בפועל.
 - **CONTEXT.md** נוצר (לא היה — לשני האחרים יש).
 
+## סבב תיקונים 9 (אוגוסט 2026, `sw.js` v9) — מטמון חוצה-פרויקטים
+**שלוש האפליקציות חיות על אותו origin (ygtotlrl-lab.github.io) וחולקות CacheStorage אחד.**
+ה-activate של כל SW מחק כל מטמון שאינו ה-`CACHE_NAME` שלו — כלומר כל אפליקציה השמידה
+את המטמונים של אחיותיה (אומת חי: ביקור ביומן עבודה רוקן את מטמון hanhala מ-11 רשומות
+ל-0, כולל סקריפטי ה-CDN). התיקון — בשלושת הפרויקטים באותו סבב:
+- **סינון מחיקה לפי קידומת:** ב-activate נמחקים רק מטמונים שמתחילים ב-`'schar-limud-'`
+  (וכן `'hanhala-ruchanit-'`/`'yoman-avoda-'` אצל האחיות). **אין להסיר את הסינון** —
+  כל SW חדש על ה-origin הזה חייב לסנן לפי קידומת משלו.
+- ב-hanhala וב-yoman נוספה גם `ensureCdnCached()` (ריפוי עצמי של סקריפטי CDN חסרים).
+  **כאן אין רשימת CDN ב-`sw.js`** — ה-fetch handler שומר כל תגובת GET בזמן-ריצה,
+  כולל סקריפטים חוצי-origin — ולכן לא נדרש מנגנון כזה.
+
 ## הרנסי בדיקה (בסשן, לא בריפו)
 `test_round6_esc.js` (`esc` + `sdRenderList` מול שם עם גרש/מרכאה/תגית),
 `test_round6_sync.js` (`syncAll` מול Supabase מדומה: שגיאות, שומר חפיפה, דגל הגיבוי).
