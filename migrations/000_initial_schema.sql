@@ -13,8 +13,9 @@
 --    התקנות קיימות. הרצה חוזרת בטוחה — הכל IF NOT EXISTS.
 --
 -- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
--- 003 = ON DELETE RESTRICT על sl_transactions. שלושתן כבר מוכלות כאן,
--- ולכן על התקנה טרייה הן no-op.
+-- 003 = ON DELETE RESTRICT על sl_transactions, 004 = חודש הצטרפות/עזיבה
+-- לתלמיד (והסרת handled_months). כולן כבר מוכלות כאן, ולכן על התקנה
+-- טרייה הן no-op.
 -- ============================================================
 
 -- ---------- משתמשים ----------
@@ -33,11 +34,15 @@ CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK 
 -- ---------- תלמידים ----------
 -- מחיקה כאן היא soft-delete בלבד (ראה migrations/002): מחיקה פיזית הפעילה
 -- ON DELETE CASCADE על sl_transactions והשמידה את כל היסטוריית הכספים.
+-- start_month / end_month (ראה migrations/004): טווח החודשים שבו התלמיד
+-- פעיל, בפורמט 'YYYY-MM'. החיוב מחושב רק בתוך הטווח (כולל); start_month
+-- ריק = כל השנה, כמו לפני 004. end_month ריק = עדיין פעיל.
 CREATE TABLE IF NOT EXISTS public.sl_students (
   id             SERIAL PRIMARY KEY,
   name           TEXT NOT NULL,
   active         BOOLEAN DEFAULT true,
-  handled_months JSONB DEFAULT '[]',
+  start_month    TEXT,
+  end_month      TEXT,
   card_settings  JSONB DEFAULT '{}',
   created_at     TIMESTAMPTZ DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
@@ -49,6 +54,42 @@ ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+-- שדרוג התקנה שנוצרה לפני 004
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS start_month TEXT,
+  ADD COLUMN IF NOT EXISTS end_month   TEXT;
+-- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
+-- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
+ALTER TABLE public.sl_students
+  DROP COLUMN IF EXISTS handled_months;
+-- ערך שאינו YYYY-MM שובר את ההשוואה הלקסיקוגרפית בקוד ומחזיר טווח שגוי.
+-- ה-DO block נועד לאידמפוטנטיות (אין ADD CONSTRAINT IF NOT EXISTS).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'sl_students_months_format_chk'
+      AND conrelid = 'public.sl_students'::regclass
+  ) THEN
+    ALTER TABLE public.sl_students
+      ADD CONSTRAINT sl_students_months_format_chk CHECK (
+        (start_month IS NULL OR start_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+        AND
+        (end_month   IS NULL OR end_month   ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'sl_students_months_order_chk'
+      AND conrelid = 'public.sl_students'::regclass
+  ) THEN
+    ALTER TABLE public.sl_students
+      ADD CONSTRAINT sl_students_months_order_chk CHECK (
+        start_month IS NULL OR end_month IS NULL OR end_month >= start_month
+      );
+  END IF;
+END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;

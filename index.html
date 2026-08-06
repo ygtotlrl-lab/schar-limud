@@ -271,6 +271,15 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
               <label>סעיף</label>
               <select id="sc-edit-section"></select>
             </div>
+            <div class="frm-row">
+              <label>חודש הצטרפות</label>
+              <input id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right">
+            </div>
+            <div class="frm-row" style="margin-bottom:6px">
+              <label>חודש עזיבה (ריק = עדיין פעיל)</label>
+              <input id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
+            </div>
+            <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
             <button class="btn" onclick="saveStudentSettings()">שמור</button>
           </div>
           <div class="acc-hdr" onclick="toggleAcc('sc-annual')" style="border-top:1px solid var(--border)">
@@ -371,6 +380,9 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
     <div class="frm-row"><label>שם</label><input id="new-st-name" type="text" placeholder="שם התלמיד"></div>
     <div class="frm-row"><label>שכ"ל חודשי (ריק = ברירת מחדל)</label><input id="new-st-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל"></div>
     <div class="frm-row"><label>סעיף</label><select id="new-st-section"></select></div>
+    <div class="frm-row"><label>חודש הצטרפות</label><input id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right"></div>
+    <div class="frm-row" style="margin-bottom:6px"><label>חודש עזיבה (ריק = עדיין פעיל)</label><input id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>
+    <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>
     <div class="ma">
       <button class="btn out" onclick="closeModal('modal-add-student')">ביטול</button>
       <button class="btn" onclick="saveNewStudent()">הוסף</button>
@@ -489,6 +501,40 @@ function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMont
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
 function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
 function monthLabel(y,m){return MONTH_HE[m]+' '+(m>=8?y:y+1);}
+// ===== טווח פעילות התלמיד: start_month / end_month (migrations/004) =====
+// עד היום כל תלמיד פעיל חויב ב-12 חודשי השנה, ולכן מי שהצטרף באמצע הוצג
+// כחייב גם על חודשים שלא היה בהם. הטווח הוא חודשי לוח גרגוריאני בפורמט
+// 'YYYY-MM' — הפורמט הזה ממוין כרונולוגית כמחרוזת, ולכן ההשוואה
+// לקסיקוגרפית ולא צריך המרה לתאריך. **גבולות שנת הלימודים (YEAR_MONTHS,
+// acadYearOf — ספטמבר עד אוגוסט) לא מושפעים מכאן בכלל.**
+var MONTH_RE=/^[0-9]{4}-(0[1-9]|1[0-2])$/;
+// אינדקס החודש m הוא 0=ינואר; בשנת לימודים y חודשי ספט'–דצמ' שייכים ל-y
+// והשאר ל-y+1 — בדיוק ההיפוך של acadYearOf.
+function monthKey(y,m){return (m>=8?y:y+1)+'-'+String(m+1).padStart(2,'0');}
+function curMonthKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+// ערך שאינו YYYY-MM היה משתתף בהשוואה ומחזיר טווח שגוי בשקט — לכן כל
+// קריאה עוברת דרך כאן, וערך פסול נחשב "לא הוגדר".
+function normMonth(v){v=(v==null?'':String(v)).trim();return MONTH_RE.test(v)?v:'';}
+function monthKeyLabel(k){var p=normMonth(k);return p?MONTH_HE[parseInt(p.slice(5,7),10)-1]+' '+p.slice(0,4):'';}
+// תלמיד ללא start_month מתנהג כמו לפני 004 — כל השנה — כדי לא לשבור נתונים
+// קיימים. end_month ריק = עדיין פעיל. הטווח כולל את שני קצותיו.
+// (מי שהוגדר לו רק חודש עזיבה — הצטרף לפני שהמנגנון היה — עדיין נחסם
+// אחרי העזיבה: היעדר start_month מסיר את הגבול התחתון בלבד.)
+function studentInMonth(s,y,m){
+  if(!s)return false;
+  var sm=normMonth(s.start_month),em=normMonth(s.end_month);
+  if(!sm&&!em)return true;
+  var k=monthKey(y,m);
+  return (!sm||k>=sm)&&(!em||k<=em);
+}
+function countInMonth(y,m){return STUDENTS.filter(function(s){return s.active&&studentInMonth(s,y,m);}).length;}
+function enrollText(s){
+  var sm=normMonth(s&&s.start_month),em=normMonth(s&&s.end_month);
+  if(!sm&&!em)return '';
+  if(sm&&em)return monthKeyLabel(sm)+' – '+monthKeyLabel(em);
+  if(sm)return 'מ-'+monthKeyLabel(sm);
+  return 'עד '+monthKeyLabel(em);
+}
 function openModal(id){document.getElementById(id).classList.remove('hidden');}
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
@@ -526,8 +572,9 @@ var SETUP_SQL_FALLBACK = `-- ===================================================
 --    התקנות קיימות. הרצה חוזרת בטוחה — הכל IF NOT EXISTS.
 --
 -- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
--- 003 = ON DELETE RESTRICT על sl_transactions. שלושתן כבר מוכלות כאן,
--- ולכן על התקנה טרייה הן no-op.
+-- 003 = ON DELETE RESTRICT על sl_transactions, 004 = חודש הצטרפות/עזיבה
+-- לתלמיד (והסרת handled_months). כולן כבר מוכלות כאן, ולכן על התקנה
+-- טרייה הן no-op.
 -- ============================================================
 
 -- ---------- משתמשים ----------
@@ -546,11 +593,15 @@ CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK 
 -- ---------- תלמידים ----------
 -- מחיקה כאן היא soft-delete בלבד (ראה migrations/002): מחיקה פיזית הפעילה
 -- ON DELETE CASCADE על sl_transactions והשמידה את כל היסטוריית הכספים.
+-- start_month / end_month (ראה migrations/004): טווח החודשים שבו התלמיד
+-- פעיל, בפורמט 'YYYY-MM'. החיוב מחושב רק בתוך הטווח (כולל); start_month
+-- ריק = כל השנה, כמו לפני 004. end_month ריק = עדיין פעיל.
 CREATE TABLE IF NOT EXISTS public.sl_students (
   id             SERIAL PRIMARY KEY,
   name           TEXT NOT NULL,
   active         BOOLEAN DEFAULT true,
-  handled_months JSONB DEFAULT '[]',
+  start_month    TEXT,
+  end_month      TEXT,
   card_settings  JSONB DEFAULT '{}',
   created_at     TIMESTAMPTZ DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
@@ -562,6 +613,42 @@ ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+-- שדרוג התקנה שנוצרה לפני 004
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS start_month TEXT,
+  ADD COLUMN IF NOT EXISTS end_month   TEXT;
+-- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
+-- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
+ALTER TABLE public.sl_students
+  DROP COLUMN IF EXISTS handled_months;
+-- ערך שאינו YYYY-MM שובר את ההשוואה הלקסיקוגרפית בקוד ומחזיר טווח שגוי.
+-- ה-DO block נועד לאידמפוטנטיות (אין ADD CONSTRAINT IF NOT EXISTS).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'sl_students_months_format_chk'
+      AND conrelid = 'public.sl_students'::regclass
+  ) THEN
+    ALTER TABLE public.sl_students
+      ADD CONSTRAINT sl_students_months_format_chk CHECK (
+        (start_month IS NULL OR start_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+        AND
+        (end_month   IS NULL OR end_month   ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'sl_students_months_order_chk'
+      AND conrelid = 'public.sl_students'::regclass
+  ) THEN
+    ALTER TABLE public.sl_students
+      ADD CONSTRAINT sl_students_months_order_chk CHECK (
+        start_month IS NULL OR end_month IS NULL OR end_month >= start_month
+      );
+  END IF;
+END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
@@ -801,16 +888,24 @@ function renderDash(){
   document.getElementById('dash-year-label').textContent=acadYearLabel(DASH_YEAR);
   var act=STUDENTS.filter(function(s){return s.active;}),dist={};
   act.forEach(function(s){dist[s.id]=calcDistribution(s.id,DASH_YEAR);});
-  var hdr='<tr><th>חודש</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+'</th>';});hdr+='<th>סה"כ</th></tr>';
+  // עמודת "פעילים" — מצבת התלמידים בכל חודש לפי טווח ההצטרפות/עזיבה,
+  // כדי לראות את השינוי לאורך השנה ולחשב לפיה.
+  var hdr='<tr><th>חודש</th><th title="מספר התלמידים הפעילים בחודש זה, לפי חודש ההצטרפות/עזיבה">פעילים</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+'</th>';});hdr+='<th>סה"כ</th></tr>';
   document.getElementById('dash-thead').innerHTML=hdr;
   var cD=[],rows='';
   YEAR_MONTHS.forEach(function(m){
-    var rt=0,cells='';
-    act.forEach(function(s){var i=dist[s.id][m]||{req:0,paid:0};rt+=i.paid;var st=i.paid>=i.req&&i.req>0?'color:var(--green)':i.paid>0?'color:var(--yellow)':'color:var(--text3)';cells+='<td class="num" style="cursor:pointer;'+st+'" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(i.paid?fmt(i.paid):'—')+'</td>';});
-    cD.push(rt);rows+='<tr><td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE[m]+'</td>'+cells+'<td class="num" style="font-weight:700">'+(rt?fmt(rt):'—')+'</td></tr>';
+    var rt=0,cells='',cnt=countInMonth(DASH_YEAR,m);
+    act.forEach(function(s){
+      var i=dist[s.id][m]||{req:0,paid:0};rt+=i.paid;
+      if(i.off){cells+='<td class="num" style="cursor:pointer;color:var(--text3);opacity:.4" title="מחוץ לטווח הפעילות של התלמיד" onclick="showDashMonth('+DASH_YEAR+','+m+')">·</td>';return;}
+      var st=i.paid>=i.req&&i.req>0?'color:var(--green)':i.paid>0?'color:var(--yellow)':'color:var(--text3)';cells+='<td class="num" style="cursor:pointer;'+st+'" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(i.paid?fmt(i.paid):'—')+'</td>';
+    });
+    cD.push(rt);rows+='<tr><td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE[m]+'</td><td class="num" style="color:var(--text2)">'+(cnt||'—')+'</td>'+cells+'<td class="num" style="font-weight:700">'+(rt?fmt(rt):'—')+'</td></tr>';
   });
   var grand=cD.reduce(function(a,b){return a+b;},0);
-  rows+='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td>';
+  // בשורת הסיכום: כמה תלמידים היו פעילים אי-פעם במהלך השנה (לא סכום החודשים)
+  var yearCnt=act.filter(function(s){return YEAR_MONTHS.some(function(m){return studentInMonth(s,DASH_YEAR,m);});}).length;
+  rows+='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="num" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td>';
   act.forEach(function(s){var t=YEAR_MONTHS.reduce(function(a,m){return a+(dist[s.id][m]?dist[s.id][m].paid:0);},0);rows+='<td class="num">'+(t?fmt(t):'—')+'</td>';});
   rows+='<td class="num">'+fmt(grand)+'</td></tr>';
   document.getElementById('dash-tbody').innerHTML=rows;
@@ -821,9 +916,11 @@ function renderDash(){
 function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=MONTH_HE[month]+' '+(month>=8?year:year+1);
   document.getElementById('dash-month-card').style.display='block';
-  var act=STUDENTS.filter(function(s){return s.active;}),html='',tot=0;
+  // רק תלמידים שהיו פעילים בחודש הזה — מי שמחוץ לטווח אינו מחויב כאן
+  // ואינו אמור להופיע ברשימת החייבים.
+  var act=STUDENTS.filter(function(s){return s.active&&studentInMonth(s,year,month);}),html='',tot=0;
   act.forEach(function(s){var d=calcDistribution(s.id,year),i=d[month]||{paid:0,req:0},b=i.paid-i.req;tot+=i.paid;var c=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(i.paid)+'</span><span class="st-total">('+fmt(i.req)+')</span></div>';});
-  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">סה"כ: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span></div>';
+  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">סה"כ: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span> <span style="font-weight:400;color:var(--text3);font-size:.82rem">• '+act.length+' תלמידים פעילים</span></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
 function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
@@ -832,7 +929,15 @@ function calcDistribution(sid,year){
   var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var txns=TRANSACTIONS.filter(function(t){return t.student_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
   var pool=txns.reduce(function(s,t){return s+parseFloat(t.amount);},0),result={};
-  YEAR_MONTHS.forEach(function(m){result[m]={req:stuT,paid:0};if(pool<=0)return;if(pool>=stuT){result[m].paid=stuT;pool-=stuT;}else{result[m].paid=Math.round(pool*100)/100;pool=0;}});
+  // חודש מחוץ לטווח ההצטרפות/עזיבה אינו מחויב (req=0), אינו נספר כחוב,
+  // והתשלומים מדלגים עליו — הם נפרסים על חודשי הטווח בלבד. הדגל off
+  // מאפשר לתצוגה להבחין בינו לבין חודש מחויב שלא שולם.
+  YEAR_MONTHS.forEach(function(m){
+    if(!studentInMonth(s,year,m)){result[m]={req:0,paid:0,off:true};return;}
+    result[m]={req:stuT,paid:0,off:false};
+    if(pool<=0)return;
+    if(pool>=stuT){result[m].paid=stuT;pool-=stuT;}else{result[m].paid=Math.round(pool*100)/100;pool=0;}
+  });
   return result;
 }
 
@@ -854,9 +959,11 @@ function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
   var cs=s.card_settings||{};
   document.getElementById('sc-name').textContent=s.name;
-  document.getElementById('sc-meta').textContent=cs.section?cs.section+(s.active?' • פעיל':' • לא פעיל'):(s.active?'פעיל':'לא פעיל');
+  var meta=[];if(cs.section)meta.push(cs.section);meta.push(s.active?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
+  document.getElementById('sc-meta').textContent=meta.join(' • ');
   var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
+  document.getElementById('sc-edit-start').value=normMonth(s.start_month);document.getElementById('sc-edit-end').value=normMonth(s.end_month);
   var ss=document.getElementById('sc-edit-section');ss.innerHTML='<option value="">-- ללא --</option>';
   (LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+esc(sec.value)+'"'+(cs.section===sec.value?' selected':'')+'>'+esc(sec.value)+'</option>';});
   renderScYearTabs();renderScAnnual();
@@ -872,20 +979,37 @@ function renderScAnnual(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
   var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var dist=calcDistribution(SC_STUDENT_ID,SC_YEAR),rows='',tR=0,tP=0;
-  YEAR_MONTHS.forEach(function(m){var i=dist[m]||{req:stuT,paid:0},b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';});
+  // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
+  YEAR_MONTHS.forEach(function(m){
+    var i=dist[m]||{req:stuT,paid:0};
+    if(i.off){rows+='<tr style="opacity:.45"><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell" colspan="3" style="text-align:center;font-size:.76rem">לא היה בישיבה</td></tr>';return;}
+    var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';
+    rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
+  });
   document.getElementById('sc-annual-tbody').innerHTML=rows;
   var tb=tP-tR;document.getElementById('sc-annual-tfoot').innerHTML='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
   document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="flex:1">'+esc(t.note||'—')+'</span><span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span><span class="pill">'+esc(t.payment_method||'—')+'</span><button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function toggleStudentActive(){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
+// דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
+// ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
+function readMonthRange(startId,endId){
+  var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
+  var sm=normMonth(rawS),em=normMonth(rawE);
+  if(rawS&&!sm){toast('❌ חודש הצטרפות לא תקין — פורמט YYYY-MM');return null;}
+  if(rawE&&!em){toast('❌ חודש עזיבה לא תקין — פורמט YYYY-MM');return null;}
+  if(sm&&em&&em<sm){toast('❌ חודש העזיבה מוקדם מחודש ההצטרפות');return null;}
+  return {start_month:sm||null,end_month:em||null};
+}
 async function saveStudentSettings(){if(!guardOnline())return;
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
+  var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;}),cs=Object.assign({},(s&&s.card_settings)||{});
   if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
-  var r=await SB.from('sl_students').update({name:name,card_settings:cs}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ הגדרות נשמרו');await syncAll();
+  var r=await SB.from('sl_students').update({name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ הגדרות נשמרו');await syncAll();
 }
 
 function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
@@ -893,14 +1017,14 @@ function unlockSettings(){var p=document.getElementById('set-pass-input').value;
 async function saveDefaultTuition(){if(!guardOnline())return;var v=document.getElementById('set-def-tuition').value;if(!v||isNaN(v)){toast('ערך לא תקין');return;}var r=await SB.from('sl_settings').upsert({key:'default_tuition',value:v});if(r.error){toast('שגיאה: '+r.error.message);return;}toast(MSG_SAVED);await syncAll();}
 async function changeAdminPass(){if(!guardOnline())return;var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;if(!p1){toast('נא להזין סיסמה');return;}if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ סיסמה שונתה');document.getElementById('set-new-pass').value='';document.getElementById('set-new-pass2').value='';await syncAll();}
 function renderSettingsLists(){
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span><span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+(er?'<span class="pill">'+esc(er)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){return'<div class="set-list-item"><span>'+esc(i.value)+'</span><button class="btn sm danger" onclick="deleteListItem('+i.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">ריק</div>';}
 async function addListItem(cat){if(!guardOnline())return;var v=prompt('הזן ערך חדש:');if(!v||!v.trim())return;var r=await SB.from('sl_lists').insert({category:cat,value:v.trim()});if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נוסף');await syncAll();}
 async function deleteListItem(id){if(!guardOnline())return;showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
-function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
+function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
+async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
 async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
