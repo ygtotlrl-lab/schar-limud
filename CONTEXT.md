@@ -49,7 +49,7 @@ print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
 | טבלה | תפקיד | הערות |
 |---|---|---|
 | `sl_users` | משתמשים | ברירת מחדל admin/admin |
-| `sl_students` | תלמידים | soft-delete (migrations/002) |
+| `sl_students` | תלמידים | soft-delete (migrations/002); `start_month`/`end_month` = טווח החיוב (migrations/004) |
 | `sl_transactions` | תשלומים (כספים!) | soft-delete בלבד; FK ל-`sl_students` ב-RESTRICT (migrations/003) |
 | `sl_settings` | הגדרות (key/value) | כולל `default_tuition`, `admin_pass` |
 | `sl_lists` | רשימות בחירה | אמצעי תשלום וכו' |
@@ -66,6 +66,7 @@ print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
 - גיבוי יומי ל-`kv_backup` ✅
 - PWA + באנר עדכון ✅
 - מקור אמת יחיד לסכימה: `migrations/000_initial_schema.sql` ✅
+- חודש הצטרפות/עזיבה לתלמיד + מצבת תלמידים חודשית בדשבורד ✅ (`migrations/004` — טרם הורצה)
 
 ## פרטי מערכת
 - אין APK — האפליקציה היא PWA בלבד (בניגוד ל-hanhala ול-yoman)
