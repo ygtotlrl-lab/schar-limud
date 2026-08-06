@@ -195,6 +195,18 @@ INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'ביט
 INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה א') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ב') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ג') ON CONFLICT DO NOTHING;
+-- סעיף "זוכה על חשבון יתרת זכות" (ראה migrations/005): תנועה שנרשמת בו
+-- מקטינה את חוב התלמיד אך אינה כסף שהתקבל, ולכן אינה נספרת בשום סיכום
+-- גבייה/הכנסה. הוא נרשם כאמצעי תשלום כי זו הרשימה היחידה שנשמרת **על
+-- התנועה** (sl_transactions.payment_method); רשימת ה-sections שמורה
+-- לשיוך תלמיד ואינה קיימת ברמת התנועה.
+-- ⚠️ ל-sl_lists אין אילוץ ייחודיות, ולכן ON CONFLICT DO NOTHING אינו מונע
+--    כפילות בהרצה חוזרת — כאן משתמשים ב-WHERE NOT EXISTS שאכן מונע אותה.
+INSERT INTO public.sl_lists (category, value)
+SELECT 'payment_methods', 'זוכה על חשבון יתרת זכות'
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.sl_lists WHERE value = 'זוכה על חשבון יתרת זכות'
+);
 
 -- ============================================================
 -- שחזור רשומה שנמחקה בטעות (הרצה ידנית לפי id):
