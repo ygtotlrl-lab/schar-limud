@@ -63,6 +63,38 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:#fafafa}
 .tbl td.num{text-align:center;font-weight:600}
+.tbl th.num{text-align:center}
+/* ===== הלוח השנתי: תלמיד בשורה, חודש בעמודה =====
+   קודם התלמידים היו עמודות והחודשים שורות, ולכן שמות התלמידים נחתכו
+   ב-ellipsis ("בן שמחון ...") והטבלה הייתה בלתי שמישה במובייל. עכשיו כל
+   תלמיד בשורה משלו עם השם המלא, החודשים נגללים לרוחב, ועמודת השם דביקה
+   בצד ימין (RTL) כך שהיא נשארת גלויה לאורך כל הגלילה.
+   הגבול של העמודה הדביקה הוא box-shadow ולא border: עם border-collapse
+   הגבולות שייכים לטבלה ולא לתא, ולכן border לא נגלל יחד עם התא הדביק. */
+.dash-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl.pivot td{white-space:nowrap}
+.tbl.pivot th.stu,.tbl.pivot td.stu{position:sticky;right:0;z-index:2;text-align:right;font-weight:600;min-width:6rem;background:var(--card);box-shadow:-1px 0 0 var(--border)}
+.tbl.pivot thead th.stu{z-index:3;background:#f5f5f5}
+.tbl.pivot th.mo{cursor:pointer}
+.tbl.pivot td.mo{cursor:pointer}
+.tbl.pivot td.off{color:var(--text3);opacity:.45}
+.tbl.pivot td.paid{color:var(--green)}
+.tbl.pivot td.zero{color:var(--text3);font-weight:400}
+.tbl.pivot td.tot,.tbl.pivot th.tot{font-weight:700;background:#fafafa}
+.tbl.pivot tfoot td{background:var(--bgsec);font-weight:700;border-bottom:none}
+.tbl.pivot tfoot td.stu{background:var(--bgsec)}
+.tbl.pivot tfoot tr.top td{border-top:2px solid var(--border)}
+.tbl.pivot tfoot tr.sub td{font-weight:600;font-size:.75rem;color:var(--text2)}
+/* צביעת שורת האחוזים — נדרשת ספציפיות גבוהה מכלל שורת-הסיכום שמעליה */
+.tbl.pivot tfoot tr.sub td.amt-green{color:var(--green)}
+.tbl.pivot tfoot tr.sub td.amt-yellow{color:var(--yellow)}
+.tbl.pivot tfoot tr.sub td.amt-red{color:var(--red)}
+.tbl.pivot tfoot tr:hover td{background:var(--bgsec)}
+/* מובייל: השם עובר לשורה שנייה במקום להיחתך — «לא לחתוך שמות באף רזולוציה» */
+@media(max-width:560px){
+  .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+  .tbl.pivot td,.tbl.pivot th{padding:6px 5px}
+}
 .frm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .frm-row label{font-size:.78rem;font-weight:600;color:var(--text2)}
 .frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .15s;background:#fff;color:#1a1a1a}
@@ -127,7 +159,6 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .txn-row.credit{background:#f7fbff}
 .credit-note{background:var(--creditl);border:1px solid #cfe2f7;color:var(--credit);border-radius:12px;padding:10px 13px;font-size:.86rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
 .credit-sub{font-size:.72rem;color:var(--text3);margin-top:6px;padding:0 4px;line-height:1.5}
-.credit-row td{background:#f7fbff!important;color:var(--credit);font-weight:700}
 .paid-cell{color:#2e7d32;font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text2)}
 .empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
@@ -168,16 +199,19 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
       <div class="card">
         <div class="card-hdr">
           <h3>לוח שנתי</h3>
+          <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
+               אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
           <div style="display:flex;align-items:center;gap:8px">
-            <button class="btn sm out" onclick="dashPrevYear()">&#9664;</button>
+            <button class="btn sm out" onclick="dashPrevYear()" title="שנה קודמת">&#9654;</button>
             <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
-            <button class="btn sm out" onclick="dashNextYear()">&#9654;</button>
+            <button class="btn sm out" onclick="dashNextYear()" title="שנה הבאה">&#9664;</button>
           </div>
         </div>
-        <div style="overflow-x:auto">
-          <table class="tbl" id="dash-table">
+        <div class="dash-scroll">
+          <table class="tbl pivot" id="dash-table">
             <thead id="dash-thead"></thead>
             <tbody id="dash-tbody"></tbody>
+            <tfoot id="dash-tfoot"></tfoot>
           </table>
         </div>
       </div>
@@ -421,6 +455,8 @@ var CUR_USER=null,SYNC_INT=null,DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 var _settingsUnlocked=false,_confirmCb=null,_dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+// שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
+var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
 function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
@@ -856,7 +892,7 @@ function showSetupScreen(){
       '<a href="https://supabase.com/dashboard/project/'+SB_PROJECT+'/sql/new" target="_blank" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center">&#128279; פתח SQL Editor</a>'+
     '</div>'+
     '<textarea id="setup-sql-ta" readonly dir="ltr" style="width:100%;height:130px;font-size:.6rem;direction:ltr;text-align:left;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;resize:none;background:#f8f9fb;color:#2d3748"></textarea>'+
-    '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8594; &#9313; פתח SQL Editor &#8594; &#9314; הדבק והרץ (F5) &#8594; &#9315; חזור לכאן</div>'+
+    '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8592; &#9313; פתח SQL Editor &#8592; &#9314; הדבק והרץ (F5) &#8592; &#9315; חזור לכאן</div>'+
     '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
   var ta = document.getElementById('setup-sql-ta');
   ta.value = '-- טוען את הסכימה...';
@@ -960,80 +996,135 @@ async function ensureCreditMethod(){
 
 function getAcadYears(){var y={};TRANSACTIONS.forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;return Object.keys(y).map(Number).sort();}
 function dashPrevYear(){DASH_YEAR--;renderDash();}function dashNextYear(){DASH_YEAR++;renderDash();}
+// ===== לוח הבקרה = תנועות בפועל, לא פריסה (אוגוסט 2026) =====
+// עד היום הדשבורד הציג את **פריסת** התשלומים: תשלום של 2000 שנרשם ביולי
+// התפצל ל-1700 ביולי ו-300 באוגוסט, ולכן החודש שבו נכנס הכסף לא נראה בשום
+// מקום. ברמה הניהולית זה פשוט לא נכון — השאלה היא "כמה נגבה בחודש הזה".
+// מעכשיו כל חודש מציג את **סך התנועות שנרשמו בו לפי תאריך התנועה**, בלי
+// שום פריסה: תשלום של 2000 מ-11 ביולי שייך כולו ליולי.
+// **הפריסה (calcDistribution) נשארת אך ורק בכרטיס התלמיד האישי** — שם היא
+// נכונה ורלוונטית (מול איזה חודש נזקף התשלום, ומה החוב בכל חודש). אין
+// להחזיר אותה לדשבורד.
+// תנועה בסעיף CREDIT_METHOD אינה כסף שהתקבל ולכן אינה נספרת כאן כלל —
+// אותו כלל כמו קודם, רק שעכשיו היא פשוט לא נכנסת לסכום במקום להיות
+// מוצגת ומופחתת בשורה נפרדת.
+function txnMonth(t){var d=new Date(t.date+'T00:00:00');return d.getMonth();}
+function studentTuition(s){
+  var cs=(s&&s.card_settings)||{},defT=parseInt(SETTINGS['default_tuition']||2000);
+  return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+}
+// מפת {student_id:{monthIdx:סכום}} לשנת לימודים אחת — תנועות בפועל בלבד.
+function actualByMonth(year){
+  var map={};
+  TRANSACTIONS.forEach(function(t){
+    if(isCreditTxn(t)||!t.date||acadYearOf(t.date)!==year)return;
+    var a=parseFloat(t.amount)||0;if(!a)return;
+    var m=txnMonth(t);if(isNaN(m))return;
+    if(!map[t.student_id])map[t.student_id]={};
+    map[t.student_id][m]=Math.round(((map[t.student_id][m]||0)+a)*100)/100;
+  });
+  return map;
+}
+// יעד הגבייה של חודש = סכום שכר הלימוד החודשי של כל התלמידים הפעילים בו
+// (שכר לימוד אישי אם הוגדר לתלמיד, אחרת ברירת המחדל).
+function monthTarget(year,m){
+  return STUDENTS.reduce(function(a,s){return a+(s.active&&studentInMonth(s,year,m)?studentTuition(s):0);},0);
+}
+function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
+function pctText(got,target){var p=pctNum(got,target);return p===null?'—':p+'%';}
+function pctClass(got,target){var p=pctNum(got,target);return p===null?'':p>=90?'amt-green':p>=60?'amt-yellow':'amt-red';}
+function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך יעד ‎'+fmt(target)+'‎';}
+
 function renderDash(){
   if(DASH_YEAR===null)DASH_YEAR=acadYearOf(todayStr());
   document.getElementById('dash-year-label').textContent=acadYearLabel(DASH_YEAR);
-  var act=STUDENTS.filter(function(s){return s.active;}),dist={};
-  act.forEach(function(s){dist[s.id]=calcDistribution(s.id,DASH_YEAR);});
-  // עמודת "פעילים" — מצבת התלמידים בכל חודש לפי טווח ההצטרפות/עזיבה,
-  // כדי לראות את השינוי לאורך השנה ולחשב לפיה.
-  var hdr='<tr><th>חודש</th><th title="מספר התלמידים הפעילים בחודש זה, לפי חודש ההצטרפות/עזיבה">פעילים</th>';act.forEach(function(s){hdr+='<th style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.name)+'</th>';});hdr+='<th>סה"כ</th></tr>';
-  document.getElementById('dash-thead').innerHTML=hdr;
-  var cD=[],cCred=[],rows='';
+  var act=STUDENTS.filter(function(s){return s.active;}),actual=actualByMonth(DASH_YEAR);
+  // הטבלה הפוכה מכפי שהייתה: תלמיד בשורה (שם מלא, עמודה דביקה בימין)
+  // וחודש בעמודה — כמו גיליון שכר לימוד קלאסי.
+  var hdr='<tr><th class="stu">תלמיד</th>';
   YEAR_MONTHS.forEach(function(m){
-    var rt=0,rc=0,cells='',cnt=countInMonth(DASH_YEAR,m);
-    act.forEach(function(s){
-      var i=dist[s.id][m]||{req:0,paid:0,cred:0};rt+=i.paid;rc+=(i.cred||0);
-      if(i.off){cells+='<td class="num" style="cursor:pointer;color:var(--text3);opacity:.4" title="מחוץ לטווח הפעילות של התלמיד" onclick="showDashMonth('+DASH_YEAR+','+m+')">·</td>';return;}
-      // תא שכולו/חלקו זיכוי מיתרה נצבע כחול ומסומן ב-↩ — כדי שלא ייקרא כתקבול
-      var cr=i.cred||0;
-      var st=cr>0?'color:var(--credit)':i.paid>=i.req&&i.req>0?'color:var(--green)':i.paid>0?'color:var(--yellow)':'color:var(--text3)';
-      var ti=cr>0?' title="מזה ‎'+fmt(cr)+'‎ זיכוי על חשבון יתרת זכות — אינו תקבול"':'';
-      cells+='<td class="num" style="cursor:pointer;'+st+'"'+ti+' onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(i.paid?fmt(i.paid)+(cr>0?' ↩':''):'—')+'</td>';
-    });
-    cD.push(rt);cCred.push(rc);rows+='<tr><td style="cursor:pointer;font-weight:600;white-space:nowrap" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE[m]+'</td><td class="num" style="color:var(--text2)">'+(cnt||'—')+'</td>'+cells+'<td class="num" style="font-weight:700">'+(rt?fmt(rt):'—')+'</td></tr>';
+    hdr+='<th class="num mo" title="'+esc(monthLabel(DASH_YEAR,m))+' — לחיצה לפירוט" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE_SHORT[m]+'</th>';
   });
-  var grand=cD.reduce(function(a,b){return a+b;},0),grandCred=cCred.reduce(function(a,b){return a+b;},0);
-  // בשורת הסיכום: כמה תלמידים היו פעילים אי-פעם במהלך השנה (לא סכום החודשים)
+  hdr+='<th class="num tot">סה"כ</th></tr>';
+  document.getElementById('dash-thead').innerHTML=hdr;
+
+  var rows='',colT={},grand=0;
+  act.forEach(function(s){
+    var mm=actual[s.id]||{},tot=0,cells='';
+    YEAR_MONTHS.forEach(function(m){
+      var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
+      // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג כ-'·' — אבל רק אם באמת לא
+      // נרשמה בו תנועה. תשלום מראש/בדיעבד מוצג תמיד, כדי שסכום העמודה
+      // יהיה שווה בדיוק לסכום התנועות של החודש.
+      if(!v&&!studentInMonth(s,DASH_YEAR,m)){
+        cells+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" onclick="showDashMonth('+DASH_YEAR+','+m+')">·</td>';return;
+      }
+      var extra=v&&!studentInMonth(s,DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לטווח הפעילות של התלמיד"':'';
+      cells+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(v?fmt(v):'—')+'</td>';
+    });
+    grand=Math.round((grand+tot)*100)/100;
+    rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cells+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
+  });
+  document.getElementById('dash-tbody').innerHTML=rows||'<tr><td class="stu">—</td><td class="num" colspan="13">אין תלמידים פעילים</td></tr>';
+
+  // שורות הסיכום: נגבה / יעד / אחוז — שלושתן זו מתחת לזו באותה עמודה, כך
+  // ששני המספרים שמהם נגזר האחוז מוצגים לצידו ולא רק כאחוז מרחף.
+  var tgt={},grandTgt=0;
+  YEAR_MONTHS.forEach(function(m){tgt[m]=monthTarget(DASH_YEAR,m);grandTgt+=tgt[m];});
+  var tf='<tr class="top"><td class="stu">סה"כ נגבה</td>';
+  YEAR_MONTHS.forEach(function(m){tf+='<td class="num mo" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
+  tf+='<td class="num tot">'+fmt(grand)+'</td></tr>';
+  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש × שכר הלימוד החודשי שלהם">יעד</td>';
+  YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(tgt[m]?fmt(tgt[m]):'—')+'</td>';});
+  tf+='<td class="num tot">'+fmt(grandTgt)+'</td></tr>';
+  tf+='<tr class="sub"><td class="stu">אחוז גבייה</td>';
+  YEAR_MONTHS.forEach(function(m){tf+='<td class="num '+pctClass(colT[m]||0,tgt[m])+'" title="'+ofTargetTitle(colT[m]||0,tgt[m])+'">'+pctText(colT[m]||0,tgt[m])+'</td>';});
+  tf+='<td class="num tot '+pctClass(grand,grandTgt)+'" title="'+ofTargetTitle(grand,grandTgt)+'">'+pctText(grand,grandTgt)+'</td></tr>';
+  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש זה, לפי חודש ההצטרפות/עזיבה">פעילים</td>';
+  YEAR_MONTHS.forEach(function(m){var c=countInMonth(DASH_YEAR,m);tf+='<td class="num">'+(c||'—')+'</td>';});
+  // בשורת הסיכום: כמה תלמידים היו פעילים בשלב כלשהו בשנה (לא סכום החודשים)
   var yearCnt=act.filter(function(s){return YEAR_MONTHS.some(function(m){return studentInMonth(s,DASH_YEAR,m);});}).length;
-  rows+='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="num" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td>';
-  act.forEach(function(s){var t=YEAR_MONTHS.reduce(function(a,m){return a+(dist[s.id][m]?dist[s.id][m].paid:0);},0);rows+='<td class="num">'+(t?fmt(t):'—')+'</td>';});
-  rows+='<td class="num">'+fmt(grand)+'</td></tr>';
-  // שורת "מזה זיכוי מיתרה" + "גבייה בפועל": שורת ה"סה"כ" נשארת כיסוי החיוב
-  // (מה שכוסה בכל חודש), והשורות האלה מפרידות ממנה את מה שאינו כסף שהתקבל.
-  // מוצגות רק כשיש זיכויים בשנה — בלעדיהם "גבייה בפועל" זהה ל"סה"כ".
-  if(grandCred>0){
-    rows+='<tr class="credit-row"><td title="תנועות בסעיף &quot;'+esc(CREDIT_METHOD)+'&quot; — ניצול זכות משנה קודמת, לא כסף שהתקבל">↩ מזה זיכוי מיתרה</td><td class="num">—</td>';
-    act.forEach(function(s){var c=distCredApplied(dist[s.id]);rows+='<td class="num">'+(c?fmt(c):'—')+'</td>';});
-    rows+='<td class="num">'+fmt(grandCred)+'</td></tr>';
-    rows+='<tr style="background:var(--bgsec);font-weight:700"><td title="סה״כ בניכוי הזיכויים — הכסף שהתקבל בפועל">גבייה בפועל</td><td class="num">—</td>';
-    act.forEach(function(s){var t=YEAR_MONTHS.reduce(function(a,m){return a+(dist[s.id][m]?dist[s.id][m].paid:0);},0)-distCredApplied(dist[s.id]);rows+='<td class="num">'+(t?fmt(t):'—')+'</td>';});
-    rows+='<td class="num">'+fmt(grand-grandCred)+'</td></tr>';
-  }
-  // שורת יתרת הזכות — **לא** מקוזזת מהחוב ולא מחוברת לגבייה; שדה נפרד
-  var credTot=act.reduce(function(a,s){return a+distCredit(dist[s.id]);},0);
-  if(credTot>0){
-    rows+='<tr class="credit-row"><td title="שולם מעבר לסך החיוב בטווח החודשים של התלמיד — אינו חוב שלילי ואינו מקוזז מסך החוב">&#128142; יתרת זכות</td><td class="num">—</td>';
-    act.forEach(function(s){var c=distCredit(dist[s.id]);rows+='<td class="num">'+(c?fmt(c):'—')+'</td>';});
-    rows+='<td class="num">'+fmt(credTot)+'</td></tr>';
-  }
-  document.getElementById('dash-tbody').innerHTML=rows;
+  tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
+  document.getElementById('dash-tfoot').innerHTML=tf;
+
   if(_dashChart)_dashChart.destroy();
   var ctx=document.getElementById('dash-chart').getContext('2d');
-  // הגרף מציג את הכסף שהתקבל בפועל; הזיכויים נערמים מעליו בצבע נפרד
-  // ורק כשקיימים, כדי שהעמודה לא תנפח את הגבייה בכסף שלא נכנס.
-  var cCash=cD.map(function(v,i){return Math.round((v-cCred[i])*100)/100;});
-  var ds=[{label:'גבייה בפועל',data:cCash,backgroundColor:'rgba(30,58,95,0.75)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:4}];
-  if(grandCred>0)ds.push({label:'זיכוי מיתרה (אינו תקבול)',data:cCred,backgroundColor:'rgba(21,101,192,0.45)',borderColor:'#1565c0',borderWidth:1,borderRadius:4});
-  _dashChart=new Chart(ctx,{type:'bar',data:{labels:YEAR_MONTHS.map(function(m){return MONTH_HE[m];}),datasets:ds},options:{responsive:true,plugins:{legend:{display:grandCred>0,labels:{font:{family:'Heebo'}}}},scales:{y:{stacked:true,ticks:{font:{family:'Heebo'},callback:function(v){return String.fromCharCode(8362)+v.toLocaleString();}}},x:{stacked:true,ticks:{font:{family:'Heebo'},maxRotation:45}}}}});
+  // הגרף מציג בדיוק את נתוני הטבלה: עמודה = התנועות שנרשמו בחודש, וקו
+  // היעד לצידה כדי שיהיה ברור מאיפה אחוז הגבייה מגיע.
+  var cD=YEAR_MONTHS.map(function(m){return colT[m]||0;}),cT=YEAR_MONTHS.map(function(m){return tgt[m];});
+  _dashChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:YEAR_MONTHS.map(function(m){return MONTH_HE_SHORT[m];}),datasets:[
+      {label:'נגבה בפועל',data:cD,backgroundColor:'rgba(30,58,95,0.75)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:4},
+      {label:'יעד',type:'line',data:cT,borderColor:'#c62828',backgroundColor:'#c62828',borderWidth:2,borderDash:[5,4],pointRadius:2,fill:false,tension:.15}
+    ]},
+    options:{responsive:true,plugins:{
+      legend:{labels:{font:{family:'Heebo'}}},
+      tooltip:{callbacks:{afterBody:function(items){
+        var i=items&&items[0]?items[0].dataIndex:-1;if(i<0)return'';
+        return 'אחוז גבייה: '+pctText(cD[i],cT[i]);
+      }}}
+    },scales:{y:{ticks:{font:{family:'Heebo'},callback:function(v){return String.fromCharCode(8362)+v.toLocaleString();}}},x:{ticks:{font:{family:'Heebo'},maxRotation:45}}}}
+  });
 }
 function showDashMonth(year,month){
-  document.getElementById('dash-month-title').textContent=MONTH_HE[month]+' '+(month>=8?year:year+1);
+  document.getElementById('dash-month-title').textContent=monthLabel(year,month);
   document.getElementById('dash-month-card').style.display='block';
-  // רק תלמידים שהיו פעילים בחודש הזה — מי שמחוץ לטווח אינו מחויב כאן
-  // ואינו אמור להופיע ברשימת החייבים.
-  var act=STUDENTS.filter(function(s){return s.active&&studentInMonth(s,year,month);}),html='',tot=0,totCred=0,totBal=0;
+  var actual=actualByMonth(year);
+  // מוצגים תלמידים שהיו פעילים בחודש — ובנוסף כל תלמיד פעיל שנרשמה לו
+  // תנועה בחודש הזה גם אם הוא מחוץ לטווח, כדי שהסכום כאן יהיה זהה בדיוק
+  // לעמודת החודש בטבלה.
+  var act=STUDENTS.filter(function(s){return s.active&&(studentInMonth(s,year,month)||((actual[s.id]||{})[month]||0)>0);});
+  var html='',tot=0,target=0;
   act.forEach(function(s){
-    var d=calcDistribution(s.id,year),i=d[month]||{paid:0,req:0,cred:0},b=i.paid-i.req,cr=i.cred||0,bal=distCredit(d);
-    tot+=i.paid;totCred+=cr;totBal+=bal;
-    var c=cr>0?'amt-credit':b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';
-    // יתרת הזכות מוצגת כתגית נפרדת ליד השם — לא מעורבבת בסכום החודשי
-    var tag=bal>0?' <span class="badge blue" title="יתרת זכות בשנה זו — אינה מקוזזת מהחוב">&#128142; '+fmt(bal)+'</span>':'';
-    html+='<div class="st-row"><span class="st-name">'+esc(s.name)+tag+'</span><span class="st-paid '+c+'"'+(cr>0?' title="מזה ‎'+fmt(cr)+'‎ זיכוי מיתרה — אינו תקבול"':'')+'>'+fmt(i.paid)+(cr>0?' ↩':'')+'</span><span class="st-total">('+fmt(i.req)+')</span></div>';
+    var v=(actual[s.id]||{})[month]||0,inM=studentInMonth(s,year,month),req=inM?studentTuition(s):0;
+    tot+=v;target+=req;
+    var c=!inM?'':v>=req?'amt-green':v>0?'amt-yellow':'amt-red';
+    html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span></div>';
   });
-  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">סה"כ: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span> <span style="font-weight:400;color:var(--text3);font-size:.82rem">• '+act.length+' תלמידים פעילים</span>'+
-    (totCred>0?'<div style="font-weight:400;font-size:.8rem;color:var(--credit);margin-top:4px">↩ מזה זיכוי מיתרה: &#8362;'+fmt(totCred)+' • גבייה בפועל: <span style="font-weight:700">&#8362;'+fmt(tot-totCred)+'</span></div>':'')+
-    (totBal>0?'<div style="font-weight:400;font-size:.8rem;color:var(--credit);margin-top:2px">&#128142; יתרת זכות (שנתית, לא מקוזזת): &#8362;'+fmt(totBal)+'</div>':'')+'</div>';
+  tot=Math.round(tot*100)/100;
+  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">נגבה: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
+    '<div style="font-weight:400;color:var(--text3);font-size:.78rem;margin-top:4px">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
 function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
