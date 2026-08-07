@@ -363,6 +363,10 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
       </div>
       <div id="settings-main" style="display:none">
         <div class="card">
+          <div class="card-hdr"><h3>&#9203; ממתין לסנכרון</h3></div>
+          <div class="card-body"><div id="pend-status-box"></div></div>
+        </div>
+        <div class="card">
           <div class="card-hdr"><h3>&#128190; אחסון מקומי</h3></div>
           <div class="card-body"><div id="ls-status-box"></div></div>
         </div>
@@ -977,6 +981,313 @@ window.lsFails = lsFails;
 window.lsOkSince = lsOkSince;
 window.lsGuardToast = lsGuardToast;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
+/* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
+var PEND_CFG = { app: 'schar-limud', key: 'sl_pending' };
+
+/* ═══ ממתין לסנכרון — מודול משותף (סבב 12) ═══════════════════════════════
+   הבעיה שהמודול הזה פותר: אחרי שמירה מקומית המסך נראה **בדיוק** כמו אחרי
+   שמירה בענן. המשתמש רושם תשלום ברכבת התחתית, רואה אותו ברשימה, וסוגר את
+   האפליקציה בהנחה שהוא שמור — בזמן שהוא יושב רק על המכשיר הזה. סימון גלוי
+   הוא ההבדל בין "שמור" ל"שמור אצלך בלבד".
+
+   שלוש רמות תצוגה, כולן מהמפה אחת:
+     • **תגית ⏳ על הרשומה עצמה** — `pendTag(key)`, נכנסת לשורה ברשימה.
+     • **מונה גלוי** — סרגל תחתון, מוצג רק כשיש משהו ממתין.
+     • **התרעה** — משהו ממתין מעל 24 שעות ⇐ באנר אדום קבוע שנשאר עד סגירה.
+
+   ⚠️ **ההגדרה של "ממתין" היא ראייתית, לא אופטימית.** רשומה מסומנת ממתינה
+   ברגע שנכתבה במכשיר, ויורדת מהסימון **רק כשיש ראיה שהענן קיבל אותה**:
+   תשובת הצלחה, או דחיפת-מצב מוצלחת שכללה אותה. כשל רשת אינו ראיה לכלום
+   ולכן **אינו מוריד סימון** — תשובה שאבדה ברשת היא בדיוק המקרה שבו הרשומה
+   אולי כן נכנסה, ואולי לא. ספק ⇐ נשאר מסומן.
+
+   ⚠️ **כשל סמכותי כן מוריד את הסימון** (`pendFailed`) — שגיאת ולידציה או
+   הרשאה אומרת שהשורה **לא** נכתבה, וסימון "ממתין" עליה היה שקר מהכיוון
+   השני: הוא מבטיח שליחה חוזרת שלא תקרה לעולם.
+
+   ⚠️ **הכלל לדחיפת-מצב מלא** (`pendConfirmPush`): דחיפה מוצלחת מאשרת כל מה
+   שסומן **לפני שצילום המצב נלקח** — לא לפני שהיא הסתיימה. רשומה שנכתבה
+   באמצע הדחיפה אינה בתוכה, והורדת הסימון ממנה הייתה מאבדת אותה בשקט.
+   לכן `t0` נלקח לפני קריאת המצב המקומי, ומועבר לכאן.
+
+   התלויות: `lsSet`/`lsGet` (מודול האחסון) ו-`esc`. `PEND_CFG` מוגדרת מעליו
+   והיא **הדבר היחיד שנבדל בין האפליקציות**.
+   ═══════════════════════════════════════════════════════════════════════ */
+var PEND_LATE_MS = 24 * 60 * 60 * 1000;   // סף ההתרעה
+var PEND_MAX = 800;                       // תקרת המפה — הגנה מפני צמיחה בלי גבול
+var _pendMap = null;
+var _pendAlertDismissed = 0;
+
+// `PEND_CFG.key` יכולה להיות מחרוזת או פונקציה. yoman-avoda מחזיקה שני
+// מוסדות באותו דומיין, וסימוני האחד אינם תקפים לשני — שם היא פונקציה.
+function pendKeyName() {
+  var k = (typeof PEND_CFG === 'object') ? PEND_CFG.key : null;
+  if (typeof k === 'function') { try { k = k(); } catch (e) { k = null; } }
+  return k || 'pending_sync';
+}
+// החלפת הקשר (מוסד/משתמש) — המפה נטענת מחדש מהמפתח החדש.
+function pendReload() { _pendMap = null; pendAll(); pendRender(); }
+
+function pendAll() {
+  if (_pendMap) return _pendMap;
+  var v = null;
+  try { var raw = lsGet(pendKeyName(), null); v = raw == null ? null : JSON.parse(raw); }
+  catch (e) { v = null; }
+  _pendMap = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  // ניקוי ערכים פגומים — חותמת שאינה מספר חיובי אינה ראיה לכלום
+  Object.keys(_pendMap).forEach(function (k) {
+    var t = Number(_pendMap[k]);
+    if (!isFinite(t) || t <= 0) delete _pendMap[k];
+  });
+  return _pendMap;
+}
+
+// הכתיבה עוברת דרך lsSet (כלל ברזל 1). כישלון כאן אינו שקט: lsSet מרימה
+// באנר ורושמת ליומן, ו-lsGuardToast יבלע כל "✅" בשתי השניות הבאות.
+function pendSave() {
+  var m = pendAll();
+  var keys = Object.keys(m);
+  if (keys.length > PEND_MAX) {
+    // גריעה של הישנים ביותר. זו לא "מחיקת נתון שטרם הסתנכרן" — הרשומה עצמה
+    // נשארת במקומה; רק הסימון שלה יורד. עדיין נרשם ליומן, כי סימון שנעלם
+    // בלי אישור הוא בדיוק מה שהמודול בא למנוע.
+    keys.sort(function (a, b) { return m[a] - m[b]; });
+    var drop = keys.slice(0, keys.length - PEND_MAX);
+    drop.forEach(function (k) { delete m[k]; });
+    try { lsLog('pend-overflow', drop.length + ' סימונים נגרעו (תקרה ' + PEND_MAX + ')', 0); } catch (e) { }
+  }
+  return lsSet(pendKeyName(), JSON.stringify(m));
+}
+
+// סימון. חותמת קיימת **אינה נדרסת** — הגיל נמדד מהכתיבה הראשונה שלא אושרה,
+// אחרת עריכה חוזרת של אותה רשומה הייתה מאפסת את שעון ההתרעה לנצח.
+function pendMark(key) {
+  if (!key) return 0;
+  var m = pendAll();
+  if (!m[key]) { m[key] = Date.now(); pendSave(); pendRender(); }
+  return m[key];
+}
+function pendMarkMany(keys) {
+  if (!keys || !keys.length) return;
+  var m = pendAll(), now = Date.now(), ch = false;
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i] && !m[keys[i]]) { m[keys[i]] = now; ch = true; }
+  }
+  if (ch) { pendSave(); pendRender(); }
+}
+
+// אישור — יש ראיה שהענן קיבל.
+function pendClear(key) {
+  if (!key) return;
+  var m = pendAll();
+  if (m[key]) { delete m[key]; pendSave(); pendRender(); }
+}
+function pendClearMany(keys) {
+  if (!keys || !keys.length) return;
+  var m = pendAll(), ch = false;
+  for (var i = 0; i < keys.length; i++) if (m[keys[i]]) { delete m[keys[i]]; ch = true; }
+  if (ch) { pendSave(); pendRender(); }
+}
+
+// כשל סמכותי — הכתיבה **לא** נכנסה, ולכן הסימון יורד. ראה ההערה בראש המודול.
+function pendFailed(key) { pendClear(key); }
+
+// אישור דחיפת-מצב מלא: כל מה שסומן לפני `t0` נכלל בצילום שנדחף בהצלחה.
+// `prefix` מגביל לקטגוריה אחת — דחיפה של מפתח אחד אינה מאשרת את השאר.
+function pendConfirmPush(prefix, t0) {
+  var m = pendAll(), ch = false;
+  t0 = Number(t0) || 0;
+  if (!t0) return;
+  Object.keys(m).forEach(function (k) {
+    if (prefix && k.indexOf(prefix) !== 0) return;
+    if (m[k] < t0) { delete m[k]; ch = true; }
+  });
+  if (ch) { pendSave(); pendRender(); }
+}
+
+function pendHas(key) { return !!pendAll()[key]; }
+function pendSince(key) { return pendAll()[key] || 0; }
+function pendCount() { return Object.keys(pendAll()).length; }
+function pendOldest() {
+  var m = pendAll(), keys = Object.keys(m), t = 0;
+  for (var i = 0; i < keys.length; i++) if (!t || m[keys[i]] < t) t = m[keys[i]];
+  return t;
+}
+function pendLateCount() {
+  var m = pendAll(), keys = Object.keys(m), n = 0, cut = Date.now() - PEND_LATE_MS;
+  for (var i = 0; i < keys.length; i++) if (m[keys[i]] < cut) n++;
+  return n;
+}
+function pendReset() { _pendMap = {}; pendSave(); pendRender(); }
+
+function pendFmtAge(ms) {
+  if (!isFinite(ms) || ms < 0) ms = 0;
+  var mi = Math.floor(ms / 60000);
+  if (mi < 1) return 'פחות מדקה';
+  if (mi < 60) return mi + ' דק׳';
+  var h = Math.floor(mi / 60);
+  if (h < 24) return h + ' שע׳';
+  return Math.floor(h / 24) + ' ימים';
+}
+
+/* --------------------------------------------------------------- תצוגה */
+function pendEnsureStyle() {
+  if (document.getElementById('pend-style')) return;
+  var s = document.createElement('style');
+  s.id = 'pend-style';
+  s.textContent =
+    '.pend-tag{display:inline-block;background:#fde68a;color:#78350f;border:1px solid #f59e0b;' +
+    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:1.6;' +
+    'white-space:nowrap;vertical-align:middle;margin:0 4px}' +
+    '.pend-tag.late{background:#fecaca;color:#7f1d1d;border-color:#dc2626}' +
+    '#pend-bar{position:fixed;z-index:2147482000;left:0;right:0;bottom:0;padding:8px 12px;' +
+    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:#3d2c00;background:#ffd88a;' +
+    'box-shadow:0 -2px 10px rgba(0,0,0,.18)}' +
+    '#pend-bar.late{background:#ffb4ab;color:#5c1a12}' +
+    '#pend-alert{position:fixed;z-index:2147483000;left:0;right:0;top:0;padding:10px 14px;' +
+    'direction:rtl;font:700 13px/1.6 inherit;color:#fff;background:#b91c1c;' +
+    'box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;justify-content:center}' +
+    '#pend-alert button{background:rgba(255,255,255,.25);color:#fff;border:1px solid #fff;' +
+    'border-radius:6px;padding:2px 10px;font:inherit;cursor:pointer}';
+  (document.head || document.documentElement).appendChild(s);
+}
+
+// התגית שנכנסת לשורת הרשומה. מחזירה מחרוזת ריקה כשאין מה להציג, כדי
+// שאפשר יהיה לשרשר אותה ללא תנאי בכל תבנית.
+function pendTag(key) {
+  var t = pendSince(key);
+  if (!t) return '';
+  pendEnsureStyle();
+  var age = Date.now() - t, late = age > PEND_LATE_MS;
+  var title = 'ממתין לסנכרון מאז ' + new Date(t).toLocaleString('he-IL') +
+              ' (' + pendFmtAge(age) + ') — שמור במכשיר, טרם אושר בענן';
+  return '<span class="pend-tag' + (late ? ' late' : '') + '" title="' + esc(title) + '">' +
+         (late ? '⚠️' : '⏳') + ' ממתין</span>';
+}
+
+function pendCounterText() {
+  var n = pendCount(), off = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+  if (!n) return off ? '⚠️ אין רשת' : '';
+  var late = pendLateCount();
+  var s = (late ? '⚠️ ' : (off ? '⚠️ אין רשת · ' : '⏳ ')) + n + ' פעולות ממתינות לסנכרון';
+  var old = pendOldest();
+  if (old) s += ' · הישנה ביותר לפני ' + pendFmtAge(Date.now() - old);
+  return s;
+}
+
+function pendRender() {
+  if (typeof document === 'undefined' || !document.body) return;
+  pendEnsureStyle();
+  var txt = pendCounterText(), bar = document.getElementById('pend-bar');
+  if (!txt) { if (bar) bar.style.display = 'none'; }
+  else {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'pend-bar';
+      document.body.appendChild(bar);
+    }
+    var extra = '';
+    try { if (typeof PEND_CFG === 'object' && PEND_CFG.extra) extra = PEND_CFG.extra() || ''; } catch (e) { }
+    bar.textContent = txt + (extra ? ' · ' + extra : '');
+    bar.className = pendLateCount() ? 'late' : '';
+    bar.style.display = '';
+  }
+  pendRenderAlert();
+}
+
+// ההתרעה נפרדת מהמונה בכוונה: מונה הוא מידע, וסרגל תחתון נבלע ברעש המסך.
+// משהו שממתין מעל יממה כבר אינו "מסתנכרן ברקע" — זו תקלה שדורשת פעולה.
+function pendRenderAlert() {
+  var late = pendLateCount(), el = document.getElementById('pend-alert');
+  if (!late || (_pendAlertDismissed && (Date.now() - _pendAlertDismissed) < 6 * 60 * 60 * 1000)) {
+    if (el) el.remove();
+    return;
+  }
+  var msg = '⚠️ ' + late + ' פעולות ממתינות לסנכרון מעל 24 שעות — בדוק חיבור לאינטרנט. הנתונים שמורים במכשיר בלבד.';
+  if (el) { var sp = el.firstChild; if (sp) sp.textContent = msg; return; }
+  el = document.createElement('div');
+  el.id = 'pend-alert';
+  var span = document.createElement('span');
+  span.textContent = msg;
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'הבנתי';
+  btn.onclick = function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); };
+  el.appendChild(span);
+  el.appendChild(btn);
+  document.body.appendChild(el);
+}
+
+// פאנל להגדרות — מה בדיוק ממתין, ומאיזה גיל.
+function pendStatusHTML() {
+  var m = pendAll(), keys = Object.keys(m);
+  keys.sort(function (a, b) { return m[a] - m[b]; });
+  var h = '<div style="font-size:13px;line-height:1.8">';
+  h += '<div>מצב רשת: <b>' + (navigator.onLine ? 'מקוון' : 'לא מקוון') + '</b></div>';
+  h += '<div>פעולות ממתינות לסנכרון: <b>' + keys.length + '</b></div>';
+  if (!keys.length) { h += '<div style="color:#16a34a">✅ הכול מסונכרן</div></div>'; return h; }
+  h += '<div style="margin-top:6px;max-height:220px;overflow:auto">';
+  keys.slice(0, 60).forEach(function (k) {
+    var age = Date.now() - m[k], late = age > PEND_LATE_MS;
+    h += '<div style="display:flex;gap:8px;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.08);padding:3px 0">' +
+         '<span>' + esc(k) + '</span><span style="' + (late ? 'color:#b91c1c;font-weight:700' : 'opacity:.7') + '">' +
+         esc(pendFmtAge(age)) + '</span></div>';
+  });
+  if (keys.length > 60) h += '<div style="opacity:.7">…ועוד ' + (keys.length - 60) + '</div>';
+  h += '</div></div>';
+  return h;
+}
+
+// רענון תקופתי — הגיל מוצג בתגיות ובמונה, וסף ה-24 שעות חייב להיחצות
+// גם כשהמשתמש לא נגע בכלום.
+var _pendTick = null;
+function pendBoot() {
+  pendAll();
+  pendRender();
+  if (!_pendTick) _pendTick = setInterval(pendRender, 60000);
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('online', pendRender);
+    window.addEventListener('offline', pendRender);
+  }
+}
+/* ═══════════════ סוף מודול "ממתין לסנכרון" ═════════════════════════════ */
+
+/* ── חיבור schar-limud למודול ─────────────────────────────────────────────
+   ⚠️ **כאן עדיין אין עבודה אופליין** (הפער המתועד מכלל ברזל 3; נסגר בשלב 2).
+   לכן הסימון מכסה היום מקרה אחד ומדויק: **תשובה שאבדה ברשת**. הכתיבה נשלחה,
+   השורה אולי נכנסה למסד, והמכשיר לא יודע. עד שמשיכה מוצלחת תראה את
+   ה-`client_id` הזה בענן — הרשומה מסומנת ⏳, והמשתמש יודע שהיא לא אושרה.
+   ───────────────────────────────────────────────────────────────────────── */
+var PK_TXN = 'txn:', PK_STU = 'student:', PK_TXNDEL = 'txn-del:', PK_STUDEL = 'student-del:';
+
+// כשל רשת אינו ראיה לכלום ⇒ הסימון **נשאר**. כשל סמכותי (ולידציה, הרשאה,
+// סכימה) אומר שהשורה לא נכתבה ⇒ הסימון יורד; אחרת הוא היה נתקע לנצח על
+// רשומה שאינה קיימת בשום מקום, ומזייף את התרעת 24 השעות.
+function pendResolveErr(pk, e) { if (!isNetErr(e)) pendFailed(pk); }
+
+// הראיה היחידה שקיימת כאן היום: הרשומה חזרה מהענן במשיכה מוצלחת.
+// מקבלת את המערכים **הגולמיים** — לפני סינון ה-deleted — כי אישור מחיקה
+// הוא בדיוק הראיה ש-`deleted=true` הגיע לענן.
+function pendSyncScan(rawStudents, rawTxns) {
+  var done = [];
+  (rawTxns || []).forEach(function (t) {
+    if (t.client_id) done.push(PK_TXN + t.client_id);
+    if (t.deleted) done.push(PK_TXNDEL + t.id);
+  });
+  (rawStudents || []).forEach(function (st) {
+    if (st.client_id) done.push(PK_STU + st.client_id);
+    if (st.deleted) done.push(PK_STUDEL + st.id);
+  });
+  pendClearMany(done);
+}
+// מפתח הסימון של תנועה/תלמיד שכבר קיימים בזיכרון — לשימוש הרינדור.
+function pendTxnTag(t) { return t ? (pendTag(PK_TXN + t.client_id) || pendTag(PK_TXNDEL + t.id)) : ''; }
+function pendStuTag(st) { return st ? (pendTag(PK_STU + st.client_id) || pendTag(PK_STUDEL + st.id)) : ''; }
+function pendRenderStatus() {
+  var el = document.getElementById('pend-status-box');
+  if (el) el.innerHTML = pendStatusHTML();
+}
+
 
 // ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
 // localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
@@ -1512,6 +1823,13 @@ async function syncAll(){
     // רק תוצאות תקינות נכתבות — מקטגוריה שנכשלה עדיף להשאיר את הישן מלרוקן
     if(rs[0]&&!rs[0].error&&rs[0].data)STUDENTS=rs[0].data.filter(function(s){return !s.deleted;});
     if(rs[1]&&!rs[1].error&&rs[1].data)TRANSACTIONS=rs[1].data.filter(function(t){return !t.deleted;});
+    // הורדת סימוני "ממתין" — רק ממשיכה שהצליחה, ורק לקטגוריה שהצליחה.
+    // נסרקים המערכים ה**גולמיים**: אישור מחיקה הוא ראיית `deleted=true`,
+    // והיא נעלמת מיד אחרי הסינון שלמעלה.
+    try{pendSyncScan(
+      (rs[0]&&!rs[0].error&&rs[0].data)?rs[0].data:null,
+      (rs[1]&&!rs[1].error&&rs[1].data)?rs[1].data:null
+    );}catch(ePend){console.warn('[pend] scan',ePend);}
     if(rs[2]&&!rs[2].error&&rs[2].data){SETTINGS={};rs[2].data.forEach(function(r){SETTINGS[r.key]=r.value;});}
     if(rs[3]&&!rs[3].error&&rs[3].data){LISTS={};rs[3].data.forEach(function(r){if(!LISTS[r.category])LISTS[r.category]=[];LISTS[r.category].push({id:r.id,value:r.value});});}
     refreshUI();
@@ -1745,14 +2063,18 @@ async function saveTxn(){
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
   // UPSERT על client_id ולא INSERT: התשלום נושא מזהה שנוצר במכשיר, ולכן שליחה
   // חוזרת שלו מעדכנת את השורה הקיימת. INSERT היה יוצר שורה שנייה — תשלום כפול.
-  var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
-  try{var r=await SB.from('sl_transactions').upsert({client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)},{onConflict:'client_id'});if(r.error)throw r.error;releaseCid('txn');toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(errMsg(e));}
+  var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
+  // ⏳ הסימון נרשם **לפני** השליחה — אחרת תשובה שאובדת ברשת משאירה תשלום
+  // במצב לא-ידוע בלי שום סימן על המסך.
+  var pk=PK_TXN+cid;
+  pendMark(pk);
+  try{var r=await SB.from('sl_transactions').upsert({client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)},{onConflict:'client_id'});if(r.error)throw r.error;pendClear(pk);releaseCid('txn');toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
@@ -1764,7 +2086,7 @@ function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
-async function deleteTxn(id){if(!guardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}toast('✅ תשלום נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
+async function deleteTxn(id){if(!guardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){var pk=PK_TXNDEL+id;pendMark(pk);try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){pendResolveErr(pk,r.error);toast(errMsg(r.error));return;}pendClear(pk);toast('✅ תשלום נמחק');await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}});}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
@@ -1839,8 +2161,9 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(todayStr());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
+  pendRenderStatus();
   lsRenderStatus();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
@@ -1857,16 +2180,19 @@ async function deleteListItem(id){if(!guardOnline())return;
   if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
   showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
 function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));var r=await SB.from('sl_students').upsert({client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month},{onConflict:'client_id'});if(r.error){toast('שגיאה: '+r.error.message);return;}releaseCid('student');closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
+async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));var pk=PK_STU+cid;pendMark(pk);var r;try{r=await SB.from('sl_students').upsert({client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month},{onConflict:'client_id'});}catch(e){pendResolveErr(pk,e);toast(errMsg(e));return;}if(r.error){pendResolveErr(pk,r.error);toast('שגיאה: '+r.error.message);return;}pendClear(pk);releaseCid('student');closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
-async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
+async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){var pk=PK_STUDEL+id;pendMark(pk);try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){pendResolveErr(pk,r.error);toast(errMsg(r.error));return;}pendClear(pk);if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}});}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
 document.addEventListener('DOMContentLoaded',async function(){
   // עמידות אחסון (סבב 11): מדידה + פינוי יזום בעליית האפליקציה. המכסה
   // משותפת לארבע האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
   try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
+  // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
+  // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
+  try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
   var ok=await ensureSetup();
