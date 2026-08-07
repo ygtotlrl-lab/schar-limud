@@ -1000,6 +1000,49 @@ function _randDeviceId() {
   for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
   return id;
 }
+
+// ===== client_id — מפתח זהות שנוצר במכשיר (שלב א' לאופליין, migrations/006) =====
+// `sl_transactions.id` ו-`sl_students.id` הם SERIAL: המסד מקצה אותם, לא המכשיר.
+// לכן רשומה שנוצרה כאן היא **חסרת זהות עד שהיא מגיעה לשרת**, ושליחה חוזרת אחרי
+// תשובה שאבדה ברשת יוצרת שורה שנייה — בתנועה כספית זה תשלום כפול. `client_id`
+// הוא uuid שנוצר כאן לפני השליחה, והכתיבה היא UPSERT עליו: ניסיון חוזר מעדכן
+// את אותה שורה. **כל רשומה חדשה חייבת לקבל אותו.**
+function newClientId(){
+  try{
+    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();
+  }catch(e){}
+  // נפילה-חזרה: randomUUID קיים רק ב-secure context ובדפדפנים מודרניים, וב-WebView
+  // ישן הוא פשוט חסר. getRandomValues זמין רחב יותר; Math.random הוא המוצא האחרון.
+  var b=null;
+  try{
+    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.getRandomValues==='function'){
+      b=new Uint8Array(16);crypto.getRandomValues(b);
+    }
+  }catch(e){b=null;}
+  if(!b){b=new Array(16);for(var i=0;i<16;i++)b[i]=Math.floor(Math.random()*256);}
+  b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;  // גרסה 4, variant RFC 4122
+  var h=[],j;for(j=0;j<16;j++)h.push((b[j]+0x100).toString(16).slice(1));
+  return h.slice(0,4).join('')+'-'+h.slice(4,6).join('')+'-'+h.slice(6,8).join('')+'-'+h.slice(8,10).join('')+'-'+h.slice(10,16).join('');
+}
+// המזהה של הרשומה ש**נרשמת עכשיו**. זו הנקודה שבה ה-UPSERT מקבל משמעות כבר
+// היום: משתמש שלוחץ "שמור" שוב אחרי כשל שולח את **אותו** client_id, ולכן אם
+// הכתיבה הראשונה בכל זאת נכנסה (תשובה שאבדה ברשת) — היא מתעדכנת ולא מוכפלת.
+// מזהה שנוצר מחדש בכל ניסיון היה מחזיר בדיוק את הכפילות שהעמודה באה למנוע.
+//
+// **המזהה קשור לתוכן הטופס** (`fp`), ומשוחרר בשמירה מוצלחת. שני הכיוונים
+// חשובים, ושניהם על כסף:
+//   • אותו תוכן אחרי כשל = ניסיון חוזר ⇐ אותו מזהה ⇐ שורה אחת.
+//   • תוכן שהשתנה = תשלום אחר ⇐ מזהה חדש ⇐ שורה חדשה. בלי זה, תשלום שני
+//     שנרשם אחרי כשל היה **דורס** את הראשון במקום להתווסף אליו.
+// בסבב האופליין המלא התור היוצא הוא שיחזיק את המזהה פר-רשומה, והלוגיקה כאן
+// תהיה עודפת — אבל עד אז היא מה שהופך את ה-UPSERT למשמעותי.
+var _pendingCid = {};
+function pendingCid(slot, fp){
+  var p=_pendingCid[slot];
+  if(!p||p.fp!==fp){ p={fp:fp,id:newClientId()}; _pendingCid[slot]=p; }
+  return p.id;
+}
+function releaseCid(slot){ delete _pendingCid[slot]; }
 // supabase-js לא מטיל timeout משלו: ברשת "חצי מחוברת" ה-fetch לא מצליח ולא
 // נכשל, והממתין נתקע לנצח. עוטפים בו פעולות שהמשתמש ממתין להן.
 var NET_TIMEOUT_MS = 8000;
@@ -1175,6 +1218,7 @@ CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK 
 -- ריק = כל השנה, כמו לפני 004. end_month ריק = עדיין פעיל.
 CREATE TABLE IF NOT EXISTS public.sl_students (
   id             SERIAL PRIMARY KEY,
+  client_id      TEXT,
   name           TEXT NOT NULL,
   active         BOOLEAN DEFAULT true,
   start_month    TEXT,
@@ -1194,6 +1238,12 @@ ALTER TABLE public.sl_students
 ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS start_month TEXT,
   ADD COLUMN IF NOT EXISTS end_month   TEXT;
+-- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
+-- מותר ב-NULL בכוונה (רשומות היסטוריות); NULL-ים נחשבים שונים באינדקס ייחודי.
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS sl_students_client_id_key
+  ON public.sl_students (client_id);
 -- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
 -- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
 ALTER TABLE public.sl_students
@@ -1241,6 +1291,7 @@ CREATE INDEX IF NOT EXISTS sl_students_active_idx
 -- פיזית של תלמיד תיכשל במקום להשמיד בשקט את כל היסטוריית הכספים שלו.
 CREATE TABLE IF NOT EXISTS public.sl_transactions (
   id             SERIAL PRIMARY KEY,
+  client_id      TEXT,
   student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE RESTRICT,
   date           DATE NOT NULL,
   amount         NUMERIC(10,2) NOT NULL,
@@ -1258,6 +1309,13 @@ ALTER TABLE public.sl_transactions
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS deleted_by TEXT,
   ADD COLUMN IF NOT EXISTS created_by TEXT;
+-- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
+-- בלעדיו שליחה חוזרת של תשלום (ניתוק באמצע ואז ניסיון נוסף) יוצרת שורה
+-- שנייה, כלומר תשלום כפול. הכתיבה מהאפליקציה היא UPSERT על העמודה הזו.
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
+  ON public.sl_transactions (client_id);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
@@ -1678,7 +1736,10 @@ async function saveTxn(){
   if(!guardOnline())return;
   var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
-  try{var r=await SB.from('sl_transactions').insert({student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)});if(r.error)throw r.error;toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(errMsg(e));}
+  // UPSERT על client_id ולא INSERT: התשלום נושא מזהה שנוצר במכשיר, ולכן שליחה
+  // חוזרת שלו מעדכנת את השורה הקיימת. INSERT היה יוצר שורה שנייה — תשלום כפול.
+  var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
+  try{var r=await SB.from('sl_transactions').upsert({client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)},{onConflict:'client_id'});if(r.error)throw r.error;releaseCid('txn');toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){toast(errMsg(e));}
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
@@ -1789,7 +1850,7 @@ async function deleteListItem(id){if(!guardOnline())return;
   if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
   showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
 function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var r=await SB.from('sl_students').insert({name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});if(r.error){toast('שגיאה: '+r.error.message);return;}closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
+async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));var r=await SB.from('sl_students').upsert({client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month},{onConflict:'client_id'});if(r.error){toast('שגיאה: '+r.error.message);return;}releaseCid('student');closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
 async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}

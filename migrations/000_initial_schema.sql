@@ -39,6 +39,7 @@ CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK 
 -- ריק = כל השנה, כמו לפני 004. end_month ריק = עדיין פעיל.
 CREATE TABLE IF NOT EXISTS public.sl_students (
   id             SERIAL PRIMARY KEY,
+  client_id      TEXT,
   name           TEXT NOT NULL,
   active         BOOLEAN DEFAULT true,
   start_month    TEXT,
@@ -58,6 +59,12 @@ ALTER TABLE public.sl_students
 ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS start_month TEXT,
   ADD COLUMN IF NOT EXISTS end_month   TEXT;
+-- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
+-- מותר ב-NULL בכוונה (רשומות היסטוריות); NULL-ים נחשבים שונים באינדקס ייחודי.
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS sl_students_client_id_key
+  ON public.sl_students (client_id);
 -- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
 -- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
 ALTER TABLE public.sl_students
@@ -105,6 +112,7 @@ CREATE INDEX IF NOT EXISTS sl_students_active_idx
 -- פיזית של תלמיד תיכשל במקום להשמיד בשקט את כל היסטוריית הכספים שלו.
 CREATE TABLE IF NOT EXISTS public.sl_transactions (
   id             SERIAL PRIMARY KEY,
+  client_id      TEXT,
   student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE RESTRICT,
   date           DATE NOT NULL,
   amount         NUMERIC(10,2) NOT NULL,
@@ -122,6 +130,13 @@ ALTER TABLE public.sl_transactions
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS deleted_by TEXT,
   ADD COLUMN IF NOT EXISTS created_by TEXT;
+-- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
+-- בלעדיו שליחה חוזרת של תשלום (ניתוק באמצע ואז ניסיון נוסף) יוצרת שורה
+-- שנייה, כלומר תשלום כפול. הכתיבה מהאפליקציה היא UPSERT על העמודה הזו.
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
+  ON public.sl_transactions (client_id);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
