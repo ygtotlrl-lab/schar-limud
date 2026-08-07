@@ -73,6 +73,63 @@ https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql
 טבלאות: sl_users, sl_students, sl_transactions, sl_settings, sl_lists
 משתמש ברירת מחדל: admin / admin
 
+## חתימת APK — מפתח קבוע (לעולם לא משתנה!)
+
+| | |
+|---|---|
+| **קובץ** | `signing/schar.keystore` (PKCS12, RSA 2048) |
+| **alias** | `schar` |
+| **storepass** | `schar123` |
+| **keypass** | `schar123` (זהה ל-storepass) |
+| **תוקף** | 10,000 יום — 07.08.2026 עד 23.12.2053 |
+| **SHA256** | `29:32:D9:B5:94:69:D4:E4:53:EF:C7:EE:3B:10:55:C9:CE:4B:EE:D6:9B:BB:78:EC:EE:18:BD:C6:BE:2D:0F:87` |
+| **SHA1** | `F5:BD:6A:6E:BE:EF:B5:85:78:9F:70:B1:19:60:8F:1B:DE:90:1B:D4` |
+| **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |
+
+### ⛔ אזהרה — אין להחליף את המפתח לעולם
+
+אנדרואיד מזהה אפליקציה מותקנת לפי **חתימת המפתח**, לא לפי שם הקובץ או מספר הגרסה.
+APK שנחתם במפתח אחר נחשב אפליקציה **זרה**, וההתקנה מעל הקיימת נכשלת בשגיאת
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+
+**המשמעות המעשית של החלפת מפתח:** כל משתמש שכבר התקין יצטרך **להסיר את האפליקציה
+ולהתקין מחדש** — ואין דרך לעקוף את זה. אין שחזור, אין מיגרציה, אין "חתימה מחדש
+במפתח הישן" אחרי שהוא אבד.
+
+לכן:
+1. **לעולם לא להריץ `keytool -genkeypair` שוב** עבור הפרויקט הזה. הריצה הראשונה
+   כבר בוצעה, והקובץ בריפו הוא התוצאה שלה.
+2. **לעולם לא למחוק, לדרוס או "לרענן" את `signing/schar.keystore`.** הוא חלק מהריפו
+   בדיוק כדי שלא יאבד — כמו שקרה ב-yoman-avoda כשהמפתח ישב ב-`/tmp`.
+3. **כל APK חדש נחתם אך ורק במפתח הזה**, גם אם נבנה בכלי אחר (PWABuilder, Bubblewrap,
+   Android Studio).
+4. אחרי חתימה — לאמת שה-SHA256 תואם לטבלה למעלה.
+
+### חתימה
+
+```bash
+./signing/sign-apk.sh app-unsigned.apk schar.apk
+```
+
+הסקריפט מריץ `zipalign` ואז `apksigner`, ובסוף `apksigner verify --print-certs`.
+דורש Android build-tools ב-PATH.
+
+חלופה ידנית (apksigner):
+```bash
+apksigner sign --ks signing/schar.keystore --ks-key-alias schar \
+  --ks-pass pass:schar123 --key-pass pass:schar123 app.apk
+```
+
+חלופה ידנית (jarsigner, אם אין apksigner):
+```bash
+jarsigner -keystore signing/schar.keystore -storepass schar123 -keypass schar123 app.apk schar
+```
+
+אימות טביעת האצבע:
+```bash
+keytool -list -v -keystore signing/schar.keystore -storepass schar123
+```
+
 ## סבב תיקונים 6 (יולי 2026, `sw.js` v6)
 - **סכימת SQL — מקור אמת יחיד.** הסכימה ישבה בשלושה עותקים לא מסונכרנים (ה-SQL המוטבע
   במסך ההגדרה, `supabase-setup.sql`, ו-`migrations/`), ושניים מהם התיישנו בשקט: חסרו בהם
