@@ -1,0 +1,82 @@
+-- ============================================================
+-- schar-limud — client_id: מפתח זהות שנוצר במכשיר
+-- שם המיגרציה: add_client_id_identity
+-- הרץ ב-Supabase SQL Editor (פרויקט kxbtskqobynewvnckaaz):
+--   https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new
+-- ============================================================
+-- שלב א' של ההכנה לעבודה אופליין. **אין כאן שכבת אופליין** — רק תשתית הזהות
+-- שבלעדיה אי אפשר לבנות אותה בבטחה.
+--
+-- הבעיה: `sl_transactions.id` ו-`sl_students.id` הם SERIAL, כלומר `nextval`
+-- בצד המסד. **המכשיר לא יודע את המזהה של רשומה שהוא יצר עד שהיא מגיעה לשרת.**
+-- המשמעות המעשית לתנועה כספית:
+--   1. המכשיר שולח INSERT של תשלום.
+--   2. המסד מכניס את השורה — והתשובה אובדת ברשת (ניתוק, timeout).
+--   3. המכשיר, שלא קיבל תשובה, שולח שוב.
+--   4. המסד מקצה id חדש ויוצר **שורה שנייה** — כלומר תשלום כפול, בכסף.
+-- אין למסד שום דרך לדעת ששתי השורות הן אותה כוונה. ביומן-עבודה ובהנהלה
+-- הבעיה הזו לא קיימת: שם המזהה הוא uuid שנוצר במכשיר, ומנוע המיזוג מזהה
+-- כפילות לפי id.
+--
+-- הפתרון: עמודת `client_id` — uuid שנוצר **במכשיר** לפני השליחה, עם אילוץ
+-- ייחודיות. הכתיבה מהאפליקציה עוברת ל-UPSERT על העמודה הזו, ולכן שליחה
+-- חוזרת של אותה רשומה **מעדכנת את השורה הקיימת במקום ליצור שנייה**.
+--
+-- ⚠️ העמודה **מותרת ב-NULL בכוונה**: 25 התנועות והתלמידים הקיימים נוצרו
+--    לפני המיגרציה ואין להם client_id. אילוץ NOT NULL היה מכשיל את המיגרציה
+--    או מחייב מילוי מזהים מומצאים לרשומות היסטוריות. ב-Postgres ערכי NULL
+--    **נחשבים שונים זה מזה** באינדקס ייחודי, ולכן ריבוי NULL-ים מותר ואינו
+--    מתנגש. כל רשומה **חדשה** מקבלת client_id מהאפליקציה.
+--
+-- ⚠️ המזהה הראשי לא השתנה. `id` נשאר SERIAL והוא עדיין המפתח שאליו מצביע
+--    `sl_transactions.student_id`. `client_id` הוא מפתח **זהות** מקביל
+--    לצורך דה-דופליקציה, ולא מפתח קשרים.
+--
+-- ⛔ האינדקס חייב להיות **מלא ולא חלקי.** אינדקס עם `WHERE client_id IS NOT NULL`
+--    נראה נכון יותר (הוא לא מאנדקס את הרשומות ההיסטוריות) אבל **שובר את
+--    ה-UPSERT**: הסקת ON CONFLICT על אינדקס חלקי מצליחה רק אם המשפט חוזר על
+--    התנאי, ו-PostgREST אינו יכול לפלוט אותו. זה קרה בפועל — ר' `007`.
+--    אינדקס מלא מתיר ריבוי NULL בדיוק כמו החלקי, ולכן אין שום ויתור.
+--
+-- הרצה חוזרת בטוחה (הכול IF NOT EXISTS).
+-- ============================================================
+
+-- ---------- 1. sl_transactions ----------
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+
+COMMENT ON COLUMN public.sl_transactions.client_id IS
+  'מזהה ייחודי שנוצר במכשיר (uuid) לפני השליחה. תנאי לעבודה אופליין בטוחה: הכתיבה היא UPSERT עליו, ולכן שליחה חוזרת מעדכנת ואינה יוצרת תשלום כפול. NULL = רשומה שנוצרה לפני migrations/006.';
+
+-- אינדקס ייחודי (ולא ADD CONSTRAINT) — זו הצורה האידמפוטנטית היחידה כאן,
+-- והיא מספיקה במלואה: `ON CONFLICT (client_id)` נסמך על אינדקס ייחודי בדיוק
+-- כמו על אילוץ. NULL-ים נחשבים שונים ולכן הרשומות ההיסטוריות לא מתנגשות.
+CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
+  ON public.sl_transactions (client_id);
+
+-- ---------- 2. sl_students ----------
+-- אותו טיפול בדיוק: יצירת תלמיד אופליין תהיה בטוחה מכפילות בסבב הבא.
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS client_id TEXT;
+
+COMMENT ON COLUMN public.sl_students.client_id IS
+  'מזהה ייחודי שנוצר במכשיר (uuid) לפני השליחה. הכתיבה היא UPSERT עליו, ולכן שליחה חוזרת מעדכנת ואינה יוצרת תלמיד כפול. NULL = רשומה שנוצרה לפני migrations/006.';
+
+CREATE UNIQUE INDEX IF NOT EXISTS sl_students_client_id_key
+  ON public.sl_students (client_id);
+
+-- ---------- 3. אימות ----------
+-- שתי העמודות קיימות, ושני האינדקסים ייחודיים:
+--
+-- SELECT table_name, column_name, is_nullable, data_type
+--   FROM information_schema.columns
+--  WHERE table_schema='public' AND column_name='client_id'
+--  ORDER BY table_name;
+--
+-- SELECT indexname, indexdef FROM pg_indexes
+--  WHERE schemaname='public' AND indexname LIKE '%client_id_key';
+--
+-- אין כפילויות בפועל (אמור להחזיר 0 שורות):
+--
+-- SELECT client_id, count(*) FROM public.sl_transactions
+--  WHERE client_id IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
