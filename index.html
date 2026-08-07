@@ -363,6 +363,10 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
       </div>
       <div id="settings-main" style="display:none">
         <div class="card">
+          <div class="card-hdr"><h3>&#128190; אחסון מקומי</h3></div>
+          <div class="card-body"><div id="ls-status-box"></div></div>
+        </div>
+        <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input id="set-def-tuition" type="number" min="0" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
@@ -457,7 +461,10 @@ var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
 var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
-function toast(msg,dur){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
+function toast(msg,dur){
+  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
+  if(typeof lsGuardToast==='function'&&!lsGuardToast(msg))return;
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
 // להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
@@ -471,23 +478,522 @@ var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 function isNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1||m.indexOf('timeout')!==-1; }
 function guardOnline(){ if(!navigator.onLine){ toast(MSG_OFFLINE,3000); return false; } return true; }
 function errMsg(e){ return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+// ═══ עמידות אחסון מקומי (סבב 11) ═══
+// ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
+// זו הטבלה **היחידה** שנבדלת בין ארבע האפליקציות; המודול שמתחתיה זהה בכולן.
+var LS_CFG = {
+  app: 'schar',
+  logKey: 'sl_ls_log',
+  hzPrefix: 'sl_ls_hz_',
+
+  // ⚠️ שכר לימוד היא היחידה מהארבע שאין לה **עותק מקומי של הנתונים** —
+  // `syncAll` קוראת ישירות מ-Supabase כל 3 שניות, וב-localStorage יושבים רק
+  // `sl_device_id` ו-`sl_last_backup` (עשרות בתים). לכן שני השלבים ריקים:
+  // אין כאן מטמון לפנות ואין רשומות ישנות מקומיות. **זה לא פער במימוש —
+  // זה תיאור נכון של האפליקציה**, והמודול נשאר זהה כדי שברגע שייבנה כאן
+  // עותק מקומי (ר' "עבודה אופליין" ב-CLAUDE.md) יהיה רק למלא את הטבלה.
+  // עד אז התרומה של המודול כאן היא הכתיבה המוגנת, הניטור וההתרעות —
+  // שרלוונטיים במלואם, כי המכסה משותפת עם שלוש האחיות.
+  tier1: [],
+  tier2: [],
+
+  pending: function () { return false; },
+  syncedThrough: function () { return 0; }
+};
+// מתאם הטוסט — החתימה כאן היא toast(msg, dur).
+function lsToast(msg, dur) { try { toast(msg, dur || 5000); } catch (e) {} }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   עמידות אחסון מקומי — מודול משותף (סבב 11).
+   **הקטע הזה זהה מילה במילה בארבע האפליקציות** (hanhala-ruchanit, schar-limud,
+   yoman-avoda, gius). כל שינוי כאן חייב להיעשות בארבעתן באותו סבב.
+   התלויות היחידות שמחוץ לו: `LS_CFG` (טבלת מדיניות פר-אפליקציה, מוגדרת מעליו),
+   `lsToast(msg, dur)` (מתאם דק לטוסט של האפליקציה) ו-`esc()`.
+
+   הרקע: ארבע האפליקציות מתארחות על אותו origin ולכן חולקות מכסת localStorage
+   אחת (~5MB). הסכנה אינה אובדן הנתונים הקיימים — הם בענן — אלא **כתיבה חדשה
+   שנכשלת בזמן שהמשתמש מקבל אישור הצלחה**. לכן:
+     1. `lsSet` מחזירה false בכישלון, ומציגה באנר אדום קבוע. **כל קורא במסלול
+        קריטי חייב לבדוק את הערך המוחזר ולא להציג "נשמר" אחריו.**
+     2. `lsBoot` מודדת את הנפח של **כל** המפתחות בדומיין (לא רק של האפליקציה
+        הנוכחית) ומתריעה מעל 3MB / 4MB.
+     3. מעל 60% מהמכסה מתבצע **פינוי יזום** — לא מחכים לכישלון.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var LS_QUOTA_BYTES = 5 * 1024 * 1024;   // מכסת origin טיפוסית
+var LS_WARN_BYTES  = 3 * 1024 * 1024;   // התרעה
+var LS_CRIT_BYTES  = 4 * 1024 * 1024;   // התרעה בולטת
+var LS_SWEEP_PCT   = 0.60;              // מעל זה — פינוי יזום בעלייה
+var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
+var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
+
+// נוסח אחיד בארבע האפליקציות. סמלים: ✅ הצלחה / ⚠️ אזהרה / ❌ שגיאה, בתחילה.
+var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. פנו מקום בהגדרות ← אחסון מקומי.';
+var MSG_LS_BLOCK  = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
+var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — כדאי לפנות מקום בהגדרות';
+var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — פנו מקום בהגדרות מיד';
+var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
+
+// כל האפליקציות שחולקות את ה-origin. הקידומת היא מה שמזהה מי תופס מה.
+var LS_APPS = [
+  { id: 'hanhala', name: 'הנהלה רוחנית', pre: ['ys_'] },
+  { id: 'schar',   name: 'שכר לימוד',    pre: ['sl_'] },
+  { id: 'yoman',   name: 'יומן עבודה',   pre: ['tb_'] },
+  { id: 'gius',    name: 'גיוס',         pre: ['g_', 'gius'] }
+];
+
+function lsFmtBytes(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return n + ' ב׳';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
+  return (n / (1024 * 1024)).toFixed(2) + ' MB';
+}
+function lsAppOf(key) {
+  var k = String(key == null ? '' : key);
+  for (var i = 0; i < LS_APPS.length; i++) {
+    for (var j = 0; j < LS_APPS[i].pre.length; j++) {
+      if (k.indexOf(LS_APPS[i].pre[j]) === 0) return LS_APPS[i];
+    }
+  }
+  return { id: 'other', name: 'אחר', pre: [] };
+}
+// UTF-16: שני בתים לתו, גם למפתח וגם לערך. הערכה, לא מדידה מדויקת — אבל
+// עקבית, וזה מה שנדרש כדי להשוות מול הסף.
+function lsEntryBytes(key, val) {
+  return (String(key == null ? '' : key).length + String(val == null ? '' : val).length) * 2;
+}
+
+// מדידת **כל** המפתחות בדומיין, לא רק של האפליקציה הנוכחית — זה כל העניין:
+// המכסה משותפת, ולכן אפליקציה שמסתכלת רק על עצמה לא רואה את מה שחונק אותה.
+function lsUsage() {
+  var out = { total: 0, quota: LS_QUOTA_BYTES, free: 0, pct: 0, apps: [], keys: [], ok: true };
+  var byApp = {}, i;
+  for (i = 0; i < LS_APPS.length; i++) byApp[LS_APPS[i].id] = { id: LS_APPS[i].id, name: LS_APPS[i].name, bytes: 0, count: 0 };
+  byApp.other = { id: 'other', name: 'אחר', bytes: 0, count: 0 };
+  try {
+    for (i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k == null) continue;
+      var v = '';
+      try { v = localStorage.getItem(k) || ''; } catch (e) { }
+      var b = lsEntryBytes(k, v), a = lsAppOf(k);
+      out.total += b;
+      out.keys.push({ key: k, bytes: b, app: a.id, appName: a.name });
+      if (!byApp[a.id]) byApp[a.id] = { id: a.id, name: a.name, bytes: 0, count: 0 };
+      byApp[a.id].bytes += b; byApp[a.id].count++;
+    }
+  } catch (e) { out.ok = false; }
+  out.keys.sort(function (x, y) { return y.bytes - x.bytes; });
+  Object.keys(byApp).forEach(function (id) { if (byApp[id].count) out.apps.push(byApp[id]); });
+  out.apps.sort(function (x, y) { return y.bytes - x.bytes; });
+  out.free = Math.max(0, out.quota - out.total);
+  out.pct = out.quota ? out.total / out.quota : 0;
+  return out;
+}
+
+/* ── יומן הפינוי ────────────────────────────────────────────────────────
+   הפינוי שקט כלפי המשתמש, אבל **לא בלתי נראה** — בלי יומן אי אפשר לדעת
+   מתי ומה פונה. נשמר קצר בכוונה (12 רשומות) כדי שהיומן עצמו לא יהפוך
+   לצרכן מקום. הכתיבה כאן גולמית ולא דרך `lsSet` — אחרת כישלון ביומן היה
+   מפעיל פינוי שכותב ליומן, וחוזר חלילה. */
+function lsSetRaw(key, value) {
+  try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+}
+function lsLogRead() {
+  try { var v = JSON.parse(localStorage.getItem(LS_CFG.logKey) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function lsLog(action, detail, bytes) {
+  var e = { t: Date.now(), a: String(action), d: String(detail == null ? '' : detail), b: Number(bytes) || 0 };
+  try { console.info('[ls] ' + e.a + (e.d ? ' · ' + e.d : '') + (e.b ? ' · ' + lsFmtBytes(e.b) : '')); } catch (e1) { }
+  try {
+    var arr = lsLogRead();
+    arr.push(e);
+    while (arr.length > LS_LOG_MAX) arr.shift();
+    lsSetRaw(LS_CFG.logKey, JSON.stringify(arr));
+  } catch (e2) { }
+}
+
+// שמות הזריקה משתנים בין דפדפנים; code 22 הוא הישן, 1014 הוא של פיירפוקס.
+function lsIsQuotaErr(e) {
+  if (!e) return false;
+  var n = e.name || '';
+  return n === 'QuotaExceededError' || n === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+         e.code === 22 || e.code === 1014;
+}
+
+/* ── באנר כישלון קבוע ───────────────────────────────────────────────────
+   טוסט נעלם אחרי שלוש שניות; כישלון שמירה חייב להישאר על המסך עד שהמשתמש
+   סוגר אותו, אחרת הוא בדיוק "הכישלון השקט" שאנחנו מונעים. */
+function lsAlert(msg) {
+  var el = document.getElementById('ls-alert');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ls-alert';
+    el.setAttribute('role', 'alert');
+    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:#b3261e;' +
+      'color:#fff;direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
+      'padding:12px 46px;box-shadow:0 2px 14px rgba(0,0,0,.35)';
+    var sp = document.createElement('span');
+    sp.id = 'ls-alert-msg';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = '✕';
+    b.setAttribute('aria-label', 'סגור');
+    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:#fff;' +
+      'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
+    b.addEventListener('click', function () { el.style.display = 'none'; });
+    el.appendChild(sp); el.appendChild(b);
+    (document.body || document.documentElement).appendChild(el);
+  }
+  var m = document.getElementById('ls-alert-msg');
+  if (m) m.textContent = String(msg == null ? '' : msg);
+  el.style.display = '';
+}
+
+/* ── כתיבה מוגנת ────────────────────────────────────────────────────────
+   **כל כתיבה ל-localStorage באפליקציה עוברת דרך כאן.** אין קריאה ישירה
+   ל-`localStorage.setItem` מחוץ למודול הזה (למעט `lsSetRaw` שבתוכו).
+   מחזירה true/false — ומסלול קריטי שמתעלם מהערך המוחזר הוא באג. */
+var _lsSweeping = false;
+var _lsToastAt = 0;
+/* "אף כישלון שקט" — מונה כישלונות גלובלי.
+   מסלול קריטי (רישום נוכחות, שמירת תשלום, הוספת רשומה, רישום תנועה) עוטף את
+   הפעולה כך:  `var t = lsFails(); ...await save()...; if (!lsOkSince(t)) return;`
+   ורק אז מציג "נשמר". כך גם כתיבה שנכשלה עמוק בתוך שרשרת async מונעת את טוסט
+   ההצלחה, בלי להשחיל ערך מוחזר דרך עשר פונקציות. */
+var _lsFailCount = 0;
+function lsFails() { return _lsFailCount; }
+function lsOkSince(n) { return _lsFailCount === n; }
+
+/* ── שער "אין טוסט הצלחה אחרי כישלון שמירה" ─────────────────────────────
+   נקודת אכיפה **אחת** במקום עשרות בדיקות פזורות שאפשר לשכוח באחת: `toast()`
+   של כל אפליקציה פותחת ב-`if (!lsGuardToast(msg)) return;`, וכל הודעה
+   שמתחילה ב-✅ נבלעת אם כתיבה מקומית נכשלה בשתי וחצי השניות האחרונות —
+   כלומר בתוך אותה פעולת משתמש. הבאנר האדום כבר על המסך, והוא ההודעה
+   הנכונה. **אין להסיר את השורה הזו מ-`toast`** — בלעדיה חוזר בדיוק המצב
+   שהסבב הזה בא למנוע: כתיבה שנכשלה ומשתמש שמקבל "נשמר בהצלחה". */
+var _lsLastFailAt = 0;
+var LS_SUCCESS_MUTE_MS = 2500;
+function lsSuccessBlocked() { return (Date.now() - _lsLastFailAt) < LS_SUCCESS_MUTE_MS; }
+function lsGuardToast(msg) {
+  return !(String(msg == null ? '' : msg).indexOf('✅') === 0 && lsSuccessBlocked());
+}
+function lsSet(key, value) {
+  var v = (value == null ? '' : String(value));
+  try { localStorage.setItem(key, v); return true; } catch (e) {
+    // בתוך פינוי — כישלון הוא תוצאה, לא טריגר לפינוי נוסף (רקורסיה).
+    if (_lsSweeping) return false;
+    _lsFailCount++;
+    _lsLastFailAt = Date.now();
+    if (lsIsQuotaErr(e)) {
+      // מנגנון חירום: פינוי נוסף לפי **אותו סדר** בדיוק, וניסיון אחד נוסף.
+      var need = lsEntryBytes(key, v) + 64 * 1024;
+      var freed = lsSweepGuarded('חירום — כתיבה נכשלה במכסה: ' + key, need);
+      if (freed > 0) {
+        // הצליח בניסיון השני — לא כישלון. המונה מוחזר כדי שהמסלול הקריטי
+        // יציג "נשמר", שהרי הנתון באמת נשמר.
+        try { localStorage.setItem(key, v); _lsFailCount--; _lsLastFailAt = 0; lsLog('כתיבה חוזרת הצליחה', key, 0); return true; }
+        catch (e2) { e = e2; }
+      }
+      lsLog('❌ כתיבה נכשלה (מכסה)', key, lsEntryBytes(key, v));
+      lsAlert(MSG_LS_FULL);
+      lsToastThrottled(MSG_LS_FULL);
+    } else {
+      lsLog('❌ כתיבה נכשלה (אחסון חסום)', key, 0);
+      lsAlert(MSG_LS_BLOCK);
+      lsToastThrottled(MSG_LS_BLOCK);
+    }
+    try { console.warn('[ls] setItem נכשל עבור ' + key + ':', e && e.message); } catch (e3) { }
+    return false;
+  }
+}
+// הבאנר אידמפוטנטי ולכן מוצג בכל כישלון; הטוסט מווסת כדי שסדרת כתיבות
+// כושלת לא תהפוך למטר טוסטים שמסתיר את ההודעה עצמה.
+function lsToastThrottled(msg) {
+  var now = Date.now();
+  if (now - _lsToastAt < 8000) return;
+  _lsToastAt = now;
+  try { lsToast(msg, 6000); } catch (e) { }
+}
+function lsGet(key, fallback) {
+  try {
+    var v = localStorage.getItem(key);
+    return v == null ? (fallback === undefined ? null : fallback) : v;
+  } catch (e) { return fallback === undefined ? null : fallback; }
+}
+function lsRemove(key) {
+  try { localStorage.removeItem(key); return true; } catch (e) { return false; }
+}
+
+/* ── אופק הפינוי ────────────────────────────────────────────────────────
+   פינוי שלב ב׳ גורע רשומות ישנות מהעותק **שעל הדיסק** בלבד. כדי שהן לא
+   יחזרו לדיסק בשמירה הבאה (מנוע המיזוג מחזיר כל רשומה מרוחקת שאין לה
+   מקבילה מקומית — ולכן פינוי בלי אופק הוא חסר משמעות), נשמר לכל מפתח
+   "אופק": חותמת הזמן של הרשומה החדשה ביותר שפונתה. `lsSetArray` מסננת
+   מתחתיו בכל כתיבה. **הזיכרון והענן לא נוגעים** — רק הדיסק מצטמצם. */
+function lsHorizon(key) {
+  var v = parseInt(lsGet(LS_CFG.hzPrefix + key, '0'), 10);
+  return isFinite(v) && v > 0 ? v : 0;
+}
+function lsHorizonKeys() {
+  var out = [];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(LS_CFG.hzPrefix) === 0) out.push(k);
+    }
+  } catch (e) { }
+  return out;
+}
+function lsClearHorizons() {
+  var ks = lsHorizonKeys();
+  ks.forEach(lsRemove);
+  if (ks.length) lsLog('אופק הפינוי נוקה', ks.length + ' מפתחות', 0);
+  return ks.length;
+}
+// כתיבת מערך מכובדת-אופק. `tsOf(rec)` מחזירה חותמת זמן במילישניות.
+function lsSetArray(key, arr, tsOf) {
+  var list = Array.isArray(arr) ? arr : [];
+  var hz = lsHorizon(key), keep = list;
+  if (hz > 0 && typeof tsOf === 'function') {
+    keep = list.filter(function (r) {
+      var t = Number(tsOf(r));
+      return !(isFinite(t) && t > 0 && t <= hz);
+    });
+  }
+  return lsSet(key, JSON.stringify(keep));
+}
+
+/* ── פינוי יזום ─────────────────────────────────────────────────────────
+   סדר קפדני:
+     א. מטמונים וערכים שניתן לשחזר מהענן בכל רגע.
+     ב. ארכיון ורשומות ישנות **שכבר מסונכרנות** — הישן ביותר קודם.
+     ג. ⛔ נתון שטרם הסתנכרן לענן לא מפונה בשום מצב, גם אם המקום נגמר
+        לגמרי. במצב כזה עדיף להיכשל ברעש מאשר למחוק. */
+function lsSweepGuarded(reason, needBytes) {
+  if (_lsSweeping) return 0;
+  _lsSweeping = true;
+  try { return lsSweep(reason, needBytes); }
+  finally { _lsSweeping = false; }
+}
+function lsSweep(reason, needBytes) {
+  var need = Number(needBytes) || 0, freed = 0, i;
+  lsLog('פינוי התחיל', reason, 0);
+
+  // ── שלב א: מטמונים שניתן לשחזר מהענן ──
+  var sized = [];
+  (LS_CFG.tier1 || []).forEach(function (k) {
+    var v = lsGet(k, null);
+    if (v != null) sized.push({ k: k, b: lsEntryBytes(k, v) });
+  });
+  sized.sort(function (a, b) { return b.b - a.b; });   // הגדול קודם — מפנה מהר
+  var hit = [];
+  for (i = 0; i < sized.length; i++) {
+    if (need && freed >= need) break;
+    if (lsRemove(sized[i].k)) { freed += sized[i].b; hit.push(sized[i].k); }
+  }
+  if (hit.length) lsLog('פינוי א׳ — מטמונים', hit.join(', '), freed);
+  if (need && freed >= need) return freed;
+
+  // ── שלב ב: רשומות ישנות מסונכרנות ──
+  // כלל ג נאכף כאן, לפני הכול: אם יש **משהו** בתור שטרם עלה לענן, אי אפשר
+  // לדעת מה כבר בטוח שם — ולכן שלב ב מדולג לגמרי.
+  if (LS_CFG.pending && LS_CFG.pending()) {
+    lsLog('פינוי ב׳ דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
+    return freed;
+  }
+  var through = 0;
+  try { through = Number(LS_CFG.syncedThrough && LS_CFG.syncedThrough()) || 0; } catch (e) { through = 0; }
+  var specs = (LS_CFG.tier2 || []).slice();
+  // מפתח יכול להביא עֵד סנכרון משלו (`spec.syncedThrough`) כשהחותמת הגלובלית
+  // אינה מעידה עליו — למשל מערך שנדחף בנפרד ובהצלחה נפרדת.
+  var anyOwn = false;
+  for (i = 0; i < specs.length; i++) if (typeof specs[i].syncedThrough === 'function') anyOwn = true;
+  if (!through && !anyOwn) {
+    lsLog('פינוי ב׳ דולג', 'אין חותמת סנכרון מאומתת', 0);
+    return freed;
+  }
+  for (i = 0; i < specs.length; i++) specs[i]._b = lsEntryBytes(specs[i].key, lsGet(specs[i].key, ''));
+  specs.sort(function (a, b) { return b._b - a._b; });
+  for (i = 0; i < specs.length; i++) {
+    if (need && freed >= need) break;
+    freed += lsPruneKey(specs[i], through, need ? Math.max(0, need - freed) : 0);
+  }
+  return freed;
+}
+function lsPruneKey(spec, through, want) {
+  var raw = lsGet(spec.key, null);
+  if (raw == null) return 0;
+  var arr;
+  try { arr = JSON.parse(raw); } catch (e) { return 0; }
+  if (!Array.isArray(arr) || arr.length < 2) return 0;
+
+  // רצפת גיל פר-מפתח: גם רשומה מסונכרנת לא מפונה אם היא טרייה מדי. בלעדיה
+  // היינו מפנים דווקא את מה שהמשתמש עובד עליו עכשיו.
+  var cut = through;
+  if (typeof spec.syncedThrough === 'function') {
+    try { cut = Number(spec.syncedThrough()) || 0; } catch (e0) { cut = 0; }
+  }
+  if (!cut) return 0;
+  if (spec.minAgeMs) cut = Math.min(cut, Date.now() - spec.minAgeMs);
+  if (cut <= 0) return 0;
+
+  var before = lsEntryBytes(spec.key, raw);
+  var cand = [];
+  for (var i = 0; i < arr.length; i++) {
+    var t = Number(spec.ts(arr[i]));
+    if (isFinite(t) && t > 0 && t <= cut) cand.push({ i: i, t: t });
+  }
+  if (!cand.length) return 0;
+  cand.sort(function (a, b) { return a.t - b.t; });     // הישן ביותר קודם
+
+  var target = want > 0 ? want : Math.max(0, before - Math.floor(before * 0.5));
+  var drop = {}, hz = 0, est = 0, kept = arr.length;
+  for (i = 0; i < cand.length && est < target && kept > 1; i++) {
+    var rec = arr[cand[i].i];
+    var s = '';
+    try { s = JSON.stringify(rec) || ''; } catch (e2) { s = ''; }
+    est += s.length * 2;
+    drop[cand[i].i] = 1;
+    hz = cand[i].t;
+    kept--;
+  }
+  if (!hz) return 0;
+  var next = arr.filter(function (r, ix) { return !drop[ix]; });
+  var json = JSON.stringify(next);
+  if (!lsSetRaw(spec.key, json)) return 0;
+  lsSetRaw(LS_CFG.hzPrefix + spec.key, String(hz));
+  var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
+  lsLog('פינוי ב׳ — ' + (spec.label || spec.key),
+        (arr.length - next.length) + ' רשומות ישנות, עד ' + new Date(hz).toLocaleDateString('he-IL'),
+        gained);
+  if (typeof spec.after === 'function') { try { spec.after(next); } catch (e3) { } }
+  return gained;
+}
+
+/* ── בדיקת העלייה ───────────────────────────────────────────────────────
+   נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו. */
+function lsBoot() {
+  var u = lsUsage(), swept = 0;
+  if (u.total >= u.quota * LS_SWEEP_PCT) {
+    swept = lsSweepGuarded('פינוי יזום בעלייה — ' + Math.round(u.pct * 100) + '% מהמכסה',
+                           Math.max(0, u.total - Math.floor(u.quota * LS_SWEEP_TO)));
+    if (swept > 0) u = lsUsage();
+  }
+  if (u.total >= LS_CRIT_BYTES) {
+    lsLog('⚠️ מעל 4MB', lsFmtBytes(u.total), u.total);
+    lsAlert(MSG_LS_CRIT + ' (' + lsFmtBytes(u.total) + ' מתוך ' + lsFmtBytes(u.quota) + ')');
+  } else if (u.total >= LS_WARN_BYTES) {
+    lsLog('⚠️ מעל 3MB', lsFmtBytes(u.total), u.total);
+    try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000); } catch (e) { }
+  }
+  if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000); } catch (e1) { } }
+  return { usage: u, swept: swept };
+}
+
+/* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
+function lsStatusHTML() {
+  var u = lsUsage();
+  var pct = Math.min(100, Math.round(u.pct * 100));
+  var col = u.total >= LS_CRIT_BYTES ? '#b3261e' : (u.total >= LS_WARN_BYTES ? '#b26a00' : '#2e7d32');
+  var h = '<div class="ls-status" dir="rtl" style="font-size:13px;line-height:1.7">';
+  h += '<div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:4px">' +
+       '<span>נפח כולל בדומיין</span><span style="color:' + col + '">' + esc(lsFmtBytes(u.total)) +
+       ' / ' + esc(lsFmtBytes(u.quota)) + ' (' + pct + '%)</span></div>';
+  h += '<div style="background:rgba(128,128,128,.25);border-radius:6px;height:9px;overflow:hidden;margin-bottom:8px">' +
+       '<div style="width:' + pct + '%;height:100%;background:' + col + '"></div></div>';
+  h += '<div style="margin-bottom:8px">נשאר: <b>' + esc(lsFmtBytes(u.free)) + '</b></div>';
+
+  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי אפליקציה</div><table style="width:100%;border-collapse:collapse">';
+  u.apps.forEach(function (a) {
+    h += '<tr><td style="padding:2px 0">' + esc(a.name) + (a.id === LS_CFG.app ? ' <b>(זו)</b>' : '') +
+         '</td><td style="text-align:left;padding:2px 0">' + esc(lsFmtBytes(a.bytes)) +
+         ' <span style="opacity:.6">· ' + a.count + ' מפתחות</span></td></tr>';
+  });
+  if (!u.apps.length) h += '<tr><td>—</td><td></td></tr>';
+  h += '</table>';
+
+  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
+  u.keys.slice(0, 12).forEach(function (k) {
+    h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
+         '<span style="opacity:.6"> · ' + esc(k.appName) + '</span></td>' +
+         '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
+  });
+  if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';
+  h += '</table>';
+
+  var hz = lsHorizonKeys();
+  if (hz.length) {
+    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(178,106,0,.12);color:#b26a00">' +
+         '⚠️ פונו רשומות ישנות מ-' + hz.length + ' מפתחות מחוסר מקום. הן שמורות בענן ויחזרו לתצוגה כשיש רשת.</div>';
+  }
+
+  var log = lsLogRead();
+  h += '<div style="font-weight:800;margin:10px 0 4px">יומן פינוי</div>';
+  if (!log.length) h += '<div style="opacity:.6">— טרם בוצע פינוי —</div>';
+  else {
+    h += '<div style="font-size:12px;opacity:.85">';
+    for (var i = log.length - 1; i >= 0; i--) {
+      var d = new Date(log[i].t);
+      h += '<div>' + esc(d.toLocaleDateString('he-IL')) + ' ' + esc(d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })) +
+           ' — ' + esc(log[i].a) + (log[i].d ? ' · ' + esc(log[i].d) : '') +
+           (log[i].b ? ' · ' + esc(lsFmtBytes(log[i].b)) : '') + '</div>';
+    }
+    h += '</div>';
+  }
+
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+       '<button type="button" onclick="window.lsSweepNow()">🧹 פנה מקום עכשיו</button>' +
+       '<button type="button" onclick="window.lsRefreshStatus()">↻ רענן</button>';
+  if (hz.length) h += '<button type="button" onclick="window.lsRestoreAll()">☁️ טען הכל מחדש מהענן</button>';
+  h += '</div></div>';
+  return h;
+}
+function lsRenderStatus() {
+  var el = document.getElementById('ls-status-box');
+  if (el) el.innerHTML = lsStatusHTML();
+}
+function lsRefreshStatus() { lsRenderStatus(); }
+function lsSweepNow() {
+  var before = lsUsage().total;
+  var freed = lsSweepGuarded('פינוי ידני מההגדרות', 0);
+  lsRenderStatus();
+  try { lsToast(freed > 0 ? ('✅ פונו ' + lsFmtBytes(freed)) : '⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000); } catch (e) { }
+  return before - lsUsage().total;
+}
+function lsRestoreAll() {
+  lsClearHorizons();
+  lsRenderStatus();
+  try { lsToast('✅ האופק נוקה — הנתונים הישנים יחזרו בסנכרון הבא', 4000); } catch (e) { }
+}
+window.lsSweepNow = lsSweepNow;
+window.lsRefreshStatus = lsRefreshStatus;
+window.lsRestoreAll = lsRestoreAll;
+window.lsSet = lsSet;
+window.lsGet = lsGet;
+window.lsUsage = lsUsage;
+window.lsFails = lsFails;
+window.lsOkSince = lsOkSince;
+window.lsGuardToast = lsGuardToast;
+/* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
+
 // ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
 // localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
 // הזו כל קורא של getDeviceId מפיל את הפונקציה שקראה לו.
 var _deviceIdMem = null;
 function getDeviceId() {
-  try {
-    var id = localStorage.getItem('sl_device_id');
-    if (!id) {
-      id = _deviceIdMem || _randDeviceId();
-      localStorage.setItem('sl_device_id', id);
-    }
-    _deviceIdMem = id;
-    return id;
-  } catch (e) {
-    if (!_deviceIdMem) _deviceIdMem = _randDeviceId();
-    return _deviceIdMem;
+  // ⚠️ החריג היחיד ל-`lsSet` באפליקציה, ובכוונה: `lsSetRaw` הוא אותו עוזר
+  // מוקשח בלי הבאנר האדום. מזהה מכשיר שלא נשמר הוא חסר-נזק, והוא נכתב בכל
+  // עליית דף — באחסון חסום הוא היה מרים באנר קבוע כבר על מסך הכניסה ומאמן
+  // את המשתמש להתעלם ממנו. **אין להשתמש ב-`lsSetRaw` לשום נתון של המשתמש.**
+  var id = lsGet('sl_device_id', null);
+  if (!id) {
+    id = _deviceIdMem || _randDeviceId();
+    lsSetRaw('sl_device_id', id);
   }
+  _deviceIdMem = id;
+  return id;
 }
 function _randDeviceId() {
   var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
@@ -538,7 +1044,7 @@ async function slMaybeDailyBackup(){
       var ins=await SB.from('kv_backup').insert({key:tables[i], value:JSON.stringify(res.data)});
       if(!ins||ins.error) ok=false;
     }
-    if(ok){ try{ localStorage.setItem('sl_last_backup',today); }catch(eS){} }
+    if(ok) lsSet('sl_last_backup',today);
     else console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בכניסה הבאה');
   }catch(e){ /* גיבוי לא חוסם ולא שובר */ }
   _slBackupRunning=false;
@@ -1267,6 +1773,7 @@ function renderSettingsLists(){
   var cy=acadYearOf(todayStr());
   document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent('+s.id+')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
+  lsRenderStatus();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
@@ -1288,6 +1795,10 @@ async function saveNewStudent(){if(!guardOnline())return;var name=document.getEl
 async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){toast(errMsg(r.error));return;}if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){toast(errMsg(e));}});}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
 document.addEventListener('DOMContentLoaded',async function(){
+  // עמידות אחסון (סבב 11): מדידה + פינוי יזום בעליית האפליקציה. המכסה
+  // משותפת לארבע האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
+  // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
+  try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
   var ok=await ensureSetup();
