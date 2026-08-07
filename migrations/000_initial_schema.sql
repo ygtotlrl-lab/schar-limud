@@ -61,10 +61,13 @@ ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS end_month   TEXT;
 -- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
 -- מותר ב-NULL בכוונה (רשומות היסטוריות); NULL-ים נחשבים שונים באינדקס ייחודי.
+-- ⛔ האינדקס חייב להיות **מלא ולא חלקי** — ר' 007. אינדקס עם
+--    `WHERE client_id IS NOT NULL` שובר את הסקת ON CONFLICT של PostgREST.
 ALTER TABLE public.sl_students
   ADD COLUMN IF NOT EXISTS client_id TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS sl_students_client_id_key
   ON public.sl_students (client_id);
+DROP INDEX IF EXISTS public.sl_students_client_id_uidx;  -- הווריאנט החלקי, אם נוצר
 -- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
 -- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
 ALTER TABLE public.sl_students
@@ -133,10 +136,14 @@ ALTER TABLE public.sl_transactions
 -- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
 -- בלעדיו שליחה חוזרת של תשלום (ניתוק באמצע ואז ניסיון נוסף) יוצרת שורה
 -- שנייה, כלומר תשלום כפול. הכתיבה מהאפליקציה היא UPSERT על העמודה הזו.
+-- ⛔ האינדקס חייב להיות **מלא ולא חלקי** — ר' 007. אינדקס עם
+--    `WHERE client_id IS NOT NULL` שובר את הסקת ON CONFLICT של PostgREST,
+--    כלומר שמירת תשלום מפסיקה לעבוד.
 ALTER TABLE public.sl_transactions
   ADD COLUMN IF NOT EXISTS client_id TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
   ON public.sl_transactions (client_id);
+DROP INDEX IF EXISTS public.sl_transactions_client_id_uidx;  -- הווריאנט החלקי, אם נוצר
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
