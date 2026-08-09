@@ -86,7 +86,7 @@ https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql
 | 006 | `client_id` בשתי טבלאות הליבה | ✅ הורצה |
 | 007 | החלפת האינדקסים החלקיים באינדקסים **מלאים** | ✅ **הורצה ואומתה** |
 | 008 | `updated_at` + טריגר בשתי טבלאות הליבה | ✅ הורצה ואומתה |
-| 009 | `updated_at`+`client_id`+tombstones ל-`sl_settings`/`sl_lists` | ⚠️ **מחייבת וממתינה להרצה** |
+| 009 | `updated_at`+`client_id`+tombstones ל-`sl_settings`/`sl_lists` | ✅ הורצה ואומתה |
 
 **007 — אומתה במסד:** קיימים בדיוק שני אינדקסים ייחודיים על `client_id`,
 `sl_transactions_client_id_key` ו-`sl_students_client_id_key`, **שניהם מלאים
@@ -94,9 +94,12 @@ https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql
 `client_id` עובד, ושמירת תשלום ותלמיד חדש תקינה.
 (תיעוד קודם כאן אמר ש-007 «מחייבת וממתינה להרצה» — זה כבר לא נכון והוסר.)
 
-**009 — הפריט הפתוח היחיד.** עד שתורץ: עריכת הגדרות ורשימות אופליין אינה
-עובדת, ו-`upsert` על `client_id` ב-`sl_lists` נכשל ב-`42P10`. ר' הפרק
-«סבב 13» למטה.
+**009 — אומתה במסד** (אוגוסט 2026): `updated_at` והטריגרים קיימים בשתי
+טבלאות ההגדרות, `client_id` קיימת עם **ארבעה** אינדקסים ייחודיים מלאים
+ואפס חלקיים, ה-tombstones קיימות ב-`sl_lists`, ו-`EXPLAIN` על ה-UPSERT
+מתכנן עם הבורר הנכון. הנתונים שלמים. ר' הפרק «סבב 13» למטה.
+
+**אין כרגע מיגרציה ממתינה.** 005 היא היחידה שלא הורצה, ובכוונה.
 
 טבלאות: sl_users, sl_students, sl_transactions, sl_settings, sl_lists
 משתמש ברירת מחדל: admin / admin
@@ -862,7 +865,7 @@ schar-limud, yoman-avoda, gius), והוא ממשיך את חמשת כללי הב
 והשיעורות נטענו מהמראה), אבל **עריכה** — שינוי שכר לימוד ברירת מחדל, הוספת
 אמצעי תשלום, מחיקת שיעור — נחסמה ב-`guardOnline`.
 
-### `migrations/009` — ⚠️ מחייבת וממתינה להרצה
+### `migrations/009` — ✅ הורצה ואומתה
 שלושה דברים, ולכל אחד סיבה נפרדת:
 1. **`updated_at` + טריגר** (`sl_settings_touch`, `sl_lists_touch`) — חותמת
    המיזוג. אותו דפוס בדיוק כמו 008, כולל הכלל שהטריגר דורס **ב-UPDATE
