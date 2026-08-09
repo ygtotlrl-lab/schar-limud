@@ -14,8 +14,10 @@
 --
 -- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
 -- 003 = ON DELETE RESTRICT על sl_transactions, 004 = חודש הצטרפות/עזיבה
--- לתלמיד (והסרת handled_months). כולן כבר מוכלות כאן, ולכן על התקנה
--- טרייה הן no-op.
+-- לתלמיד (והסרת handled_months), 006+007 = client_id + אינדקס ייחודי
+-- **מלא**, 008 = updated_at + טריגר, 009 = updated_at/client_id/tombstones
+-- ל-sl_settings ול-sl_lists. כולן כבר מוכלות כאן, ולכן על התקנה טרייה הן
+-- no-op. (005 היא זריעת נתון בלבד ואינה חלק מהסכימה.)
 -- ============================================================
 
 -- ---------- משתמשים ----------
@@ -188,21 +190,45 @@ BEGIN
 END $$;
 
 -- ---------- הגדרות ----------
+-- updated_at / client_id (ראה migrations/009): שתי הטבלאות האלה נכנסו
+-- לשכבת האופליין, ולכן הן צריכות חותמת מיזוג וזהות שנוצרת במכשיר.
+-- ⚠️ המפתח הראשי כאן הוא `key` (TEXT) ולא SERIAL — לרשומה כבר יש זהות
+-- שהמכשיר יודע לייצר, ולכן האפליקציה כותבת ב-onConflict:'key'.
+-- `client_id` נוספת לסימטריה ולשימוש עתידי, ואינה מפתח הכתיבה כאן.
 CREATE TABLE IF NOT EXISTS public.sl_settings (
-  key   TEXT PRIMARY KEY,
-  value TEXT
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  client_id  TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- ⛔ אינדקס **מלא** ולא חלקי — ראה ההסבר אצל sl_students/sl_transactions
+-- ואצל migrations/007. אינדקס חלקי שובר את הסקת ON CONFLICT.
+CREATE UNIQUE INDEX IF NOT EXISTS sl_settings_client_id_key
+  ON public.sl_settings (client_id);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_settings TO anon, authenticated, service_role;
 ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_settings_all" ON public.sl_settings;
 CREATE POLICY "sl_settings_all" ON public.sl_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- ---------- רשימות (אמצעי תשלום, שיעורות) ----------
+-- מחיקה כאן היא soft-delete בלבד (ראה migrations/009). בלי tombstone פריט
+-- שנמחק במכשיר אחד חוזר לחיים במיזוג הבא, כי היעדר רשומה אצל צד אחד אינו
+-- מחיקה. `id` הוא SERIAL והמסד מקצה אותו, ולכן `client_id` הוא **מפתח
+-- הכתיבה בפועל** לכל פריט שנוצר במכשיר.
 CREATE TABLE IF NOT EXISTS public.sl_lists (
-  id       SERIAL PRIMARY KEY,
-  category TEXT NOT NULL,
-  value    TEXT NOT NULL
+  id         SERIAL PRIMARY KEY,
+  category   TEXT NOT NULL,
+  value      TEXT NOT NULL,
+  client_id  TEXT,
+  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
+  deleted_by TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- ⛔ אינדקס **מלא** ולא חלקי — ראה migrations/007.
+CREATE UNIQUE INDEX IF NOT EXISTS sl_lists_client_id_key
+  ON public.sl_lists (client_id);
+CREATE INDEX IF NOT EXISTS sl_lists_deleted_idx ON public.sl_lists (deleted);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_lists TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_lists_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY;
@@ -266,4 +292,28 @@ CREATE TRIGGER sl_transactions_touch
 DROP TRIGGER IF EXISTS sl_students_touch ON public.sl_students;
 CREATE TRIGGER sl_students_touch
   BEFORE UPDATE ON public.sl_students
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+
+-- ============================================================
+-- 009 — sl_settings ו-sl_lists נכנסות לשכבת האופליין
+-- ============================================================
+-- ה-CREATE TABLE שלמעלה כבר כולל את העמודות עבור התקנה טרייה; הבלוק הזה
+-- הוא מסלול השדרוג להתקנה קיימת. ר' `migrations/009_settings_lists_offline.sql`
+-- להסבר המלא — ובפרט לאזהרה שהאינדקס על client_id חייב להיות **מלא**.
+ALTER TABLE public.sl_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.sl_settings ADD COLUMN IF NOT EXISTS client_id  TEXT;
+ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS client_id  TEXT;
+ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+
+DROP TRIGGER IF EXISTS sl_settings_touch ON public.sl_settings;
+CREATE TRIGGER sl_settings_touch
+  BEFORE UPDATE ON public.sl_settings
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+
+DROP TRIGGER IF EXISTS sl_lists_touch ON public.sl_lists;
+CREATE TRIGGER sl_lists_touch
+  BEFORE UPDATE ON public.sl_lists
   FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
