@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.sl_students (
   end_month      TEXT,
   card_settings  JSONB DEFAULT '{}',
   created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
   deleted_at     TIMESTAMPTZ,
   deleted_by     TEXT
@@ -123,6 +124,7 @@ CREATE TABLE IF NOT EXISTS public.sl_transactions (
   note           TEXT,
   created_at     TIMESTAMPTZ DEFAULT NOW(),
   created_by     TEXT,
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
   deleted_at     TIMESTAMPTZ,
   deleted_by     TEXT
@@ -235,3 +237,33 @@ WHERE NOT EXISTS (
 --   UPDATE public.sl_transactions SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<TXN_ID>;
 --   UPDATE public.sl_students     SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<STUDENT_ID>;
 -- ============================================================
+
+-- ============================================================
+-- 008 — updated_at + טריגר (מיזוג ברמת רשומה, סבב 12 שלב 2)
+-- ============================================================
+-- בלי חותמת עדכון אין מנוע מיזוג, ולכן אין עבודה אופליין. הטריגר דורס
+-- **ב-UPDATE בלבד**; ב-INSERT החותמת שהמכשיר קבע ברגע היצירה נשמרת, וזה
+-- מה שמונע מרשומה שנוצרה אופליין להיראות כאילו נוצרה בהגעה לשרת.
+-- ר' `migrations/008_updated_at.sql` להסבר המלא.
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE OR REPLACE FUNCTION public.sl_touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS sl_transactions_touch ON public.sl_transactions;
+CREATE TRIGGER sl_transactions_touch
+  BEFORE UPDATE ON public.sl_transactions
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+
+DROP TRIGGER IF EXISTS sl_students_touch ON public.sl_students;
+CREATE TRIGGER sl_students_touch
+  BEFORE UPDATE ON public.sl_students
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();

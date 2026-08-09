@@ -490,19 +490,19 @@ var LS_CFG = {
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
 
-  // ⚠️ שכר לימוד היא היחידה מהארבע שאין לה **עותק מקומי של הנתונים** —
-  // `syncAll` קוראת ישירות מ-Supabase כל 3 שניות, וב-localStorage יושבים רק
-  // `sl_device_id` ו-`sl_last_backup` (עשרות בתים). לכן שני השלבים ריקים:
-  // אין כאן מטמון לפנות ואין רשומות ישנות מקומיות. **זה לא פער במימוש —
-  // זה תיאור נכון של האפליקציה**, והמודול נשאר זהה כדי שברגע שייבנה כאן
-  // עותק מקומי (ר' "עבודה אופליין" ב-CLAUDE.md) יהיה רק למלא את הטבלה.
-  // עד אז התרומה של המודול כאן היא הכתיבה המוגנת, הניטור וההתרעות —
-  // שרלוונטיים במלואם, כי המכסה משותפת עם שלוש האחיות.
-  tier1: [],
+  // מאז סבב 12 שלב 2 יש כאן עותק מקומי מלא (`sl_mirror_*`).
+  // **`sl_mirror_settings`/`sl_mirror_lists` בשלב א'** — הן נטענות מהענן בכל
+  // סנכרון מוצלח ואינן נכתבות מקומית לעולם, כלומר איבודן קוסמטי.
+  tier1: ['sl_mirror_settings', 'sl_mirror_lists'],
+  // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס.** אלה כספים:
+  // רשומה שפונתה מהדיסק אינה נראית באפליקציה אופליין, וחישוב חוב על נתון
+  // חסר גרוע מכל מכסה. `sl_mirror_students` הם אבות המפתח הזר שלהן —
+  // גם הם בחוץ, אחרת נשארות תנועות בלי שם מוצג.
   tier2: [],
 
-  pending: function () { return false; },
-  syncedThrough: function () { return 0; }
+  // ⛔ יש משהו שטרם עלה לענן ⇒ שלב ב מדולג לגמרי. גם ספק נחשב "יש".
+  pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
+  syncedThrough: function () { try { return parseInt(lsGet('sl_synced_at', '0'), 10) || 0; } catch (e) { return 0; } }
 };
 // מתאם הטוסט — החתימה כאן היא toast(msg, dur).
 function lsToast(msg, dur) { try { toast(msg, dur || 5000); } catch (e) {} }
@@ -1258,35 +1258,213 @@ function pendBoot() {
    השורה אולי נכנסה למסד, והמכשיר לא יודע. עד שמשיכה מוצלחת תראה את
    ה-`client_id` הזה בענן — הרשומה מסומנת ⏳, והמשתמש יודע שהיא לא אושרה.
    ───────────────────────────────────────────────────────────────────────── */
-var PK_TXN = 'txn:', PK_STU = 'student:', PK_TXNDEL = 'txn-del:', PK_STUDEL = 'student-del:';
+// מפתחות הסימון בנויים על **מפתח המיזוג** (`slKey`), ולכן מחיקה אינה מפתח
+// נפרד: מאז שלב 2 מחיקה היא כתיבה מקומית של `deleted=true` על אותה רשומה.
+var PK_TXN = 'txn:', PK_STU = 'student:';
+function pendTxnKey(row) { return PK_TXN + slKey(row); }
+function pendStuKey(row) { return PK_STU + slKey(row); }
 
 // כשל רשת אינו ראיה לכלום ⇒ הסימון **נשאר**. כשל סמכותי (ולידציה, הרשאה,
 // סכימה) אומר שהשורה לא נכתבה ⇒ הסימון יורד; אחרת הוא היה נתקע לנצח על
 // רשומה שאינה קיימת בשום מקום, ומזייף את התרעת 24 השעות.
 function pendResolveErr(pk, e) { if (!isNetErr(e)) pendFailed(pk); }
 
-// הראיה היחידה שקיימת כאן היום: הרשומה חזרה מהענן במשיכה מוצלחת.
-// מקבלת את המערכים **הגולמיים** — לפני סינון ה-deleted — כי אישור מחיקה
-// הוא בדיוק הראיה ש-`deleted=true` הגיע לענן.
-function pendSyncScan(rawStudents, rawTxns) {
-  var done = [];
-  (rawTxns || []).forEach(function (t) {
-    if (t.client_id) done.push(PK_TXN + t.client_id);
-    if (t.deleted) done.push(PK_TXNDEL + t.id);
-  });
-  (rawStudents || []).forEach(function (st) {
-    if (st.client_id) done.push(PK_STU + st.client_id);
-    if (st.deleted) done.push(PK_STUDEL + st.id);
-  });
-  pendClearMany(done);
+// ⚠️ **הסימונים מחושבים מחדש מתוך מצב האמת, ורק אחרי משיכה שהצליחה.**
+// "ממתין" כאן = הרשומה המקומית חדשה מזו שבענן, או שאין לה מקבילה שם בכלל.
+// זו ראיה ישירה ולא הסקה: משיכה שנכשלה אינה מגיעה לכאן, ולכן כשל רשת
+// לעולם אינו מוריד סימון. חותמות קיימות נשמרות (pendMark לא דורס), כדי
+// ששעון 24 השעות ימשיך למנות מהכתיבה הראשונה שלא אושרה.
+// ⚠️ `t0` נלקח בתחילת הסנכרון. רשומה שנכתבה **תוך כדי** הסנכרון לא נבדקה
+// מול הענן ולא נדחפה, ולכן הסימון שלה נשאר — אותו כלל בדיוק כמו
+// `pendConfirmPush` בשלוש האחיות.
+function pendSyncScan(keepKeys, t0) {
+  var want = {};
+  (keepKeys || []).forEach(function (k) { want[k] = 1; });
+  pendMarkMany(Object.keys(want));
+  var m = pendAll(), gone = [];
+  Object.keys(m).forEach(function (k) { if (!want[k] && m[k] < t0) gone.push(k); });
+  pendClearMany(gone);
 }
 // מפתח הסימון של תנועה/תלמיד שכבר קיימים בזיכרון — לשימוש הרינדור.
-function pendTxnTag(t) { return t ? (pendTag(PK_TXN + t.client_id) || pendTag(PK_TXNDEL + t.id)) : ''; }
-function pendStuTag(st) { return st ? (pendTag(PK_STU + st.client_id) || pendTag(PK_STUDEL + st.id)) : ''; }
+function pendTxnTag(t) { return t ? pendTag(pendTxnKey(t)) : ''; }
+function pendStuTag(st) { return st ? pendTag(pendStuKey(st)) : ''; }
 function pendRenderStatus() {
   var el = document.getElementById('pend-status-box');
   if (el) el.innerHTML = pendStatusHTML();
 }
+/* ═══ עבודה אופליין — עותק מקומי, מיזוג ברמת רשומה ודחיפת מצב (סבב 12, שלב 2)
+   עד הסבב הזה schar-limud קראה ישירות מ-Supabase בכל `syncAll` (כל 3 שניות)
+   ולא החזיקה שום עותק מקומי: בלי רשת לא היה מה להציג ולא היה לאן לכתוב. זה
+   היה הפער האחרון מכלל ברזל 3, והוא נשאר פתוח בכוונה כי `sl_transactions`
+   הוא **כספים** — מנוע מיזוג על כסף הוא החלטת אפיון ולא נגררת.
+
+   ארבעת הרכיבים, בדפוס של hanhala-ruchanit (דחיפת-מצב), לא בדפוס התור של gius:
+     1. **עותק מקומי** של ארבע הטבלאות ב-`sl_mirror_*`, **כולל רשומות מחוקות** —
+        בלי ה-tombstones מחיקה שנעשתה במכשיר אחר לא הייתה מגיעה לכאן לעולם.
+     2. **קריאה ממנו בעליית האפליקציה**, לפני כל נגיעה ברשת.
+     3. **סנכרון ברקע** — משיכה, מיזוג, ואז דחיפת מה שמקומי וחדש יותר.
+     4. **מיזוג ברמת רשומה** לפי `client_id` ו-`updated_at` (migrations/008).
+
+   ⚠️ **זהות הרשומה — `client_id` עם נפילה-חזרה ל-`id`.** 25 התנועות ו-63
+   התלמידים שקדמו ל-006 מחזיקים `client_id = NULL`, ולכן מפתח המיזוג הוא
+   `c:<client_id>` כשקיים ו-`i:<id>` אחרת. רשומה שנוצרה במכשיר היא ההפך —
+   יש לה `client_id` ואין לה `id` (הוא SERIAL שהמסד מקצה), והיא נתפרת לשורה
+   שחזרה מהענן לפי ה-`client_id`.
+
+   ⚠️ **המכשיר חותם `updated_at` בעצמו** ביצירה ובעדכון. בלי זה רשומה שנוצרה
+   אופליין הייתה נושאת את חותמת **ההגעה לשרת** ולא את חותמת העריכה, והמיזוג
+   היה מעדיף תמיד את מי שהגיע ראשון לשרת על פני מי שערך אחרון.
+   הטריגר בצד השרת (`sl_transactions_touch`/`sl_students_touch`) דורס את
+   החותמת ב-UPDATE — וזה בסדר, **כי דוחפים רק שורות שכבר ניצחו במיזוג**.
+   שורה מקומית שהפסידה אינה נדחפת כלל, ולכן לעולם אינה מפעילה את הטריגר.
+
+   ⚠️ **`sl_settings` ו-`sl_lists` — קריאה אופליין בלבד.** מיגרציה 008 הוסיפה
+   `updated_at` ל-`sl_transactions` ול-`sl_students` בלבד, ולכן אין לשתי
+   הטבלאות האלה חותמת להשוות. הן ממורות לקריאה (הטופס עובד אופליין), אבל
+   **עריכה שלהן דורשת רשת** — עדיף לחסום ברעש מאשר לנחש מי ניצח.
+   ═══════════════════════════════════════════════════════════════════════ */
+var SL_MIRROR_PREFIX = 'sl_mirror_';
+var SL_SYNCED_KEY = 'sl_synced_at';
+var SL_TABLES = [
+  { t: 'sl_students',     m: 'students',     rec: true },
+  { t: 'sl_transactions', m: 'transactions', rec: true },
+  { t: 'sl_settings',     m: 'settings',     rec: false },
+  { t: 'sl_lists',        m: 'lists',        rec: false }
+];
+// העמודות שמותר לשלוח. `id` מסונן במפורש: הוא SERIAL של המסד, ושליחה שלו
+// בכתיבה של רשומה שנוצרה במכשיר הייתה מנסה לקבוע מזהה שאינו שלנו.
+var SL_COLS = {
+  sl_transactions: ['client_id','student_id','date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
+  sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at']
+};
+var MIRROR = { students: [], transactions: [], settings: [], lists: [] };
+var _slLastPullOk = 0;
+
+function slNow() { return new Date().toISOString(); }
+// מפתח הזהות. `client_id` כשקיים — הוא נוצר במכשיר ושורד את המסע לשרת;
+// `id` הוא נפילה-חזרה לרשומות היסטוריות שקדמו ל-migrations/006.
+function slKey(r) {
+  if (!r || typeof r !== 'object') return '';
+  if (r.client_id) return 'c:' + r.client_id;
+  if (r.id != null) return 'i:' + r.id;
+  return '';
+}
+function slTs(r) {
+  var x = r && r.updated_at ? Date.parse(r.updated_at) : NaN;
+  return isFinite(x) ? x : 0;
+}
+// מנוע המיזוג. הענן הוא בסיס הסדר ומנצח בשוויון (דטרמיניסטי — שני מכשירים
+// שממזגים את אותם צדדים מגיעים לאותה תוצאה). **היעדר רשומה בענן אינו מחיקה**:
+// היא עשויה להיות כתיבה מקומית שטרם עלתה.
+//
+// ⚠️ **`isPending` — רשומה מקומית שטרם אושרה בענן מנצחת ללא תלות בחותמת.**
+// זו לא החמרה תיאורטית אלא תיקון לאובדן נתונים אמיתי: הטריגר בצד השרת
+// (`sl_transactions_touch`) דורס את `updated_at` ב-**NOW()** בכל UPDATE.
+// המשמעות — ברגע שמכשיר א' דוחף את העריכה שלו, השורה בענן מקבלת חותמת
+// מאוחרת יותר מעריכה **חדשה יותר** שיושבת אצל מכשיר ב' וטרם עלתה. בלי
+// הכלל הזה מכשיר ב' היה מאמץ את גרסת א' והעריכה שלו הייתה נעלמת בשקט.
+// המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
+// יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
+// שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
+// "היעדר רשומה אינו מחיקה" — ספק ⇐ שומרים את מה שהמשתמש כתב.)
+function slMerge(local, remote, isPending) {
+  local = Array.isArray(local) ? local : [];
+  remote = Array.isArray(remote) ? remote : [];
+  var out = [], seen = {}, byKey = {};
+  local.forEach(function (l) { var k = slKey(l); if (k) byKey[k] = l; });
+  remote.forEach(function (r) {
+    var k = slKey(r);
+    if (!k) { out.push(r); return; }
+    seen[k] = 1;
+    var l = byKey[k];
+    if (!l) { out.push(r); return; }
+    var localWins = (isPending && isPending(k)) || slTs(l) > slTs(r);
+    out.push(localWins ? l : r);
+  });
+  local.forEach(function (l) {
+    var k = slKey(l);
+    if (k && !seen[k]) out.push(l);
+  });
+  return out;
+}
+
+function slMirrorLoad() {
+  SL_TABLES.forEach(function (spec) {
+    var v = null;
+    try { var raw = lsGet(SL_MIRROR_PREFIX + spec.m, null); v = raw == null ? null : JSON.parse(raw); }
+    catch (e) { console.warn('[mirror] ' + spec.m + ' פגום — נטען ריק', e); v = null; }
+    MIRROR[spec.m] = Array.isArray(v) ? v.filter(function (r) { return r && typeof r === 'object'; }) : [];
+  });
+}
+function slMirrorSave(m) { return lsSetArray(SL_MIRROR_PREFIX + m, MIRROR[m] || [], slTs); }
+function slMirrorHasData() {
+  return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
+}
+
+// נקודת הסינון היחידה של ה-soft-delete (כלל 5 ו-6) — בדיוק כמו שהייתה
+// ב-syncAll. כל 11 הקוראים של STUDENTS מקבלים אותה אוטומטית.
+function slApplyMirror() {
+  STUDENTS = (MIRROR.students || []).filter(function (s) { return !s.deleted; })
+    .sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || ''), 'he'); });
+  TRANSACTIONS = (MIRROR.transactions || []).filter(function (t) { return !t.deleted; })
+    .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
+  SETTINGS = {};
+  (MIRROR.settings || []).forEach(function (r) { SETTINGS[r.key] = r.value; });
+  LISTS = {};
+  (MIRROR.lists || []).slice().sort(function (a, b) { return String(a.value || '').localeCompare(String(b.value || ''), 'he'); })
+    .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ id: r.id, value: r.value }); });
+}
+
+// כתיבה מקומית-תחילה. מחזירה `false` אם הכתיבה ל-localStorage נכשלה —
+// מסלול קריטי (כלל ברזל 2): בכסף אסור להציג "נשמר" על כתיבה שלא נכתבה.
+function slLocalWrite(tbl, row) {
+  var m = tbl === 'sl_transactions' ? 'transactions' : 'students';
+  row.updated_at = slNow();               // ⚠️ חותמת המכשיר — ראה ההערה בראש
+  var k = slKey(row), arr = MIRROR[m] || (MIRROR[m] = []), hit = false;
+  for (var i = 0; i < arr.length; i++) {
+    if (slKey(arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
+  }
+  if (!hit) arr.push(row);
+  if (!slMirrorSave(m)) return false;
+  slApplyMirror();
+  return true;
+}
+
+function slPayload(tbl, row) {
+  var cols = SL_COLS[tbl] || [], out = {};
+  cols.forEach(function (c) { if (row[c] !== undefined) out[c] = row[c]; });
+  return out;
+}
+
+// דחיפת מצב: כל שורה מקומית שהמיזוג הותיר כמנצחת נשלחת.
+// **שני מסלולי כתיבה, והבחירה ביניהם היא הגנה על כסף:**
+//   • יש `id` ⇒ `update ... eq(id)` — כולל רשומות היסטוריות עם `client_id`
+//     ריק, ש-`upsert` על `client_id` היה יוצר להן **שורה כפולה**.
+//   • אין `id` (נוצרה במכשיר) ⇒ `upsert` על `client_id` — אידמפוטנטי, ולכן
+//     ניסיון חוזר אחרי תשובה שאבדה ברשת מעדכן ולא מכפיל.
+async function slPushRow(tbl, row) {
+  var body = slPayload(tbl, row);
+  if (row.id != null) return await SB.from(tbl).update(body).eq('id', row.id);
+  if (!body.client_id) return { error: { message: 'רשומה בלי client_id ובלי id — לא נשלחת' } };
+  return await SB.from(tbl).upsert(body, { onConflict: 'client_id' });
+}
+
+// מה צריך לעלות: רשומה מקומית שאין לה מקבילה בענן, שהיא חדשה ממנה, **או
+// שהיא עדיין מסומנת ⏳**. הסעיף השלישי אינו ייתור: הטריגר בצד השרת דורס את
+// `updated_at` ב-NOW() בכל UPDATE, ולכן רשומה שמכשיר אחר דחף נראית "חדשה"
+// מעריכה מקומית שטרם עלתה. בלי הסעיף הזה העריכה המקומית הייתה נשארת
+// מסומנת ⏳ לנצח ולעולם לא נדחפת — ר' ההערה ב-slMerge.
+function slDirtyRows(m, remoteByKey, isPending) {
+  var out = [];
+  (MIRROR[m] || []).forEach(function (l) {
+    var k = slKey(l);
+    if (!k) return;
+    var r = remoteByKey[k];
+    if (!r || slTs(l) > slTs(r) || (isPending && isPending(k))) out.push(l);
+  });
+  return out;
+}
+
 
 
 // ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
@@ -1536,6 +1714,7 @@ CREATE TABLE IF NOT EXISTS public.sl_students (
   end_month      TEXT,
   card_settings  JSONB DEFAULT '{}',
   created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
   deleted_at     TIMESTAMPTZ,
   deleted_by     TEXT
@@ -1613,6 +1792,7 @@ CREATE TABLE IF NOT EXISTS public.sl_transactions (
   note           TEXT,
   created_at     TIMESTAMPTZ DEFAULT NOW(),
   created_by     TEXT,
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted        BOOLEAN NOT NULL DEFAULT false,
   deleted_at     TIMESTAMPTZ,
   deleted_by     TEXT
@@ -1725,6 +1905,36 @@ WHERE NOT EXISTS (
 --   UPDATE public.sl_transactions SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<TXN_ID>;
 --   UPDATE public.sl_students     SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<STUDENT_ID>;
 -- ============================================================
+
+-- ============================================================
+-- 008 — updated_at + טריגר (מיזוג ברמת רשומה, סבב 12 שלב 2)
+-- ============================================================
+-- בלי חותמת עדכון אין מנוע מיזוג, ולכן אין עבודה אופליין. הטריגר דורס
+-- **ב-UPDATE בלבד**; ב-INSERT החותמת שהמכשיר קבע ברגע היצירה נשמרת, וזה
+-- מה שמונע מרשומה שנוצרה אופליין להיראות כאילו נוצרה בהגעה לשרת.
+-- ר' \`migrations/008_updated_at.sql\` להסבר המלא.
+ALTER TABLE public.sl_transactions
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.sl_students
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE OR REPLACE FUNCTION public.sl_touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS sl_transactions_touch ON public.sl_transactions;
+CREATE TRIGGER sl_transactions_touch
+  BEFORE UPDATE ON public.sl_transactions
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+
+DROP TRIGGER IF EXISTS sl_students_touch ON public.sl_students;
+CREATE TRIGGER sl_students_touch
+  BEFORE UPDATE ON public.sl_students
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
 `;
 // <<< END GENERATED SQL FALLBACK
 
@@ -1801,10 +2011,51 @@ async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
   if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
   startAuthLoad();
-  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr(MSG_BAD_LOGIN);return;}CUR_USER=r.data;document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
+  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr(MSG_BAD_LOGIN);return;}CUR_USER=r.data;slSaveSession(r.data);document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
 }
-function doLogout(){CUR_USER=null;_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
-async function enterApp(){document.getElementById('auth-screen').classList.add('hidden');document.getElementById('main-app').classList.remove('hidden');document.getElementById('nav-username').textContent=CUR_USER.username;await syncAll();SYNC_INT=setInterval(syncAll,3000);slResetLock();slMaybeDailyBackup();ensureCreditMethod();}
+function doLogout(){CUR_USER=null;slClearSession();_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+// ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת (כלל ברזל 3).
+// אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
+// איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
+function enterApp(){
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  document.getElementById('nav-username').textContent=CUR_USER.username;
+  slApplyMirror();
+  refreshUI();
+  syncAll();                                   // רענון ברקע
+  SYNC_INT=setInterval(syncAll,3000);
+  slResetLock();slMaybeDailyBackup();ensureCreditMethod();
+}
+
+/* ── סשן מקומי — כניסה אופליין ────────────────────────────────────────────
+   ⚠️ **הסשן אינו מחזיק סיסמה.** שכפול סיסמאות של משתמשים ל-localStorage של
+   כל מכשיר היא חשיפה שאין בה צורך: מי שכבר נכנס פעם אחת ממשיך לעבוד
+   אופליין דרך הסשן, ו**כניסה חדשה דורשת רשת**. אותה החלטה בדיוק כמו
+   `gius.session` (ר' CLAUDE.md של gius). אין להוסיף כאן סיסמאות.
+   ───────────────────────────────────────────────────────────────────────── */
+var SL_SESSION_KEY='sl_session';
+function slSaveSession(u){
+  if(!u)return;
+  lsSet(SL_SESSION_KEY,JSON.stringify({id:u.id,username:u.username}));
+}
+function slReadSession(){
+  try{var v=JSON.parse(lsGet(SL_SESSION_KEY,'null'));return (v&&v.username)?v:null;}catch(e){return null;}
+}
+function slClearSession(){ lsRemove(SL_SESSION_KEY); }
+
+// אימות מחדש ברקע, **אחרי** שהאפליקציה כבר עלתה. מנתק אך ורק על תשובה
+// סמכותית (המשתמש אינו קיים) — כשל רשת אינו ראיה לכלום, וניתוק עליו היה
+// זורק החוצה בדיוק את מי שעובד אופליין.
+async function slRevalidateSession(sess){
+  if(!sess||!navigator.onLine)return;
+  try{
+    var r=await withTimeout(SB.from('sl_users').select('*').eq('username',sess.username).maybeSingle());
+    if(r&&r.error)return;                       // שגיאת שרת/רשת — משאירים מחובר
+    if(!r||!r.data){ toast('⚠️ המשתמש אינו קיים עוד — נדרשת כניסה מחדש',5000); doLogout(); return; }
+    CUR_USER=r.data;
+  }catch(e){ /* רשת — לא מנתקים */ }
+}
 // שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
 // **חובה לשחרר ב-finally** ולא בסוף ה-try — כשל אחד שמשאיר את הדגל דלוק
 // מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
@@ -1813,30 +2064,51 @@ var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'
 async function syncAll(){
   if(_syncBusy) return;
   _syncBusy=true;
+  var _t0=Date.now();   // ראה pendSyncScan
   try{
-    var rs=await Promise.all([SB.from('sl_students').select('*').order('name'),SB.from('sl_transactions').select('*').order('date'),SB.from('sl_settings').select('*'),SB.from('sl_lists').select('*').order('value')]);
+    var rs=await Promise.all([SB.from('sl_students').select('*'),SB.from('sl_transactions').select('*'),SB.from('sl_settings').select('*'),SB.from('sl_lists').select('*')]);
     // supabase-js לא זורק בכשל — הוא מחזיר {data:null,error:{...}}. לכן ה-catch
     // כאן היה קוד מת, ושאילתה שנכשלה השאירה נתונים ישנים על המסך בלי משוב.
     var errs=[];
-    for(var i=0;i<rs.length;i++){ if(!rs[i]||rs[i].error) errs.push(SYNC_LABELS[i]); }
+    for(var i=0;i<rs.length;i++){ if(!rs[i]||rs[i].error||!Array.isArray(rs[i].data)) errs.push(SYNC_LABELS[i]); }
     _lastSyncOk=!errs.length;
-    // רק תוצאות תקינות נכתבות — מקטגוריה שנכשלה עדיף להשאיר את הישן מלרוקן
-    if(rs[0]&&!rs[0].error&&rs[0].data)STUDENTS=rs[0].data.filter(function(s){return !s.deleted;});
-    if(rs[1]&&!rs[1].error&&rs[1].data)TRANSACTIONS=rs[1].data.filter(function(t){return !t.deleted;});
-    // הורדת סימוני "ממתין" — רק ממשיכה שהצליחה, ורק לקטגוריה שהצליחה.
-    // נסרקים המערכים ה**גולמיים**: אישור מחיקה הוא ראיית `deleted=true`,
-    // והיא נעלמת מיד אחרי הסינון שלמעלה.
-    try{pendSyncScan(
-      (rs[0]&&!rs[0].error&&rs[0].data)?rs[0].data:null,
-      (rs[1]&&!rs[1].error&&rs[1].data)?rs[1].data:null
-    );}catch(ePend){console.warn('[pend] scan',ePend);}
-    if(rs[2]&&!rs[2].error&&rs[2].data){SETTINGS={};rs[2].data.forEach(function(r){SETTINGS[r.key]=r.value;});}
-    if(rs[3]&&!rs[3].error&&rs[3].data){LISTS={};rs[3].data.forEach(function(r){if(!LISTS[r.category])LISTS[r.category]=[];LISTS[r.category].push({id:r.id,value:r.value});});}
+
+    // ── מיזוג ברמת רשומה. רק קטגוריה שנמשכה בהצלחה ממוזגת: מיזוג מול
+    //    "ענן ריק" שנובע מכשל רשת היה נראה כמו מחיקה של הכול.
+    var remoteStu={}, remoteTxn={}, pulledStu=false, pulledTxn=false;
+    if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
+      pulledStu=true;
+      rs[0].data.forEach(function(r){ remoteStu[slKey(r)]=r; });
+      MIRROR.students=slMerge(MIRROR.students,rs[0].data,function(k){return pendHas(PK_STU+k);}); slMirrorSave('students');
+    }
+    if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
+      pulledTxn=true;
+      rs[1].data.forEach(function(r){ remoteTxn[slKey(r)]=r; });
+      MIRROR.transactions=slMerge(MIRROR.transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); slMirrorSave('transactions');
+    }
+    // הגדרות ורשימות אינן ממוזגות אלא מוחלפות: אין להן updated_at (008 נגעה
+    // רק בשתי טבלאות הליבה), ולכן אין במה להשוות. הן קריאה בלבד אופליין.
+    if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){ MIRROR.settings=rs[2].data; slMirrorSave('settings'); }
+    if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){ MIRROR.lists=rs[3].data; slMirrorSave('lists'); }
+    slApplyMirror();
     refreshUI();
+
+    // ── דחיפת מצב: כל שורה מקומית שניצחה במיזוג עולה. **רק לטבלה שנמשכה
+    //    בהצלחה** — בלי לדעת מה יש בענן אי אפשר לדעת מה מקומי-וחדש-יותר,
+    //    ודחיפה עיוורת הייתה מחזירה לחיים שורה שנמחקה במכשיר אחר.
+    var stillPending=[];
+    if(pulledStu) stillPending=stillPending.concat(await slPushTable('sl_students','students',remoteStu,PK_STU));
+    if(pulledTxn) stillPending=stillPending.concat(await slPushTable('sl_transactions','transactions',remoteTxn,PK_TXN));
+    if(pulledStu&&pulledTxn) pendSyncScan(stillPending,_t0);
+
+    if(!errs.length){
+      _slLastPullOk=Date.now();
+      lsSet(SL_SYNCED_KEY,String(_slLastPullOk));
+    }
     // אזהרה פעם אחת ולא כל 3 שניות, וטוסט התאוששות כשהחיבור חוזר
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
-      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג עלול להיות לא מעודכן',4000);}
+      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג הוא העותק שבמכשיר',4000);}
     }else if(_syncWarned){_syncWarned=false;toast('☁️ החיבור לנתונים חזר');}
   }catch(e){
     _lastSyncOk=false;
@@ -1844,6 +2116,33 @@ async function syncAll(){
     if(!_syncWarned){_syncWarned=true;toast(errMsg(e),4000);}
   }finally{_syncBusy=false;}
 }
+
+// דוחפת את השורות המקומיות שניצחו, אחת-אחת, ומחזירה את מפתחות הסימון של
+// אלה שעדיין לא עלו. שורה אחת שנכשלה אינה עוצרת את השאר: בניגוד לתור FIFO,
+// כאן אין תלות סדר בין הרשומות (המפתח הזר `student_id` נשמר כי תלמיד חדש
+// נדחף בקטגוריה שלו לפני התנועות — sl_students קודמת ב-syncAll).
+async function slPushTable(tbl,m,remoteByKey,prefix){
+  var dirty=slDirtyRows(m,remoteByKey,function(k){return pendHas(prefix+k);}), still=[];
+  for(var i=0;i<dirty.length;i++){
+    var row=dirty[i], pk=prefix+slKey(row);
+    try{
+      var r=await slPushRow(tbl,row);
+      if(r&&r.error){
+        console.error('[push] '+tbl,r.error.message||r.error);
+        // כשל סמכותי (ולידציה/הרשאה/סכימה) — השורה לא נכתבה ולא תיכתב;
+        // הסימון יורד כדי לא להבטיח שליחה חוזרת שלא תקרה. כשל רשת נשאר.
+        if(!isNetErr(r.error)) pendFailed(pk); else still.push(pk);
+      }else{
+        pendClear(pk);
+      }
+    }catch(e){
+      console.error('[push] '+tbl,e);
+      if(!isNetErr(e)) pendFailed(pk); else still.push(pk);
+    }
+  }
+  return still;
+}
+
 function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();if(_settingsUnlocked)renderSettingsLists();}
 function updateDropdowns(){
   var act=STUDENTS.filter(function(s){return s.active;});
@@ -2057,18 +2356,25 @@ function calcDistribution(sid,year){
   return result;
 }
 
+// ⭐ מקומי-תחילה (שלב 2). התשלום נשמר במכשיר ומוצג מיד; הרשת היא עניין של
+// הרקע. `guardOnline` הוסר בכוונה — הוא היה מה שחסם רישום תשלום בלי רשת.
 async function saveTxn(){
-  if(!guardOnline())return;
   var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
-  // UPSERT על client_id ולא INSERT: התשלום נושא מזהה שנוצר במכשיר, ולכן שליחה
-  // חוזרת שלו מעדכנת את השורה הקיימת. INSERT היה יוצר שורה שנייה — תשלום כפול.
+  // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
+  // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
-  // ⏳ הסימון נרשם **לפני** השליחה — אחרת תשובה שאובדת ברשת משאירה תשלום
-  // במצב לא-ידוע בלי שום סימן על המסך.
-  var pk=PK_TXN+cid;
-  pendMark(pk);
-  try{var r=await SB.from('sl_transactions').upsert({client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null)},{onConflict:'client_id'});if(r.error)throw r.error;pendClear(pk);releaseCid('txn');toast('✅ תשלום נשמר');document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';document.getElementById('txn-note').value='';await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}
+  var row={client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null),deleted:false,deleted_at:null,deleted_by:null};
+  // מסלול קריטי (כלל ברזל 2): כשל כתיבה מקומית עוצר כאן ברעש. בכסף אסור
+  // בשום מצב להציג "נשמר" על משהו שלא נכתב לשום מקום.
+  if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000);return;}
+  pendMark(pendTxnKey(row));
+  releaseCid('txn');
+  document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';
+  document.getElementById('txn-note').value='';
+  refreshUI();
+  toast(navigator.onLine?'✅ תשלום נשמר':'✅ תשלום נשמר במכשיר — יסונכרן כשתחזור הרשת',4000);
+  syncAll();   // בלי await: המשתמש לא ממתין לרשת
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
@@ -2086,7 +2392,18 @@ function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
-async function deleteTxn(id){if(!guardOnline())return;showConfirm('מחיקת תשלום','למחוק תשלום זה?',async function(){var pk=PK_TXNDEL+id;pendMark(pk);try{var r=await SB.from('sl_transactions').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){pendResolveErr(pk,r.error);toast(errMsg(r.error));return;}pendClear(pk);toast('✅ תשלום נמחק');await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}});}
+// מקבלת את **מפתח המיזוג** ולא את ה-id: תשלום שנרשם אופליין עדיין אין לו id
+// (הוא SERIAL של המסד), ובלי זה אי אפשר היה למחוק אותו לפני שהסתנכרן.
+function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
+  var t=(MIRROR.transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
+  if(!t){toast('⚠️ התשלום לא נמצא');return;}
+  var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:(CUR_USER?CUR_USER.username:null)});
+  if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  pendMark(pendTxnKey(row));
+  refreshUI();
+  toast(navigator.onLine?'✅ תשלום נמחק':'✅ נמחק במכשיר — יסונכרן כשתחזור הרשת',4000);
+  syncAll();
+});}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
@@ -2130,9 +2447,13 @@ function renderScAnnual(){
   if(applied>0)ch+='<div class="credit-sub" style="color:var(--credit);font-weight:600">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn('+t.id+')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
-async function toggleStudentActive(){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;var r=await SB.from('sl_students').update({active:!s.active}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast(!s.active?'תלמיד הופעל':'תלמיד הושהה');await syncAll();}
+function toggleStudentActive(){var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+  var row=Object.assign({},s,{active:!s.active});
+  if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000);return;}
+  pendMark(pendStuKey(row));refreshUI();
+  toast(row.active?'✅ תלמיד הופעל':'✅ תלמיד הושהה');syncAll();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
 // ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
 function readMonthRange(startId,endId){
@@ -2143,14 +2464,18 @@ function readMonthRange(startId,endId){
   if(sm&&em&&em<sm){toast('❌ חודש העזיבה מוקדם מחודש ההצטרפות');return null;}
   return {start_month:sm||null,end_month:em||null};
 }
-async function saveStudentSettings(){if(!guardOnline())return;
+function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
-  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;}),cs=Object.assign({},(s&&s.card_settings)||{});
+  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  var cs=Object.assign({},s.card_settings||{});
   if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
-  var r=await SB.from('sl_students').update({name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month}).eq('id',SC_STUDENT_ID);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ הגדרות נשמרו');await syncAll();
+  var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
+  if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000);return;}
+  pendMark(pendStuKey(row));refreshUI();
+  toast(navigator.onLine?'✅ הגדרות נשמרו':'✅ נשמר במכשיר — יסונכרן כשתחזור הרשת',4000);syncAll();
 }
 
 function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
@@ -2180,10 +2505,29 @@ async function deleteListItem(id){if(!guardOnline())return;
   if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
   showConfirm('מחיקה','למחוק פריט זה?',async function(){var r=await SB.from('sl_lists').delete().eq('id',id);if(r.error){toast('שגיאה: '+r.error.message);return;}toast('✅ נמחק');await syncAll();});}
 function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
-async function saveNewStudent(){if(!guardOnline())return;var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));var pk=PK_STU+cid;pendMark(pk);var r;try{r=await SB.from('sl_students').upsert({client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month},{onConflict:'client_id'});}catch(e){pendResolveErr(pk,e);toast(errMsg(e));return;}if(r.error){pendResolveErr(pk,r.error);toast('שגיאה: '+r.error.message);return;}pendClear(pk);releaseCid('student');closeModal('modal-add-student');toast('✅ תלמיד נוסף');await syncAll();}
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;
+  var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
+  var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
+  if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000);return;}
+  pendMark(pendStuKey(row));
+  releaseCid('student');
+  closeModal('modal-add-student');
+  refreshUI();
+  toast(navigator.onLine?'✅ תלמיד נוסף':'✅ תלמיד נוסף במכשיר — יסונכרן כשתחזור הרשת',4000);
+  syncAll();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
-async function deleteStudent(id){if(!guardOnline())return;var s=STUDENTS.find(function(x){return x.id===id;});showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',async function(){var pk=PK_STUDEL+id;pendMark(pk);try{var r=await SB.from('sl_students').update({deleted:true,deleted_at:new Date().toISOString(),deleted_by:(CUR_USER?CUR_USER.username:null)}).eq('id',id);if(r.error){pendResolveErr(pk,r.error);toast(errMsg(r.error));return;}pendClear(pk);if(SC_STUDENT_ID===id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}toast('✅ תלמיד נמחק');await syncAll();}catch(e){pendResolveErr(pk,e);toast(errMsg(e));}});}
+function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){return slKey(x)===String(key);})[0];
+ showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',function(){
+  if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:(CUR_USER?CUR_USER.username:null)});
+  if(!slLocalWrite('sl_students',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  pendMark(pendStuKey(row));
+  if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
+  refreshUI();
+  toast(navigator.onLine?'✅ תלמיד נמחק':'✅ נמחק במכשיר — יסונכרן כשתחזור הרשת',4000);
+  syncAll();
+});}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
 document.addEventListener('DOMContentLoaded',async function(){
   // עמידות אחסון (סבב 11): מדידה + פינוי יזום בעליית האפליקציה. המכסה
@@ -2193,9 +2537,23 @@ document.addEventListener('DOMContentLoaded',async function(){
   // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
+  try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
+
+  // סשן קיים ⇒ נכנסים מיד, גם בלי רשת. האימות מול השרת רץ ברקע.
+  var _sess=slReadSession();
+  if(_sess){
+    CUR_USER=_sess;
+    enterApp();
+    slRevalidateSession(_sess);
+    return;
+  }
+
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
-  var ok=await ensureSetup();
+  // מסך ההתקנה נבדק מול השרת. בלי רשת אין לו מה לומר, ובלעדי הדילוג הוא
+  // היה מציג "צריך להתקין" למשתמש שרק אין לו קליטה.
+  var ok = navigator.onLine ? await ensureSetup() : true;
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
 });
 // ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
