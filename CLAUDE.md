@@ -161,6 +161,43 @@ jarsigner -keystore signing/schar.keystore -storepass schar123 -keypass schar123
 keytool -list -v -keystore signing/schar.keystore -storepass schar123
 ```
 
+## APK — מעטפת WebView מקורית שטוענת מהרשת (⛔ לא TWA) — אוגוסט 2026
+שכר לימוד עברה לדפוס המעטפת-מהרשת של yoman-avoda (סבב 13 שם): תיקיית
+**`android/`** מכילה מעטפת WebView מקורית שטוענת את
+`https://ygtotlrl-lab.github.io/schar-limud/` **מהרשת** — לא מנכסים מוטבעים.
+פרטים מלאים ב-`android/README.md`. עיקרי הדברים:
+
+- **לעולם לא TWA ולא PWABuilder** — TWA מריץ את האתר בתוך כרום, וסינון התוכן
+  במכשירי המשתמשים חוסם את כרום (נמדד בפועל ב-gius). WebView מרנדר בתוך
+  התהליך ולא נחסם.
+- **package `com.schar.limud`, versionCode 1** — המעטפת הראשונה כאן, טוענת
+  מהרשת מהיום הראשון (בניגוד ליומן, לא היה כאן שלב `file://`).
+  `usesCleartextTraffic=false`, minSdk 21 / targetSdk 34.
+- ⛔ **אין נכסים מוטבעים, ואין להוסיף** — עותק `file://` הוא origin אחסון
+  נפרד: תשלום שנרשם אליו אופליין לא היה נראה לאפליקציה האמיתית לעולם, וזה
+  כסף. בנוסף הוא מקור אמת שני (כלל קריטי 4). ה-service worker + שכבת
+  ה-MIRROR נותנים אופליין אחרי עלייה מוצלחת אחת.
+- ⛔ **אין גשר שיתוף — וזה ההבדל היחיד מהתבנית של יומן.** בקוד של שכר לימוד
+  אין `navigator.share`, ולכן `AndroidShareBridge` הושמט כליל — Java, manifest
+  (אין FileProvider/queries) ותלויות (אין androidx). אם אי-פעם יידרש גשר —
+  מעתיקים את הדפוס הכפול-נעילה של יומן; לעולם לא `addJavascriptInterface` חשוף
+  על דף שנטען מהרשת.
+- **`http`/`https` נשארים בתוך המעטפת** (מסירה לדפדפן = כרום = חסום);
+  `tel:`/`mailto:`/`whatsapp:` וכו' נמסרים למערכת.
+- **עדכוני קוד web לא מצריכים APK חדש** — מגיעים דרך ה-service worker ובאנר
+  העדכון, כמו בדפדפן. APK חדש נדרש רק לשינוי במעטפת עצמה.
+- **צנרת בנייה:** `.github/workflows/build-apk.yml` — Actions → **Build Signed
+  APK** → Run workflow (temurin 17, בנייה, חתימה עם `signing/schar.keystore`
+  הקבוע alias `schar`, אימות `apksigner verify`). ה-artifact:
+  **`schar-limud-signed-apk`**.
+
+### ⚠️ אזהרת מעבר-origin חד-פעמי (אותו עיקרון כמו ביומן)
+ה-WebView של ה-APK מחזיק **מחיצת אחסון נפרדת** מזו של הדפדפן באותו מכשיר.
+מי שעבד בדפדפן ועובר ל-APK מתחיל עם localStorage ריק — כניסה מחדש, וה-MIRROR
+נטען מהענן (מקור האמת). ⛔ **מה שכן יכול ללכת לאיבוד: רשומה שסומנה ⏳ בדפדפן
+וטרם עלתה לענן.** לכן לפני מעבר מכשיר ל-APK — לוודא בדפדפן שההגדרות ←
+«⏳ ממתין לסנכרון» מציג **0**.
+
 ## סבב תיקונים 6 (יולי 2026, `sw.js` v6)
 - **סכימת SQL — מקור אמת יחיד.** הסכימה ישבה בשלושה עותקים לא מסונכרנים (ה-SQL המוטבע
   במסך ההגדרה, `supabase-setup.sql`, ו-`migrations/`), ושניים מהם התיישנו בשקט: חסרו בהם

@@ -1,0 +1,59 @@
+name: Build Signed APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ⛔ No "copy web assets" step, and it must never be added.
+      # The shell loads https://ygtotlrl-lab.github.io/schar-limud/ over the network,
+      # so a bundled copy would be a SECOND source of truth that only ever goes stale —
+      # and worse, it lives in the file:// storage origin, a different localStorage
+      # partition from the https site. Anything typed into it offline would be invisible
+      # to the real app — and here that data is money. See android/README.md.
+
+      - name: Generate Gradle wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.7 --no-daemon
+
+      - name: Build release APK (unsigned)
+        run: |
+          cd android
+          ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Sign APK with permanent keystore
+        run: |
+          cd android
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          echo "Using build-tools: $BT"
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -p -f 4 "$UNSIGNED" aligned.apk
+          "$BT/apksigner" sign \
+            --ks ../signing/schar.keystore \
+            --ks-key-alias schar \
+            --ks-pass pass:schar123 \
+            --key-pass pass:schar123 \
+            --out schar-limud-signed.apk \
+            aligned.apk
+          "$BT/apksigner" verify --print-certs schar-limud-signed.apk
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: schar-limud-signed-apk
+          path: android/schar-limud-signed.apk
