@@ -508,6 +508,18 @@ var LS_CFG = {
   // גם הם בחוץ, אחרת נשארות תנועות בלי שם מוצג.
   tier2: [],
 
+  // ⚠️ סבב 14 — עדות סנכרון חלופית (אימות מול הענן): **המודול המשותף מכיל
+  // אותה, וכאן אין לה על מה לחול.** המסלול נכנס לפעולה רק עבור מפתח
+  // ב-`tier2` שהגדיר `idOf`+`verify`, ו-`tier2` כאן ריק — ונשאר ריק:
+  // `sl_mirror_transactions` הם **כספים** ו-`sl_mirror_students` הם אבות
+  // המפתח הזר שלהם. אימות מול הענן מוכיח שהרשומה שם, אבל **אינו הופך
+  // רשומה כספית לניתנת לפינוי**: פינוי שלה מסתיר תנועה מהמסך אופליין
+  // וחישוב חוב על נתון חסר גרוע מכל מכסה. `sl_mirror_settings`/
+  // `sl_mirror_lists` נכתבות מקומית-תחילה מאז 009 (ר' `tier1`).
+  // המשמעות המעשית: schar אינה מפנה מקום, ואם הדומיין מלא היא זו שתתריע
+  // בלי לפתור. הפתרון שם הוא yoman ו-hanhala, שכן מפנות — לא צמצום
+  // העותק המקומי של הכסף.
+
   // ⛔ יש משהו שטרם עלה לענן ⇒ שלב ב מדולג לגמרי. גם ספק נחשב "יש".
   pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
   syncedThrough: function () { try { return parseInt(lsGet('sl_synced_at', '0'), 10) || 0; } catch (e) { return 0; } }
@@ -815,9 +827,13 @@ function lsSweep(reason, needBytes) {
     lsLog('פינוי ב׳ דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
     return freed;
   }
-  var through = 0;
-  try { through = Number(LS_CFG.syncedThrough && LS_CFG.syncedThrough()) || 0; } catch (e) { through = 0; }
+  var through = lsGlobalWitness();
   var specs = (LS_CFG.tier2 || []).slice();
+  // מפתח בלי עֵד מקומי אך עם מסלול אימות מול הענן אינו מפונה כאן — האימות
+  // אסינכרוני ולכן הוא רץ ב-`lsBootDeferred`, אחרי העלייה. מדווח כדי
+  // שהיומן לא יראה כאילו לא נעשה כלום.
+  var defer = lsVerifySpecs(through);
+  if (defer.length) lsLog('פינוי ב׳ — ' + defer.length + ' מפתחות ללא עֵד מקומי', 'ימשיכו באימות מול הענן', 0);
   // מפתח יכול להביא עֵד סנכרון משלו (`spec.syncedThrough`) כשהחותמת הגלובלית
   // אינה מעידה עליו — למשל מערך שנדחף בנפרד ובהצלחה נפרדת.
   var anyOwn = false;
@@ -843,11 +859,8 @@ function lsPruneKey(spec, through, want) {
 
   // רצפת גיל פר-מפתח: גם רשומה מסונכרנת לא מפונה אם היא טרייה מדי. בלעדיה
   // היינו מפנים דווקא את מה שהמשתמש עובד עליו עכשיו.
-  var cut = through;
-  if (typeof spec.syncedThrough === 'function') {
-    try { cut = Number(spec.syncedThrough()) || 0; } catch (e0) { cut = 0; }
-  }
-  if (!cut) return 0;
+  var cut = lsSpecWitness(spec, through);
+  if (!cut) return 0;   // אין עֵד מקומי — המסלול הנכון הוא האימות מול הענן
   if (spec.minAgeMs) cut = Math.min(cut, Date.now() - spec.minAgeMs);
   if (cut <= 0) return 0;
 
@@ -884,15 +897,215 @@ function lsPruneKey(spec, through, want) {
   return gained;
 }
 
+/* ── עדות סנכרון חלופית: אימות ישיר מול הענן (סבב 14) ────────────────────
+   שלב ב מותנה בעֵד סנכרון **מקומי** — חותמת שנכתבת רק אחרי דחיפה מוצלחת
+   מהמכשיר הזה. בדפדפן שקורא ולא כותב (המחשב שממנו רק מסתכלים) אין דחיפה,
+   ולכן אין עֵד, ולכן שלב ב מדולג לגמרי: הפינוי מחזיר 0 וההתרעה הצהובה
+   נשארת קבועה — בזמן שכל הנתונים כבר בענן. נמדד בפועל: 3.06MB / 61%,
+   ופינוי שהחזיר 0.
+
+   התיקון אינו הרפיה של הדרישה אלא **החלפת מקור הראיה**: במקום להסיק
+   "זה בענן" מחותמת מקומית, שואלים את הענן. `spec.verify()` מושכת את העותק
+   הענני של אותו מפתח, ורשומה נמחקת רק אם היא נמצאת שם לפי `spec.idOf`
+   **וגם** חותמת הענן אינה ישנה מהחותמת המקומית — כלומר הענן מחזיק את
+   הגרסה הזו או חדשה ממנה.
+
+   ⛔ **נכשל סגור.** אין רשת, `verify` זרקה, החזירה `ok:false`, או שהמפתח
+      כלל אינו קיים בענן ⇒ לא מפנים דבר. היעדר ראיה אינו ראיה.
+   ⛔ **רצפות הגיל (`minAgeMs`) נשארות כמו שהיו** — הן שכבת בטיחות נפרדת
+      מהראיה, ולא תחליף לה.
+   ⛔ **`LS_CFG.pending()` נבדק כאן בדיוק כמו בשלב ב הסינכרוני**: יש משהו
+      שטרם עלה ⇒ לא מפנים דבר.
+   ⛔ **פינוי רצף בלבד.** הרשומות נבדקות מהישנה לחדשה, והפינוי **נעצר**
+      בראשונה שלא אומתה — לא מדלג עליה וממשיך מעליה. הסיבה היא האופק:
+      אחרי הפינוי נשמר `hz` = חותמת הרשומה החדשה ביותר שנמחקה,
+      ו-`lsSetArray` מסננת **בכל כתיבה** כל רשומה שחותמתה ≤ hz. דילוג
+      והמשך היו מוחקים בכתיבה הבאה, בשקט, דווקא את הרשומה שאין לה עותק
+      בענן — ההפך הגמור מהכוונה.
+   ⚠️ **אסינכרוני.** `lsBoot` סינכרונית ורצה לפני שהמסך עולה, ולכן מסלול
+      האימות רץ אחריה (`lsBootDeferred`) — וההתרעה נדחית איתו, אחרת
+      המשתמש מקבל אזהרה צהובה על מצב שנפתר שתי שניות אחר כך. */
+
+var LS_DEFER_MS = 3000;   // המתנה אחרי העלייה לפני האימות — שהאפליקציה תספיק לעלות
+
+function lsGlobalWitness() {
+  try { return Number(LS_CFG.syncedThrough && LS_CFG.syncedThrough()) || 0; } catch (e) { return 0; }
+}
+/* עֵד הסנכרון של מפתח בודד: משלו אם הוגדר, אחרת הגלובלי. **מפתח שהגדיר
+   `syncedThrough` משלו אינו נופל חזרה לגלובלי** — עֵד של מערך אחד אינו
+   מעיד על אחר. (זו ההתנהגות שהייתה כאן מאז סבב 11; היא רק עברה לעוזר.) */
+function lsSpecWitness(spec, through) {
+  if (spec && typeof spec.syncedThrough === 'function') {
+    try { return Number(spec.syncedThrough()) || 0; } catch (e) { return 0; }
+  }
+  return Number(through) || 0;
+}
+// המפתחות שאין להם עֵד מקומי אך יש להם מסלול אימות מול הענן.
+function lsVerifySpecs(through) {
+  var t = (through === undefined) ? lsGlobalWitness() : through;
+  return (LS_CFG.tier2 || []).filter(function (s) {
+    return !!s && typeof s.verify === 'function' && typeof s.idOf === 'function' && !lsSpecWitness(s, t);
+  });
+}
+function lsHasVerifiers() { return lsVerifySpecs().length > 0; }
+
+// מפת {מזהה: החותמת הגבוהה ביותר} מתוך העותק הענני.
+function lsCloudIndex(spec, rows) {
+  if (!Array.isArray(rows) || !spec || typeof spec.idOf !== 'function') return null;
+  var idx = {}, i, id, t;
+  for (i = 0; i < rows.length; i++) {
+    id = spec.idOf(rows[i]);
+    if (id == null || id === '') continue;
+    id = String(id);
+    t = Number(spec.ts(rows[i]));
+    if (!isFinite(t) || t < 0) t = 0;
+    if (!(id in idx) || t > idx[id]) idx[id] = t;
+  }
+  return idx;
+}
+
+// גריעה ממפתח אחד כשהראיה היא מפת הענן ולא חותמת מקומית.
+function lsPruneKeyVerified(spec, idx, want) {
+  if (!idx || !spec || typeof spec.idOf !== 'function') return 0;
+  var raw = lsGet(spec.key, null);
+  if (raw == null) return 0;
+  var arr;
+  try { arr = JSON.parse(raw); } catch (e) { return 0; }
+  if (!Array.isArray(arr) || arr.length < 2) return 0;
+
+  // הראיה החליפה את העֵד, **לא** את רצפת הגיל.
+  var cut = spec.minAgeMs ? (Date.now() - spec.minAgeMs) : 0;
+  if (cut <= 0) return 0;
+
+  var before = lsEntryBytes(spec.key, raw), i;
+  var cand = [];
+  for (i = 0; i < arr.length; i++) {
+    var t0 = Number(spec.ts(arr[i]));
+    if (isFinite(t0) && t0 > 0 && t0 <= cut) cand.push({ i: i, t: t0 });
+  }
+  if (!cand.length) return 0;
+  cand.sort(function (a, b) { return a.t - b.t; });   // הישן ביותר קודם
+
+  var target = want > 0 ? want : Math.max(0, before - Math.floor(before * 0.5));
+  var drop = {}, hz = 0, est = 0, kept = arr.length, stopped = '';
+  for (i = 0; i < cand.length && est < target && kept > 1; i++) {
+    var rec = arr[cand[i].i];
+    var id = spec.idOf(rec);
+    id = (id == null) ? '' : String(id);
+    // ⛔ עצירה, לא דילוג — ר' ההסבר על האופק למעלה.
+    if (!id) { stopped = 'רשומה בלי מזהה'; break; }
+    if (!(id in idx)) { stopped = 'רשומה שאינה בענן'; break; }
+    if (idx[id] < cand[i].t) { stopped = 'הענן מחזיק גרסה ישנה יותר'; break; }
+    var s = '';
+    try { s = JSON.stringify(rec) || ''; } catch (e2) { s = ''; }
+    est += s.length * 2;
+    drop[cand[i].i] = 1;
+    hz = cand[i].t;
+    kept--;
+  }
+  if (!hz) {
+    lsLog('אימות — לא פונה דבר מ' + (spec.label || spec.key), stopped || 'אין רשומה מעל רצפת הגיל', 0);
+    return 0;
+  }
+  var next = arr.filter(function (r, ix) { return !drop[ix]; });
+  var json = JSON.stringify(next);
+  if (!lsSetRaw(spec.key, json)) return 0;
+  lsSetRaw(LS_CFG.hzPrefix + spec.key, String(hz));
+  var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
+  lsLog('פינוי ב׳ (אומת מול הענן) — ' + (spec.label || spec.key),
+        (arr.length - next.length) + ' רשומות ישנות, עד ' + new Date(hz).toLocaleDateString('he-IL') +
+        (stopped ? ' · נעצר ב' + stopped : ''),
+        gained);
+  if (typeof spec.after === 'function') { try { spec.after(next); } catch (e3) { } }
+  return gained;
+}
+
+// כמה בתים צריך לפנות כדי לרדת אל יעד הפינוי. 0 = אין צורך.
+function lsSweepNeed() {
+  var u = lsUsage();
+  if (u.total < u.quota * LS_SWEEP_PCT) return 0;
+  return Math.max(0, u.total - Math.floor(u.quota * LS_SWEEP_TO));
+}
+
+/* שלב ב בגרסה האסינכרונית: לכל מפתח בלי עֵד מקומי — משיכת העותק הענני
+   ופינוי של מה שאומת בלבד. מחזירה Promise עם מספר הבתים שפונו. */
+var _lsVerifying = false;
+function lsSweepVerified(reason, needBytes) {
+  if (_lsVerifying) return Promise.resolve(0);
+  var specs = lsVerifySpecs();
+  if (!specs.length) return Promise.resolve(0);
+  if (LS_CFG.pending && LS_CFG.pending()) {
+    lsLog('אימות מול הענן דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
+    return Promise.resolve(0);
+  }
+  _lsVerifying = true;
+  var need = Number(needBytes) || 0, freed = 0, i = 0;
+  lsLog('אימות מול הענן התחיל', reason, 0);
+  function step() {
+    if (i >= specs.length || (need && freed >= need)) return Promise.resolve(freed);
+    var spec = specs[i++], p;
+    try { p = Promise.resolve(spec.verify()); } catch (e) { p = Promise.reject(e); }
+    return p.then(function (res) {
+      // נכשל סגור: כל תשובה שאינה {ok:true, rows:[...]} אינה ראיה.
+      if (!res || res.ok !== true || !Array.isArray(res.rows)) {
+        lsLog('אימות נכשל — ' + (spec.label || spec.key), 'לא מפנים דבר (נכשל סגור)', 0);
+        return;
+      }
+      freed += lsPruneKeyVerified(spec, lsCloudIndex(spec, res.rows),
+                                  need ? Math.max(0, need - freed) : 0);
+    }, function (e) {
+      lsLog('אימות נכשל — ' + (spec.label || spec.key),
+            (e && e.message) ? String(e.message) : 'שגיאת רשת', 0);
+    }).then(step);
+  }
+  function done() { _lsVerifying = false; return freed; }
+  return step().then(done, done);
+}
+
+/* ── המסלול הנדחה ───────────────────────────────────────────────────────
+   רץ אחרי שהאפליקציה כבר עלתה, כדי שהאימות (רשת) לא יחסום את הטעינה. */
+var _lsDeferTimer = null;
+function lsScheduleDeferred(delayMs) {
+  if (_lsDeferTimer) return false;
+  _lsDeferTimer = setTimeout(function () {
+    _lsDeferTimer = null;
+    try { lsBootDeferred(); } catch (e) { }
+  }, delayMs == null ? LS_DEFER_MS : delayMs);
+  return true;
+}
+function lsBootDeferred() {
+  var need = lsSweepNeed();
+  var p = need ? lsSweepVerified('פינוי נדחה בעלייה — אימות מול הענן', need) : Promise.resolve(0);
+  function finish(freed) {
+    freed = Number(freed) || 0;
+    var u = lsUsage();
+    if (freed > 0) lsLog('פינוי נדחה הסתיים', lsFmtBytes(freed) + ' · נותרו ' + Math.round(u.pct * 100) + '%', freed);
+    lsBootAlert(u);
+    try { lsRenderStatus(); } catch (e) { }
+    return { usage: u, freed: freed };
+  }
+  return p.then(finish, function () { return finish(0); });
+}
+
 /* ── בדיקת העלייה ───────────────────────────────────────────────────────
-   נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו. */
-function lsBoot() {
+   נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו.
+   **סינכרונית בכוונה** — היא חייבת לרוץ לפני הטעינה. כשיש מפתחות שניתן
+   לאמת מול הענן, ההתרעה נדחית יחד עם האימות (`lsBootDeferred`). */
+function lsBoot(opts) {
   var u = lsUsage(), swept = 0;
   if (u.total >= u.quota * LS_SWEEP_PCT) {
     swept = lsSweepGuarded('פינוי יזום בעלייה — ' + Math.round(u.pct * 100) + '% מהמכסה',
                            Math.max(0, u.total - Math.floor(u.quota * LS_SWEEP_TO)));
     if (swept > 0) u = lsUsage();
   }
+  var deferred = false;
+  if (u.total >= LS_WARN_BYTES && !(opts && opts.noDefer) && lsHasVerifiers()) {
+    deferred = lsScheduleDeferred(opts && opts.deferMs);
+  }
+  if (!deferred) lsBootAlert(u);
+  return { usage: u, swept: swept, deferred: deferred };
+}
+function lsBootAlert(u) {
   if (u.total >= LS_CRIT_BYTES) {
     lsLog('⚠️ מעל 4MB', lsFmtBytes(u.total), u.total);
     lsAlert(MSG_LS_CRIT + ' (' + lsFmtBytes(u.total) + ' מתוך ' + lsFmtBytes(u.quota) + ')');
@@ -901,7 +1114,6 @@ function lsBoot() {
     try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000); } catch (e) { }
   }
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000); } catch (e1) { } }
-  return { usage: u, swept: swept };
 }
 
 /* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
@@ -941,6 +1153,14 @@ function lsStatusHTML() {
          '⚠️ פונו רשומות ישנות מ-' + hz.length + ' מפתחות מחוסר מקום. הן שמורות בענן ויחזרו לתצוגה כשיש רשת.</div>';
   }
 
+  var vs = lsVerifySpecs();
+  if (vs.length) {
+    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(21,101,192,.12);color:#1565c0">' +
+         '☁️ במכשיר הזה אין עדות דחיפה מקומית עבור: ' +
+         esc(vs.map(function (s) { return s.label || s.key; }).join(', ')) +
+         '. פינוי שלהם נעשה רק אחרי אימות ישיר מול הענן — רשומה שאינה שם לא נמחקת.</div>';
+  }
+
   var log = lsLogRead();
   h += '<div style="font-weight:800;margin:10px 0 4px">יומן פינוי</div>';
   if (!log.length) h += '<div style="opacity:.6">— טרם בוצע פינוי —</div>';
@@ -967,12 +1187,19 @@ function lsRenderStatus() {
   if (el) el.innerHTML = lsStatusHTML();
 }
 function lsRefreshStatus() { lsRenderStatus(); }
+// מחזירה Promise — הפינוי הידני עובר גם במסלול הסינכרוני וגם באימות מול
+// הענן, ולכן ההודעה למשתמש מחכה לשניהם.
 function lsSweepNow() {
-  var before = lsUsage().total;
   var freed = lsSweepGuarded('פינוי ידני מההגדרות', 0);
   lsRenderStatus();
-  try { lsToast(freed > 0 ? ('✅ פונו ' + lsFmtBytes(freed)) : '⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000); } catch (e) { }
-  return before - lsUsage().total;
+  var p = lsHasVerifiers() ? lsSweepVerified('פינוי ידני מההגדרות — אימות מול הענן', 0) : Promise.resolve(0);
+  function finish(extra) {
+    freed += Number(extra) || 0;
+    lsRenderStatus();
+    try { lsToast(freed > 0 ? ('✅ פונו ' + lsFmtBytes(freed)) : '⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000); } catch (e) { }
+    return freed;
+  }
+  return p.then(finish, function () { return finish(0); });
 }
 function lsRestoreAll() {
   lsClearHorizons();
@@ -988,6 +1215,8 @@ window.lsUsage = lsUsage;
 window.lsFails = lsFails;
 window.lsOkSince = lsOkSince;
 window.lsGuardToast = lsGuardToast;
+window.lsBootDeferred = lsBootDeferred;
+window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var PEND_CFG = { app: 'schar-limud', key: 'sl_pending' };
