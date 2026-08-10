@@ -1,0 +1,47 @@
+name: cleanup-merged-branches
+
+# מוחק אוטומטית ענפי claude/ שמוזגו במלואם ל-main.
+# שני קווי הגנה: (1) בדיקת prefix קשיחה — רק ענפים שמתחילים ב-claude/;
+# (2) git merge-base --is-ancestor — רק ענף שה-HEAD שלו כבר בתוך main.
+# ענף לא ממוזג מדולג עם הודעה ביומן. main לעולם אינו מועמד למחיקה.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete fully-merged claude/ branches
+        run: |
+          set -u
+          git fetch origin --prune --quiet
+          deleted=0; skipped=0
+          for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/); do
+            branch="${ref#refs/remotes/origin/}"
+            # קו הגנה 1: prefix קשיח — רק ענפי claude/. כל ענף אחר (כולל main) לא נבדק כלל.
+            case "$branch" in
+              claude/*) ;;
+              *) continue ;;
+            esac
+            # קו הגנה 2: מחיקה רק אם ה-HEAD של הענף הוא ancestor של main (מוזג במלואו).
+            if git merge-base --is-ancestor "$ref" origin/main; then
+              echo "🗑️  deleting fully-merged branch: $branch"
+              git push origin --delete "$branch" || echo "⚠️  failed to delete $branch (continuing)"
+              deleted=$((deleted+1))
+            else
+              echo "⏭️  skipping unmerged branch: $branch"
+              skipped=$((skipped+1))
+            fi
+          done
+          echo "done: $deleted deleted, $skipped skipped"
