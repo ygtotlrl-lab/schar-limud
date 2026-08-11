@@ -164,6 +164,13 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:#f5f5f5;color:#555;border:1px solid var(--border)}
 @media(max-width:480px){.txn-row{grid-template-columns:65px 1fr auto auto}.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}.st-row{grid-template-columns:1fr auto}.st-total{display:none}}
+/* מידע טכני — קיפול מסכי האחסון (תצוגה בלבד): שורה צנועה בתחתית ההגדרות */
+.tech-info{margin-top:22px;font-size:12px;opacity:.7}
+.tech-info>summary{cursor:pointer;list-style:none;display:inline-block;padding:4px 2px}
+.tech-info>summary::-webkit-details-marker{display:none}
+.tech-info[open]{opacity:1}
+.tech-info .ls-status button{display:none!important}
+.ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
 </style>
 </head>
 <body>﻿<div id="auth-screen">
@@ -367,10 +374,6 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
           <div class="card-body"><div id="pend-status-box"></div></div>
         </div>
         <div class="card">
-          <div class="card-hdr"><h3>&#128190; אחסון מקומי</h3></div>
-          <div class="card-body"><div id="ls-status-box"></div></div>
-        </div>
-        <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input id="set-def-tuition" type="number" min="0" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
@@ -406,6 +409,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
           </div>
           <div id="set-sections-list"></div>
         </div>
+        <div id="tech-info-box"></div>
       </div>
     </div>
   </div>
@@ -1218,6 +1222,46 @@ window.lsGuardToast = lsGuardToast;
 window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
+
+/* ═══ "מידע טכני" — קיפול מסכי האחסון (תצוגה בלבד, סבב 15) ═══════════════
+   המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
+   בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
+   הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
+   המנגנון האוטומטי (lsBoot/lsSweep) הוא הדרך היחידה לפינוי.
+   חריג יחיד ומכוון: מעל LS_CRIT_BYTES מוצגת שורת מצב עדינה גם מחוץ
+   לרכיב — רשת הביטחון היחידה שמוצגת ביוזמת המערכת. */
+function techInfoHTML() {
+  var crit = '';
+  try {
+    var u = lsUsage();
+    if (u.total >= LS_CRIT_BYTES) {
+      crit = '<div class="ls-crit-line">⚠️ האחסון המקומי כמעט מלא (' + esc(lsFmtBytes(u.total)) +
+             ' מתוך ' + esc(lsFmtBytes(u.quota)) + ') — פרטים ב"מידע טכני"</div>';
+    }
+  } catch (e) { }
+  return crit +
+    '<details class="tech-info" ontoggle="window.techInfoToggle&&window.techInfoToggle(this)">' +
+    '<summary>מידע טכני &rsaquo;</summary>' +
+    '<div id="ls-status-box"></div>' +
+    '</details>';
+}
+function techInfoToggle(el) {
+  if (el && el.open) { try { lsRenderStatus(); } catch (e) { } }
+}
+function techInfoMount() {
+  var box = document.getElementById('tech-info-box');
+  if (!box) return;
+  var prev = box.querySelector('details.tech-info');
+  var wasOpen = !!(prev && prev.open);
+  box.innerHTML = techInfoHTML();
+  if (wasOpen) {
+    var d = box.querySelector('details.tech-info');
+    if (d) d.open = true;
+  }
+}
+window.techInfoToggle = techInfoToggle;
+window.techInfoMount = techInfoMount;
+/* ═══ סוף רכיב "מידע טכני" ═══════════════════════════════════════════════ */
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var PEND_CFG = { app: 'schar-limud', key: 'sl_pending' };
 
@@ -2946,7 +2990,7 @@ function renderSettingsLists(){
   document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent(\''+esc(slKey(s))+'\')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
   pendRenderStatus();
-  lsRenderStatus();
+  techInfoMount();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
