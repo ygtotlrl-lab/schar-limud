@@ -1,0 +1,34 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.schar.limud'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.schar.limud"
+        minSdk 21
+        targetSdk 34
+        // 1 = the first shell, loading the live site (https://ygtotlrl-lab.github.io/schar-limud/)
+        // from day one — schar-limud never had a file:// build.
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// No dependencies, on purpose: yoman's shell needs androidx.webkit + androidx.core for
+// its origin-restricted share bridge (navigator.share → FileProvider). schar-limud's
+// page has no navigator.share, the bridge is omitted entirely, and nothing androidx
+// is used. See MainActivity.java.
