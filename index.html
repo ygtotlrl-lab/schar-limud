@@ -1263,7 +1263,18 @@ window.techInfoToggle = techInfoToggle;
 window.techInfoMount = techInfoMount;
 /* ═══ סוף רכיב "מידע טכני" ═══════════════════════════════════════════════ */
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-var PEND_CFG = { app: 'schar-limud', key: 'sl_pending' };
+var PEND_CFG = {
+  app: 'schar-limud', key: 'sl_pending',
+  // השהיית ציור (סבב 16): בתום ההחזקה, תגית ⏳ שנותרה צריכה להיכנס לשורות
+  // שכבר רונדרו בלעדיה. שלושת מציירי התגיות — יומן התשלומים, רשימת התנועות
+  // שבכרטיס התלמיד (renderScAnnual, בלי לאפס את שדות העריכה של הכרטיס)
+  // ורשימות ההגדרות. כולם אידמפוטנטיים, וכשל באחד אינו מפיל את השאר.
+  redraw: function () {
+    try { renderTxnLog(); } catch (e) { }
+    try { renderScAnnual(); } catch (e) { }
+    try { renderSettingsLists(); } catch (e) { }
+  }
+};
 
 /* ═══ ממתין לסנכרון — מודול משותף (סבב 12) ═══════════════════════════════
    הבעיה שהמודול הזה פותר: אחרי שמירה מקומית המסך נראה **בדיוק** כמו אחרי
@@ -1299,6 +1310,60 @@ var PEND_MAX = 800;                       // תקרת המפה — הגנה מפ
 var _pendMap = null;
 var _pendAlertDismissed = 0;
 
+/* ---------------------------------------------- השהיית ציור (סבב 16) ----
+   באונליין תקין האישור מגיע תוך פחות משתי שניות מהסימון, והתגית והסרגל היו
+   מהבהבים לשבריר שנייה על כל שמירה. לכן סימון שנוצר **הרגע** בכתיבה חדשה
+   מקבל "החזקת ציור" בזיכרון: אם האישור הגיע בתוך PEND_DRAW_DELAY_MS —
+   ה-⏳ לא מופיע כלל; אם לא — הוא מופיע וממשיך להתנהג בדיוק כמו היום.
+   ⚠️ ההשהיה היא על ה**ציור בלבד**: הסימון הלוגי נכתב ל-localStorage מיידית
+   (מנגנוני הבטיחות — פינוי, דחיפה, מיגרציות — נשענים עליו), מסך ההגדרות
+   (pendStatusHTML) והמונים הלוגיים (pendCount/pendHas/pendSince) אינם
+   מושהים לעולם, וההחזקה חיה **בזיכרון בלבד** — סימון שנטען מהדיסק בעליית
+   האפליקציה (המכשיר נסגר בתוך שתי השניות) מצויר מיד. */
+var PEND_DRAW_DELAY_MS = 2000;
+var _pendDrawHold = {};     // key -> הרגע שממנו מותר לצייר (זיכרון בלבד, לא נשמר)
+
+function pendHoldDraw(key, now) {
+  _pendDrawHold[key] = (now || Date.now()) + PEND_DRAW_DELAY_MS;
+}
+// חותמת לציור: 0 כל עוד הסימון מוחזק. סימון בלי החזקה (נטען מהדיסק) — מיידי.
+function pendDrawSince(key) {
+  var t = pendSince(key);
+  if (!t) return 0;
+  var h = _pendDrawHold[key];
+  if (h && Date.now() < h) return 0;
+  if (h) delete _pendDrawHold[key];
+  return t;
+}
+// כמה סימונים מותר לצייר עכשיו. משמש רק להחלטת "האם להציג את הסרגל" —
+// המספר המוצג עצמו הוא תמיד pendCount() המלא.
+function pendDrawCount() {
+  var m = pendAll(), keys = Object.keys(m), n = 0, now = Date.now();
+  for (var i = 0; i < keys.length; i++) {
+    var h = _pendDrawHold[keys[i]];
+    if (!h || now >= h) n++;
+  }
+  return n;
+}
+// בתום ההחזקה: הסימון עדיין קיים (לא אושר — אופליין/רשת איטית) ⇒ מציירים
+// אותו עכשיו, כולל רינדור הרשימות דרך PEND_CFG.redraw (פר-אפליקציה).
+// אושר בינתיים (המסלול המהיר הרגיל) ⇒ אין מה לצייר ואין רינדור מיותר.
+function pendDrawFlush() {
+  var m = pendAll(), now = Date.now(), revealed = false;
+  Object.keys(_pendDrawHold).forEach(function (k) {
+    if (now >= _pendDrawHold[k]) {
+      delete _pendDrawHold[k];
+      if (m[k]) revealed = true;
+    }
+  });
+  if (!revealed) return;
+  pendRender();
+  try { if (typeof PEND_CFG === 'object' && PEND_CFG.redraw) PEND_CFG.redraw(); } catch (e) { }
+}
+function pendScheduleFlush() {
+  try { setTimeout(pendDrawFlush, PEND_DRAW_DELAY_MS + 50); } catch (e) { }
+}
+
 // `PEND_CFG.key` יכולה להיות מחרוזת או פונקציה. yoman-avoda מחזיקה שני
 // מוסדות באותו דומיין, וסימוני האחד אינם תקפים לשני — שם היא פונקציה.
 function pendKeyName() {
@@ -1307,7 +1372,7 @@ function pendKeyName() {
   return k || 'pending_sync';
 }
 // החלפת הקשר (מוסד/משתמש) — המפה נטענת מחדש מהמפתח החדש.
-function pendReload() { _pendMap = null; pendAll(); pendRender(); }
+function pendReload() { _pendMap = null; _pendDrawHold = {}; pendAll(); pendRender(); }
 
 function pendAll() {
   if (_pendMap) return _pendMap;
@@ -1345,28 +1410,33 @@ function pendSave() {
 function pendMark(key) {
   if (!key) return 0;
   var m = pendAll();
-  if (!m[key]) { m[key] = Date.now(); pendSave(); pendRender(); }
+  if (!m[key]) {
+    // הסימון הלוגי נכתב מיידית (pendSave); רק הציור מוחזק (סבב 16).
+    m[key] = Date.now();
+    pendHoldDraw(key, m[key]); pendScheduleFlush();
+    pendSave(); pendRender();
+  }
   return m[key];
 }
 function pendMarkMany(keys) {
   if (!keys || !keys.length) return;
   var m = pendAll(), now = Date.now(), ch = false;
   for (var i = 0; i < keys.length; i++) {
-    if (keys[i] && !m[keys[i]]) { m[keys[i]] = now; ch = true; }
+    if (keys[i] && !m[keys[i]]) { m[keys[i]] = now; pendHoldDraw(keys[i], now); ch = true; }
   }
-  if (ch) { pendSave(); pendRender(); }
+  if (ch) { pendScheduleFlush(); pendSave(); pendRender(); }
 }
 
 // אישור — יש ראיה שהענן קיבל.
 function pendClear(key) {
   if (!key) return;
   var m = pendAll();
-  if (m[key]) { delete m[key]; pendSave(); pendRender(); }
+  if (m[key]) { delete m[key]; delete _pendDrawHold[key]; pendSave(); pendRender(); }
 }
 function pendClearMany(keys) {
   if (!keys || !keys.length) return;
   var m = pendAll(), ch = false;
-  for (var i = 0; i < keys.length; i++) if (m[keys[i]]) { delete m[keys[i]]; ch = true; }
+  for (var i = 0; i < keys.length; i++) if (m[keys[i]]) { delete m[keys[i]]; delete _pendDrawHold[keys[i]]; ch = true; }
   if (ch) { pendSave(); pendRender(); }
 }
 
@@ -1381,7 +1451,7 @@ function pendConfirmPush(prefix, t0) {
   if (!t0) return;
   Object.keys(m).forEach(function (k) {
     if (prefix && k.indexOf(prefix) !== 0) return;
-    if (m[k] < t0) { delete m[k]; ch = true; }
+    if (m[k] < t0) { delete m[k]; delete _pendDrawHold[k]; ch = true; }
   });
   if (ch) { pendSave(); pendRender(); }
 }
@@ -1399,7 +1469,7 @@ function pendLateCount() {
   for (var i = 0; i < keys.length; i++) if (m[keys[i]] < cut) n++;
   return n;
 }
-function pendReset() { _pendMap = {}; pendSave(); pendRender(); }
+function pendReset() { _pendMap = {}; _pendDrawHold = {}; pendSave(); pendRender(); }
 
 function pendFmtAge(ms) {
   if (!isFinite(ms) || ms < 0) ms = 0;
@@ -1436,7 +1506,7 @@ function pendEnsureStyle() {
 // התגית שנכנסת לשורת הרשומה. מחזירה מחרוזת ריקה כשאין מה להציג, כדי
 // שאפשר יהיה לשרשר אותה ללא תנאי בכל תבנית.
 function pendTag(key) {
-  var t = pendSince(key);
+  var t = pendDrawSince(key);   // השהיית ציור (סבב 16) — לא pendSince
   if (!t) return '';
   pendEnsureStyle();
   var age = Date.now() - t, late = age > PEND_LATE_MS;
@@ -1448,7 +1518,9 @@ function pendTag(key) {
 
 function pendCounterText() {
   var n = pendCount(), off = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
-  if (!n) return off ? '⚠️ אין רשת' : '';
+  // כל הסימונים עדיין מוחזקים (נוצרו הרגע) ⇒ הסרגל לא קופץ לשבריר שנייה.
+  // כשהוא כן מוצג — n הוא האמת הלוגית המלאה, לא רק מה שמותר לצייר.
+  if (!n || !pendDrawCount()) return off ? '⚠️ אין רשת' : '';
   var late = pendLateCount();
   var s = (late ? '⚠️ ' : (off ? '⚠️ אין רשת · ' : '⏳ ')) + n + ' פעולות ממתינות לסנכרון';
   var old = pendOldest();
