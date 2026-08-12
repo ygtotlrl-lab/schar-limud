@@ -193,7 +193,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
     </div>
     <div class="auth-field">
       <label>סיסמה</label>
-      <input id="au-pass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="auth-btn" id="auth-btn" onclick="doLogin()">כניסה</button>
     <div class="auth-err" id="auth-err"></div>
@@ -372,7 +372,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
         <div class="card-body">
           <div class="frm-row">
             <label>סיסמת מנהל</label>
-            <input id="set-pass-input" type="password" placeholder="סיסמה" onkeydown="if(event.key==='Enter')unlockSettings()">
+            <input id="set-pass-input" type="password" inputmode="numeric" maxlength="6" placeholder="סיסמה" onkeydown="if(event.key==='Enter')unlockSettings()">
           </div>
           <div id="set-pass-err" style="color:var(--red);font-size:.82rem;margin-bottom:8px;min-height:16px"></div>
           <button class="btn" onclick="unlockSettings()">כניסה</button>
@@ -389,8 +389,8 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
         <div class="card">
           <div class="card-hdr"><h3>שינוי סיסמת מנהל</h3></div>
           <div class="card-body">
-            <div class="frm-row"><label>סיסמה חדשה</label><input id="set-new-pass" type="password"></div>
-            <div class="frm-row"><label>אישור סיסמה</label><input id="set-new-pass2" type="password"></div>
+            <div class="frm-row"><label>סיסמה חדשה</label><input id="set-new-pass" type="password" inputmode="numeric" maxlength="6"></div>
+            <div class="frm-row"><label>אישור סיסמה</label><input id="set-new-pass2" type="password" inputmode="numeric" maxlength="6"></div>
             <button class="btn" onclick="changeAdminPass()">שנה סיסמה</button>
           </div>
         </div>
@@ -1877,6 +1877,12 @@ function slMirrorHasData() {
    ובהיעדרה בודקת מול הענן — כלומר נכשלת סגור ולא פתוח.
    ═══════════════════════════════════════════════════════════════════════ */
 var SL_SECRET_SETTINGS = ['admin_pass'];
+// סבב 19: סיסמה בת שש ספרות בדיוק. ⛔ נאכף **רק במסלולי יצירה/שינוי** —
+// לא בכניסה ולא בשער ההגדרות. אלה מקום שבו הפורמט של הסיסמה הקיימת אינו
+// ידוע (ובשער ההגדרות הוא אפילו לא ניתן לבדיקה — ההשוואה היא מול טביעת
+// PBKDF2 חד-כיוונית), ואכיפה שם הייתה נועלת בחוץ סיסמה תקפה.
+var PASS_SIX_RE = /^[0-9]{6}$/;
+var MSG_PASS_SIX = 'הסיסמה חייבת להיות שש ספרות';
 var SL_PASS_HASH_KEY = 'sl_admin_pass_h';
 var SL_PASS_SALT = 'schar-limud/sl_settings/admin_pass/v1';
 var SL_PASS_ITER = 100000;
@@ -3129,6 +3135,11 @@ async function changeAdminPass(){
   if(!guardOnline())return;
   var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;
   if(!p1){toast('נא להזין סיסמה');return;}
+  // ⛔ הפורמט נאכף כאן בלבד — במסלול **שינוי** הסיסמה. `unlockSettings`
+  // ו-`doLogin` רק בודקים התאמה: הראשון מול טביעת PBKDF2 חד-כיוונית שאי
+  // אפשר לגזור ממנה פורמט, והשני מול סיסמה קיימת בענן. אכיפת פורמט שם
+  // הייתה נועלת בחוץ סיסמה שנקבעה לפני הסבב הזה.
+  if(!PASS_SIX_RE.test(p1)){toast(MSG_PASS_SIX);return;}
   if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}
   var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1},{onConflict:'key'});
   if(r.error){toast('שגיאה: '+r.error.message);return;}
