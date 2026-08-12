@@ -367,15 +367,13 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 
     <!-- Panel 4: Settings -->
     <div id="panel-settings" class="panel">
-      <div id="settings-lock" class="card">
-        <div class="card-hdr"><h3>&#128274; כניסה להגדרות</h3></div>
+      <!-- סבב 26: אין כאן יותר שער סיסמה. ההרשאה נגזרת מ-`sl_users.role`
+           של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
+           ההודעה שמוצגת למי שאינו admin — לא טופס. -->
+      <div id="settings-denied" class="card" style="display:none">
+        <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
-          <div class="frm-row">
-            <label>סיסמת מנהל</label>
-            <input id="set-pass-input" type="password" inputmode="numeric" maxlength="6" placeholder="סיסמה" onkeydown="if(event.key==='Enter')unlockSettings()">
-          </div>
-          <div id="set-pass-err" style="color:var(--red);font-size:.82rem;margin-bottom:8px;min-height:16px"></div>
-          <button class="btn" onclick="unlockSettings()">כניסה</button>
+          <div id="set-denied-msg" style="font-size:.9rem;color:var(--text2);line-height:1.7"></div>
         </div>
       </div>
       <div id="settings-main" style="display:none">
@@ -386,14 +384,9 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
             <button class="btn" onclick="saveDefaultTuition()">שמור</button>
           </div>
         </div>
-        <div class="card">
-          <div class="card-hdr"><h3>שינוי סיסמת מנהל</h3></div>
-          <div class="card-body">
-            <div class="frm-row"><label>סיסמה חדשה</label><input id="set-new-pass" type="password" inputmode="numeric" maxlength="6"></div>
-            <div class="frm-row"><label>אישור סיסמה</label><input id="set-new-pass2" type="password" inputmode="numeric" maxlength="6"></div>
-            <button class="btn" onclick="changeAdminPass()">שנה סיסמה</button>
-          </div>
-        </div>
+        <!-- סבב 26: כרטיס «שינוי סיסמת מנהל» הוסר יחד עם השער שהוא שירת.
+             סיסמאות המשתמשים מנוהלות בלוח הבקרה של Supabase — אין כאן מסך
+             ניהול משתמשים, וזו החלטה מתועדת (כלל ברזל 9). -->
         <div class="card">
           <div class="card-hdr">
             <h3>&#128100; תלמידים</h3>
@@ -472,7 +465,7 @@ var SB = supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhb
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
 var CUR_USER=null,SYNC_INT=null,DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
-var _settingsUnlocked=false,_confirmCb=null,_dashChart=null;
+var _confirmCb=null,_dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
@@ -1765,7 +1758,8 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
    הליבה בלבד, ובלי חותמת אין במה להשוות. 009 נותנת להן `updated_at`+טריגר,
    `client_id` עם אינדקס ייחודי **מלא**, ו-tombstones ל-`sl_lists` — ולכן
    הן ממוזגות, נדחפות ונכתבות מקומית בדיוק כמו השתיים האחרות.
-   **החריג היחיד שנשאר: `admin_pass`** — ר' הפרק על שער ההגדרות למטה.
+   **החריג היחיד שנשאר: `admin_pass`** — שריד של שער ההגדרות שבוטל בסבב
+   26, שאינו יורד לדיסק. ר' `SL_NEVER_MIRROR_SETTINGS` למטה.
    ═══════════════════════════════════════════════════════════════════════ */
 var SL_MIRROR_PREFIX = 'sl_mirror_';
 var SL_SYNCED_KEY = 'sl_synced_at';
@@ -1872,61 +1866,47 @@ function slMirrorHasData() {
   return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
 }
 
-/* ═══ ⛔ הסיסמה אינה יורדת לדיסק בטקסט גלוי ═════════════════════════════
-   `sl_settings` מחזיקה את `admin_pass` — סיסמת שער מסך ההגדרות. ברגע
-   שהטבלה נכנסה לעותק המקומי, שמירה נאיבית שלה הייתה כותבת את הסיסמה
-   **בטקסט גלוי** ל-localStorage של כל מכשיר, באותו origin שבו חיות עוד
-   שלוש אפליקציות. אותה החלטה בדיוק כמו `strip: ['password']` על `g_users`
-   בגיוס: **שורת הסוד מוסרת מהמראה, בכניסה ובכתיבה כאחד.**
+/* ═══ ⛔ שורות שלעולם אינן יורדות לדיסק ═════════════════════════════════
+   `sl_settings` הוא עותק מקומי מלא של טבלת ההגדרות, ולכן כל שורה שיושבת
+   בה נכתבת ל-localStorage — באותו origin שבו חיות עוד שלוש אפליקציות.
+   הרשימה כאן היא **רשימת המפתחות שאסור להם להגיע לשם לעולם**, והיא
+   נאכפת בשלוש נקודות (סבב 24): במשיכה (`slStripSecrets` ב-`syncAll`),
+   בכתיבה המקומית (`slLocalWrite` מסרבת במפורש), ובשער הדיסק עצמו
+   (`slSanitizeRows` בתוך `slMirrorSave`). שלוש נקודות ולא אחת — כך גם
+   נתיב חדש שיתווסף בעתיד אינו יכול להדליף.
 
-   ההסרה היא בנקודת הכניסה (`slStripSecrets` על מה שנמשך מהענן), ולכן
-   השורה פשוט **אינה קיימת** בעותק המקומי: היא לא ממוזגת, לא נשמרת, ולא
-   נדחפת. אין מסלול שבו היא מחליקה פנימה.
+   ⚠️ **`admin_pass` — שריד, לא מנגנון חי (סבב 26).** עד סבב 26 זו הייתה
+   סיסמת השער של מסך ההגדרות, שכבת הרשאה שנייה שהתקיימה כאן ולא בשלוש
+   האחיות. **השכבה בוטלה כולה**: ההרשאה נגזרת מ-`sl_users.role`, ואין
+   באפליקציה שום קוד שקורא, כותב או משווה מול הערך הזה.
 
-   ⚠️ **ולכן `SETTINGS['admin_pass']` ריק תמיד — ואסור ליפול חזרה ל-'admin'.**
-   הבדיקה הישנה `p !== (SETTINGS['admin_pass']||'admin')` הייתה הופכת,
-   ברגע שהשורה נעלמת מהמראה, לשער שנפתח לכל מי שמקליד «admin». במקומה
-   `unlockSettings` משווה מול **טביעת PBKDF2** ששמורה ב-`sl_admin_pass_h`,
-   ובהיעדרה בודקת מול הענן — כלומר נכשלת סגור ולא פתוח.
+   ⛔ **ובכל זאת הוא נשאר ברשימה, וזו החלטה ולא שכחה.** השורה עדיין
+   קיימת במסד הייצור ומחזיקה ערך אמיתי בן שש ספרות — סיסמה שהמנהל בחר,
+   וסביר שהיא משמשת אותו גם במקום אחר. הוצאתה מהרשימה כאן הייתה מורידה
+   את הערך הזה **בטקסט גלוי** לכל מכשיר, כלומר מחליפה מנגנון שהוסר
+   בדליפה חדשה. הרשימה תתרוקן כשהשורה תימחק מהמסד — ולא לפני.
    ═══════════════════════════════════════════════════════════════════════ */
-var SL_SECRET_SETTINGS = ['admin_pass'];
-// סבב 19: סיסמה בת שש ספרות בדיוק. ⛔ נאכף **רק במסלולי יצירה/שינוי** —
-// לא בכניסה ולא בשער ההגדרות. אלה מקום שבו הפורמט של הסיסמה הקיימת אינו
-// ידוע (ובשער ההגדרות הוא אפילו לא ניתן לבדיקה — ההשוואה היא מול טביעת
-// PBKDF2 חד-כיוונית), ואכיפה שם הייתה נועלת בחוץ סיסמה תקפה.
-var PASS_SIX_RE = /^[0-9]{6}$/;
-var MSG_PASS_SIX = 'הסיסמה חייבת להיות שש ספרות';
-var SL_PASS_HASH_KEY = 'sl_admin_pass_h';
-var SL_PASS_SALT = 'schar-limud/sl_settings/admin_pass/v1';
-var SL_PASS_ITER = 100000;
-function slIsSecretSetting(k) { return SL_SECRET_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
+var SL_NEVER_MIRROR_SETTINGS = ['admin_pass'];
+function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
 function slStripSecrets(rows) {
   return (Array.isArray(rows) ? rows : []).filter(function (r) { return !(r && slIsSecretSetting(r.key)); });
 }
-// PBKDF2-SHA256. גיבוב פשוט של סיסמה חלשה הוא הזמנה לטבלת קשת; ההשהיה
-// כאן היא מה שהופך ניחוש-בכוח על העותק שבדיסק ליקר. מחזירה null כשאין
-// `crypto.subtle` (הקשר לא-מאובטח / WebView ישן) — והקורא **נכשל סגור**.
-async function slHashPass(p) {
+
+/* ═══ ניקוי חד-פעמי במכשיר — טביעת סיסמת השער (סבב 26) ═══════════════════
+   `sl_admin_pass_h` החזיק טביעת PBKDF2 של סיסמת שער ההגדרות. השער בוטל,
+   ולכן אין מי שיקרא אותו — אבל הוא **לא נעלם מעצמו**: localStorage שורד
+   עדכוני קוד, וערך שאין לו קורא הוא בדיוק הסוג של שריד שסשן עתידי מוצא
+   ומנחש לְמה הוא שימש. המפתח נמחק בעלייה הראשונה אחרי העדכון.
+   ⚠️ הפעולה נרשמת ליומן הפינוי (כלל ברזל 2 — אף כישלון שקט, ואף מחיקה
+   שקטה): מפתח שנעלם בלי עקבות הוא בדיוק מה שהיומן בא למנוע. */
+var SL_OLD_PASS_HASH_KEY = 'sl_admin_pass_h';
+function slDropLegacyPassHash() {
   try {
-    if (typeof crypto === 'undefined' || !crypto || !crypto.subtle || !crypto.subtle.importKey) return null;
-    var enc = new TextEncoder();
-    var key = await crypto.subtle.importKey('raw', enc.encode(String(p == null ? '' : p)), 'PBKDF2', false, ['deriveBits']);
-    var bits = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt: enc.encode(SL_PASS_SALT), iterations: SL_PASS_ITER, hash: 'SHA-256' }, key, 256);
-    var b = new Uint8Array(bits), h = '';
-    for (var i = 0; i < b.length; i++) h += (b[i] + 0x100).toString(16).slice(1);
-    return h;
-  } catch (e) { console.warn('[pass] גיבוב נכשל', e); return null; }
-}
-// ערך הסיסמה בפועל: שורה ריקה או חסרה = 'admin', בדיוק כמו ברירת המחדל
-// ההיסטורית ובזריעה של 000. הנרמול נעשה **במקום אחד** כדי ששתי דרכי
-// הבדיקה (טביעה מקומית / השוואה מול הענן) לא ייפרדו זו מזו.
-function slPassOf(v) { return (v == null || v === '') ? 'admin' : String(v); }
-// נקראת אחרי משיכת הגדרות שהצליחה, **לפני** ההסרה מהמראה.
-async function slRememberPassHash(rows) {
-  var row = (Array.isArray(rows) ? rows : []).filter(function (r) { return r && r.key === 'admin_pass'; })[0];
-  var h = await slHashPass(slPassOf(row ? row.value : null));
-  if (h) lsSet(SL_PASS_HASH_KEY, h);
+    if (lsGet(SL_OLD_PASS_HASH_KEY, null) == null) return false;
+    lsRemove(SL_OLD_PASS_HASH_KEY);
+    if (typeof lsLog === 'function') lsLog('ניקוי שריד (סבב 26)', SL_OLD_PASS_HASH_KEY + ' — שער ההגדרות בוטל', 0);
+    return true;
+  } catch (e) { console.warn('[migrate] ניקוי ' + SL_OLD_PASS_HASH_KEY + ' נכשל', e); return false; }
 }
 
 /* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users (סבב 24) ═════════════
@@ -1956,8 +1936,10 @@ async function slRememberPassHash(rows) {
    ═══════════════════════════════════════════════════════════════════════ */
 var SL_USERS_KEY = 'sl_mirror_users';
 // רשימת ההיתר. `id`+`username` לזיהוי ולתצוגה (`nav-username`, `created_by`),
-// `pass_salt`+`pass_fp` לאימות. ⛔ **אין להוסיף כאן `password`.**
-var SL_USER_COLS = ['id', 'username', 'pass_salt', 'pass_fp'];
+// `pass_salt`+`pass_fp` לאימות, ו-`role` להרשאות (סבב 26 — הוא מקור האמת
+// היחיד לגישה למסך ההגדרות, ולכן חייב לרדת למכשיר כדי שההרשאה תעבוד
+// אופליין בדיוק כמו הכניסה). ⛔ **אין להוסיף כאן `password`.**
+var SL_USER_COLS = ['id', 'username', 'pass_salt', 'pass_fp', 'role'];
 var SL_USERS = [];
 var SL_PASS_ITER_USER = 100000;
 // המלח הנשמר הוא אקראי פר-משתמש; הקידומת מוסיפה הפרדת-הקשר, כך שטבלה
@@ -2013,13 +1995,35 @@ async function slPassFields(pass) {
   var made = await slMakePassFp(pass);
   return made ? { pass_salt: made.salt, pass_fp: made.fp } : { pass_salt: null, pass_fp: null };
 }
-// תשובת שרת שאומרת "העמודות עדיין לא קיימות" — כלומר `migrations/010` טרם
-// הורצה. ⚠️ בלי הבדיקה הזו משיכת המשתמשים הייתה **נכשלת לגמרי** בחלון שבין
+// תשובת שרת שאומרת "העמודות עדיין לא קיימות" — כלומר `migrations/010`
+// (`pass_salt`/`pass_fp`) או `migrations/011` (`role`) טרם הורצה.
+// ⚠️ בלי הבדיקה הזו משיכת המשתמשים הייתה **נכשלת לגמרי** בחלון שבין
 // דחיפת הקוד להרצת המיגרציה, ומכשיר שנכנס אליו משתמש היה מאבד את המראה.
+// הנפילה-חזרה היא ל-`id,username` — שתי העמודות שקיימות מאז 000.
 function slIsMissingFpCol(err) {
   var m = ((err && (err.message || err.details || err.hint || err.code || '')) + '').toLowerCase();
-  return m.indexOf('pass_fp') !== -1 || m.indexOf('pass_salt') !== -1;
+  return m.indexOf('pass_fp') !== -1 || m.indexOf('pass_salt') !== -1 || m.indexOf('role') !== -1;
 }
+
+/* ═══ הרשאה — נגזרת מהמשתמש, לא מסיסמה שנייה (סבב 26) ═══════════════════
+   ⛔ **נכשל סגור, ובשלושה מצבים שונים בכוונה.** `slSettingsAccess`
+   מחזירה `'ok'` · `'no-role'` (העמודה עדיין לא קיימת — 011 טרם הורצה)
+   · `'denied'` (יש תפקיד, והוא אינו admin). ההפרדה בין השניים האחרונים
+   היא אותו שיקול בדיוק כמו ארבע הודעות הכניסה האופליין (סבב 24):
+   «אין לך הרשאה» למנהל שפשוט טרם הריץ מיגרציה הוא כשל שקט — הוא שולח
+   אותו לחפש באג בהרשאות במקום להריץ את השורה שתפתור.
+   ⚠️ כל מה שאינו בדיוק `'admin'` — כולל תפקיד שהוקלד בטעות — אינו מקבל
+   גישה. תפקיד לא מוכר שולל הרשאה, לעולם לא מעניק אותה. */
+function slSettingsAccess(u) {
+  var who = (u === undefined) ? CUR_USER : u;
+  if (!who) return 'denied';
+  var r = who.role;
+  if (r === undefined || r === null || r === '') return 'no-role';
+  return String(r) === 'admin' ? 'ok' : 'denied';
+}
+function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
+var MSG_SET_DENIED  = '🔒 מסך ההגדרות פתוח למשתמשי ניהול בלבד. המשתמש שאיתו נכנסת אינו מוגדר כך — יש לפנות למנהל המערכת.';
+var MSG_SET_NO_ROLE = '🔧 מסך ההגדרות טרם הופעל במסד הנתונים. יש להריץ את <code>migrations/011_users_role.sql</code> ב-SQL Editor של Supabase, ואז להיכנס מחדש.';
 
 function slUsersLoad() {
   try {
@@ -2054,6 +2058,10 @@ async function slPullUsers(force) {
     if (!r || r.error || !Array.isArray(r.data)) return false;
     SL_USERS = r.data.map(slUserPub).filter(function (u) { return u && u.username; });
     slUsersSave();
+    // סבב 26: תפקיד שהשתנה בלוח הבקרה מגיע דרך המשיכה הזו, ולכן המשתמש
+    // המחובר מסונכרן מולה. **הרענון קורה אחרי שהמראה נשמרה** — הפוך מזה,
+    // הוא היה קורא ערך שעוד לא נכתב.
+    if (CUR_USER) { CUR_USER = slResolveUser(CUR_USER); slSaveSession(CUR_USER); }
     _slUsersPulledAt = Date.now();
     return true;
   } catch (e) { return false; }
@@ -2114,7 +2122,7 @@ async function slEnsurePassFp(u, pass) {
    (`MSG_OFFLINE`/`MSG_SAVED`/`MSG_BAD_LOGIN`/`MSG_SYNC_BACK`, סבב 8):
    הבלוק ההוא מוכרז זהה מילה במילה בארבעת הפרויקטים, והוספת קבוע אליו
    כאן בלבד הייתה יוצרת בדיוק את הסחיפה שכלל ברזל 8 בא למנוע. אותו שיקול
-   בדיוק כמו `MSG_PASS_SIX` (סבב 19). */
+   בדיוק חל על `MSG_SET_DENIED`/`MSG_SET_NO_ROLE` (סבב 26). */
 var MSG_OFF_UNKNOWN   = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
 var MSG_OFF_NO_FP     = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
 var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
@@ -2485,7 +2493,9 @@ function showSetupScreen(){
     '<div style="font-size:.7rem;color:var(--text2);margin:0 0 8px;text-align:right;line-height:1.5;background:#fff8e6;border:1px solid #f0dfa8;border-radius:8px;padding:7px 8px">'+
       '<b>&#9315; משתמש ראשון</b> — אין משתמש ברירת מחדל. הרץ ב-SQL Editor, אחרי החלפת הערכים:'+
       '<div dir="ltr" style="direction:ltr;text-align:left;font-family:monospace;font-size:.66rem;margin-top:4px;word-break:break-all">'+
-        esc("INSERT INTO public.sl_users (username, password) VALUES ('שם המשתמש', '123456');")+
+        // ⚠️ סבב 26 — `role` במפורש. הוא מקור האמת היחיד להרשאות, והמשתמש
+        //    הראשון חייב להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
+        esc("INSERT INTO public.sl_users (username, password, role) VALUES ('שם המשתמש', '123456', 'admin');")+
       '</div></div>'+
     '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
   var ta = document.getElementById('setup-sql-ta');
@@ -2578,7 +2588,7 @@ async function doLoginOffline(u,p){
   enterApp();
   toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
 }
-function doLogout(){CUR_USER=null;slClearSession();_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+function doLogout(){CUR_USER=null;slClearSession();clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת (כלל ברזל 3).
 // אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
 // איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
@@ -2604,12 +2614,29 @@ function enterApp(){
    קיצור דרך למי שכבר מזוהה ולא התנאי לכניסה.
    ───────────────────────────────────────────────────────────────────────── */
 var SL_SESSION_KEY='sl_session';
+/* ⚠️ **`role` נשמר בסשן (סבב 26) — וזה הכרחי, לא נוחות.** בלעדיו, מכשיר
+   שנפתח מחדש **בלי רשת** היה מעלה `CUR_USER` בלי תפקיד, כלומר נועל את
+   מסך ההגדרות בפני המנהל עד לחיבור הבא — בדיוק הפגם שהמנגנון הישן סבל
+   ממנו («פתיחה ראשונה במכשיר דורשת רשת»), רק בכיסוי אחר.
+   ⛔ הוא **אינו** סוד ואינו מחליף את מקור האמת: `slResolveUser` מעדיפה
+   תמיד את מראת המשתמשים, ו-`slRevalidateSession` מרעננת מהענן. הסשן הוא
+   הערך האחרון הידוע, ותו לא. אותה החלטה בדיוק כמו `gius.session`. */
 function slSaveSession(u){
   if(!u)return;
-  lsSet(SL_SESSION_KEY,JSON.stringify({id:u.id,username:u.username}));
+  var s={id:u.id,username:u.username};
+  if(u.role!==undefined&&u.role!==null)s.role=u.role;
+  lsSet(SL_SESSION_KEY,JSON.stringify(s));
 }
 function slReadSession(){
   try{var v=JSON.parse(lsGet(SL_SESSION_KEY,'null'));return (v&&v.username)?v:null;}catch(e){return null;}
+}
+// מיזוג הסשן עם מראת המשתמשים: **המראה מנצחת** כשהמשתמש קיים בה, כי היא
+// מתרעננת מהענן כל דקה ותופסת שינוי תפקיד שנעשה במכשיר אחר. אין אותו
+// במראה (מכשיר שטרם סנכרן) ⇒ נשארים עם מה שהסשן זוכר.
+function slResolveUser(sess){
+  if(!sess)return null;
+  var m=slUserByName(sess.username);
+  return m?Object.assign({},sess,slUserPub(m)):sess;
 }
 function slClearSession(){ lsRemove(SL_SESSION_KEY); }
 
@@ -2661,10 +2688,10 @@ async function syncAll(){
     // הגדרות ורשימות — מאז 009 יש להן `updated_at`, ולכן הן ממוזגות ברמת
     // רשומה בדיוק כמו שתי טבלאות הליבה, ולא מוחלפות בבלוק.
     // ⛔ `slStripSecrets` **לפני** המיזוג: `admin_pass` לא נכנסת למראה בשום
-    //    מסלול. הטביעה נלקחת מהשורות הגולמיות, לפני ההסרה.
+    //    מסלול. (עד סבב 26 נלקחה כאן גם טביעת סיסמת השער מהשורות הגולמיות;
+    //    השער בוטל, ולכן אין יותר שום קורא של הערך הזה — רק ההסרה נשארה.)
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
-      slRememberPassHash(rs[2].data);
       var setRows=slStripSecrets(rs[2].data);
       setRows.forEach(function(r){ remoteSet[slKeyOf('settings',r)]=r; });
       MIRROR.settings=slMerge(MIRROR.settings,setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf('settings',r);}); slMirrorSave('settings');
@@ -2736,7 +2763,13 @@ async function slPushTable(tbl,m,remoteByKey,prefix){
   return still;
 }
 
-function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();if(_settingsUnlocked)renderSettingsLists();}
+// ⚠️ מסך ההגדרות מרונדר מחדש **רק כשהוא באמת מוצג** — אחרת כל סנכרון
+// (כל 3 שניות) היה בונה מחדש רשימות שאיש אינו רואה. עד סבב 26 התנאי היה
+// «השער נפתח»; היום הוא «יש הרשאה **וגם** הפאנל פעיל», כי הרשאה לבדה
+// אינה אומרת שהמסך על המסך.
+function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();
+  var sp=document.getElementById('panel-settings');
+  if(slIsAdmin()&&sp&&sp.classList.contains('active'))renderSettingsLists();}
 function updateDropdowns(){
   var act=STUDENTS.filter(function(s){return s.active;});
   var toOpts=function(a){return a.map(function(s){return{id:s.id,label:s.name};});};
@@ -3075,39 +3108,31 @@ function saveStudentSettings(){
   toast(navigator.onLine?'✅ הגדרות נשמרו':MSG_SAVED_LOCAL,4000);syncAll();
 }
 
-function showPanel(key,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('panel-'+key).classList.add('active');if(btn)btn.classList.add('active');if(key==='settings'){document.getElementById('settings-lock').style.display=_settingsUnlocked?'none':'block';document.getElementById('settings-main').style.display=_settingsUnlocked?'block':'none';if(_settingsUnlocked)renderSettingsLists();}}
-// ⛔ **השער נכשל סגור.** `SETTINGS['admin_pass']` ריק תמיד מאז 009 (שורת
-// הסוד מוסרת מהמראה), ולכן הבדיקה הישנה `p !== (SETTINGS['admin_pass']||'admin')`
-// הייתה נפתחת לכל מי שמקליד «admin». ההשוואה היא מול טביעת PBKDF2 מקומית,
-// ובהיעדרה — מול הענן. אין מסלול שלישי, ואין נפילה-חזרה שמנחשת.
-async function unlockSettings(){
-  var p=document.getElementById('set-pass-input').value;
-  var err=document.getElementById('set-pass-err');
-  var stored=lsGet(SL_PASS_HASH_KEY,null), ok=false;
-  if(stored){
-    var h=await slHashPass(p);
-    // אין crypto.subtle ⇒ אי אפשר לאמת מול הטביעה. לא מנחשים — נופלים
-    // למסלול הענן, ואם גם הוא חסום (אופליין) השער פשוט לא נפתח.
-    if(h) ok=(h===stored);
-    else stored=null;
+/* ⭐ סבב 26 — מסך ההגדרות נפתח לפי **תפקיד**, לא לפי סיסמה שנייה.
+   עד כאן היה כאן שער `unlockSettings` שביקש סיסמה נוספת (`admin_pass`),
+   שכבת הרשאה שהתקיימה כאן ולא בשלוש האחיות. מעכשיו ההרשאה נגזרת
+   מהמשתמש שכבר נכנס, כמו בהנהלה, בגיוס וביומן.
+   ⚠️ **אין כאן קריאת רשת ואין המתנה** — `CUR_USER.role` יורד עם מראת
+   המשתמשים, ולכן ההרשאה עובדת אופליין בדיוק כמו הכניסה עצמה. השער הישן,
+   לעומת זאת, דרש חיבור אחד לפני שנפתח אי-פעם במכשיר. */
+function showPanel(key,btn){
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('panel-'+key).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(key==='settings')renderSettingsPanel();
+}
+function renderSettingsPanel(){
+  var acc=slSettingsAccess(), ok=(acc==='ok');
+  var denied=document.getElementById('settings-denied'), main=document.getElementById('settings-main');
+  if(denied)denied.style.display=ok?'none':'block';
+  if(main)main.style.display=ok?'block':'none';
+  if(!ok){
+    var m=document.getElementById('set-denied-msg');
+    if(m)m.innerHTML=(acc==='no-role')?MSG_SET_NO_ROLE:MSG_SET_DENIED;
+    return;
   }
-  if(!stored){
-    if(!navigator.onLine){ err.textContent='פתיחת ההגדרות בפעם הראשונה במכשיר זה דורשת חיבור לאינטרנט'; return; }
-    try{
-      var r=await withTimeout(SB.from('sl_settings').select('value').eq('key','admin_pass').maybeSingle());
-      if(r&&r.error) throw r.error;
-      ok=(p===slPassOf(r&&r.data?r.data.value:null));
-      // הטביעה נשמרת רק על סיסמה **נכונה** — אחרת ניחוש שגוי היה קובע
-      // את מה שהמכשיר יאמין לו מכאן ואילך.
-      if(ok){ var hh=await slHashPass(p); if(hh) lsSet(SL_PASS_HASH_KEY,hh); }
-    }catch(e){ err.textContent=errMsg(e); return; }
-  }
-  if(!ok){ err.textContent='סיסמה שגויה'; return; }
-  _settingsUnlocked=true;
-  document.getElementById('settings-lock').style.display='none';
-  document.getElementById('settings-main').style.display='block';
   document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';
-  err.textContent='';
   renderSettingsLists();
 }
 // כתיבה מקומית-תחילה (009). `guardOnline` הוסר — שכר לימוד ברירת מחדל הוא
@@ -3123,27 +3148,14 @@ function saveDefaultTuition(){
   toast(navigator.onLine?MSG_SAVED:MSG_SAVED_LOCAL,4000);
   syncAll();
 }
-// ⛔ **החריג היחיד שנשאר עם `guardOnline`.** הסיסמה אינה קיימת בעותק
-// המקומי ולכן אין לה מסלול מיזוג: אין במה להשוות ואין מה לדחוף. שינוי
-// שלה הוא כתיבה ישירה לענן, ורק אחריה הטביעה המקומית מתעדכנת.
-async function changeAdminPass(){
-  if(!guardOnline())return;
-  var p1=document.getElementById('set-new-pass').value,p2=document.getElementById('set-new-pass2').value;
-  if(!p1){toast('נא להזין סיסמה');return;}
-  // ⛔ הפורמט נאכף כאן בלבד — במסלול **שינוי** הסיסמה. `unlockSettings`
-  // ו-`doLogin` רק בודקים התאמה: הראשון מול טביעת PBKDF2 חד-כיוונית שאי
-  // אפשר לגזור ממנה פורמט, והשני מול סיסמה קיימת בענן. אכיפת פורמט שם
-  // הייתה נועלת בחוץ סיסמה שנקבעה לפני הסבב הזה.
-  if(!PASS_SIX_RE.test(p1)){toast(MSG_PASS_SIX);return;}
-  if(p1!==p2){toast('הסיסמאות אינן תואמות');return;}
-  var r=await SB.from('sl_settings').upsert({key:'admin_pass',value:p1},{onConflict:'key'});
-  if(r.error){toast('שגיאה: '+r.error.message);return;}
-  var h=await slHashPass(p1); if(h) lsSet(SL_PASS_HASH_KEY,h); else lsRemove(SL_PASS_HASH_KEY);
-  toast('✅ סיסמה שונתה');
-  document.getElementById('set-new-pass').value='';
-  document.getElementById('set-new-pass2').value='';
-  await syncAll();
-}
+/* ⛔ `changeAdminPass` הוסרה בסבב 26 יחד עם השער שהיא שירתה — ואיתה
+   `PASS_SIX_RE`/`MSG_PASS_SIX`, שהיא הייתה **אתר האכיפה היחיד שלהם**
+   באפליקציה הזו (סבב 19). ⚠️ זו אינה נסיגה מכלל שש הספרות: הכלל נאכף
+   היום במקום שבו הסיסמאות באמת נקבעות — ה-INSERT הידני ב-SQL Editor,
+   שקובץ ההתקנה מדגים — ואילו `au-pass` שומר את `inputmode="numeric"`
+   ואת `maxlength="6"` כרמז קלט. ⛔ **אין להחזיר אכיפת פורמט לאף מסלול
+   כניסה**, מאותו נימוק בדיוק שכתוב מעל `slVerifyOffline`: היא הייתה
+   נועלת בחוץ סיסמה קיימת ותקפה, בלי שום מסלול שחזור. */
 function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
@@ -3224,13 +3236,18 @@ document.addEventListener('DOMContentLoaded',async function(){
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
   // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא
-  // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`.
+  // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`
+  // ו-`role` (סבב 26).
   try { slUsersLoad(); } catch (e) { console.warn('[users] load', e); }
+  // ניקוי חד-פעמי של שריד שער ההגדרות שבוטל (סבב 26).
+  try { slDropLegacyPassHash(); } catch (e) { console.warn('[migrate] legacy hash', e); }
 
   // סשן קיים ⇒ נכנסים מיד, גם בלי רשת. האימות מול השרת רץ ברקע.
   var _sess=slReadSession();
   if(_sess){
-    CUR_USER=_sess;
+    // התפקיד נלקח מהמראה כשהיא מכירה את המשתמש (סבב 26) — היא הטרייה
+    // מבין השתיים. הסשן הוא נפילה-חזרה למכשיר שטרם סנכרן.
+    CUR_USER=slResolveUser(_sess);
     enterApp();
     slRevalidateSession(_sess);
     return;

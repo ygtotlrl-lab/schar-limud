@@ -25,18 +25,27 @@
 -- סיבובים עם מלח אקראי פר-משתמש, שנשמרת במכשיר ומאפשרת **כניסה בלי רשת**.
 -- ⛔ `password` נשאר טקסט גלוי בענן במכוון — הטביעה נוספת לצידו ואינה
 --    מחליפה אותו (כלל ברזל 9). במכשיר עצמו הסיסמה אינה נשמרת לעולם.
+-- role (ראה migrations/011): מקור האמת היחיד להרשאות. `'admin'` = גישה
+-- מלאה כולל מסך ההגדרות; כל ערך אחר = משתמש רגיל שאינו נכנס להגדרות.
+-- ⛔ אין CHECK על הערכים במכוון — הקוד **נכשל סגור**, ולכן תפקיד שהוקלד
+--    בטעות שולל הרשאה ולא מעניק אותה. ⚠️ ה-DEFAULT הוא `'admin'`, ולכן
+--    משתמש רגיל חייב לציין `role` במפורש ב-INSERT.
 CREATE TABLE IF NOT EXISTS public.sl_users (
   id         SERIAL PRIMARY KEY,
   username   TEXT UNIQUE NOT NULL,
   password   TEXT NOT NULL,
   pass_salt  TEXT,
   pass_fp    TEXT,
+  role       TEXT NOT NULL DEFAULT 'admin',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
 ALTER TABLE public.sl_users
   ADD COLUMN IF NOT EXISTS pass_salt TEXT,
   ADD COLUMN IF NOT EXISTS pass_fp   TEXT;
+-- שדרוג התקנה שנוצרה לפני 011
+ALTER TABLE public.sl_users
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'admin';
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
@@ -255,16 +264,22 @@ CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK 
 -- לכל התקנה **עתידית** זו פצצה רדומה — בדיוק זו שהוסרה מ-hanhala בסבב 21.
 --
 -- יצירת המשתמש הראשון היא פעולה ידנית ומודעת. הרץ כאן, אחרי החלפת הערכים:
---     INSERT INTO public.sl_users (username, password)
---     VALUES ('שם המשתמש שלך', '123456');
+--     INSERT INTO public.sl_users (username, password, role)
+--     VALUES ('שם המשתמש שלך', '123456', 'admin');
 -- (סיסמה בת שש ספרות — סבב 19.) האפליקציה מציגה את ההנחיה הזו מעצמה
 -- כשהיא מזהה שהטבלה ריקה.
+-- ⚠️ **`role` במפורש** (סבב 26): הוא מקור האמת היחיד להרשאות, והמשתמש
+-- הראשון חייב להיות `'admin'` — אחרת לא ייפתח מסך ההגדרות לאיש.
+-- משתמש רגיל נוצר באותה פקודה עם `'user'` במקום `'admin'`.
 --
--- ⚠️ `admin_pass` שלמטה הוא **דבר אחר** — סיסמת שער מסך ההגדרות ולא
--- חשבון כניסה. היא נשארת עם ערך פתיחה כדי שמסך ההגדרות יהיה נגיש בהתקנה
--- טרייה, ויש להחליף אותה מתוך «הגדרות ← שנה סיסמה».
+-- ⛔ **`admin_pass` הוסרה מכאן בסבב 26.** עד אז נזרעה כאן שורת
+-- `('admin_pass','admin')` — סיסמת שער מסך ההגדרות, שכבת הרשאה שנייה
+-- שהייתה קיימת כאן ולא בשלוש האחיות. השכבה בוטלה כולה: ההרשאה נגזרת
+-- מ-`sl_users.role`, ומסך ההגדרות אינו מבקש סיסמה. ⛔ **אין להחזיר את
+-- השורה ואין להחזיר את המנגנון** — בפרט מפני שהקוד שקרא אותה נפל חזרה
+-- למחרוזת `'admin'` כשהשורה חסרה, כלומר התקנה טרייה נולדה עם שער שנפתח
+-- למי שהקליד «admin».
 INSERT INTO public.sl_settings (key, value) VALUES ('default_tuition', '2000') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_settings (key, value) VALUES ('admin_pass', 'admin') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'מזומן') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'העברה בנקאית') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'ביט') ON CONFLICT DO NOTHING;

@@ -71,9 +71,9 @@ const body = (name) => fn(name);
 
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
-  'SL_USERS_PULL_MS', 'SL_SECRET_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_OF',
+  'SL_USERS_PULL_MS', 'SL_NEVER_MIRROR_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_OF',
   'SL_SESSION_KEY', 'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
-  'MSG_NO_USERS', 'PASS_SIX_RE',
+  'MSG_NO_USERS',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
@@ -224,14 +224,20 @@ async function main() {
   {
     const h = makeCtx();
     ok('⛔ `password` אינו ברשימת ההיתר', h.ctx.SL_USER_COLS.indexOf('password') === -1);
-    eq('רשימת ההיתר היא ארבע העמודות המוכרות',
-      h.ctx.SL_USER_COLS.join(','), 'id,username,pass_salt,pass_fp');
+    // ⚠️ **עודכן בסבב 26** — `role` נוסף לרשימה. הוא מקור האמת להרשאות
+    // ולכן חייב לרדת למכשיר, אחרת מסך ההגדרות לא היה עובד אופליין.
+    // הטענה שנשמרת כאן היא הצורה, לא המספר: רשימת-**היתר** סגורה.
+    eq('רשימת ההיתר היא חמש העמודות המוכרות',
+      h.ctx.SL_USER_COLS.join(','), 'id,username,pass_salt,pass_fp,role');
 
-    const dirty = { id: 7, username: 'x', password: 'סוד', pass_salt: 's', pass_fp: 'f', role: 'owner' };
+    const dirty = { id: 7, username: 'x', password: 'סוד', pass_salt: 's', pass_fp: 'f',
+                    role: 'admin', secret_note: 'עמודה רגישה חדשה' };
     const pub = h.ctx.slUserPub(dirty);
     ok('slUserPub מפיל `password`', !('password' in pub));
-    ok('slUserPub מפיל עמודה זרה שנוספה לטבלה', !('role' in pub));
-    eq('slUserPub שומר את ארבע המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,username');
+    // ⭐ זו הטענה שמצדיקה רשימת-היתר ולא רשימת-איסור: עמודה חדשה בטבלה
+    //    נופלת מעצמה, בלי שאיש צריך לזכור להוסיף אותה לאיסור.
+    ok('⭐ slUserPub מפיל עמודה זרה שנוספה לטבלה', !('secret_note' in pub));
+    eq('slUserPub שומר את חמש המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,role,username');
     eq('slUserPub על קלט שאינו אובייקט מחזירה {}', JSON.stringify(h.ctx.slUserPub(null)), '{}');
   }
   {
@@ -243,7 +249,7 @@ async function main() {
     });
     eq('slPullUsers מצליחה', await h.ctx.slPullUsers(true), true);
     const q = h.calls.sb.find((x) => x.table === 'sl_users');
-    ok('⭐ ה-select מבקש עמודות מפורשות ולא `*`', q.cols === 'id,username,pass_salt,pass_fp', q.cols);
+    ok('⭐ ה-select מבקש עמודות מפורשות ולא `*`', q.cols === 'id,username,pass_salt,pass_fp,role', q.cols);
     ok('⛔ המראה שבזיכרון בלי `password`', !('password' in h.ctx.SL_USERS[0]));
     ok('⛔ המראה שעל הדיסק בלי `password`', h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1);
     ok('⛔ ערך הסיסמה עצמו אינו על הדיסק', h.store[h.ctx.SL_USERS_KEY].indexOf('135790') === -1);
@@ -417,7 +423,7 @@ async function main() {
     eq('כניסה מקוונת מצליחה', h.calls.enter, 1);
     const q0 = h.calls.sb[0];
     ok('ההשוואה עדיין מול `password` שבמסד', q0.eqs.password === A.password);
-    ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === 'id,username,pass_salt,pass_fp', q0.cols);
+    ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === 'id,username,pass_salt,pass_fp,role', q0.cols);
     ok('⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
     // ההשלמה רצה ברקע — ממתינים לה עצמה ולא לשעון (ר' `waitFor`).
     await waitFor(() => h.calls.sb.some((x) => x.kind === 'update'), 'ההשלמה ברקע');
@@ -552,7 +558,9 @@ async function main() {
     ok('⛔ אין את הצמד admin/admin ב-000', !/'admin'\s*,\s*'admin'/.test(SQL000));
     ok('⛔ אין INSERT ל-sl_users ב-supabase-setup.sql', !/insert\s+into\s+public\.sl_users/i.test(live(SETUP_REF)));
     ok('⛔ ואין צמד ערכים אמיתי ב-index.html', !/sl_users[^;]{0,120}VALUES\s*\('[a-z0-9]+'\s*,\s*'[0-9]{6}'\)/i.test(SRC));
-    ok('000 מסביר איך יוצרים משתמש ראשון', /sl_users \(username, password\)/.test(SQL000));
+    // ⚠️ סבב 26 — ההוראה כוללת עכשיו גם `role`, כי המשתמש הראשון חייב
+    //    להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
+    ok('000 מסביר איך יוצרים משתמש ראשון', /sl_users \(username, password, role\)/.test(SQL000));
     ok('⭐ מסך ההגדרה מציג את ההנחיה עם מצייני מקום', /שם המשתמש/.test(SRC));
 
     const adds = (SQL010.match(/add\s+column\s+if\s+not\s+exists/gi) || []).length;
@@ -573,14 +581,22 @@ async function main() {
   sect('ט. אינווריאנטות במקור עצמו');
   {
     ok('⛔ אין select(\'*\') על sl_users', !/from\('sl_users'\)\s*\.\s*select\('\*'\)/.test(SRC));
-    ok('⛔ PASS_SIX_RE אינו בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
-    ok('⛔ PASS_SIX_RE אינו בגוף doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
-    ok('⛔ PASS_SIX_RE אינו בגוף slVerifyOffline', body('slVerifyOffline').indexOf('PASS_SIX_RE') === -1);
-    ok('✅ PASS_SIX_RE כן מופיע ב-changeAdminPass', body('changeAdminPass').indexOf('PASS_SIX_RE') !== -1);
+    // ⚠️ **עודכן בסבב 26.** `changeAdminPass` היה אתר האכיפה **היחיד** של
+    // `PASS_SIX_RE`, והוא הוסר יחד עם שער סיסמת ההגדרות שהוא שירת; הקבוע
+    // ירד איתו. הטענה המקורית («כן מופיע ב-changeAdminPass») אינה ניתנת
+    // לבדיקה יותר, אבל **הכוונה שלה נשמרת במלואה**: מסלולי הכניסה נשארים
+    // נקיים מאכיפת פורמט, מאותו נימוק בדיוק (סבב 19 — אכיפה שם נועלת
+    // בחוץ סיסמה קיימת ותקפה). ⛔ אין להוסיף שם בדיקת פורמט.
+    ok('⛔ אין אכיפת פורמט בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
+    ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
+    ok('⛔ ולא ב-slVerifyOffline', body('slVerifyOffline').indexOf('PASS_SIX_RE') === -1);
+    ok('⛔ PASS_SIX_RE ירד מהקובץ (סבב 26)', !/^var PASS_SIX_RE\s*=/m.test(SRC));
     ok('⛔ הסשן אינו כותב password', body('slSaveSession').indexOf('password') === -1);
     ok('⛔ אין password ברשימת ההיתר שבמקור', !/SL_USER_COLS\s*=\s*\[[^\]]*password/.test(SRC));
-    ok('CACHE_NAME קודם ל-v26',
-      /schar-limud-v26/.test(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8')));
+    // ⚠️ תבנית ולא מספר קבוע (סבב 26) — טענה שמקבעת מספר נכשלת על כל
+    //    קידום עתידי, כלומר חוסמת בדיוק את מה שכלל קריטי 2 מחייב.
+    ok('CACHE_NAME בתבנית schar-limud-v<N>',
+      /CACHE_NAME = 'schar-limud-v\d+'/.test(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8')));
   }
 
   console.log('\n' + (fail ? '❌' : '✅') + `  ${pass} עברו, ${fail} נכשלו\n`);
