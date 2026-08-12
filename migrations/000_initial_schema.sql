@@ -21,12 +21,22 @@
 -- ============================================================
 
 -- ---------- משתמשים ----------
+-- pass_salt / pass_fp (ראה migrations/010): טביעת PBKDF2-SHA256 ב-100,000
+-- סיבובים עם מלח אקראי פר-משתמש, שנשמרת במכשיר ומאפשרת **כניסה בלי רשת**.
+-- ⛔ `password` נשאר טקסט גלוי בענן במכוון — הטביעה נוספת לצידו ואינה
+--    מחליפה אותו (כלל ברזל 9). במכשיר עצמו הסיסמה אינה נשמרת לעולם.
 CREATE TABLE IF NOT EXISTS public.sl_users (
   id         SERIAL PRIMARY KEY,
   username   TEXT UNIQUE NOT NULL,
   password   TEXT NOT NULL,
+  pass_salt  TEXT,
+  pass_fp    TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- שדרוג התקנה שנוצרה לפני 010
+ALTER TABLE public.sl_users
+  ADD COLUMN IF NOT EXISTS pass_salt TEXT,
+  ADD COLUMN IF NOT EXISTS pass_fp   TEXT;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
@@ -236,7 +246,23 @@ DROP POLICY IF EXISTS "sl_lists_all" ON public.sl_lists;
 CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK (true);
 
 -- ---------- נתוני פתיחה ----------
-INSERT INTO public.sl_users (username, password) VALUES ('admin', 'admin') ON CONFLICT DO NOTHING;
+-- ⛔ **אין כאן משתמש ברירת מחדל, ואין להחזיר אותו** (סבב 24).
+-- עד הסבב הזה ישבה כאן שורת INSERT ל-`sl_users` שיצרה חשבון בשם admin
+-- ובאותה סיסמה עצמה — כלומר **כל התקנה טרייה נולדה עם חשבון שסיסמתו
+-- ידועה לכל העולם**, על מסד
+-- שה-RLS שלו פתוח (`USING (true)`) ושכתובתו מופיעה בקוד המקור. במסד הייצור
+-- הנוכחי הוא אינו קיים (אומת: משתמש אחד בלבד, סיסמה בת שש ספרות), אבל
+-- לכל התקנה **עתידית** זו פצצה רדומה — בדיוק זו שהוסרה מ-hanhala בסבב 21.
+--
+-- יצירת המשתמש הראשון היא פעולה ידנית ומודעת. הרץ כאן, אחרי החלפת הערכים:
+--     INSERT INTO public.sl_users (username, password)
+--     VALUES ('שם המשתמש שלך', '123456');
+-- (סיסמה בת שש ספרות — סבב 19.) האפליקציה מציגה את ההנחיה הזו מעצמה
+-- כשהיא מזהה שהטבלה ריקה.
+--
+-- ⚠️ `admin_pass` שלמטה הוא **דבר אחר** — סיסמת שער מסך ההגדרות ולא
+-- חשבון כניסה. היא נשארת עם ערך פתיחה כדי שמסך ההגדרות יהיה נגיש בהתקנה
+-- טרייה, ויש להחליף אותה מתוך «הגדרות ← שנה סיסמה».
 INSERT INTO public.sl_settings (key, value) VALUES ('default_tuition', '2000') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_settings (key, value) VALUES ('admin_pass', 'admin') ON CONFLICT DO NOTHING;
 INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'מזומן') ON CONFLICT DO NOTHING;

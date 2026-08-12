@@ -1854,7 +1854,20 @@ function slMirrorLoad() {
     MIRROR[spec.m] = Array.isArray(v) ? v.filter(function (r) { return r && typeof r === 'object'; }) : [];
   });
 }
-function slMirrorSave(m) { return lsSetArray(SL_MIRROR_PREFIX + m, MIRROR[m] || [], slTs); }
+// ⛔ **שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות** (סבב 24).
+// עד הסבב הזה `slStripSecrets` הופעל **רק בנקודת המשיכה** מהענן. זה היה
+// בטוח בפועל, אבל בטוח **במקרה** ולא **במבנה**: מה שהגן היה היעדר מסלול
+// שכותב סוד למראה, ולא מחסום. נתיב חדש אחד — כתיבה מקומית, מיגרציית
+// שרידים, ייבוא — היה מדלג על הסינון לגמרי וכותב את `admin_pass` בטקסט
+// גלוי ל-localStorage, באותו origin שבו חיות עוד שלוש אפליקציות.
+// מעכשיו הסינון יושב בשלוש נקודות, בדיוק כמו `strip: ['password']` בגיוס:
+// במשיכה (`syncAll`), בכתיבה המקומית (`slLocalWrite` — מסרבת במפורש),
+// **ובשער הדיסק כאן** — כך שגם נתיב שיתווסף בעתיד לא יוכל להדליף.
+function slSanitizeRows(m, rows) {
+  if (m === 'settings') return slStripSecrets(rows);
+  return Array.isArray(rows) ? rows : [];
+}
+function slMirrorSave(m) { return lsSetArray(SL_MIRROR_PREFIX + m, slSanitizeRows(m, MIRROR[m] || []), slTs); }
 function slMirrorHasData() {
   return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
 }
@@ -1914,6 +1927,209 @@ async function slRememberPassHash(rows) {
   var row = (Array.isArray(rows) ? rows : []).filter(function (r) { return r && r.key === 'admin_pass'; })[0];
   var h = await slHashPass(slPassOf(row ? row.value : null));
   if (h) lsSet(SL_PASS_HASH_KEY, h);
+}
+
+/* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users (סבב 24) ═════════════
+   **הבעיה שהסבב הזה בא לפתור.** כל שאר האפליקציה עובדת אופליין מסבב 12,
+   אבל `doLogin` שלח שאילתה לענן — ולכן **בלי רשת אי אפשר היה להיכנס
+   כלל**. מי שכבר נכנס פעם אחת המשיך דרך `sl_session`, אבל מכשיר שמישהו
+   אחר נכנס בו אחרון נעל בחוץ את כל השאר. זו הייתה האפליקציה האחרונה
+   מארבע שנשארה כך (hanhala פתרה בסבב 22, gius בסבב 23).
+
+   **הפתרון — אותו מנגנון בדיוק.** לכל משתמש `pass_salt` + `pass_fp`:
+   PBKDF2-SHA256, 100,000 סיבובים, **מלח אקראי פר-משתמש**. הטביעה יורדת
+   למכשיר; הסיסמה — לעולם לא. מכשיר שאבד חושף טביעות ולא סיסמאות,
+   וההשהיה של 100k היא מה שהופך ניחוש-בכוח על העותק שבדיסק ליקר גם מול
+   סיסמה בת שש ספרות (סבב 19).
+
+   ⚠️ **`password` בענן נשאר טקסט גלוי — במכוון** (כלל ברזל 9). אין כאן
+   מסך ניהול משתמשים, והמנהל מנהל סיסמאות מלוח הבקרה של Supabase.
+   הטביעה **נוספת לצידה** ואינה מחליפה אותה. ⛔ אין לגזור מכאן שהמסד עבר
+   להצפנה.
+
+   ⛔ **`password` לעולם לא יורד למכשיר — וההגנה היא במבנה ולא בזהירות.**
+   מראת המשתמשים נבנית מ**רשימת עמודות מותרות** (`SL_USER_COLS`), לא
+   מהסרה של עמודה אחת: רשימת-היתר נשארת נכונה גם כשתיווסף לטבלה עמודה
+   רגישה חדשה, ורשימת-איסור לא הייתה. בנוסף, ה-`select` עצמו מבקש רק את
+   ארבע העמודות האלה — הסיסמאות של המשתמשים האחרים **אינן מגיעות לזיכרון
+   הדפדפן מלכתחילה**, ולא רק שאינן נשמרות.
+   ═══════════════════════════════════════════════════════════════════════ */
+var SL_USERS_KEY = 'sl_mirror_users';
+// רשימת ההיתר. `id`+`username` לזיהוי ולתצוגה (`nav-username`, `created_by`),
+// `pass_salt`+`pass_fp` לאימות. ⛔ **אין להוסיף כאן `password`.**
+var SL_USER_COLS = ['id', 'username', 'pass_salt', 'pass_fp'];
+var SL_USERS = [];
+var SL_PASS_ITER_USER = 100000;
+// המלח הנשמר הוא אקראי פר-משתמש; הקידומת מוסיפה הפרדת-הקשר, כך שטבלה
+// מחושבת מראש עבור אפליקציה אחרת על אותו origin אינה תקפה כאן. ה-origin
+// `ygtotlrl-lab.github.io` משותף לארבע האפליקציות — זו לא הערה תיאורטית.
+var SL_PASS_CTX = 'schar-limud/sl_users/v1/';
+
+function slUserPub(r) {
+  var o = {};
+  if (!r || typeof r !== 'object') return o;
+  SL_USER_COLS.forEach(function (c) { if (r[c] !== undefined && r[c] !== null) o[c] = r[c]; });
+  return o;
+}
+// 16 בתים אקראיים כ-hex. מחזירה null כשאין crypto — והקורא **נכשל סגור**.
+function slRandSalt() {
+  try {
+    if (typeof crypto === 'undefined' || !crypto || !crypto.getRandomValues) return null;
+    var b = new Uint8Array(16); crypto.getRandomValues(b);
+    var h = '';
+    for (var i = 0; i < b.length; i++) h += (b[i] + 0x100).toString(16).slice(1);
+    return h;
+  } catch (e) { return null; }
+}
+// PBKDF2-SHA256 → hex בן 64 תווים. מחזירה null כשאין `crypto.subtle`
+// (הקשר לא-מאובטח / WebView ישן) — וגם כאן הקורא נכשל סגור.
+async function slPassFp(pass, salt) {
+  try {
+    if (!salt) return null;
+    if (typeof crypto === 'undefined' || !crypto || !crypto.subtle || !crypto.subtle.importKey) return null;
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey('raw', enc.encode(String(pass == null ? '' : pass)), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(SL_PASS_CTX + String(salt)), iterations: SL_PASS_ITER_USER, hash: 'SHA-256' }, key, 256);
+    var b = new Uint8Array(bits), h = '';
+    for (var i = 0; i < b.length; i++) h += (b[i] + 0x100).toString(16).slice(1);
+    return h;
+  } catch (e) { console.warn('[pass-fp] גזירת טביעה נכשלה', e); return null; }
+}
+// גוזרת מלח+טביעה לסיסמה. מחזירה {salt, fp} או null בכישלון.
+async function slMakePassFp(pass) {
+  var salt = slRandSalt();
+  if (!salt) return null;
+  var fp = await slPassFp(pass, salt);
+  return fp ? { salt: salt, fp: fp } : null;
+}
+// ⛔ **שדות הכתיבה לסיסמה — כישלון גזירה מאפס את שני השדות ולא רק מדלג.**
+// טביעה ישנה שנשארת על מקומה הייתה ממשיכה לפתוח את הכניסה האופליין עם
+// הסיסמה **הקודמת**, לנצח — כלומר שינוי סיסמה שאינו משנה כלום מבחינת מי
+// שמחזיק את המכשיר. **כל מסלול עתידי שכותב סיסמה ל-`sl_users` חייב לעבור
+// דרך כאן** (היום אין באפליקציה מסך ניהול משתמשים, ולכן הקורא היחיד הוא
+// `slEnsurePassFp` — ר' שם).
+async function slPassFields(pass) {
+  var made = await slMakePassFp(pass);
+  return made ? { pass_salt: made.salt, pass_fp: made.fp } : { pass_salt: null, pass_fp: null };
+}
+// תשובת שרת שאומרת "העמודות עדיין לא קיימות" — כלומר `migrations/010` טרם
+// הורצה. ⚠️ בלי הבדיקה הזו משיכת המשתמשים הייתה **נכשלת לגמרי** בחלון שבין
+// דחיפת הקוד להרצת המיגרציה, ומכשיר שנכנס אליו משתמש היה מאבד את המראה.
+function slIsMissingFpCol(err) {
+  var m = ((err && (err.message || err.details || err.hint || err.code || '')) + '').toLowerCase();
+  return m.indexOf('pass_fp') !== -1 || m.indexOf('pass_salt') !== -1;
+}
+
+function slUsersLoad() {
+  try {
+    var raw = lsGet(SL_USERS_KEY, null);
+    var v = raw == null ? null : JSON.parse(raw);
+    SL_USERS = Array.isArray(v) ? v.map(slUserPub).filter(function (u) { return u && u.username; }) : [];
+  } catch (e) { console.warn('[users] מראת המשתמשים פגומה — נטענה ריקה', e); SL_USERS = []; }
+}
+// ⛔ שער הדיסק של מראת המשתמשים — עובר דרך `slUserPub` בדיוק כמו הטעינה
+//    והמשיכה. שלוש נקודות, בדיוק כמו הסרת הסוד מ-`sl_settings`.
+function slUsersSave() { return lsSet(SL_USERS_KEY, JSON.stringify((SL_USERS || []).map(slUserPub))); }
+function slUserByName(username) {
+  var arr = SL_USERS || [];
+  for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].username) === String(username)) return arr[i];
+  return null;
+}
+
+// משיכת מראת המשתמשים. ⛔ **ה-`select` מבקש רשימת עמודות מפורשת ולא `*`** —
+// הסיסמאות אינן מגיעות לזיכרון הדפדפן כלל. נפילה-חזרה לשתי עמודות כשהמיגרציה
+// טרם הורצה: אז אין טביעות, והכניסה האופליין תאמר זאת במפורש ('no-fp').
+// מווסתת בזמן: הסנכרון רץ כל 3 שניות, ורשימת המשתמשים כמעט אינה משתנה.
+var _slUsersPulledAt = 0, _slUsersPulling = false;
+var SL_USERS_PULL_MS = 60000;
+async function slPullUsers(force) {
+  if (_slUsersPulling) return false;
+  if (!force && (Date.now() - _slUsersPulledAt) < SL_USERS_PULL_MS) return false;
+  if (!navigator.onLine) return false;
+  _slUsersPulling = true;
+  try {
+    var r = await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')));
+    if (r && r.error && slIsMissingFpCol(r.error)) r = await withTimeout(SB.from('sl_users').select('id,username'));
+    if (!r || r.error || !Array.isArray(r.data)) return false;
+    SL_USERS = r.data.map(slUserPub).filter(function (u) { return u && u.username; });
+    slUsersSave();
+    _slUsersPulledAt = Date.now();
+    return true;
+  } catch (e) { return false; }
+  finally { _slUsersPulling = false; }
+}
+
+/* ---- מסלול ההשלמה: טביעה למשתמש שנכנס עכשיו מקוון ----
+   רץ **רק** בכניסה מקוונת מוצלחת — הרגע היחיד שבו האפליקציה מחזיקה סיסמה
+   נכונה של משתמש. אין כאן יצירת סוד חדש, רק גזירת טביעה ממה שכבר קיים.
+   ⚠️ **בכוונה אינו סורק את שאר המשתמשים** (בשונה מ-gius, שם ההשלמה היא
+   פעולת בעלים על כל הטבלה): סריקה כזו הייתה מחייבת למשוך את הסיסמאות
+   **הגלויות של כולם** לזיכרון המכשיר, וכאן אין תפקיד «בעלים» שמצדיק זאת.
+   כל משתמש משלים את הטביעה שלו בכניסה המקוונת הראשונה שלו.
+
+   שלושת המצבים, וההבדל ביניהם הוא ההבדל בין הגנה לפרצה:
+     • הטביעה קיימת ותואמת ⇒ אין מה לעשות.
+     • אין טביעה כלל ⇒ גוזרים וכותבים. כשל גזירה = **דילוג שקט**: אין
+       טביעה ישנה שעלולה להיות תקפה, ואין מה לאפס.
+     • ⚠️ יש טביעה והיא **אינה** תואמת ⇒ הסיסמה שונתה מחוץ לאפליקציה
+       (לוח הבקרה של Supabase). הטביעה השמורה **תקפה לסיסמה הישנה**,
+       כלומר היא פותחת כניסה אופליין בסיסמה שכבר בוטלה. כאן כשל גזירה
+       **מאפס את שני השדות** דרך `slPassFields` — עדיף בלי כניסה אופליין
+       מאשר כניסה אופליין בסיסמה מבוטלת.
+   ⚠️ אי-התאמה נקבעת רק כשהצלחנו **לגזור** טביעה. `slPassFp` שמחזירה null
+   (אין `crypto.subtle`) אינה ראיה לכלום — אז מדלגים בשקט. */
+async function slEnsurePassFp(u, pass) {
+  try {
+    if (!u || u.id == null || !navigator.onLine) return false;
+    var cur = null;
+    if (u.pass_salt && u.pass_fp) {
+      cur = await slPassFp(pass, u.pass_salt);
+      if (cur === null) return false;          // אין crypto — לא ראיה, לא נוגעים
+      if (cur === u.pass_fp) return false;      // תואמת — אין מה להשלים
+    }
+    var stale = !!(u.pass_salt && u.pass_fp);   // הייתה טביעה, והיא אינה תואמת
+    var body;
+    if (stale) {
+      body = await slPassFields(pass);          // ⛔ כשל גזירה ⇒ {null,null}
+    } else {
+      var made = await slMakePassFp(pass);
+      if (!made) return false;                  // אין מה לאפס — דילוג שקט
+      body = { pass_salt: made.salt, pass_fp: made.fp };
+    }
+    var r = await withTimeout(SB.from('sl_users').update(body).eq('id', u.id));
+    if (r && r.error) { if (!slIsMissingFpCol(r.error)) console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
+    u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
+    return true;
+  } catch (e) { console.warn('[pass-fp] השלמה נכשלה', e && e.message); return false; }
+}
+
+/* ---- אימות אופליין מול הטביעה ----
+   ⚠️ **ארבעה מצבים, ארבע הודעות שונות.** «המשתמש אינו בעותק המקומי»
+   ו«אין לו טביעה» **אינם** אומרים שהסיסמה שגויה — הם אומרים שאין כאן במה
+   לאמת אותה. `MSG_BAD_LOGIN` על מצב כזה הוא כשל שקט: הוא מוביל את
+   המשתמש להקליד שוב ושוב סיסמה נכונה לחלוטין, במקום לומר לו את הדבר
+   היחיד שיפתור — חיבור אחד.
+   ⚠️ ההודעות **פרטיות ל-schar-limud, ובכוונה מחוץ לבלוק ההודעות המשותף**
+   (`MSG_OFFLINE`/`MSG_SAVED`/`MSG_BAD_LOGIN`/`MSG_SYNC_BACK`, סבב 8):
+   הבלוק ההוא מוכרז זהה מילה במילה בארבעת הפרויקטים, והוספת קבוע אליו
+   כאן בלבד הייתה יוצרת בדיוק את הסחיפה שכלל ברזל 8 בא למנוע. אותו שיקול
+   בדיוק כמו `MSG_PASS_SIX` (סבב 19). */
+var MSG_OFF_UNKNOWN   = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP     = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת — יש ליצור משתמש ראשון ב-SQL Editor של Supabase';
+
+// מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
+// ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19): מסלול כניסה אינו יודע
+//    באיזה פורמט נקבעה הסיסמה הקיימת, ואכיפה כאן הייתה נועלת בחוץ סיסמה
+//    תקפה שנקבעה לפני סבב 19, בלי שום מסלול שחזור.
+async function slVerifyOffline(u, pass) {
+  if (!u) return 'bad';
+  if (!u.pass_salt || !u.pass_fp) return 'no-fp';
+  var fp = await slPassFp(pass, u.pass_salt);
+  if (fp === null) return 'no-crypto';
+  return fp === u.pass_fp ? 'ok' : 'bad';
 }
 
 // נקודת הסינון היחידה של ה-soft-delete (כלל 5, 6 ו-009) — בדיוק כמו
@@ -2190,353 +2406,44 @@ function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),parseInt(el.getAttrib
 function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
 // ===== סכימת ההגדרה הראשונית =====
-// מקור האמת היחיד לסכימה הוא migrations/000_initial_schema.sql. מסך ההגדרה
-// מושך אותו ב-fetch מאותו origin; המחרוזת המוטבעת שלמטה היא **גיבוי בלבד**
-// לשעה שה-fetch נכשל, והיא מיוצרת אוטומטית מאותו קובץ.
-// tools/sync-setup-sql.py נכשל אם השניים נפרדו — הרץ אותו לפני כל push.
+// ⭐ סבב 24 (השלמה) — **מקור אמת אחד, בלי עותק מוטבע.**
+// עד כאן ישב כאן `SETUP_SQL_FALLBACK`: עותק מיוצר של
+// migrations/000_initial_schema.sql, ששכפל את הסכימה לתוך index.html
+// והצריך כלי (tools/sync-setup-sql.py) כדי לשמור על עקביות בין השניים.
+// הוא הוסר, ואיתו הכלי:
+// ⛔ ה-fetch נעשה **מאותו origin שממנו נטענה האפליקציה עצמה**. אם הוא
+//    נכשל — האפליקציה כבר לא הייתה עולה מלכתחילה. כלומר הגיבוי הגן מפני
+//    תרחיש שאינו קיים, בעוד שהמחיר — מקור אמת שני שמתיישן בשקט — הוא
+//    אמיתי ומדוד (זה בדיוק מה שקרה בסבב 6).
+// כשל משיכה מציג מעכשיו הודעה מפורשת עם קישור ישיר לקובץ ב-GitHub,
+// ולעולם לא סכימה שאיננו יודעים אם היא עדכנית.
+// ⛔ אין להחזיר סכימה מוטבעת ל-index.html בשום צורה — היא הופכת את
+//    כלל קריטי 7 («מקור אמת יחיד לסכימה») לאכיפה ידנית בכלי חיצוני.
 var SETUP_SQL_URL = './migrations/000_initial_schema.sql';
-// >>> BEGIN GENERATED SQL FALLBACK — נוצר מ-migrations/000_initial_schema.sql, לא לערוך ביד
-var SETUP_SQL_FALLBACK = `-- ============================================================
--- שכר לימוד — הסכימה המלאה (מקור האמת היחיד)
--- שם המיגרציה: initial_schema
--- הרץ ב-Supabase SQL Editor (פרויקט kxbtskqobynewvnckaaz):
---   https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new
--- ============================================================
--- ⚠️ הקובץ הזה הוא **מקור האמת היחיד** לסכימה.
---    * \`supabase-setup.sql\` בשורש הריפו מפנה לכאן ואינו מכיל סכימה.
---    * \`index.html\` מושך את הקובץ הזה ב-fetch ומציג אותו במסך ההגדרה
---      הראשונית; יש בו עותק-גיבוי מוטבע לשעת חירום בלבד, ו-
---      \`tools/check-sql-sync.py\` נכשל אם הוא נפרד מהקובץ הזה.
---    כל שינוי סכימה נכנס כאן **וגם** כמיגרציית שדרוג נפרדת (00N_) עבור
---    התקנות קיימות. הרצה חוזרת בטוחה — הכל IF NOT EXISTS.
---
--- היסטוריה: 001 = soft-delete לתשלומים, 002 = soft-delete לתלמידים,
--- 003 = ON DELETE RESTRICT על sl_transactions, 004 = חודש הצטרפות/עזיבה
--- לתלמיד (והסרת handled_months), 006+007 = client_id + אינדקס ייחודי
--- **מלא**, 008 = updated_at + טריגר, 009 = updated_at/client_id/tombstones
--- ל-sl_settings ול-sl_lists. כולן כבר מוכלות כאן, ולכן על התקנה טרייה הן
--- no-op. (005 היא זריעת נתון בלבד ואינה חלק מהסכימה.)
--- ============================================================
+var SETUP_SQL_GITHUB = 'https://github.com/ygtotlrl-lab/schar-limud/blob/main/migrations/000_initial_schema.sql';
 
--- ---------- משתמשים ----------
-CREATE TABLE IF NOT EXISTS public.sl_users (
-  id         SERIAL PRIMARY KEY,
-  username   TEXT UNIQUE NOT NULL,
-  password   TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
-GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
-ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "sl_users_all" ON public.sl_users;
-CREATE POLICY "sl_users_all" ON public.sl_users FOR ALL USING (true) WITH CHECK (true);
-
--- ---------- תלמידים ----------
--- מחיקה כאן היא soft-delete בלבד (ראה migrations/002): מחיקה פיזית הפעילה
--- ON DELETE CASCADE על sl_transactions והשמידה את כל היסטוריית הכספים.
--- start_month / end_month (ראה migrations/004): טווח החודשים שבו התלמיד
--- פעיל, בפורמט 'YYYY-MM'. החיוב מחושב רק בתוך הטווח (כולל); start_month
--- ריק = כל השנה, כמו לפני 004. end_month ריק = עדיין פעיל.
-CREATE TABLE IF NOT EXISTS public.sl_students (
-  id             SERIAL PRIMARY KEY,
-  client_id      TEXT,
-  name           TEXT NOT NULL,
-  active         BOOLEAN DEFAULT true,
-  start_month    TEXT,
-  end_month      TEXT,
-  card_settings  JSONB DEFAULT '{}',
-  created_at     TIMESTAMPTZ DEFAULT NOW(),
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted        BOOLEAN NOT NULL DEFAULT false,
-  deleted_at     TIMESTAMPTZ,
-  deleted_by     TEXT
-);
--- שדרוג התקנה שנוצרה לפני 002
-ALTER TABLE public.sl_students
-  ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS deleted_by TEXT;
--- שדרוג התקנה שנוצרה לפני 004
-ALTER TABLE public.sl_students
-  ADD COLUMN IF NOT EXISTS start_month TEXT,
-  ADD COLUMN IF NOT EXISTS end_month   TEXT;
--- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
--- מותר ב-NULL בכוונה (רשומות היסטוריות); NULL-ים נחשבים שונים באינדקס ייחודי.
--- ⛔ האינדקס חייב להיות **מלא ולא חלקי** — ר' 007. אינדקס עם
---    \`WHERE client_id IS NOT NULL\` שובר את הסקת ON CONFLICT של PostgREST.
-ALTER TABLE public.sl_students
-  ADD COLUMN IF NOT EXISTS client_id TEXT;
-CREATE UNIQUE INDEX IF NOT EXISTS sl_students_client_id_key
-  ON public.sl_students (client_id);
-DROP INDEX IF EXISTS public.sl_students_client_id_uidx;  -- הווריאנט החלקי, אם נוצר
--- handled_months הוסרה ב-004: היא לא נקראה ולא נכתבה באף מקום בקוד, וכל
--- הרשומות החזיקו בה ערך ריק. אין להחזיר אותה.
-ALTER TABLE public.sl_students
-  DROP COLUMN IF EXISTS handled_months;
--- ערך שאינו YYYY-MM שובר את ההשוואה הלקסיקוגרפית בקוד ומחזיר טווח שגוי.
--- ה-DO block נועד לאידמפוטנטיות (אין ADD CONSTRAINT IF NOT EXISTS).
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'sl_students_months_format_chk'
-      AND conrelid = 'public.sl_students'::regclass
-  ) THEN
-    ALTER TABLE public.sl_students
-      ADD CONSTRAINT sl_students_months_format_chk CHECK (
-        (start_month IS NULL OR start_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
-        AND
-        (end_month   IS NULL OR end_month   ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
-      );
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'sl_students_months_order_chk'
-      AND conrelid = 'public.sl_students'::regclass
-  ) THEN
-    ALTER TABLE public.sl_students
-      ADD CONSTRAINT sl_students_months_order_chk CHECK (
-        start_month IS NULL OR end_month IS NULL OR end_month >= start_month
-      );
-  END IF;
-END $$;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO anon, authenticated, service_role;
-GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated, service_role;
-ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "sl_students_all" ON public.sl_students;
-CREATE POLICY "sl_students_all" ON public.sl_students FOR ALL USING (true) WITH CHECK (true);
-CREATE INDEX IF NOT EXISTS sl_students_active_idx
-  ON public.sl_students (name)
-  WHERE deleted = false;
-
--- ---------- תשלומים (כספים) ----------
--- מחיקה = soft-delete בלבד. כל שליפה/סיכום באפליקציה מסננת deleted = false.
--- ON DELETE RESTRICT (ראה migrations/003) — רשת ביטחון ברמת המסד: מחיקה
--- פיזית של תלמיד תיכשל במקום להשמיד בשקט את כל היסטוריית הכספים שלו.
-CREATE TABLE IF NOT EXISTS public.sl_transactions (
-  id             SERIAL PRIMARY KEY,
-  client_id      TEXT,
-  student_id     INTEGER REFERENCES public.sl_students(id) ON DELETE RESTRICT,
-  date           DATE NOT NULL,
-  amount         NUMERIC(10,2) NOT NULL,
-  payment_method TEXT,
-  note           TEXT,
-  created_at     TIMESTAMPTZ DEFAULT NOW(),
-  created_by     TEXT,
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted        BOOLEAN NOT NULL DEFAULT false,
-  deleted_at     TIMESTAMPTZ,
-  deleted_by     TEXT
-);
--- שדרוג התקנה שנוצרה לפני 001
-ALTER TABLE public.sl_transactions
-  ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS deleted_by TEXT,
-  ADD COLUMN IF NOT EXISTS created_by TEXT;
--- שדרוג התקנה שנוצרה לפני 006 — client_id: מפתח זהות שנוצר במכשיר.
--- בלעדיו שליחה חוזרת של תשלום (ניתוק באמצע ואז ניסיון נוסף) יוצרת שורה
--- שנייה, כלומר תשלום כפול. הכתיבה מהאפליקציה היא UPSERT על העמודה הזו.
--- ⛔ האינדקס חייב להיות **מלא ולא חלקי** — ר' 007. אינדקס עם
---    \`WHERE client_id IS NOT NULL\` שובר את הסקת ON CONFLICT של PostgREST,
---    כלומר שמירת תשלום מפסיקה לעבוד.
-ALTER TABLE public.sl_transactions
-  ADD COLUMN IF NOT EXISTS client_id TEXT;
-CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
-  ON public.sl_transactions (client_id);
-DROP INDEX IF EXISTS public.sl_transactions_client_id_uidx;  -- הווריאנט החלקי, אם נוצר
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
-GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
-ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "sl_transactions_all" ON public.sl_transactions;
-CREATE POLICY "sl_transactions_all" ON public.sl_transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE INDEX IF NOT EXISTS sl_transactions_active_idx
-  ON public.sl_transactions (student_id, date)
-  WHERE deleted = false;
--- שדרוג התקנה שנוצרה לפני 003 (האילוץ הישן היה ON DELETE CASCADE).
--- מדלג בשקט אם יש תנועות יתומות — הרצה חוזרת של הקובץ הזה לא אמורה
--- להיכשל אף פעם. לטיפול מלא ביתומים ראה migrations/003.
-DO $$
-DECLARE
-  orphans bigint;
-  del_action text;
-BEGIN
-  SELECT confdeltype INTO del_action
-  FROM pg_constraint
-  WHERE conname = 'sl_transactions_student_id_fkey'
-    AND conrelid = 'public.sl_transactions'::regclass;
-
-  IF del_action IS NULL OR del_action = 'r' THEN RETURN; END IF;
-
-  SELECT COUNT(*) INTO orphans
-  FROM public.sl_transactions t
-  LEFT JOIN public.sl_students s ON s.id = t.student_id
-  WHERE t.student_id IS NOT NULL AND s.id IS NULL;
-
-  IF orphans > 0 THEN
-    RAISE NOTICE 'דילוג על החלפת האילוץ ל-RESTRICT: % תנועות יתומות. ראה migrations/003.', orphans;
-    RETURN;
-  END IF;
-
-  ALTER TABLE public.sl_transactions
-    DROP CONSTRAINT IF EXISTS sl_transactions_student_id_fkey;
-  ALTER TABLE public.sl_transactions
-    ADD CONSTRAINT sl_transactions_student_id_fkey
-    FOREIGN KEY (student_id) REFERENCES public.sl_students(id)
-    ON DELETE RESTRICT;
-END $$;
-
--- ---------- הגדרות ----------
--- updated_at / client_id (ראה migrations/009): שתי הטבלאות האלה נכנסו
--- לשכבת האופליין, ולכן הן צריכות חותמת מיזוג וזהות שנוצרת במכשיר.
--- ⚠️ המפתח הראשי כאן הוא \`key\` (TEXT) ולא SERIAL — לרשומה כבר יש זהות
--- שהמכשיר יודע לייצר, ולכן האפליקציה כותבת ב-onConflict:'key'.
--- \`client_id\` נוספת לסימטריה ולשימוש עתידי, ואינה מפתח הכתיבה כאן.
-CREATE TABLE IF NOT EXISTS public.sl_settings (
-  key        TEXT PRIMARY KEY,
-  value      TEXT,
-  client_id  TEXT,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
--- ⛔ אינדקס **מלא** ולא חלקי — ראה ההסבר אצל sl_students/sl_transactions
--- ואצל migrations/007. אינדקס חלקי שובר את הסקת ON CONFLICT.
-CREATE UNIQUE INDEX IF NOT EXISTS sl_settings_client_id_key
-  ON public.sl_settings (client_id);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_settings TO anon, authenticated, service_role;
-ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "sl_settings_all" ON public.sl_settings;
-CREATE POLICY "sl_settings_all" ON public.sl_settings FOR ALL USING (true) WITH CHECK (true);
-
--- ---------- רשימות (אמצעי תשלום, שיעורות) ----------
--- מחיקה כאן היא soft-delete בלבד (ראה migrations/009). בלי tombstone פריט
--- שנמחק במכשיר אחד חוזר לחיים במיזוג הבא, כי היעדר רשומה אצל צד אחד אינו
--- מחיקה. \`id\` הוא SERIAL והמסד מקצה אותו, ולכן \`client_id\` הוא **מפתח
--- הכתיבה בפועל** לכל פריט שנוצר במכשיר.
-CREATE TABLE IF NOT EXISTS public.sl_lists (
-  id         SERIAL PRIMARY KEY,
-  category   TEXT NOT NULL,
-  value      TEXT NOT NULL,
-  client_id  TEXT,
-  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
-  deleted_at TIMESTAMPTZ,
-  deleted_by TEXT,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
--- ⛔ אינדקס **מלא** ולא חלקי — ראה migrations/007.
-CREATE UNIQUE INDEX IF NOT EXISTS sl_lists_client_id_key
-  ON public.sl_lists (client_id);
-CREATE INDEX IF NOT EXISTS sl_lists_deleted_idx ON public.sl_lists (deleted);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_lists TO anon, authenticated, service_role;
-GRANT USAGE, SELECT ON SEQUENCE public.sl_lists_id_seq TO anon, authenticated, service_role;
-ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "sl_lists_all" ON public.sl_lists;
-CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK (true);
-
--- ---------- נתוני פתיחה ----------
-INSERT INTO public.sl_users (username, password) VALUES ('admin', 'admin') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_settings (key, value) VALUES ('default_tuition', '2000') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_settings (key, value) VALUES ('admin_pass', 'admin') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'מזומן') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'העברה בנקאית') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('payment_methods', 'ביט') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה א') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ב') ON CONFLICT DO NOTHING;
-INSERT INTO public.sl_lists (category, value) VALUES ('sections', 'כיתה ג') ON CONFLICT DO NOTHING;
--- סעיף "זוכה על חשבון יתרת זכות" (ראה migrations/005): תנועה שנרשמת בו
--- מקטינה את חוב התלמיד אך אינה כסף שהתקבל, ולכן אינה נספרת בשום סיכום
--- גבייה/הכנסה. הוא נרשם כאמצעי תשלום כי זו הרשימה היחידה שנשמרת **על
--- התנועה** (sl_transactions.payment_method); רשימת ה-sections שמורה
--- לשיוך תלמיד ואינה קיימת ברמת התנועה.
--- ⚠️ ל-sl_lists אין אילוץ ייחודיות, ולכן ON CONFLICT DO NOTHING אינו מונע
---    כפילות בהרצה חוזרת — כאן משתמשים ב-WHERE NOT EXISTS שאכן מונע אותה.
-INSERT INTO public.sl_lists (category, value)
-SELECT 'payment_methods', 'זוכה על חשבון יתרת זכות'
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.sl_lists WHERE value = 'זוכה על חשבון יתרת זכות'
-);
-
--- ============================================================
--- שחזור רשומה שנמחקה בטעות (הרצה ידנית לפי id):
---   UPDATE public.sl_transactions SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<TXN_ID>;
---   UPDATE public.sl_students     SET deleted=false, deleted_at=NULL, deleted_by=NULL WHERE id=<STUDENT_ID>;
--- ============================================================
-
--- ============================================================
--- 008 — updated_at + טריגר (מיזוג ברמת רשומה, סבב 12 שלב 2)
--- ============================================================
--- בלי חותמת עדכון אין מנוע מיזוג, ולכן אין עבודה אופליין. הטריגר דורס
--- **ב-UPDATE בלבד**; ב-INSERT החותמת שהמכשיר קבע ברגע היצירה נשמרת, וזה
--- מה שמונע מרשומה שנוצרה אופליין להיראות כאילו נוצרה בהגעה לשרת.
--- ר' \`migrations/008_updated_at.sql\` להסבר המלא.
-ALTER TABLE public.sl_transactions
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE public.sl_students
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-CREATE OR REPLACE FUNCTION public.sl_touch_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS sl_transactions_touch ON public.sl_transactions;
-CREATE TRIGGER sl_transactions_touch
-  BEFORE UPDATE ON public.sl_transactions
-  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
-
-DROP TRIGGER IF EXISTS sl_students_touch ON public.sl_students;
-CREATE TRIGGER sl_students_touch
-  BEFORE UPDATE ON public.sl_students
-  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
-
--- ============================================================
--- 009 — sl_settings ו-sl_lists נכנסות לשכבת האופליין
--- ============================================================
--- ה-CREATE TABLE שלמעלה כבר כולל את העמודות עבור התקנה טרייה; הבלוק הזה
--- הוא מסלול השדרוג להתקנה קיימת. ר' \`migrations/009_settings_lists_offline.sql\`
--- להסבר המלא — ובפרט לאזהרה שהאינדקס על client_id חייב להיות **מלא**.
-ALTER TABLE public.sl_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE public.sl_settings ADD COLUMN IF NOT EXISTS client_id  TEXT;
-ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS client_id  TEXT;
-ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted    BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-ALTER TABLE public.sl_lists    ADD COLUMN IF NOT EXISTS deleted_by TEXT;
-
-DROP TRIGGER IF EXISTS sl_settings_touch ON public.sl_settings;
-CREATE TRIGGER sl_settings_touch
-  BEFORE UPDATE ON public.sl_settings
-  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
-
-DROP TRIGGER IF EXISTS sl_lists_touch ON public.sl_lists;
-CREATE TRIGGER sl_lists_touch
-  BEFORE UPDATE ON public.sl_lists
-  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
-`;
-// <<< END GENERATED SQL FALLBACK
-
-// מושך את מקור האמת; נופל לעותק המוטבע רק אם המשיכה נכשלה, ואז מסמן זאת
-// בראש הטקסט כדי שלא תורץ סכימה ישנה בלי שאיש ידע.
+// מושך את מקור האמת. מחזירה {ok, text}:
+// ⛔ כשל ⇒ **לא מוצגת שום סכימה**. סכימה שאיננו יודעים אם היא עדכנית,
+//    שמוצגת בתיבה שהמשתמש מעתיק ומריץ על המסד, גרועה מהודעת שגיאה גלויה.
 async function loadSetupSql(){
   try{
     var r = await fetch(SETUP_SQL_URL, {cache:'no-store'});
     if(r && r.ok){
       var t = await r.text();
       // שמירה מפני דף שגיאה של Pages שחוזר עם 200
-      if(t && t.indexOf('sl_transactions') !== -1) return t;
+      if(t && t.indexOf('sl_transactions') !== -1) return {ok:true, text:t};
     }
   }catch(e){}
-  return '-- \u26a0\ufe0f \u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05d4\u05d9\u05d4 \u05dc\u05de\u05e9\u05d5\u05da \u05d0\u05ea migrations/000_initial_schema.sql \u2014 \u05de\u05d5\u05e6\u05d2 \u05e2\u05d5\u05ea\u05e7 \u05d2\u05d9\u05d1\u05d5\u05d9 \u05de\u05d5\u05d8\u05d1\u05e2.\n'
-       + '-- \u05d5\u05d3\u05d0 \u05de\u05d5\u05dc \u05d4\u05e7\u05d5\u05d1\u05e5 \u05e9\u05d1\u05e8\u05d9\u05e4\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e8\u05e6\u05d4.\n\n' + SETUP_SQL_FALLBACK;
+  return {ok:false, text:''};
 }
 
 var _setupPollInt = null;
 
 function copySql(){
   var ta = document.getElementById('setup-sql-ta');
+  // המשיכה נכשלה ⇒ התיבה מוסתרת ואין מה להעתיק. השומר הזה אינו קישוט:
+  // בלעדיו לחיצה על כפתור שנשאר גלוי הייתה זורקת TypeError.
+  if(!ta || !ta.value) return;
   if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(function(){document.getElementById('setup-copy-btn').textContent='✓ הועתק!';setTimeout(function(){document.getElementById('setup-copy-btn').textContent='&#128203; העתק SQL';},2000);});}
   else{ta.select();document.execCommand('copy');document.getElementById('setup-copy-btn').textContent='✓ הועתק!';}
 }
@@ -2564,11 +2471,33 @@ function showSetupScreen(){
       '<a href="https://supabase.com/dashboard/project/'+SB_PROJECT+'/sql/new" target="_blank" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center">&#128279; פתח SQL Editor</a>'+
     '</div>'+
     '<textarea id="setup-sql-ta" readonly dir="ltr" style="width:100%;height:130px;font-size:.6rem;direction:ltr;text-align:left;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;resize:none;background:#f8f9fb;color:#2d3748"></textarea>'+
-    '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8592; &#9313; פתח SQL Editor &#8592; &#9314; הדבק והרץ (F5) &#8592; &#9315; חזור לכאן</div>'+
+    // ⛔ אין עותק מוטבע של הסכימה (ר\' ההערה מעל SETUP_SQL_URL). כשל משיכה
+    //    מציג את התיבה הזו במקום התיבה שלמעלה — קישור למקור האמת עצמו.
+    '<div id="setup-sql-err" style="display:none;font-size:.74rem;color:#8a2b2b;background:#fdecec;border:1px solid #f3c2c2;border-radius:8px;padding:8px;text-align:right;line-height:1.6">'+
+      '<b>&#9888;&#65039; לא ניתן היה למשוך את קובץ הסכימה.</b><br>'+
+      'פתח אותו ישירות ב-GitHub, העתק את כל תוכנו והרץ ב-SQL Editor:'+
+      '<div style="margin-top:5px"><a href="'+esc(SETUP_SQL_GITHUB)+'" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;word-break:break-all">migrations/000_initial_schema.sql</a></div>'+
+    '</div>'+
+    '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8592; &#9313; פתח SQL Editor &#8592; &#9314; הדבק והרץ (F5) &#8592; &#9315; צור משתמש ראשון &#8592; &#9316; חזור לכאן</div>'+
+    // ⛔ סבב 24 — אין יותר משתמש ברירת מחדל בסכימה. הסכימה נולדה עם
+    //    admin/admin, כלומר כל התקנה טרייה הייתה נגישה לכל מי שמכיר את
+    //    הדפוס. יצירת המשתמש הראשון היא מעכשיו פעולה ידנית ומודעת.
+    '<div style="font-size:.7rem;color:var(--text2);margin:0 0 8px;text-align:right;line-height:1.5;background:#fff8e6;border:1px solid #f0dfa8;border-radius:8px;padding:7px 8px">'+
+      '<b>&#9315; משתמש ראשון</b> — אין משתמש ברירת מחדל. הרץ ב-SQL Editor, אחרי החלפת הערכים:'+
+      '<div dir="ltr" style="direction:ltr;text-align:left;font-family:monospace;font-size:.66rem;margin-top:4px;word-break:break-all">'+
+        esc("INSERT INTO public.sl_users (username, password) VALUES ('שם המשתמש', '123456');")+
+      '</div></div>'+
     '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
   var ta = document.getElementById('setup-sql-ta');
   ta.value = '-- טוען את הסכימה...';
-  loadSetupSql().then(function(t){ var el = document.getElementById('setup-sql-ta'); if(el) el.value = t; });
+  loadSetupSql().then(function(res){
+    var el = document.getElementById('setup-sql-ta');
+    if(res && res.ok){ if(el) el.value = res.text; return; }
+    // כשל משיכה — מסתירים את התיבה ואת כפתור ההעתקה, ומפנים למקור.
+    if(el){ el.value=''; el.style.display='none'; }
+    var cb = document.getElementById('setup-copy-btn'); if(cb) cb.style.display='none';
+    var er = document.getElementById('setup-sql-err'); if(er) er.style.display='block';
+  });
   startSetupPoll();
 }
 
@@ -2587,11 +2516,67 @@ async function ensureSetup(){
 
 function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').style.display='none';document.getElementById('auth-btn').disabled=false;}
 function startAuthLoad(){document.getElementById('auth-err').textContent='';document.getElementById('auth-spinner').style.display='block';document.getElementById('auth-btn').disabled=true;}
+// ⭐ סבב 24 — כניסה גם בלי רשת.
+// **עם רשת המסלול לא השתנה**: השאילתה לענן היא עדיין מקור האמת, וההשוואה
+// היא מול `password` שבמסד. מה שנוסף הוא (א) מסלול אופליין מול הטביעה,
+// (ב) `select` של עמודות מפורשות במקום `*` — הסיסמה אינה מגיעה לזיכרון
+// בכלל, ו-(ג) השלמת טביעה + רענון מראת המשתמשים, ברקע ואחרי הכניסה.
+// ⛔ **אין כאן אכיפת פורמט שש ספרות** — ר' ההערה מעל `slVerifyOffline`.
 async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
   if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
+  if(!navigator.onLine){ return doLoginOffline(u,p); }
   startAuthLoad();
-  try{var r=await SB.from('sl_users').select('*').eq('username',u).eq('password',p).maybeSingle();if(r.error)throw r.error;if(!r.data){showAuthErr(MSG_BAD_LOGIN);return;}CUR_USER=r.data;slSaveSession(r.data);document.getElementById('auth-spinner').style.display='none';enterApp();}catch(e){showAuthErr('שגיאה: '+(e.message||e));}
+  try{
+    var cols=SL_USER_COLS.join(',');
+    var r=await SB.from('sl_users').select(cols).eq('username',u).eq('password',p).maybeSingle();
+    // `migrations/010` טרם הורצה ⇒ אין עמודות טביעה. הכניסה המקוונת חייבת
+    // להמשיך לעבוד בחלון הזה; מה שלא יעבוד הוא הכניסה האופליין, והיא
+    // תאמר זאת במפורש ('no-fp').
+    if(r&&r.error&&slIsMissingFpCol(r.error)) r=await SB.from('sl_users').select('id,username').eq('username',u).eq('password',p).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){
+      // טבלה ריקה ⇒ אין כאן סיסמה שגויה אלא התקנה שטרם נוצר בה משתמש.
+      // (מאז סבב 24 אין משתמש ברירת מחדל בסכימה — ר' 000_initial_schema.)
+      var any=await SB.from('sl_users').select('id').limit(1);
+      showAuthErr((any&&!any.error&&Array.isArray(any.data)&&!any.data.length)?MSG_NO_USERS:MSG_BAD_LOGIN);
+      return;
+    }
+    var pub=slUserPub(r.data);
+    CUR_USER=pub;
+    slSaveSession(pub);
+    document.getElementById('auth-spinner').style.display='none';
+    enterApp();
+    // ── ברקע, אחרי שהמסך כבר עלה: השלמת הטביעה של המשתמש הזה ואז רענון
+    //    המראה. הסדר חשוב — משיכה לפני ההשלמה הייתה מחזירה טביעה ישנה.
+    slEnsurePassFp(pub,p).then(function(){ return slPullUsers(true); })
+      .catch(function(e){ console.warn('[pass-fp]',e); });
+  }catch(e){
+    // רשת שנפלה באמצע (navigator.onLine משקר לא פעם ב-WebView) — לא
+    // מציגים "שגיאה" למי שיש לו טביעה תקפה על המכשיר; מנסים אופליין.
+    if(isNetErr(e)) return doLoginOffline(u,p);
+    showAuthErr('שגיאה: '+(e.message||e));
+  }
+}
+
+/* כניסה ללא רשת — אימות מול `pass_fp` שבמראה (סבב 24).
+   מחזירה Promise; אף קורא בקוד אינו נשען על הערך המוחזר, אבל הבדיקות
+   חייבות משהו להמתין לו (גזירת PBKDF2 היא אסינכרונית). */
+async function doLoginOffline(u,p){
+  var cu=slUserByName(u);
+  if(!cu){ showAuthErr(MSG_OFF_UNKNOWN); return; }
+  startAuthLoad();
+  var verdict;
+  try{ verdict=await slVerifyOffline(cu,p); }
+  catch(e){ console.warn('[login] אימות אופליין נכשל',e); showAuthErr(MSG_OFF_NO_CRYPTO); return; }
+  if(verdict==='no-fp'){ showAuthErr(MSG_OFF_NO_FP); return; }
+  if(verdict==='no-crypto'){ showAuthErr(MSG_OFF_NO_CRYPTO); return; }
+  if(verdict!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
+  CUR_USER=slUserPub(cu);
+  slSaveSession(CUR_USER);
+  document.getElementById('auth-spinner').style.display='none';
+  enterApp();
+  toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
 }
 function doLogout(){CUR_USER=null;slClearSession();_settingsUnlocked=false;clearTimeout(_slLockTimer);if(SYNC_INT){clearInterval(SYNC_INT);SYNC_INT=null;}if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת (כלל ברזל 3).
@@ -2608,11 +2593,15 @@ function enterApp(){
   slResetLock();slMaybeDailyBackup();ensureCreditMethod();
 }
 
-/* ── סשן מקומי — כניסה אופליין ────────────────────────────────────────────
-   ⚠️ **הסשן אינו מחזיק סיסמה.** שכפול סיסמאות של משתמשים ל-localStorage של
-   כל מכשיר היא חשיפה שאין בה צורך: מי שכבר נכנס פעם אחת ממשיך לעבוד
-   אופליין דרך הסשן, ו**כניסה חדשה דורשת רשת**. אותה החלטה בדיוק כמו
-   `gius.session` (ר' CLAUDE.md של gius). אין להוסיף כאן סיסמאות.
+/* ── סשן מקומי ────────────────────────────────────────────────────────────
+   ⚠️ **הסשן אינו מחזיק סיסמה, וגם לא טביעה.** הוא מחזיק `id`+`username`
+   בלבד: מי שכבר נכנס ממשיך לעבוד אופליין בלי להזדהות שוב. אותה החלטה
+   בדיוק כמו `gius.session`. ⛔ אין להוסיף כאן סיסמאות.
+
+   ⭐ **מסבב 24 הסשן אינו הדרך היחידה להיכנס בלי רשת.** עד אז «כניסה חדשה
+   דורשת רשת» — ולכן מכשיר שמישהו אחר נכנס בו אחרון נעל בחוץ את כל השאר.
+   עכשיו יש `slVerifyOffline` מול `pass_fp` שבמראת המשתמשים, והסשן הוא
+   קיצור דרך למי שכבר מזוהה ולא התנאי לכניסה.
    ───────────────────────────────────────────────────────────────────────── */
 var SL_SESSION_KEY='sl_session';
 function slSaveSession(u){
@@ -2630,10 +2619,12 @@ function slClearSession(){ lsRemove(SL_SESSION_KEY); }
 async function slRevalidateSession(sess){
   if(!sess||!navigator.onLine)return;
   try{
-    var r=await withTimeout(SB.from('sl_users').select('*').eq('username',sess.username).maybeSingle());
+    // עמודות מפורשות ולא `*` (סבב 24) — `password` לא נכנס לזיכרון.
+    var r=await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')).eq('username',sess.username).maybeSingle());
+    if(r&&r.error&&slIsMissingFpCol(r.error)) r=await withTimeout(SB.from('sl_users').select('id,username').eq('username',sess.username).maybeSingle());
     if(r&&r.error)return;                       // שגיאת שרת/רשת — משאירים מחובר
     if(!r||!r.data){ toast('⚠️ המשתמש אינו קיים עוד — נדרשת כניסה מחדש',5000); doLogout(); return; }
-    CUR_USER=r.data;
+    CUR_USER=slUserPub(r.data);
   }catch(e){ /* רשת — לא מנתקים */ }
 }
 // שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
@@ -2698,6 +2689,10 @@ async function syncAll(){
     // שאינו ברשימת ה"עדיין ממתין". קטגוריה שלא נמשכה אינה מיוצגת שם, ולכן
     // די בכשל אחד מארבעה כדי שהורדת הסימון תהיה הסקה ולא ראיה.
     if(pulledStu&&pulledTxn&&pulledSet&&pulledLst) pendSyncScan(stillPending,_t0);
+    // מראת המשתמשים (סבב 24) — מווסתת בזמן ולכן אינה נוגעת ברשת בכל סבב.
+    // ⛔ **אינה חלק מ-`MIRROR` ואינה נדחפת לעולם**: היא מחזיקה טביעות ולא
+    //    סיסמאות, ודחיפת-מצב שלה הייתה כותבת `password` ריק לכל המשתמשים.
+    slPullUsers();
 
     if(!errs.length){
       _slLastPullOk=Date.now();
@@ -3228,6 +3223,9 @@ document.addEventListener('DOMContentLoaded',async function(){
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
+  // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא
+  // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`.
+  try { slUsersLoad(); } catch (e) { console.warn('[users] load', e); }
 
   // סשן קיים ⇒ נכנסים מיד, גם בלי רשת. האימות מול השרת רץ ברקע.
   var _sess=slReadSession();
