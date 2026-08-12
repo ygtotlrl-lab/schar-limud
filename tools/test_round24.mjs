@@ -145,6 +145,24 @@ function makeCtx(opts = {}) {
   return { ctx, store, calls, fields };
 }
 
+/* ⚠️ המתנה ל**אירוע**, לא לשעון. `doLogin` מפעילה את `slEnsurePassFp`
+   כשרשרת רקע (fire-and-forget) אחרי שהמסך כבר עלה, וההשלמה כוללת גזירת
+   PBKDF2 של 100,000 סיבובים. המתנה של מספר מילישניות קבוע היא **מרוץ**:
+   על המכונה הזו הגזירה לוקחת ~20ms, ועל מכונה איטית או עמוסה יותר — יותר.
+   ⛔ אין להחליף את זה בחזרה ב-`setTimeout` קבוע: זה מה שהפיל את שתי
+   הטענות המרכזיות של הסבב באימות החיצוני, בזמן שהקוד היה תקין.
+   התקרה (5 שניות) קיימת כדי שהבדיקה **תיכשל ברעש** אם ההשלמה לא תרוץ
+   כלל — ולא תיתקע. */
+async function waitFor(pred, label, ms = 5000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (pred()) return true;
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  ok('⛔ ' + label + ' — לא קרה בתוך ' + ms + 'ms', false);
+  return false;
+}
+
 // PBKDF2 עצמאי, מחושב ב-node:crypto — האורקל שמול הוא נבדק `slPassFp`.
 function oraclePbkdf2(passVal, salt, ctxPrefix, iter) {
   return pbkdf2Sync(String(passVal), Buffer.from(ctxPrefix + String(salt), 'utf8'), iter, 32, 'sha256').toString('hex');
@@ -401,7 +419,8 @@ async function main() {
     ok('ההשוואה עדיין מול `password` שבמסד', q0.eqs.password === A.password);
     ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === 'id,username,pass_salt,pass_fp', q0.cols);
     ok('⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
-    await new Promise((r) => setTimeout(r, 30));   // ההשלמה רצה ברקע
+    // ההשלמה רצה ברקע — ממתינים לה עצמה ולא לשעון (ר' `waitFor`).
+    await waitFor(() => h.calls.sb.some((x) => x.kind === 'update'), 'ההשלמה ברקע');
     const upd = h.calls.sb.find((x) => x.kind === 'update');
     ok('⭐ ההשלמה נכתבה — pass_salt+pass_fp', !!(upd && upd.body.pass_salt && upd.body.pass_fp));
     ok('⛔ ההשלמה אינה נוגעת ב-password', upd && !('password' in upd.body));
