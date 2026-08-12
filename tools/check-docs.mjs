@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-/*  בדיקת אחידות התיעוד — סבב 18.
+/*  בדיקת אחידות התיעוד — סבב 18, הורחבה בסבב 20.
  *
  *  כלל ברזל 8 של הארגון: **פרוטוקול תיעוד קבוע.** סבב 17 הוכיח שרכיב
  *  שמוכרז «משותף» נסחף בלי אכיפה — וסבב 18 מדד שאותו דבר בדיוק קרה
  *  לתיעוד עצמו: פרק «בדיקה» של סבב 14 הועתק כלשונו לארבעת הריפו, כולל
  *  לשתי אפליקציות שבהן הבדיקות שהוא מתאר מעולם לא רצו. הבדיקה הזו רצה
- *  עם שערי התחביר לפני כל דחיפה, ונכשלת על ארבעה סוגי סטייה:
+ *  עם שערי התחביר לפני כל דחיפה, ונכשלת על חמישה סוגי סטייה:
  *
  *    א. סימוני `SHARED` אינם מאוזנים, מקוננים, בלי `id`, עם `id` כפול,
  *       או שרשימת המזהים אינה תואמת לרשימה הקנונית שלמטה.
@@ -13,6 +13,15 @@
  *    ג. שורת «עודכן לאחרונה» חסרה, אינה בראש הקובץ, או בפורמט שגוי.
  *    ד. פרק שהוא פרטי בהגדרה («חתימת APK» / «בדיקה») נמצא בתוך בלוק
  *       `SHARED` — סעיף 5 של כלל ברזל 8.
+ *    ה. (סבב 20) הקובץ שונה מול `origin/main` אבל שורת «עודכן לאחרונה»
+ *       זהה לזו שב-`origin/main` — כלומר לא קודמה. סעיף ג בודק את
+ *       **צורת** השורה; זה בודק שהיא באמת התקדמה.
+ *
+ *  ⚠️ סעיף ה — ורק הוא — **מדלג ואינו מפיל** כשאין בסיס להשוואה: אין
+ *  git בסביבה, אין `origin/main`, או שהקובץ אינו קיים שם. clone רדוד או
+ *  ריפו בלי remote הם מצבים לגיטימיים בסביבת בנייה, ושער שנשבר בהם היה
+ *  גורם לעקיפה של הבדיקה כולה. ⛔ אין להפוך את הדילוג לכישלון ואין
+ *  להרחיב אותו למקרים אחרים.
  *
  *  סימונים שבתוך גדר קוד (```) אינם נספרים, אחרת הדוגמה שבתוך פרק כלל
  *  ברזל 8 עצמו הייתה נקראת כבלוק אמיתי.
@@ -22,6 +31,7 @@
  */
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -40,8 +50,9 @@ const CANON = [
   ['round-15-tech-info',      '61819c0a62fc9e0a'],
   ['round-16-pend-delay',     '994d3cb66d4ced7c'],
   ['iron-rule-7-status-area', '3acd979daa17a205'],
-  ['iron-rule-8-docs',        '77b52bafb53d94b1'],
+  ['iron-rule-8-docs',        '356ea521bb4373cc'],
   ['round-18-what',           '32879d2c35c25081'],
+  ['round-20-what',           '18a3eaad8f9c0e4a'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -50,6 +61,7 @@ const PRIVATE_HEADINGS = [
   { re: /^#{2,3}\s*בדיקה\s*$/,  name: 'בדיקה' },
 ];
 
+const STAMP_PREFIX = 'עודכן לאחרונה';
 const STAMP_RE = /^עודכן לאחרונה: סבב (\d+) · (\d{4})-(\d{2})-(\d{2})$/;
 const START_RE = /^<!--\s*SHARED:start\s+id="([^"]*)"\s*-->\s*$/;
 const START_LOOSE = /^<!--\s*SHARED:start\b/;
@@ -58,28 +70,43 @@ const END_RE   = /^<!--\s*SHARED:end\s*-->\s*$/;
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
 const pass = (m) => console.log('✅ ' + m);
+const warn = (m) => console.warn('⚠️ ' + m);   // אזהרה שאינה מפילה את השער
 
 if (!fs.existsSync(APP.file)) {
   console.error(`❌ ${APP.file} לא נמצא — יש להריץ את הבדיקה משורש הריפו`);
   process.exit(1);
 }
-const lines = fs.readFileSync(APP.file, 'utf8').split('\n');
+const src = fs.readFileSync(APP.file, 'utf8');
+const lines = src.split('\n');
 
 /* גדרות קוד — כל שורה מסומנת אם היא בתוך ``` */
-const inFence = new Array(lines.length).fill(false);
-{
+function fenceMask(ls) {
+  const mask = new Array(ls.length).fill(false);
   let f = false;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith('```')) { f = !f; inFence[i] = true; continue; }
-    inFence[i] = f;
+  for (let i = 0; i < ls.length; i++) {
+    if (ls[i].startsWith('```')) { f = !f; mask[i] = true; continue; }
+    mask[i] = f;
   }
+  return mask;
+}
+const inFence = fenceMask(lines);
+
+/* שורת «עודכן לאחרונה» של טקסט כלשהו — אותו זיהוי בדיוק בשני צדי ההשוואה
+ * שבסעיף ה, כדי שגרסת הדיסק וגרסת origin/main ייקראו באותה דרך. */
+function stampOf(text) {
+  const ls = text.split('\n');
+  const f = fenceMask(ls);
+  for (let i = 0; i < ls.length; i++) {
+    if (!f[i] && ls[i].startsWith(STAMP_PREFIX)) return ls[i].trim();
+  }
+  return null;
 }
 
 /* ── ג. שורת «עודכן לאחרונה» ───────────────────────────────────────────── */
 {
   const hits = [];
   for (let i = 0; i < lines.length; i++) {
-    if (!inFence[i] && lines[i].startsWith('עודכן לאחרונה')) hits.push(i);
+    if (!inFence[i] && lines[i].startsWith(STAMP_PREFIX)) hits.push(i);
   }
   if (hits.length === 0) {
     fail('שורת «עודכן לאחרונה» חסרה. הפורמט: «עודכן לאחרונה: סבב N · YYYY-MM-DD»');
@@ -168,6 +195,48 @@ for (const [id, sha] of CANON) {
     }
   }
   if (!bad) pass('פרקים פרטיים בהגדרה («חתימת APK» / «בדיקה») יושבים מחוץ לבלוקים המשותפים');
+}
+
+/* ── ה. שורת העדכון קודמה בפועל מול origin/main (סבב 20) ───────────────── */
+/*  הפער שסבב 18 דיווח עליו: סעיף ג בודק שהשורה קיימת, בראש הקובץ ובפורמט
+ *  תקין — כלומר את **צורתה**. סשן שערך פרק פרטי והשאיר את מספר הסבב הישן
+ *  עבר את השער. כאן משווים את הקובץ שעל הדיסק (ולכן גם שינוי שטרם קומט)
+ *  מול `origin/main`, ואם התוכן שונה אבל השורה זהה — זו הפרה של סעיף 2
+ *  בכלל ברזל 8.
+ *  ⛔ אין בסיס להשוואה ⇒ מדלגים באזהרה. אין להפוך זאת לכישלון. */
+{
+  const git = (...args) => spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const skip = (why) => warn(`דילוג על בדיקת קידום שורת העדכון — ${why}. ` +
+                             'זו אזהרה בלבד; השער אינו נופל (סבב 20).');
+
+  const ver = git('--version');
+  if (ver.error || ver.status !== 0) {
+    skip('git אינו זמין בסביבה');
+  } else if (git('rev-parse', '--is-inside-work-tree').stdout.trim() !== 'true') {
+    skip('התיקייה אינה עותק עבודה של git');
+  } else if (git('rev-parse', '--verify', '--quiet', 'origin/main').status !== 0) {
+    skip('אין origin/main להשוות אליו (clone רדוד או ריפו בלי remote)');
+  } else {
+    const base = git('show', `origin/main:./${APP.file}`);
+    if (base.status !== 0) {
+      skip(`${APP.file} אינו קיים ב-origin/main`);
+    } else if (base.stdout === src) {
+      pass(`${APP.file} זהה ל-origin/main — אין שינוי, ואין מה לקדם`);
+    } else {
+      const here = stampOf(src);
+      const there = stampOf(base.stdout);
+      if (there === null) {
+        pass('שורת «עודכן לאחרונה» אינה קיימת ב-origin/main — היא נוספת בשינוי הזה');
+      } else if (here !== null && here === there) {
+        fail('CLAUDE.md שונה ושורת העדכון לא קודמה — ' +
+             `«${there}» זהה לזו שב-origin/main. כלל ברזל 8, סעיף 2: כל סבב ` +
+             'מקדם את שורת «עודכן לאחרונה», גם סבב שנגע רק בקובץ אחד.');
+      } else if (here !== null) {
+        pass(`שורת העדכון קודמה מול origin/main: «${there}» ← «${here}»`);
+      }
+      /* here === null כבר דווח בסעיף ג — אין טעם לדווח פעמיים. */
+    }
+  }
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');
