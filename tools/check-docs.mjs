@@ -50,11 +50,12 @@ const CANON = [
   ['round-15-tech-info',      '61819c0a62fc9e0a'],
   ['round-16-pend-delay',     '994d3cb66d4ced7c'],
   ['iron-rule-7-status-area', '3acd979daa17a205'],
-  ['iron-rule-8-docs',        '356ea521bb4373cc'],
+  ['iron-rule-8-docs',        '51f12430a5a4122f'],
   ['round-18-what',           '32879d2c35c25081'],
   ['round-20-what',           '18a3eaad8f9c0e4a'],
   ['iron-rule-9-security-spread', 'abb2199f20651c52'],
   ['round-21-what',           'f5cf25f8ef829163'],
+  ['round-24b-what',          '23e31eca803b28fa'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */

@@ -28,7 +28,7 @@ alter table public.TABLE_NAME enable row level security;
 ## כללים קריטיים לפיתוח
 
 1. **node --check לפני כל push** — חובה מוחלטת (חילוץ ה-JS מ-`index.html` + `sw.js`)
-2. **`python3 tools/sync-setup-sql.py --check`** — חובה לצד בדיקת התחביר
+2. **`node tools/check-status-area.mjs` + `node tools/check-docs.mjs`** — חובה לצד בדיקת התחביר
 3. **קידום `CACHE_NAME` ב-`sw.js`** בכל שינוי קוד — בלי זה העדכון לא מגיע למשתמשים
 4. **`sl_transactions` = כספים** — soft-delete בלבד (`deleted=true`), לעולם לא `DELETE` פיזי
 5. **`esc()`** על כל ערך משתמש שנכנס ל-`innerHTML`
