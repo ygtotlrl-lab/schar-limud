@@ -53,9 +53,11 @@ const CANON = [
   ['iron-rule-8-docs',        '51f12430a5a4122f'],
   ['round-18-what',           '32879d2c35c25081'],
   ['round-20-what',           '18a3eaad8f9c0e4a'],
-  ['iron-rule-9-security-spread', 'abb2199f20651c52'],
+  ['iron-rule-9-security-spread', '8ab6dcc38c449f51'],
   ['round-21-what',           'f5cf25f8ef829163'],
   ['round-24b-what',          '23e31eca803b28fa'],
+  ['iron-rule-10-users',      '91911ec339c9e6fb'],
+  ['round-26b-what',          '46da920b39793d46'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */

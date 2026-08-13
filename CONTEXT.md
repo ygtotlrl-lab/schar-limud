@@ -48,10 +48,10 @@ print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
 
 | טבלה | תפקיד | הערות |
 |---|---|---|
-| `sl_users` | משתמשים | ברירת מחדל admin/admin |
+| `sl_users` | משתמשים | ⛔ אין ברירת מחדל (סבב 24) · `role` קובע הרשאה (סבב 26) |
 | `sl_students` | תלמידים | soft-delete (migrations/002); `start_month`/`end_month` = טווח החיוב (migrations/004) |
 | `sl_transactions` | תשלומים (כספים!) | soft-delete בלבד; FK ל-`sl_students` ב-RESTRICT (migrations/003) |
-| `sl_settings` | הגדרות (key/value) | כולל `default_tuition`, `admin_pass` |
+| `sl_settings` | הגדרות (key/value) | `default_tuition`. ⛔ `admin_pass` — שריד של שער שבוטל בסבב 26, אינו יורד לדיסק |
 | `sl_lists` | רשימות בחירה | אמצעי תשלום, סעיפים; כולל את סעיף המערכת «זוכה על חשבון יתרת זכות» |
 
 ⚠️ **התנגשות שמות:** הקידומת `sl` כאן = **שכר לימוד**; ב-`hanhala-ruchanit` קיימת
