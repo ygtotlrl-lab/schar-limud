@@ -62,7 +62,7 @@ const CANON = [
   ['round-27-what',           '5670c4075f64e56f'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['round-28-what',           '423fab93e9616987'],
-  ['round-29-what',           '188e18733328d117'],
+  ['round-29-what',           '2597ca03d6779d2a'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
