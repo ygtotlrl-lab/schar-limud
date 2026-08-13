@@ -56,13 +56,13 @@ const CANON = [
   ['iron-rule-9-security-spread', '8ab6dcc38c449f51'],
   ['round-21-what',           'f5cf25f8ef829163'],
   ['round-24b-what',          '23e31eca803b28fa'],
-  ['iron-rule-10-users',      'd884a09e03780ef1'],
+  ['iron-rule-10-users',      'c822ccbf258e76a5'],
   ['round-26b-what',          '46da920b39793d46'],
   ['capability-matrix',       'f86d3d4fa78692f3'],
   ['round-27-what',           '5670c4075f64e56f'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['round-28-what',           '423fab93e9616987'],
-  ['round-29-what',           '2bb6c0560711f512'],
+  ['round-29-what',           '188e18733328d117'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
