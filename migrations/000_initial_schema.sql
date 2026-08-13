@@ -42,8 +42,11 @@
 -- 003 = ON DELETE RESTRICT על sl_transactions, 004 = חודש הצטרפות/עזיבה
 -- לתלמיד (והסרת handled_months), 006+007 = client_id + אינדקס ייחודי
 -- **מלא**, 008 = updated_at + טריגר, 009 = updated_at/client_id/tombstones
--- ל-sl_settings ול-sl_lists. כולן כבר מוכלות כאן, ולכן על התקנה טרייה הן
--- no-op. (005 היא זריעת נתון בלבד ואינה חלק מהסכימה.)
+-- ל-sl_settings ול-sl_lists, 010 = pass_salt/pass_fp, 011 = role,
+-- 012 = צמצום הרשאות anon ו-authenticated (REVOKE DELETE/TRUNCATE). כולן
+-- כבר מוכלות כאן,
+-- ולכן על התקנה טרייה הן no-op. (005 היא זריעת נתון בלבד ואינה חלק
+-- מהסכימה.)
 -- ============================================================
 
 -- ---------- משתמשים ----------
@@ -79,7 +82,19 @@ ALTER TABLE public.sl_users
 UPDATE public.sl_users SET role = 'admin' WHERE role IS NULL;
 ALTER TABLE public.sl_users ALTER COLUMN role SET NOT NULL;
 ALTER TABLE public.sl_users ALTER COLUMN role DROP DEFAULT;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
+-- ⚠️ ההרשאות של `anon` ושל `authenticated` צומצמו בסבב 29, בהחלטת המנהל
+--    (`migrations/012`).
+-- ⛔ **REVOKE לפני GRANT, ואין לקצר לשורת GRANT אחת:** פרויקט Supabase
+--    סטנדרטי מגיע עם `ALTER DEFAULT PRIVILEGES … GRANT ALL`, ולכן הטבלה
+--    **נולדת** עם DELETE ו-TRUNCATE לשני התפקידים — ו-GRANT הוא אדיטיבי בלבד
+--    ואינו מסיר אותם. השורה הזו היא גם שורת ההתכנסות להתקנה ותיקה.
+-- ⛔ אין להחזיר להם את DELETE/TRUNCATE (סבב 29) — אין באפליקציה אף
+--    מסלול מחיקה מול המסד (אפס `.delete()`), וכל מחיקה היא soft-delete
+--    שמתבצעת ב-UPDATE (כללים קריטיים 5 ו-6).
+-- ⚠️ הרשאת ה-SEQUENCE נשארת: INSERT על טבלת SERIAL דורש USAGE על הרצף.
+REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.sl_users FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sl_users TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_users_all" ON public.sl_users;
@@ -155,7 +170,10 @@ BEGIN
       );
   END IF;
 END $$;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO anon, authenticated, service_role;
+-- ⚠️ אותו דפוס כמו ב-`sl_users` שלמעלה, ומאותה סיבה — ר' ההסבר שם.
+REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.sl_students FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sl_students TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_students TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_students_all" ON public.sl_students;
@@ -200,7 +218,10 @@ ALTER TABLE public.sl_transactions
 CREATE UNIQUE INDEX IF NOT EXISTS sl_transactions_client_id_key
   ON public.sl_transactions (client_id);
 DROP INDEX IF EXISTS public.sl_transactions_client_id_uidx;  -- הווריאנט החלקי, אם נוצר
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO anon, authenticated, service_role;
+-- ⚠️ אותו דפוס כמו ב-`sl_users` שלמעלה, ומאותה סיבה — ר' ההסבר שם.
+REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.sl_transactions FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sl_transactions TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_transactions TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_transactions_all" ON public.sl_transactions;
@@ -257,7 +278,10 @@ CREATE TABLE IF NOT EXISTS public.sl_settings (
 -- ואצל migrations/007. אינדקס חלקי שובר את הסקת ON CONFLICT.
 CREATE UNIQUE INDEX IF NOT EXISTS sl_settings_client_id_key
   ON public.sl_settings (client_id);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_settings TO anon, authenticated, service_role;
+-- ⚠️ אותו דפוס כמו ב-`sl_users` שלמעלה, ומאותה סיבה — ר' ההסבר שם.
+REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.sl_settings FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sl_settings TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_settings TO service_role;
 ALTER TABLE public.sl_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_settings_all" ON public.sl_settings;
 CREATE POLICY "sl_settings_all" ON public.sl_settings FOR ALL USING (true) WITH CHECK (true);
@@ -281,7 +305,10 @@ CREATE TABLE IF NOT EXISTS public.sl_lists (
 CREATE UNIQUE INDEX IF NOT EXISTS sl_lists_client_id_key
   ON public.sl_lists (client_id);
 CREATE INDEX IF NOT EXISTS sl_lists_deleted_idx ON public.sl_lists (deleted);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_lists TO anon, authenticated, service_role;
+-- ⚠️ אותו דפוס כמו ב-`sl_users` שלמעלה, ומאותה סיבה — ר' ההסבר שם.
+REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.sl_lists FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sl_lists TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_lists TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_lists_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_lists ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_lists_all" ON public.sl_lists;
