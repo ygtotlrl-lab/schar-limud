@@ -474,6 +474,14 @@ function toast(msg,dur){
   // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
   if(typeof lsGuardToast==='function'&&!lsGuardToast(msg))return;
   var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
+/* ══════════════════════════════════════════════════════════════════════════
+   הודעות ועוזרי רשת — נוסח משותף לארבע האפליקציות
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ `MSG_OFFLINE`/`MSG_SAVED`/`MSG_BAD_LOGIN`/`MSG_SYNC_BACK` זהים
+   מילה במילה בארבעתן (סבב 8/17). ⛔ אין להוסיף כאן קבוע הודעה
+   חדש «לאחידות» (סבב 19) — קבוע שנוסף בשתיים מהארבע הוא בדיוק
+   הסחיפה שכלל ברזל 8 בא למנוע; הודעה פרטית יושבת מחוץ לבלוק.
+   ══════════════════════════════════════════════════════════════════════════ */
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
 // להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
@@ -509,7 +517,7 @@ var LS_CFG = {
   // עלתה. `tier1` נסרק **בלי** מחסום `pending()`, כלומר פינוי שלהן היה
   // מוחק בשקט הגדרה או פריט רשימה שנרשמו אופליין. **אין להחזיר אותן.**
   tier1: [],
-  // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס.** אלה כספים:
+  // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס** (סבב 12 שלב 2) — אלה כספים:
   // רשומה שפונתה מהדיסק אינה נראית באפליקציה אופליין, וחישוב חוב על נתון
   // חסר גרוע מכל מכסה. `sl_mirror_students` הם אבות המפתח הזר שלהן —
   // גם הם בחוץ, אחרת נשארות תנועות בלי שם מוצג.
@@ -527,7 +535,7 @@ var LS_CFG = {
   // בלי לפתור. הפתרון שם הוא yoman ו-hanhala, שכן מפנות — לא צמצום
   // העותק המקומי של הכסף.
 
-  // ⛔ יש משהו שטרם עלה לענן ⇒ שלב ב מדולג לגמרי. גם ספק נחשב "יש".
+  // ⛔ יש משהו שטרם עלה לענן ⇒ שלב ב מדולג לגמרי (סבב 11) — ספק נחשב "יש".
   pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
   syncedThrough: function () { try { return parseInt(lsGet('sl_synced_at', '0'), 10) || 0; } catch (e) { return 0; } }
 };
@@ -1727,7 +1735,9 @@ function pendTxnTag(t) { return t ? pendTag(pendTxnKey(t)) : ''; }
 function pendStuTag(st) { return st ? pendTag(pendStuKey(st)) : ''; }
 // פריט רשימה שנוצר/נמחק אופליין — `LISTS` מחזיקה את מפתח המיזוג ב-`key`.
 function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
-/* ═══ עבודה אופליין — עותק מקומי, מיזוג ברמת רשומה ודחיפת מצב (סבב 12, שלב 2)
+/* ══════════════════════════════════════════════════════════════════════════
+   עבודה אופליין — מראה, מיזוג ברמת רשומה ודחיפת-מצב (סבב 12, שלב 2)
+   ══════════════════════════════════════════════════════════════════════════
    עד הסבב הזה schar-limud קראה ישירות מ-Supabase בכל `syncAll` (כל 3 שניות)
    ולא החזיקה שום עותק מקומי: בלי רשת לא היה מה להציג ולא היה לאן לכתוב. זה
    היה הפער האחרון מכלל ברזל 3, והוא נשאר פתוח בכוונה כי `sl_transactions`
@@ -1866,6 +1876,9 @@ function slMirrorHasData() {
   return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   משתמשים, סודות וכניסה — טביעת PBKDF2 והרשאה לפי תפקיד
+   ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ ⛔ שורות שלעולם אינן יורדות לדיסק ═════════════════════════════════
    `sl_settings` הוא עותק מקומי מלא של טבלת ההגדרות, ולכן כל שורה שיושבת
    בה נכתבת ל-localStorage — באותו origin שבו חיות עוד שלוש אפליקציות.
@@ -1985,7 +1998,8 @@ async function slMakePassFp(pass) {
   var fp = await slPassFp(pass, salt);
   return fp ? { salt: salt, fp: fp } : null;
 }
-// ⛔ **שדות הכתיבה לסיסמה — כישלון גזירה מאפס את שני השדות ולא רק מדלג.**
+// ⛔ **שדות הכתיבה לסיסמה — כישלון גזירה מאפס את שני השדות ולא רק מדלג**
+//    (סבב 24) —
 // טביעה ישנה שנשארת על מקומה הייתה ממשיכה לפתוח את הכניסה האופליין עם
 // הסיסמה **הקודמת**, לנצח — כלומר שינוי סיסמה שאינו משנה כלום מבחינת מי
 // שמחזיק את המכשיר. **כל מסלול עתידי שכותב סיסמה ל-`sl_users` חייב לעבור
@@ -2032,7 +2046,7 @@ function slUsersLoad() {
     SL_USERS = Array.isArray(v) ? v.map(slUserPub).filter(function (u) { return u && u.username; }) : [];
   } catch (e) { console.warn('[users] מראת המשתמשים פגומה — נטענה ריקה', e); SL_USERS = []; }
 }
-// ⛔ שער הדיסק של מראת המשתמשים — עובר דרך `slUserPub` בדיוק כמו הטעינה
+// ⛔ שער הדיסק של מראת המשתמשים (סבב 24) — עובר דרך `slUserPub` בדיוק כמו הטעינה
 //    והמשיכה. שלוש נקודות, בדיוק כמו הסרת הסוד מ-`sl_settings`.
 function slUsersSave() { return lsSet(SL_USERS_KEY, JSON.stringify((SL_USERS || []).map(slUserPub))); }
 function slUserByName(username) {
@@ -2041,7 +2055,8 @@ function slUserByName(username) {
   return null;
 }
 
-// משיכת מראת המשתמשים. ⛔ **ה-`select` מבקש רשימת עמודות מפורשת ולא `*`** —
+// משיכת מראת המשתמשים. ⛔ **ה-`select` מבקש רשימת עמודות מפורשת ולא `*`**
+//    (סבב 24) —
 // הסיסמאות אינן מגיעות לזיכרון הדפדפן כלל. נפילה-חזרה לשתי עמודות כשהמיגרציה
 // טרם הורצה: אז אין טביעות, והכניסה האופליין תאמר זאת במפורש ('no-fp').
 // מווסתת בזמן: הסנכרון רץ כל 3 שניות, ורשימת המשתמשים כמעט אינה משתנה.
@@ -2099,7 +2114,7 @@ async function slEnsurePassFp(u, pass) {
     var stale = !!(u.pass_salt && u.pass_fp);   // הייתה טביעה, והיא אינה תואמת
     var body;
     if (stale) {
-      body = await slPassFields(pass);          // ⛔ כשל גזירה ⇒ {null,null}
+      body = await slPassFields(pass);          // ⛔ כשל גזירה ⇒ {null,null} (סבב 24) — ר' מעל
     } else {
       var made = await slMakePassFp(pass);
       if (!made) return false;                  // אין מה לאפס — דילוג שקט
@@ -2129,7 +2144,7 @@ var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנד�
 var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת — יש ליצור משתמש ראשון ב-SQL Editor של Supabase';
 
 // מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
-// ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19): מסלול כניסה אינו יודע
+// ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19) — מסלול כניסה אינו יודע
 //    באיזה פורמט נקבעה הסיסמה הקיימת, ואכיפה כאן הייתה נועלת בחוץ סיסמה
 //    תקפה שנקבעה לפני סבב 19, בלי שום מסלול שחזור.
 async function slVerifyOffline(u, pass) {
@@ -2163,7 +2178,7 @@ var SL_MIRROR_OF = { sl_students: 'students', sl_transactions: 'transactions', s
 function slLocalWrite(tbl, row) {
   var m = SL_MIRROR_OF[tbl];
   if (!m) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
-  // ⛔ שורת סוד לעולם לא נכתבת מקומית — ראה הפרק שמעל.
+  // ⛔ שורת סוד לעולם לא נכתבת מקומית (סבב 13) — ראה הפרק שמעל.
   if (m === 'settings' && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
   row.updated_at = slNow();               // ⚠️ חותמת המכשיר — ראה ההערה בראש
   var k = slKeyOf(m, row), arr = MIRROR[m] || (MIRROR[m] = []), hit = false;
@@ -2182,7 +2197,7 @@ function slPayload(tbl, row) {
   return out;
 }
 
-// דחיפת מצב: כל שורה מקומית שהמיזוג הותיר כמנצחת נשלחת.
+// דחיפת-מצב: כל שורה מקומית שהמיזוג הותיר כמנצחת נשלחת.
 // **שני מסלולי כתיבה, והבחירה ביניהם היא הגנה על כסף:**
 //   • יש `id` ⇒ `update ... eq(id)` — כולל רשומות היסטוריות עם `client_id`
 //     ריק, ש-`upsert` על `client_id` היה יוצר להן **שורה כפולה**.
@@ -2220,6 +2235,9 @@ function slDirtyRows(m, remoteByKey, isPending) {
 
 
 
+/* ══════════════════════════════════════════════════════════════════════════
+   מזהה מכשיר, `client_id` ונעילה אוטומטית
+   ══════════════════════════════════════════════════════════════════════════ */
 // ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
 // localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
 // הזו כל קורא של getDeviceId מפיל את הפונקציה שקראה לו.
@@ -2413,6 +2431,13 @@ function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)ret
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),parseInt(el.getAttribute('data-id')),el.getAttribute('data-label'));}
 function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
+/* ══════════════════════════════════════════════════════════════════════════
+   מסך ההגדרה הראשונית — הסכימה נמשכת מקובץ המיגרציה
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ אין להחזיר לכאן עותק מוטבע של הסכימה (השלמת סבב 24) — שני
+   עותקים מתיישנים בשקט, וההתקנה הטרייה היא המקום שבו זה מתגלה
+   מאוחר מדי. מקור האמת הוא `migrations/000_initial_schema.sql`.
+   ══════════════════════════════════════════════════════════════════════════ */
 // ===== סכימת ההגדרה הראשונית =====
 // ⭐ סבב 24 (השלמה) — **מקור אמת אחד, בלי עותק מוטבע.**
 // עד כאן ישב כאן `SETUP_SQL_FALLBACK`: עותק מיוצר של
@@ -2431,7 +2456,7 @@ var SETUP_SQL_URL = './migrations/000_initial_schema.sql';
 var SETUP_SQL_GITHUB = 'https://github.com/ygtotlrl-lab/schar-limud/blob/main/migrations/000_initial_schema.sql';
 
 // מושך את מקור האמת. מחזירה {ok, text}:
-// ⛔ כשל ⇒ **לא מוצגת שום סכימה**. סכימה שאיננו יודעים אם היא עדכנית,
+// ⛔ כשל ⇒ **לא מוצגת שום סכימה** (השלמת סבב 24) — סכימה שאיננו יודעים אם היא עדכנית,
 //    שמוצגת בתיבה שהמשתמש מעתיק ומריץ על המסד, גרועה מהודעת שגיאה גלויה.
 async function loadSetupSql(){
   try{
@@ -2479,7 +2504,7 @@ function showSetupScreen(){
       '<a href="https://supabase.com/dashboard/project/'+SB_PROJECT+'/sql/new" target="_blank" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center">&#128279; פתח SQL Editor</a>'+
     '</div>'+
     '<textarea id="setup-sql-ta" readonly dir="ltr" style="width:100%;height:130px;font-size:.6rem;direction:ltr;text-align:left;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;resize:none;background:#f8f9fb;color:#2d3748"></textarea>'+
-    // ⛔ אין עותק מוטבע של הסכימה (ר\' ההערה מעל SETUP_SQL_URL). כשל משיכה
+    // ⛔ אין עותק מוטבע של הסכימה (השלמת סבב 24) — ר\' ההערה מעל SETUP_SQL_URL. כשל משיכה
     //    מציג את התיבה הזו במקום התיבה שלמעלה — קישור למקור האמת עצמו.
     '<div id="setup-sql-err" style="display:none;font-size:.74rem;color:#8a2b2b;background:#fdecec;border:1px solid #f3c2c2;border-radius:8px;padding:8px;text-align:right;line-height:1.6">'+
       '<b>&#9888;&#65039; לא ניתן היה למשוך את קובץ הסכימה.</b><br>'+
@@ -2659,6 +2684,14 @@ async function slRevalidateSession(sess){
 // מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
 var _syncBusy=false,_syncWarned=false,_lastSyncOk=false;
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
+/* ══════════════════════════════════════════════════════════════════════════
+   סנכרון — משיכה ← מיזוג ← דחיפת-מצב
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ הסדר אינו ניתן להיפוך (כלל ברזל 6): אי אפשר לדעת מה לדחוף בלי
+   לראות קודם מה בענן, ודחיפה עיוורת מחזירה לחיים רשומות שנמחקו
+   במכשיר אחר. ⛔ דוחפים רק לקטגוריה שנמשכה בהצלחה (סבב 12 שלב 2) —
+   קטגוריה שנכשלה במשיכה אינה יודעת מה יש בענן.
+   ══════════════════════════════════════════════════════════════════════════ */
 async function syncAll(){
   if(_syncBusy) return;
   _syncBusy=true;
@@ -2704,7 +2737,7 @@ async function syncAll(){
     slApplyMirror();
     refreshUI();
 
-    // ── דחיפת מצב: כל שורה מקומית שניצחה במיזוג עולה. **רק לטבלה שנמשכה
+    // ── דחיפת-מצב: כל שורה מקומית שניצחה במיזוג עולה. **רק לטבלה שנמשכה
     //    בהצלחה** — בלי לדעת מה יש בענן אי אפשר לדעת מה מקומי-וחדש-יותר,
     //    ודחיפה עיוורת הייתה מחזירה לחיים שורה שנמחקה במכשיר אחר.
     var stillPending=[];
@@ -2814,6 +2847,9 @@ async function ensureCreditMethod(){
 
 function getAcadYears(){var y={};TRANSACTIONS.forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;return Object.keys(y).map(Number).sort();}
 function dashPrevYear(){DASH_YEAR--;renderDash();}function dashNextYear(){DASH_YEAR++;renderDash();}
+/* ══════════════════════════════════════════════════════════════════════════
+   לוח הבקרה — תנועות בפועל לפי תאריך התנועה
+   ══════════════════════════════════════════════════════════════════════════ */
 // ===== לוח הבקרה = תנועות בפועל, לא פריסה (אוגוסט 2026) =====
 // עד היום הדשבורד הציג את **פריסת** התשלומים: תשלום של 2000 שנרשם ביולי
 // התפצל ל-1700 ביולי ו-300 באוגוסט, ולכן החודש שבו נכנס הכסף לא נראה בשום
@@ -2988,6 +3024,9 @@ function calcDistribution(sid,year){
 
 // ⭐ מקומי-תחילה (שלב 2). התשלום נשמר במכשיר ומוצג מיד; הרשת היא עניין של
 // הרקע. `guardOnline` הוסר בכוונה — הוא היה מה שחסם רישום תשלום בלי רשת.
+/* ══════════════════════════════════════════════════════════════════════════
+   תשלומים — רישום, יומן ומחיקה רכה
+   ══════════════════════════════════════════════════════════════════════════ */
 async function saveTxn(){
   var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
@@ -3035,6 +3074,9 @@ function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלו
   syncAll();
 });}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
+/* ══════════════════════════════════════════════════════════════════════════
+   כרטיס התלמיד — פריסה שנתית, טווח פעילות ויתרת זכות
+   ══════════════════════════════════════════════════════════════════════════ */
 function renderStudentCard(){
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
   var cs=s.card_settings||{};
@@ -3214,7 +3256,7 @@ function addListItem(cat){
   toast(navigator.onLine?'✅ נוסף':MSG_SAVED_LOCAL,4000);
   syncAll();
 }
-// ⛔ מחיקה = soft-delete (009). מחיקה פיזית הייתה נמחקת מקומית וחוזרת
+// ⛔ מחיקה = soft-delete (סבב 13, מיגרציה 009) — מחיקה פיזית הייתה נמחקת מקומית וחוזרת
 // מהענן בסנכרון הבא, כי היעדר רשומה אצל צד אחד אינו מחיקה.
 function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט: גם אם הכפתור הוצג מרינדור ישן.
@@ -3290,6 +3332,9 @@ document.addEventListener('DOMContentLoaded',async function(){
   var ok = navigator.onLine ? await ensureSetup() : true;
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
 });
+/* ══════════════════════════════════════════════════════════════════════════
+   עדכון גרסה ואתחול האפליקציה
+   ══════════════════════════════════════════════════════════════════════════ */
 // ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
 // דפוס משותף לשלושת הפרויקטים (סבב 8), לפי המימוש של hanhala-ruchanit:
 // הבאנר נבנה ב-JS (לא HTML סטטי), מזהה 'sw-update-banner', שמירה על עותק
