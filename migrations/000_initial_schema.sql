@@ -28,24 +28,31 @@
 -- role (ראה migrations/011): מקור האמת היחיד להרשאות. `'admin'` = גישה
 -- מלאה כולל מסך ההגדרות; כל ערך אחר = משתמש רגיל שאינו נכנס להגדרות.
 -- ⛔ אין CHECK על הערכים במכוון — הקוד **נכשל סגור**, ולכן תפקיד שהוקלד
---    בטעות שולל הרשאה ולא מעניק אותה. ⚠️ ה-DEFAULT הוא `'admin'`, ולכן
---    משתמש רגיל חייב לציין `role` במפורש ב-INSERT.
+--    בטעות שולל הרשאה ולא מעניק אותה.
+-- ⛔ **ואין DEFAULT כלל** — כמו `ys_users` בהנהלה. יצירת משתמש **חייבת**
+--    לציין `role` במפורש, אחרת ה-INSERT נכשל במסד. ברירת מחדל שמעניקה
+--    הרשאה היא בדיוק הכשל שסבב 26 בא לסגור; ר' `migrations/011`.
 CREATE TABLE IF NOT EXISTS public.sl_users (
   id         SERIAL PRIMARY KEY,
   username   TEXT UNIQUE NOT NULL,
   password   TEXT NOT NULL,
   pass_salt  TEXT,
   pass_fp    TEXT,
-  role       TEXT NOT NULL DEFAULT 'admin',
+  role       TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
 ALTER TABLE public.sl_users
   ADD COLUMN IF NOT EXISTS pass_salt TEXT,
   ADD COLUMN IF NOT EXISTS pass_fp   TEXT;
--- שדרוג התקנה שנוצרה לפני 011
+-- שדרוג התקנה שנוצרה לפני 011 — שלושה שלבים, ואי אפשר לקצר אותם:
+-- `ADD COLUMN … NOT NULL` בלי DEFAULT נכשל על טבלה שיש בה שורות.
+-- ⚠️ ה-UPDATE נוגע **רק** בשורות שקדמו לעמודה. ר' `migrations/011`.
 ALTER TABLE public.sl_users
-  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'admin';
+  ADD COLUMN IF NOT EXISTS role TEXT;
+UPDATE public.sl_users SET role = 'admin' WHERE role IS NULL;
+ALTER TABLE public.sl_users ALTER COLUMN role SET NOT NULL;
+ALTER TABLE public.sl_users ALTER COLUMN role DROP DEFAULT;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sl_users TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.sl_users_id_seq TO anon, authenticated, service_role;
 ALTER TABLE public.sl_users ENABLE ROW LEVEL SECURITY;
@@ -268,8 +275,9 @@ CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK 
 --     VALUES ('שם המשתמש שלך', '123456', 'admin');
 -- (סיסמה בת שש ספרות — סבב 19.) האפליקציה מציגה את ההנחיה הזו מעצמה
 -- כשהיא מזהה שהטבלה ריקה.
--- ⚠️ **`role` במפורש** (סבב 26): הוא מקור האמת היחיד להרשאות, והמשתמש
--- הראשון חייב להיות `'admin'` — אחרת לא ייפתח מסך ההגדרות לאיש.
+-- ⚠️ **`role` במפורש, ואין ברירת מחדל** (סבב 26): הוא מקור האמת היחיד
+-- להרשאות, ולעמודה אין `DEFAULT` — כלומר INSERT בלי `role` **נכשל במסד**.
+-- המשתמש הראשון חייב להיות `'admin'`, אחרת לא ייפתח מסך ההגדרות לאיש;
 -- משתמש רגיל נוצר באותה פקודה עם `'user'` במקום `'admin'`.
 --
 -- ⛔ **`admin_pass` הוסרה מכאן בסבב 26.** עד אז נזרעה כאן שורת

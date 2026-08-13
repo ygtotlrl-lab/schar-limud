@@ -384,17 +384,39 @@ async function main() {
     ok('⛔ ואינו זורע שום INSERT ל-sl_users גם בהערה עם ערכים אמיתיים',
       !/INSERT INTO public\.sl_users[^;]*VALUES\s*\(\s*'[^']*'\s*,\s*'\d{6}'\s*,\s*'admin'\s*\)/i
         .test(code000));
-    ok('000 מגדיר role על sl_users', /role\s+TEXT NOT NULL DEFAULT 'admin'/.test(SQL000));
+    ok('000 מגדיר role על sl_users', /role\s+TEXT NOT NULL,/.test(SQL000));
+    // ⭐ **ההשלמה של סבב 26.** הניסוח הראשון היה `DEFAULT 'admin'` — ברירת
+    // מחדל ש**מעניקה** הרשאה, כלומר בדיוק משפחת הכשל שהסבב בא לסגור, וגם
+    // החריגה היחידה בארגון (`ys_users` בלי DEFAULT; `g_users` עם DEFAULT
+    // אבל של התפקיד הנמוך). הטענה הפוכה עכשיו: אין DEFAULT כלל.
+    const code000NoCmt = SQL000.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    // ⚠️ שורת `DROP DEFAULT` מנוטרלת מהבדיקה — היא בדיוק ההפך ממה שנאסר.
+    const noDrop000 = code000NoCmt.split('\n').filter((l) => !/DROP DEFAULT/i.test(l)).join('\n');
+    ok("⭐⛔ 000 אינו נותן ל-role שום DEFAULT",
+      !/role[^;\n]*DEFAULT/i.test(noDrop000) && !/DEFAULT\s*'(admin|user)'/i.test(noDrop000));
     ok('000 כולל שדרוג ADD COLUMN IF NOT EXISTS role', /ADD COLUMN IF NOT EXISTS role/.test(SQL000));
+    ok('000 נועל NOT NULL ומסיר DEFAULT בשדרוג',
+      /ALTER COLUMN role SET NOT NULL/.test(code000NoCmt) &&
+      /ALTER COLUMN role DROP DEFAULT/.test(code000NoCmt));
     ok('הוראת המשתמש הראשון כוללת role', /INSERT INTO public\.sl_users \(username, password, role\)/.test(SQL000));
 
     const stmts = SQL011.split('\n').filter((l) => l.trim() && !l.trim().startsWith('--')).join(' ');
     ok('011 אדיטיבית — ADD COLUMN IF NOT EXISTS בלבד', /ADD COLUMN IF NOT EXISTS role TEXT/.test(stmts));
     ok('⛔ 011 אינה נוגעת ב-password', stmts.indexOf('password') === -1);
-    ok('⛔ 011 אינה מוחקת ואינה מעדכנת נתונים',
-      !/\bDROP\b/i.test(stmts) && !/\bUPDATE\b/i.test(stmts) && !/\bDELETE\b/i.test(stmts));
+    // ⚠️ הטענה הקודמת הייתה «אין UPDATE ואין DROP כלל». היא **לא הוחלשה** —
+    // היא חודדה: 011 כן מריצה UPDATE אחד ו-DROP אחד, ולכן נבדק שהם בדיוק
+    // אלה שמותרים. UPDATE **בלי** `WHERE role IS NULL` היה דורס תפקידים
+    // קיימים; `DROP TABLE`/`DROP COLUMN` היה משמיד נתונים.
+    const updates = stmts.match(/\bUPDATE\b[^;]*;/gi) || [];
+    ok('⛔ 011 — ה-UPDATE היחיד הוא מילוי שורות שקדמו לעמודה',
+      updates.length === 1 && /WHERE\s+role\s+IS\s+NULL/i.test(updates[0]) &&
+      /SET\s+role\s*=\s*'admin'/i.test(updates[0]));
+    ok('⛔ 011 — ה-DROP היחיד הוא DROP DEFAULT',
+      (stmts.match(/\bDROP\b/gi) || []).length === 1 && /ALTER COLUMN role DROP DEFAULT/.test(stmts));
+    ok('⛔ 011 אינה מוחקת נתונים', !/\bDELETE\b/i.test(stmts) && !/DROP\s+(TABLE|COLUMN)/i.test(stmts));
     ok('⛔ 011 אינה זורעת משתמש', !/INSERT\s+INTO/i.test(stmts));
-    ok('ברירת המחדל היא admin', /DEFAULT 'admin'/.test(stmts));
+    ok('⭐⛔ 011 אינה משאירה DEFAULT על role',
+      !/DEFAULT\s*'/i.test(stmts) && /ALTER COLUMN role SET NOT NULL/.test(stmts));
   }
 
   /* ── ז. מסלולי הכניסה לא נגעו ────────────────────────────────────────── */
