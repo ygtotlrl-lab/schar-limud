@@ -36,6 +36,8 @@ const CANON = {
           start: '/* ═══ "מידע טכני" — קיפול מסכי האחסון', end: '/* ═══ סוף רכיב "מידע טכני"' },
   sync: { name: 'בלוק "☁️ סנכרון"',      sha: '65ff4f75bc4f6756', lines: 60,
           start: '/* ═══ אזור מצב — בלוק "☁️ סנכרון"', end: '/* ═══ סוף בלוק "☁️ סנכרון"' },
+  backup: { name: 'מודול הגיבוי היומי', sha: 'e87ee5bc7cd62b7b', lines: 203,
+          start: '/* ═══ גיבוי יומי ויומן פעולות', end: 'סוף מודול הגיבוי היומי' },
 };
 
 const VOID = new Set(['area','base','br','col','embed','hr','img','input','link',
