@@ -290,7 +290,14 @@ async function main() {
     const h = makeCtx();
     eq('מכשיר נקי מלכתחילה ⇒ false', h.ctx.slDropLegacyPassHash(), false);
     eq('ואין רישום ליומן', h.calls.lsLog.length, 0);
-    ok('הפונקציה מחווטת בעלייה', /slDropLegacyPassHash\(\)/.test(SRC.split('DOMContentLoaded')[1] || ''));
+    /* ⚠️ הטענה חודדה בהשלמת סבב 30 ולא הוחלשה: קודם היא חיפשה את הקריאה
+       **אחרי** המחרוזת `DOMContentLoaded`, וזה נשבר כשהמטפל האנונימי קיבל
+       שם (`slBoot`) והוגדר לפני שורת הרישום. עכשיו נבדק שהקריאה יושבת
+       **בתוך פונקציית העלייה עצמה** — נקודת ההפעלה הקנונית של כלל ברזל 12 —
+       ושהיא זו שנרשמת ל-`DOMContentLoaded`. */
+    ok('הפונקציה מחווטת בפונקציית העלייה', /slDropLegacyPassHash\(\)/.test(fn('slBoot')));
+    ok('ופונקציית העלייה היא שנרשמת ל-DOMContentLoaded',
+      /addEventListener\(\s*'DOMContentLoaded'\s*,\s*slBoot\s*\)/.test(SRC));
   }
 
   /* ── ד. התפקיד שורד סשן, ואופליין ────────────────────────────────────── */

@@ -1350,6 +1350,279 @@ window.syncStatusMount = syncStatusMount;
 window.syncNowFromStatus = syncNowFromStatus;
 window.statusAreaMount = statusAreaMount;
 /* ═══ סוף בלוק "☁️ סנכרון" ═══════════════════════════════════════════════ */
+
+/* ── BK_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
+/* ⛔ `sl_users` אינה ברשימה (סבב 30) — היא מחזיקה `password` בטקסט גלוי
+   ואת `pass_salt`/`pass_fp`, ו-`kv_backup` קריאה ל-`anon`; גיבוי שלה היה
+   מעתיק את הסוד למקום שני ומבטל את מה שסבב 24 בנה. שחזור משתמשים נעשה
+   ידנית ע"י המנהל מלוח הבקרה, ר' «אחרי ההרצה» בקובץ ההתקנה. */
+var BK_CFG = {
+  client: function () { return SB; },
+  flagKey: 'sl_last_backup',
+  atKey: 'sl_last_backup_at',
+  logQueueKey: 'sl_log_queue',
+  prefix: '',
+  device: function () { try { return getDeviceId(); } catch (e) { return null; } },
+  user: function () { try { return (CUR_USER && CUR_USER.username) ? CUR_USER.username : null; } catch (e) { return null; } },
+  sources: function () {
+    return ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'].map(function (t) {
+      return { kind: 'table', name: t };
+    });
+  }
+};
+
+/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30) ══════════════════════
+   עד הסבב הזה גיבו רק hanhala-ruchanit ו-schar-limud, כל אחת במימוש משלה,
+   ויומן פעולות היה רק בהנהלה. שני המימושים היו כמעט זהים — אותה נעילת
+   ריצה, אותו דגל-יומי שנכתב אחרי הצלחה, אותה בדיקת error מפורשת — ולכן
+   הליבה חולצה לכאן והוחלה בארבע האפליקציות. **הבלוק זהה בית-לבית
+   בארבעתן**, וכל שינוי בו נעשה בארבע באותו סבב (כלל ברזל 7).
+   מעליו יושבת `BK_CFG` — הדבר היחיד שנבדל בין האפליקציות.
+
+   ⛔ הדגל היומי נכתב **אחרי** ההצלחה ולא לפניה (נרשם בסבב 6 בהנהלה) —
+      כתיבה-מראש הפכה כל כישלון (רשת, הרשאה, טבלה חסרה) לדילוג שקט על
+      יממה שלמה. תפקיד הנעילה שהיא מילאה עבר ל-`_bkRunning`.
+   ⛔ הגיבוי אינו חוסם ואינו מפיל שום מסלול (נרשם בסבב 6 בהנהלה) — הוא
+      נקרא בלי `await`, כל גופו בתוך `try`, וכשל רשת נבלע בשקט.
+   ⛔ כל תשובה נבדקת ב-`error` מפורש (נרשם בסבב 6 בהנהלה) — supabase-js
+      אינו זורק, ולכן `try/catch` לבדו היה מדווח הצלחה על כישלון.
+   ⚠️ התאריך הוא UTC (`toISOString`) — כך היה בשני המימושים הקודמים,
+      והוא זהה בכל המכשירים ללא תלות באזור הזמן שלהם.
+
+   ⭐ גיבוי דיפרנציאלי: ערך שלא השתנה מאז הגיבוי האחרון אינו נכתב שוב.
+      ⚠️ זה אינו קיצור דרך אלא תנאי לכך שהגיבוי יהיה בר-קיימא: הערך הגדול
+      בארגון (`tb_archive` של ראשון לציון) הוא 1.2MB, וכתיבה יומית שלו
+      הייתה מוסיפה ~36MB בחודש ל-`kv_backup` המשותפת. ההשוואה היא מול
+      חתימה מקומית (אורך + FNV-1a), ולכן היא אינה מושכת דבר מהרשת.
+      ⛔ בספק — כותבים: חתימה חסרה, מכשיר חדש או ערך שלא ניתן לחישוב
+      מביאים לכתיבה מלאה (סבב 30) — גיבוי חסר גרוע מגיבוי כפול.
+
+   ⛔ אין מסלול מחיקה ואין `update` (סבב 29) — `kv_backup` ו-`sync_log` הן
+      יומני ראיות, ולשני התפקידים יש בהן `insert`+`select` בלבד. המודול
+      הזה אינו מנסה לעדכן או למחוק שורה, וגריעה שלהן היא החלטת המנהל.
+
+   ⭐ נקודת הפעלה אחת ויחידה — `bkBoot()` (סבב 30, השלמה). כלל ברזל 12:
+      יכולת משותפת נמדדת גם בנקודת ההפעלה שלה, לא רק בליבה. הליבה כאן
+      הייתה זהה בין הנהלה ל-schar מרגע שחולצה — ובכל זאת הגיבוי של הנהלה
+      **הפסיק לרוץ 25 יום** ואיש לא ידע, מפני שהיא הפעילה אותו **מתוך
+      מסלול הדחיפה**: כשהנתונים סטטיים (חופשה) אין דחיפה, ולכן אין גיבוי —
+      בדיוק בתקופה שבה תקלה עוברת בלי שיבחינו בה.
+      ⛔ אין לקרוא ל-`bkMaybeDaily` ישירות מקוד האפליקציה (סבב 30, השלמה) —
+      הקריאה היחידה אליה היא `bkBoot()`, מפונקציית העלייה של האפליקציה,
+      זו שקוראת גם ל-`lsBoot()` ול-`pendBoot()`. מנגנון בטיחות שתלוי
+      בפעילות רגילה אינו מנגנון בטיחות, ו-`check-capabilities.mjs` נכשל
+      על נקודת הפעלה שנודדת.
+      ⚠️ `logFlush` היא **כן** ניתנת לקריאה נוספת (חזרת רשת, כניסה
+      מוצלחת): היא ריקון תור חוזר ולא מנגנון יומי, וריקון תכוף יותר הוא
+      שיפור ולא סחיפה. נקודת ה**עלייה** שלה, לעומת זאת, היא `bkBoot`
+      בלבד — כך שגם מכשיר שלא עשה דבר מרוקן את התור בפתיחה.
+
+   ⭐ התרעת גיבוי מיושן — `BK_STALE_DAYS` (סבב 30, השלמה). זה מה שהיה
+      חושף את 25 הימים ביום הרביעי. ⛔ ולא התראה קופצת (סבב 15) — שקט הוא
+      ברירת המחדל, וההתרעה היא שורה ב«מידע טכני» לצד «גובה לאחרונה».
+      ⚠️ הסף הוא **שלושה ימים** ולא יום אחד: הדגל יומי, ולכן פספוס בודד
+      הוא רעש לגיטימי (מכשיר אופליין, סוף שבוע), ושלושה הם דפוס.
+
+   ה-API: `bkBoot` · `bkMaybeDaily` · `bkLastAt`/`bkStale` ·
+   `bkStatusHTML`/`bkStatusMount` · `logAction`/`logFlush` ·
+   `bkToday`/`bkSig`.
+   ══════════════════════════════════════════════════════════════════════ */
+var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
+var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
+var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
+var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
+var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
+
+function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
+function _bkCfg(name, dflt) {
+  try {
+    if (typeof BK_CFG === 'undefined' || BK_CFG[name] === undefined) return dflt;
+    return _bkVal(BK_CFG[name]);
+  } catch (e) { return dflt; }
+}
+function _bkClient() { try { return BK_CFG.client(); } catch (e) { return null; } }
+
+function bkToday() { return new Date().toISOString().slice(0, 10); }
+
+// חתימת תוכן לגיבוי הדיפרנציאלי — אורך + FNV-1a. אינה סוד ואינה אימות,
+// רק "האם זה אותו ערך בדיוק".
+function bkSig(s) {
+  var str = String(s == null ? '' : s), h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return str.length + ':' + h.toString(16);
+}
+
+/* ── יומן הפעולות ──────────────────────────────────────────────────────── */
+function _bkLogRow(action, key, count, details) {
+  return {
+    device_id: _bkCfg('device', null),
+    user_name: _bkCfg('user', null),
+    action: action,
+    key: key || null,
+    record_count: (count === undefined || count === null) ? null : count,
+    details: details || null
+  };
+}
+function _bkLogQueue(row) {
+  try {
+    var qk = _bkVal(BK_CFG.logQueueKey);
+    var q = JSON.parse(lsGet(qk, '[]') || '[]');
+    if (!Array.isArray(q)) q = [];
+    q.push(row);
+    if (q.length > BK_LOG_MAX) q = q.slice(-BK_LOG_MAX);
+    lsSet(qk, JSON.stringify(q));
+  } catch (e) { }
+}
+// רישום fire-and-forget. ⛔ לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו
+// (נרשם בסבב 6 בהנהלה) — תיעוד אבחון שמפיל כניסה או שמירה גרוע מהיעדרו.
+function logAction(action, key, count, details) {
+  var row = null;
+  try {
+    row = _bkLogRow(action, key, count, details);
+    var c = _bkClient();
+    if (!c) { _bkLogQueue(row); return; }
+    c.from(BK_LOG_TABLE).insert(row).then(
+      function (r) { if (r && r.error) _bkLogQueue(row); },
+      function () { _bkLogQueue(row); }
+    );
+  } catch (e) { if (row) _bkLogQueue(row); }
+}
+// שליחת מה שהצטבר באופליין. נקראת כשיש ראיה שהרשת עובדת.
+async function logFlush() {
+  var qk, q;
+  try { qk = _bkVal(BK_CFG.logQueueKey); q = JSON.parse(lsGet(qk, '[]') || '[]'); } catch (e) { return 0; }
+  if (!Array.isArray(q) || !q.length) return 0;
+  var c = _bkClient();
+  if (!c) return 0;
+  lsSet(qk, '[]');
+  var failed = [], sent = 0;
+  for (var i = 0; i < q.length; i++) {
+    try {
+      var r = await c.from(BK_LOG_TABLE).insert(q[i]);
+      if (r && r.error) failed.push(q[i]); else sent++;
+    } catch (e2) { failed.push(q[i]); }
+  }
+  if (failed.length) {
+    try {
+      var q2 = JSON.parse(lsGet(qk, '[]') || '[]');
+      if (!Array.isArray(q2)) q2 = [];
+      lsSet(qk, JSON.stringify(q2.concat(failed).slice(-BK_LOG_MAX)));
+    } catch (e3) { }
+  }
+  return sent;
+}
+
+/* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
+// מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
+async function bkMaybeDaily() {
+  if (_bkRunning) return false;
+  var c = _bkClient();
+  if (!c) return false;
+  var flag = _bkCfg('flagKey', null);
+  if (!flag) return false;
+  var today = bkToday();
+  if (lsGet(flag, '') === today) return false;
+  var src = _bkCfg('sources', []) || [];
+  if (!src.length) return false;
+  _bkRunning = true;
+  var ok = true, wrote = 0, same = 0;
+  try {
+    var pre = _bkCfg('prefix', '') || '';
+    for (var i = 0; i < src.length; i++) {
+      var s = src[i], val = null;
+      if (s.kind === 'kv') {
+        var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
+        if (!res || res.error) { ok = false; continue; }
+        val = (res.data && res.data.value != null) ? String(res.data.value) : null;
+      } else {
+        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
+        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
+        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
+        var rt = await c.from(s.name).select(s.cols || '*');
+        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
+        val = JSON.stringify(rt.data);
+      }
+      // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
+      if (val == null) continue;
+      var bkey = pre + s.name;
+      var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
+      if (lsGet(sigKey, '') === sig) { same++; continue; }
+      var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
+      if (!ins || ins.error) { ok = false; continue; }
+      lsSet(sigKey, sig);
+      wrote++;
+    }
+    if (ok) {
+      lsSet(flag, today);
+      lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
+      logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
+    } else {
+      // ⛔ בלי כתיבת הדגל — ההזדמנות הבאה באותו יום תנסה שוב (נרשם בסבב 6
+      //    בהנהלה): גיבוי שנכשל ודילג על יממה שלמה הוא בדיוק מה שהדגל
+      //    שנכתב-מראש גרם.
+      logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
+      console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בהזדמנות הבאה');
+    }
+  } catch (e) { ok = false; }
+  _bkRunning = false;
+  return ok;
+}
+
+/* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */
+// ⛔ הרכיב נתלה **אחרי** הבלוק הקפוא ואינו עורך אותו (סבב 30) — «מידע
+//    טכני» חתום ב-`check-status-area.mjs`, ועריכתו הייתה מחייבת שינוי
+//    בארבעת הריפו ובחתימות עבור שורת תצוגה אחת.
+function bkLastAt() {
+  var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
+  return isFinite(v) ? v : 0;
+}
+// ⚠️ מחזירה את מספר הימים רק כשהוא חצה את הסף, ו-0 אחרת — כדי שאתר
+//    הקריאה יהיה `if (bkStale())` ולא השוואה שמשוכפלת בכל מקום.
+//    מכשיר שטרם גיבה בכלל מחזיר 0: «— טרם גובה —» כבר אומר את זה, והתרעה
+//    בנוסף לו הייתה רעש בעלייה הראשונה.
+function bkStale() {
+  var t = bkLastAt();
+  if (!t) return 0;
+  var d = Math.floor((Date.now() - t) / 86400000);
+  return (d >= BK_STALE_DAYS) ? d : 0;
+}
+function bkStatusHTML() {
+  var t = bkLastAt(), st = bkStale();
+  return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
+    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
+    (st ? '<div class="bk-stale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
+    '</div>';
+}
+function bkStatusMount() {
+  var box = document.getElementById('tech-info-box');
+  if (!box) return;
+  var d = box.querySelector('details.tech-info');
+  if (!d) return;
+  var prev = d.querySelector('.bk-line');
+  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+  var wrap = document.createElement('div');
+  wrap.innerHTML = bkStatusHTML();
+  var node = wrap.firstChild;
+  if (node) d.appendChild(node);
+}
+window.bkStatusMount = bkStatusMount;
+
+/* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
+// ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול (סבב 30, השלמה) — היא
+//    יושבת בפונקציית העלייה, לצד `lsBoot()` ו-`pendBoot()`, ולעולם לא
+//    במסלול דחיפה/סנכרון. ר' הנימוק המלא בכותרת הבלוק.
+// ⚠️ שתי הקריאות אינן ב-`await` ואינן חוסמות: העלייה אינה ממתינה לרשת,
+//    וכל כשל נבלע בשקט בתוך המודול.
+function bkBoot() {
+  try { bkMaybeDaily(); } catch (e) { }
+  try { logFlush(); } catch (e) { }
+}
+window.bkBoot = bkBoot;
+/* ═══════════════ סוף מודול הגיבוי היומי ═══════════════════════════════ */
+
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var PEND_CFG = {
   app: 'schar-limud', key: 'sl_pending',
@@ -2328,30 +2601,10 @@ function esc(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
-// ===== גיבוי יומי (פעם ביום) של טבלאות sl_* לתוך kv_backup =====
-// הדגל נכתב **אחרי** הצלחה, לא לפניה: קודם הוא נכתב ראשון, ולכן גיבוי שנכשל
-// (רשת / kv_backup חסרה / הרשאה) דילג בשקט על יממה שלמה. _slBackupRunning
-// מחליף את תפקיד הנעילה שהכתיבה-מראש מילאה. **אין להחזיר את הכתיבה-מראש.**
-var _slBackupRunning=false;
-async function slMaybeDailyBackup(){
-  if(_slBackupRunning) return;
-  var today=new Date().toISOString().slice(0,10);
-  try{ if(localStorage.getItem('sl_last_backup')===today) return; }catch(eL){}
-  _slBackupRunning=true;
-  try{
-    var tables=['sl_students','sl_transactions','sl_settings','sl_lists'],ok=true;
-    for(var i=0;i<tables.length;i++){
-      var res=await SB.from(tables[i]).select('*');
-      if(!res||res.error||!Array.isArray(res.data)){ ok=false; continue; }
-      // supabase-js לא זורק — גם ה-insert חייב בדיקת error מפורשת
-      var ins=await SB.from('kv_backup').insert({key:tables[i], value:JSON.stringify(res.data)});
-      if(!ins||ins.error) ok=false;
-    }
-    if(ok) lsSet('sl_last_backup',today);
-    else console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בכניסה הבאה');
-  }catch(e){ /* גיבוי לא חוסם ולא שובר */ }
-  _slBackupRunning=false;
-}
+// ⛔ `slMaybeDailyBackup()` הוסרה (סבב 30, השלמה) — היא הייתה מעטפת דקה
+//    מעל `bkMaybeDaily`, וקיומה אפשר לקרוא למודול מכל מקום. נקודת ההפעלה
+//    היחידה היא `bkBoot()` מ-`slBoot()`, ומעטפת שרק מסתירה אותה מחזירה
+//    בדיוק את הפיזור שהסבב הזה בא לסלק.
 function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
@@ -2625,7 +2878,10 @@ function enterApp(){
   refreshUI();
   syncAll();                                   // רענון ברקע
   SYNC_INT=setInterval(syncAll,3000);
-  slResetLock();slMaybeDailyBackup();ensureCreditMethod();
+  // ⛔ `slMaybeDailyBackup()` הוסרה מכאן (סבב 30, השלמה) — הגיבוי עבר
+  //    ל-`slBoot()`, נקודת ההפעלה המוצהרת, לצד `lsBoot()`/`pendBoot()`.
+  //    הוא אינו תלוי בכניסה, ולכן אין סיבה שיחכה לה.
+  slResetLock();ensureCreditMethod();
 }
 
 /* ── סשן מקומי ────────────────────────────────────────────────────────────
@@ -3235,6 +3491,7 @@ function renderSettingsLists(){
   document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent(\''+esc(slKey(s))+'\')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
   statusAreaMount();
+  bkStatusMount();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
@@ -3297,7 +3554,18 @@ function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){retur
   syncAll();
 });}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
-document.addEventListener('DOMContentLoaded',async function(){
+/* ══════════════════════════════════════════════════════════════════════════
+   פונקציית העלייה של האפליקציה
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ יש לה שם (סבב 30, השלמה) ואינה מאזין אנונימי — היא **נקודת ההפעלה
+      המוצהרת** של האפליקציה, וכל ההפעלות של המודולים המשותפים יושבות בה:
+      `lsBoot()` · `pendBoot()` · `bkBoot()`. `check-capabilities.mjs`
+      מאמת שהשלוש יושבות באותה פונקציה, והשם הוא מה שמאפשר לו לעשות זאת.
+   ⛔ אין לפזר הפעלת מודול משותף לפונקציה אחרת (סבב 30, השלמה) — יכולת
+      שמופעלת ממקום אחר בכל אפליקציה היא פער גם כשהליבה זהה, וזה בדיוק מה
+      שהשבית את הגיבוי של הנהלה ל-25 יום.
+   ══════════════════════════════════════════════════════════════════════════ */
+async function slBoot(){
   // עמידות אחסון (סבב 11): מדידה + פינוי יזום בעליית האפליקציה. המכסה
   // משותפת לארבע האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
@@ -3305,6 +3573,11 @@ document.addEventListener('DOMContentLoaded',async function(){
   // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
+  // ⭐ כאן ולא ב-`enterApp` (סבב 30, השלמה): הגיבוי אינו תלוי בכניסה, וכך
+  //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
+  //    כמה שפחות תלוי במה שהמשתמש עושה.
+  try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
   // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא
@@ -3331,7 +3604,8 @@ document.addEventListener('DOMContentLoaded',async function(){
   // היה מציג "צריך להתקין" למשתמש שרק אין לו קליטה.
   var ok = navigator.onLine ? await ensureSetup() : true;
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
-});
+}
+document.addEventListener('DOMContentLoaded', slBoot);
 /* ══════════════════════════════════════════════════════════════════════════
    עדכון גרסה ואתחול האפליקציה
    ══════════════════════════════════════════════════════════════════════════ */
