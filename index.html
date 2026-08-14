@@ -1401,12 +1401,36 @@ var BK_CFG = {
       יומני ראיות, ולשני התפקידים יש בהן `insert`+`select` בלבד. המודול
       הזה אינו מנסה לעדכן או למחוק שורה, וגריעה שלהן היא החלטת המנהל.
 
-   ה-API: `bkMaybeDaily` · `bkLastAt` · `bkStatusHTML`/`bkStatusMount` ·
-   `logAction`/`logFlush` · `bkToday`/`bkSig`.
+   ⭐ נקודת הפעלה אחת ויחידה — `bkBoot()` (סבב 30, השלמה). כלל ברזל 12:
+      יכולת משותפת נמדדת גם בנקודת ההפעלה שלה, לא רק בליבה. הליבה כאן
+      הייתה זהה בין הנהלה ל-schar מרגע שחולצה — ובכל זאת הגיבוי של הנהלה
+      **הפסיק לרוץ 25 יום** ואיש לא ידע, מפני שהיא הפעילה אותו **מתוך
+      מסלול הדחיפה**: כשהנתונים סטטיים (חופשה) אין דחיפה, ולכן אין גיבוי —
+      בדיוק בתקופה שבה תקלה עוברת בלי שיבחינו בה.
+      ⛔ אין לקרוא ל-`bkMaybeDaily` ישירות מקוד האפליקציה (סבב 30, השלמה) —
+      הקריאה היחידה אליה היא `bkBoot()`, מפונקציית העלייה של האפליקציה,
+      זו שקוראת גם ל-`lsBoot()` ול-`pendBoot()`. מנגנון בטיחות שתלוי
+      בפעילות רגילה אינו מנגנון בטיחות, ו-`check-capabilities.mjs` נכשל
+      על נקודת הפעלה שנודדת.
+      ⚠️ `logFlush` היא **כן** ניתנת לקריאה נוספת (חזרת רשת, כניסה
+      מוצלחת): היא ריקון תור חוזר ולא מנגנון יומי, וריקון תכוף יותר הוא
+      שיפור ולא סחיפה. נקודת ה**עלייה** שלה, לעומת זאת, היא `bkBoot`
+      בלבד — כך שגם מכשיר שלא עשה דבר מרוקן את התור בפתיחה.
+
+   ⭐ התרעת גיבוי מיושן — `BK_STALE_DAYS` (סבב 30, השלמה). זה מה שהיה
+      חושף את 25 הימים ביום הרביעי. ⛔ ולא התראה קופצת (סבב 15) — שקט הוא
+      ברירת המחדל, וההתרעה היא שורה ב«מידע טכני» לצד «גובה לאחרונה».
+      ⚠️ הסף הוא **שלושה ימים** ולא יום אחד: הדגל יומי, ולכן פספוס בודד
+      הוא רעש לגיטימי (מכשיר אופליין, סוף שבוע), ושלושה הם דפוס.
+
+   ה-API: `bkBoot` · `bkMaybeDaily` · `bkLastAt`/`bkStale` ·
+   `bkStatusHTML`/`bkStatusMount` · `logAction`/`logFlush` ·
+   `bkToday`/`bkSig`.
    ══════════════════════════════════════════════════════════════════════ */
 var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
 var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
+var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
 
 function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
@@ -1555,10 +1579,22 @@ function bkLastAt() {
   var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
   return isFinite(v) ? v : 0;
 }
-function bkStatusHTML() {
+// ⚠️ מחזירה את מספר הימים רק כשהוא חצה את הסף, ו-0 אחרת — כדי שאתר
+//    הקריאה יהיה `if (bkStale())` ולא השוואה שמשוכפלת בכל מקום.
+//    מכשיר שטרם גיבה בכלל מחזיר 0: «— טרם גובה —» כבר אומר את זה, והתרעה
+//    בנוסף לו הייתה רעש בעלייה הראשונה.
+function bkStale() {
   var t = bkLastAt();
+  if (!t) return 0;
+  var d = Math.floor((Date.now() - t) / 86400000);
+  return (d >= BK_STALE_DAYS) ? d : 0;
+}
+function bkStatusHTML() {
+  var t = bkLastAt(), st = bkStale();
   return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
-    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div></div>';
+    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
+    (st ? '<div class="bk-stale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
+    '</div>';
 }
 function bkStatusMount() {
   var box = document.getElementById('tech-info-box');
@@ -1573,6 +1609,18 @@ function bkStatusMount() {
   if (node) d.appendChild(node);
 }
 window.bkStatusMount = bkStatusMount;
+
+/* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
+// ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול (סבב 30, השלמה) — היא
+//    יושבת בפונקציית העלייה, לצד `lsBoot()` ו-`pendBoot()`, ולעולם לא
+//    במסלול דחיפה/סנכרון. ר' הנימוק המלא בכותרת הבלוק.
+// ⚠️ שתי הקריאות אינן ב-`await` ואינן חוסמות: העלייה אינה ממתינה לרשת,
+//    וכל כשל נבלע בשקט בתוך המודול.
+function bkBoot() {
+  try { bkMaybeDaily(); } catch (e) { }
+  try { logFlush(); } catch (e) { }
+}
+window.bkBoot = bkBoot;
 /* ═══════════════ סוף מודול הגיבוי היומי ═══════════════════════════════ */
 
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
@@ -2553,11 +2601,10 @@ function esc(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
-// ⚠️ מעטפת דקה מעל מודול הגיבוי והיומן המשותף (סבב 30) — הליבה עברה לשם
-// ומשותפת לארבע האפליקציות, ורשימת הטבלאות יושבת ב-BK_CFG.
-// ⛔ אין להחזיר לכאן מימוש עצמאי (סבב 30) — שני מימושים כמעט-זהים הם בדיוק
-//    מה שהסבב הזה בא לסלק, והם נסחפים בשקט זה מזה.
-function slMaybeDailyBackup(){ return bkMaybeDaily(); }
+// ⛔ `slMaybeDailyBackup()` הוסרה (סבב 30, השלמה) — היא הייתה מעטפת דקה
+//    מעל `bkMaybeDaily`, וקיומה אפשר לקרוא למודול מכל מקום. נקודת ההפעלה
+//    היחידה היא `bkBoot()` מ-`slBoot()`, ומעטפת שרק מסתירה אותה מחזירה
+//    בדיוק את הפיזור שהסבב הזה בא לסלק.
 function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
@@ -2831,7 +2878,10 @@ function enterApp(){
   refreshUI();
   syncAll();                                   // רענון ברקע
   SYNC_INT=setInterval(syncAll,3000);
-  slResetLock();slMaybeDailyBackup();ensureCreditMethod();
+  // ⛔ `slMaybeDailyBackup()` הוסרה מכאן (סבב 30, השלמה) — הגיבוי עבר
+  //    ל-`slBoot()`, נקודת ההפעלה המוצהרת, לצד `lsBoot()`/`pendBoot()`.
+  //    הוא אינו תלוי בכניסה, ולכן אין סיבה שיחכה לה.
+  slResetLock();ensureCreditMethod();
 }
 
 /* ── סשן מקומי ────────────────────────────────────────────────────────────
@@ -3504,7 +3554,18 @@ function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){retur
   syncAll();
 });}
 function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
-document.addEventListener('DOMContentLoaded',async function(){
+/* ══════════════════════════════════════════════════════════════════════════
+   פונקציית העלייה של האפליקציה
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ יש לה שם (סבב 30, השלמה) ואינה מאזין אנונימי — היא **נקודת ההפעלה
+      המוצהרת** של האפליקציה, וכל ההפעלות של המודולים המשותפים יושבות בה:
+      `lsBoot()` · `pendBoot()` · `bkBoot()`. `check-capabilities.mjs`
+      מאמת שהשלוש יושבות באותה פונקציה, והשם הוא מה שמאפשר לו לעשות זאת.
+   ⛔ אין לפזר הפעלת מודול משותף לפונקציה אחרת (סבב 30, השלמה) — יכולת
+      שמופעלת ממקום אחר בכל אפליקציה היא פער גם כשהליבה זהה, וזה בדיוק מה
+      שהשבית את הגיבוי של הנהלה ל-25 יום.
+   ══════════════════════════════════════════════════════════════════════════ */
+async function slBoot(){
   // עמידות אחסון (סבב 11): מדידה + פינוי יזום בעליית האפליקציה. המכסה
   // משותפת לארבע האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
@@ -3512,6 +3573,11 @@ document.addEventListener('DOMContentLoaded',async function(){
   // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
+  // ⭐ כאן ולא ב-`enterApp` (סבב 30, השלמה): הגיבוי אינו תלוי בכניסה, וכך
+  //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
+  //    כמה שפחות תלוי במה שהמשתמש עושה.
+  try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
   // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא
@@ -3538,7 +3604,8 @@ document.addEventListener('DOMContentLoaded',async function(){
   // היה מציג "צריך להתקין" למשתמש שרק אין לו קליטה.
   var ok = navigator.onLine ? await ensureSetup() : true;
   if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
-});
+}
+document.addEventListener('DOMContentLoaded', slBoot);
 /* ══════════════════════════════════════════════════════════════════════════
    עדכון גרסה ואתחול האפליקציה
    ══════════════════════════════════════════════════════════════════════════ */

@@ -63,7 +63,9 @@ const CANON = [
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['round-28-what',           '423fab93e9616987'],
   ['round-29-what',           '2597ca03d6779d2a'],
-  ['round-30-what',           'e023fcf0bf4a4bd3'],
+  ['round-30-what',           '656a135e10dc4867'],
+  ['iron-rule-12-capabilities', '71ff1e08ef91d698'],
+  ['round-30b-what',          '06dc5a926e7fa025'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
