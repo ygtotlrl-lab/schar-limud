@@ -30,7 +30,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const SQL000 = fs.readFileSync(path.join(ROOT, 'migrations', '000_initial_schema.sql'), 'utf8');
 const SQL010 = fs.readFileSync(path.join(ROOT, 'migrations', '010_users_pass_fp.sql'), 'utf8');
-const SETUP_REF = fs.readFileSync(path.join(ROOT, 'supabase-setup.sql'), 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => {
@@ -556,7 +555,11 @@ async function main() {
     const live = (t) => t.replace(/--.*$/gm, '');
     ok('⛔ אין INSERT חי ל-sl_users ב-000', !/insert\s+into\s+public\.sl_users/i.test(live(SQL000)));
     ok('⛔ אין את הצמד admin/admin ב-000', !/'admin'\s*,\s*'admin'/.test(SQL000));
-    ok('⛔ אין INSERT ל-sl_users ב-supabase-setup.sql', !/insert\s+into\s+public\.sl_users/i.test(live(SETUP_REF)));
+    // ⚠️ `supabase-setup.sql` **נמחק בסבב 33** — הוא היה קובץ הפניה בלבד,
+    //    ותוכנו מכוסה במלואו ע"י `migrations/000_initial_schema.sql`. הטענה
+    //    ⛔ הופכת לכיוון ההפוך: הקובץ אינו קיים, כדי שלא ייווצר שוב עותק
+    //    שני שמתיישן בשקט (הדפוס של `SETUP_SQL_FALLBACK`, סבב 24).
+    ok('⛔ supabase-setup.sql אינו קיים עוד (סבב 33)', !fs.existsSync(path.join(ROOT, 'supabase-setup.sql')));
     ok('⛔ ואין צמד ערכים אמיתי ב-index.html', !/sl_users[^;]{0,120}VALUES\s*\('[a-z0-9]+'\s*,\s*'[0-9]{6}'\)/i.test(SRC));
     // ⚠️ סבב 26 — ההוראה כוללת עכשיו גם `role`, כי המשתמש הראשון חייב
     //    להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
