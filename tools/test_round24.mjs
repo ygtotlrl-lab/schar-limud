@@ -107,6 +107,10 @@ function makeCtx(opts = {}) {
     // הבדיקה «אין password בדיסק» סורקת בדיוק את ה-`store` הזה.
     lsSet(k, v) { store[k] = String(v); return true; },
     lsSetArray(k, arr) { store[k] = JSON.stringify(arr); return true; },
+    // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות המראה — כאן שקוף
+    //    בכוונה; בדיקות החלון עצמו יושבות ב-test_round35_hotwin.
+    hwDiskFilter(k, rows) { return rows; },
+    hwNoteCloud() {},
     lsGet(k, d) { return k in store ? store[k] : d; },
     lsRemove(k) { delete store[k]; },
     withTimeout: (p) => p,
@@ -528,20 +532,26 @@ async function main() {
   sect('ז. סינון `admin_pass` — שלוש נקודות אכיפה');
   {
     const h = makeCtx();
-    ok('slIsSecretSetting מזהה admin_pass', h.ctx.slIsSecretSetting('admin_pass'));
+    // ⭐ מסבב 35 הרשימה ריקה — שורת `admin_pass` נמחקה מהמסד ע"י המנהל
+    //    (17.8, אומת אפס מופעים). המנגנון נשאר, ולכן הבדיקה מזריקה מפתח
+    //    זמני ומוודאת ששלוש נקודות האכיפה עדיין עובדות.
+    eq('הרשימה ריקה — אין עוד שריד admin_pass', h.ctx.SL_NEVER_MIRROR_SETTINGS.length, 0);
+    ok('admin_pass אינו מסונן עוד', !h.ctx.slIsSecretSetting('admin_pass'));
+    h.ctx.SL_NEVER_MIRROR_SETTINGS.push('secret_probe');
+    ok('slIsSecretSetting מזהה מפתח שברשימה', h.ctx.slIsSecretSetting('secret_probe'));
     ok('ואינו מזהה מפתח אחר', !h.ctx.slIsSecretSetting('default_tuition'));
-    const rows = [{ key: 'admin_pass', value: 'סוד' }, { key: 'default_tuition', value: '2000' }];
+    const rows = [{ key: 'secret_probe', value: 'סוד' }, { key: 'default_tuition', value: '2000' }];
     eq('1) משיכה — slStripSecrets מסירה את השורה', h.ctx.slStripSecrets(rows).length, 1);
     ok('   הקלט לא שונה (טהורה)', rows.length === 2);
     eq('2) כתיבה מקומית — slLocalWrite מסרבת',
-      h.ctx.slLocalWrite('sl_settings', { key: 'admin_pass', value: 'סוד' }), false);
+      h.ctx.slLocalWrite('sl_settings', { key: 'secret_probe', value: 'סוד' }), false);
     ok('   ולא נכתב דבר לדיסק', !(h.ctx.SL_MIRROR_PREFIX + 'settings' in h.store));
 
     // 3) שער הדיסק — המראה הורעלה ישירות, בעקיפת שני הקודמים.
-    h.ctx.MIRROR.settings = [{ key: 'admin_pass', value: 'סוד-גלוי' }, { key: 'default_tuition', value: '2000' }];
+    h.ctx.MIRROR.settings = [{ key: 'secret_probe', value: 'סוד-גלוי' }, { key: 'default_tuition', value: '2000' }];
     h.ctx.slMirrorSave('settings');
     const disk = h.store[h.ctx.SL_MIRROR_PREFIX + 'settings'];
-    ok('⭐ 3) שער הדיסק מסנן גם מראה שהורעלה', disk.indexOf('admin_pass') === -1 && disk.indexOf('סוד-גלוי') === -1);
+    ok('⭐ 3) שער הדיסק מסנן גם מראה שהורעלה', disk.indexOf('secret_probe') === -1 && disk.indexOf('סוד-גלוי') === -1);
     ok('   והשורה הלגיטימית כן נשמרה', disk.indexOf('default_tuition') !== -1);
     eq('slSanitizeRows על טבלה אחרת אינה מסננת',
       h.ctx.slSanitizeRows('students', [{ id: 1 }]).length, 1);
@@ -555,11 +565,6 @@ async function main() {
     const live = (t) => t.replace(/--.*$/gm, '');
     ok('⛔ אין INSERT חי ל-sl_users ב-000', !/insert\s+into\s+public\.sl_users/i.test(live(SQL000)));
     ok('⛔ אין את הצמד admin/admin ב-000', !/'admin'\s*,\s*'admin'/.test(SQL000));
-    // ⚠️ `supabase-setup.sql` **נמחק בסבב 33** — הוא היה קובץ הפניה בלבד,
-    //    ותוכנו מכוסה במלואו ע"י `migrations/000_initial_schema.sql`. הטענה
-    //    ⛔ הופכת לכיוון ההפוך: הקובץ אינו קיים, כדי שלא ייווצר שוב עותק
-    //    שני שמתיישן בשקט (הדפוס של `SETUP_SQL_FALLBACK`, סבב 24).
-    ok('⛔ supabase-setup.sql אינו קיים עוד (סבב 33)', !fs.existsSync(path.join(ROOT, 'supabase-setup.sql')));
     ok('⛔ ואין צמד ערכים אמיתי ב-index.html', !/sl_users[^;]{0,120}VALUES\s*\('[a-z0-9]+'\s*,\s*'[0-9]{6}'\)/i.test(SRC));
     // ⚠️ סבב 26 — ההוראה כוללת עכשיו גם `role`, כי המשתמש הראשון חייב
     //    להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.

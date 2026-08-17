@@ -340,6 +340,14 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
               <label>חודש עזיבה (ריק = עדיין פעיל)</label>
               <input id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
             </div>
+            <div class="frm-row">
+              <label>חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
+              <input id="sc-edit-debt" type="number" min="0" step="1" placeholder="0">
+            </div>
+            <div class="frm-row">
+              <label>הערה לחוב הקודם</label>
+              <input id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
+            </div>
             <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
             <button class="btn" onclick="saveStudentSettings()">שמור</button>
           </div>
@@ -359,6 +367,10 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
             <div style="margin-top:12px">
               <div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:6px;padding:0 4px">תשלומים בשנה זו</div>
               <div id="sc-txn-list"></div>
+            </div>
+            <div style="margin-top:12px">
+              <button class="btn sm" onclick="scPastShow()">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
+              <div id="sc-past"></div>
             </div>
           </div>
         </div>
@@ -1541,13 +1553,20 @@ async function bkMaybeDaily() {
         // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
         //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
         //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var rt = await c.from(s.name).select(s.cols || '*');
+        var q = c.from(s.name).select(s.cols || '*');
+        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
+        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
+        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+        if (s.order) q = q.order(s.order);
+        var rt = await q;
         if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
         val = JSON.stringify(rt.data);
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
-      var bkey = pre + s.name;
+      // ⭐ `key` פר-מקור (סבב 35) — מקור-טבלה שמפתחו היה מתנגש במקור
+      //    ה-kv ההיסטורי באותו שם מקבל מפתח גיבוי משלו.
+      var bkey = pre + (s.key || s.name);
       var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
@@ -1966,6 +1985,267 @@ function pendBoot() {
 }
 /* ═══════════════ סוף מודול "ממתין לסנכרון" ═════════════════════════════ */
 
+/* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
+/* ⭐ החלון החם כאן הוא תנועות שנת הלימודים הנוכחית (סבב 35) — הגבול הוא
+   `acadYearOf` הקיימת (ספטמבר–אוגוסט), אותה הגדרה שכבר משמשת את הדשבורד
+   ואת כרטיס התלמיד. המצבה, ההגדרות, הרשימות ושדה החוב — תמיד חמים ואין
+   להם מפרט. «מסך העבר» הוא «שנים קודמות» שבכרטיס התלמיד — קריאה בלבד.
+   ⚠️ תנועה בלי תאריך תקין נשארת חמה — ספק ⇐ לא מפנים.
+   ⛔ זה אינו פינוי-לפי-גיל (סבב 35) — סבב «מראה-חלון» שתועד כאן אסר
+   טלאי גיל על כספים; החלון הוא גבול-שנה מפורש, המשיכה מחזירה את הישן
+   לזיכרון כשיש רשת, והדחיפה נשארת `upsert` שאינו קורא היעדרות כמחיקה. */
+var HW_CFG = {
+  enabled: true,
+  admin: function () { return slIsAdmin(); },
+  specs: [{
+    key: 'sl_mirror_transactions',
+    label: 'תנועות שנים סגורות',
+    inWindow: function (t) {
+      var d = t && t.date;
+      if (!d) return true;
+      var y = acadYearOf(String(d).slice(0, 10));
+      if (!isFinite(y)) return true;
+      return y >= acadYearOf(todayStr());
+    },
+    idOf: function (r) { return slKey(r); },
+    ts: function (r) { return slTs(r); },
+    isPending: function (r) { return pendHas(pendTxnKey(r)); },
+    fetch: async function () {
+      try {
+        var res = await withTimeout(SB.from('sl_transactions').select('*'));
+        return (res && !res.error && Array.isArray(res.data))
+          ? { ok: true, rows: res.data } : { ok: false, rows: [] };
+      } catch (e) { return { ok: false, rows: [] }; }
+    },
+    rows: function () { return MIRROR.transactions; },
+    apply: function (kept) {
+      return lsSetArray(SL_MIRROR_PREFIX + 'transactions',
+                        slSanitizeRows('transactions', kept), slTs);
+    }
+  }]
+};
+/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35) ════════════════════════
+   המכשיר מחזיק דרך קבע רק את «החלון החם» — התקופה הפעילה — וההיסטוריה
+   חיה בענן ונמשכת לפי דרישה לקריאה. זו הכללה של שני דפוסים שכבר הוכחו:
+   אופק הפינוי של סבב 11 (רק העותק שעל הדיסק מצטמצם; הזיכרון והענן לא
+   נוגעים) והארכוב של יומן-עבודה (הישן מדוגל, ונשלף רק כשמבקשים אותו).
+
+   ⛔ שני תנאים יחד, ללא יוצא מן הכלל (סבב 35) — רשומה מתפנה מהמכשיר רק
+      כשהיא גם מחוץ לחלון וגם מסונכרנת במלואה: אינה מסומנת ⏳, והעותק
+      הענני שלה נראה בפועל עם חותמת שאינה ישנה מהמקומית. ספק ⇐ נשארת.
+   ⛔ נכשל סגור (סבב 35) — אין רשת, המשיכה נכשלה או החזירה לא-מערך ⇒ לא
+      מפנים דבר. היעדר ראיה אינו ראיה — בדיוק הכלל של סבב 14.
+   ⛔ יש משהו שטרם עלה לענן ⇒ הפינוי מדולג כולו (סבב 35) — אותה הגנה של
+      `LS_CFG.pending()` שחלה על שלב ב של הפינוי, ובנוסף לבדיקה
+      הפר-רשומתית. שתי שכבות, לא אחת.
+   ⚠️ הפינוי רץ בעליית האפליקציה (מושהה — הוא דורש רשת), ושער הדיסק
+      (`hwDiskFilter`) שומר שהוא לא יתבטל: משיכה מהענן ממזגת את הישן
+      חזרה לזיכרון — וזה רצוי, המסך מציג הכול כשיש רשת — אבל בכתיבה
+      לדיסק, רשומה שמחוץ לחלון ושראייתה העננית בידינו אינה נכתבת שוב.
+      הראיה חיה בזיכרון בלבד (`_hwCloudSeen`): אחרי טעינה מחדש אין
+      ראיה, ולכן אין סינון — עד למשיכה המוצלחת הבאה.
+   ⚠️ «מסך העבר» הוא קריאה בלבד: `hwPastLoad` מושך מהענן לפי דרישה,
+      מסנן לרשומות החיות שמחוץ לחלון, ואינו שומר דבר דרך קבע.
+   ⭐ כפתור השחזור («שחזר הכול מהענן») קורא ל-`lsRestoreAll` שבמודול
+      האחסון הקפוא — בלי לערוך אותו — עם אישור דו-שלבי, למנהל בלבד
+      (`HW_CFG.admin`). הוא פעיל גם כשהחלון החם רדום.
+
+   מעל הבלוק יושבת `HW_CFG` — הדבר היחיד שנבדל בין האפליקציות: הפעלה,
+   שער המנהל, ומפרטי החלון (מפתח, חלון, זהות, חותמת, ⏳, משיכה, כתיבה).
+   ה-API: `hwBoot` · `hwSweep` · `hwNoteCloud` · `hwDiskFilter` ·
+   `hwPastLoad` · `hwRestoreMount` · `hwEnabled`.
+   ══════════════════════════════════════════════════════════════════════ */
+var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה של סבב 14 — רשת אחרי עלייה
+var HW_RESTORE_ARM_MS = 8000;     // חלון האישור הדו-שלבי של כפתור השחזור
+var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
+var _hwSweepBusy = false;
+var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
+
+function _hwVal(v) { return (typeof v === 'function') ? v() : v; }
+function hwEnabled() {
+  try { return !!(typeof HW_CFG !== 'undefined' && HW_CFG && HW_CFG.enabled); }
+  catch (e) { return false; }
+}
+function _hwSpecs() {
+  try { return (typeof HW_CFG !== 'undefined' && HW_CFG && HW_CFG.specs) || []; }
+  catch (e) { return []; }
+}
+function _hwSpecFor(key) {
+  var specs = _hwSpecs();
+  for (var i = 0; i < specs.length; i++) {
+    try { if (_hwVal(specs[i].key) === key) return specs[i]; } catch (e) { }
+  }
+  return null;
+}
+function _hwLive(spec, rec) {
+  try { return spec.isLive ? !!spec.isLive(rec) : !(rec && rec.deleted); }
+  catch (e) { return true; }
+}
+
+// רישום הראיה העננית — כל משיכה מוצלחת מוסיפה ומעדכנת חותמות פר-מזהה.
+function hwNoteCloud(key, rows) {
+  if (!hwEnabled() || !Array.isArray(rows)) return;
+  var spec = _hwSpecFor(key);
+  if (!spec) return;
+  var idx = _hwCloudSeen[key] || (_hwCloudSeen[key] = {});
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], id, t;
+    try { id = spec.idOf(r); t = Number(spec.ts(r)) || 0; } catch (e) { continue; }
+    if (id == null) continue;
+    id = String(id);
+    if (!(idx[id] >= t)) idx[id] = t;
+  }
+}
+
+// שער הדיסק. ⛔ כל ספק משאיר את הרשומה (סבב 35) — רשומה בלי ראיה עננית
+// עדכנית לה-עצמה נכתבת לדיסק כרגיל; רק ודאות מפנה.
+function hwDiskFilter(key, rows) {
+  if (!hwEnabled() || !Array.isArray(rows)) return rows;
+  var spec = _hwSpecFor(key);
+  if (!spec) return rows;
+  var idx = _hwCloudSeen[key];
+  if (!idx) return rows;
+  var kept = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], drop = false;
+    try {
+      if (!spec.inWindow(r)) {
+        var pend = true;
+        try { pend = !!spec.isPending(r); } catch (e1) { pend = true; }
+        if (!pend) {
+          var id = spec.idOf(r);
+          if (id != null) {
+            var ct = idx[String(id)];
+            var lt = Number(spec.ts(r)) || 0;
+            if (ct !== undefined && ct >= lt) drop = true;
+          }
+        }
+      }
+    } catch (e) { drop = false; }
+    if (!drop) kept.push(r);
+  }
+  return kept;
+}
+
+// הפינוי עצמו — מושך את העותק הענני של כל מפרט, ואז כותב לדיסק את הנשאר.
+async function hwSweep() {
+  if (!hwEnabled() || _hwSweepBusy) return { swept: 0 };
+  try {
+    if (typeof LS_CFG !== 'undefined' && LS_CFG &&
+        typeof LS_CFG.pending === 'function' && LS_CFG.pending()) {
+      try { lsLog('hw-skip', 'תור יוצא לא ריק'); } catch (e0) { }
+      return { swept: 0 };
+    }
+  } catch (e) { return { swept: 0 }; }
+  _hwSweepBusy = true;
+  var swept = 0;
+  try {
+    var specs = _hwSpecs();
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i], key;
+      try { key = _hwVal(s.key); } catch (e1) { continue; }
+      var res = null;
+      try { res = await s.fetch(); } catch (e2) { res = null; }
+      if (!res || res.ok !== true || !Array.isArray(res.rows)) continue;
+      hwNoteCloud(key, res.rows);
+      var cur = null;
+      try { cur = s.rows(); } catch (e3) { cur = null; }
+      if (!Array.isArray(cur)) continue;
+      var kept = hwDiskFilter(key, cur);
+      if (kept.length === cur.length) continue;
+      var okW = false;
+      try { okW = !!s.apply(kept); } catch (e4) { okW = false; }
+      if (okW) {
+        var n = cur.length - kept.length;
+        swept += n;
+        try { lsLog('hw-sweep', (s.label || key) + ' −' + n); } catch (e5) { }
+      }
+    }
+  } catch (e6) { }
+  _hwSwept = swept;
+  _hwSweepBusy = false;
+  return { swept: swept };
+}
+
+// מסך העבר — קריאה בלבד. מחזיר מהענן את הרשומות החיות שמחוץ לחלון,
+// מהחדשה לישנה, בלי לגעת בדיסק ובלי לגעת בזיכרון האפליקציה.
+async function hwPastLoad(key, filter) {
+  var spec = _hwSpecFor(key);
+  if (!spec) return { ok: false, rows: [] };
+  var res = null;
+  try { res = await spec.fetch(); } catch (e) { res = null; }
+  if (!res || res.ok !== true || !Array.isArray(res.rows)) return { ok: false, rows: [] };
+  hwNoteCloud(key, res.rows);
+  var out = [];
+  for (var i = 0; i < res.rows.length; i++) {
+    var r = res.rows[i];
+    var inW = true;
+    try { inW = !!spec.inWindow(r); } catch (e1) { }
+    if (inW || !_hwLive(spec, r)) continue;
+    if (filter) { try { if (!filter(r)) continue; } catch (e2) { continue; } }
+    out.push(r);
+  }
+  out.sort(function (a, b) {
+    var ta = 0, tb = 0;
+    try { ta = Number(spec.ts(a)) || 0; tb = Number(spec.ts(b)) || 0; } catch (e3) { }
+    return tb - ta;
+  });
+  return { ok: true, rows: out };
+}
+
+/* ── כפתור השחזור — נגישות ל-`lsRestoreAll` ────────────────────────────── */
+// ⛔ הרכיב נתלה אחרי הבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה טכניקה
+//    של `bkStatusMount`: «מידע טכני» חתום ב-`check-status-area.mjs`,
+//    והכפתור מצטרף אליו מבחוץ.
+var _hwRestoreArmed = 0;
+function hwRestoreHTML() {
+  return '<div class="sync-line hw-restore-line"><button type="button" ' +
+    'onclick="window.hwRestoreClick&&window.hwRestoreClick(this)">' +
+    '☁️ שחזר הכול מהענן</button></div>';
+}
+function hwRestoreMount() {
+  try {
+    if (!(typeof HW_CFG !== 'undefined' && HW_CFG &&
+          typeof HW_CFG.admin === 'function' && HW_CFG.admin())) return;
+  } catch (e) { return; }
+  var box = document.getElementById('tech-info-box');
+  if (!box) return;
+  var d = box.querySelector('details.tech-info');
+  if (!d) return;
+  var prev = d.querySelector('.hw-restore-line');
+  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+  var wrap = document.createElement('div');
+  wrap.innerHTML = hwRestoreHTML();
+  var node = wrap.firstChild;
+  if (node) d.appendChild(node);
+}
+// אישור דו-שלבי: הלחיצה הראשונה חומשת לחלון קצר, השנייה מבצעת.
+function hwRestoreClick(btn) {
+  var now = Date.now();
+  if (!_hwRestoreArmed || (now - _hwRestoreArmed) > HW_RESTORE_ARM_MS) {
+    _hwRestoreArmed = now;
+    if (btn) btn.textContent = '⚠️ בטוח? לחיצה נוספת משחזרת הכול';
+    return;
+  }
+  _hwRestoreArmed = 0;
+  try { lsRestoreAll(); } catch (e) { }
+  if (btn) btn.textContent = '☁️ שחזר הכול מהענן';
+}
+window.hwRestoreClick = hwRestoreClick;
+window.hwRestoreMount = hwRestoreMount;
+
+/* ── נקודת ההפעלה ──────────────────────────────────────────────────────── */
+// ⛔ נקודת ההפעלה היחידה היא `hwBoot()` מפונקציית העלייה (סבב 35, כלל
+//    ברזל 12) — הפינוי מושהה מפני שהוא דורש רשת, בדיוק כמו הפינוי הנדחה
+//    של סבב 14. כשהמודול רדום (`HW_CFG.enabled` כבוי) היציאה מיידית,
+//    וכפתור השחזור נשאר פעיל בנפרד.
+function hwBoot() {
+  if (!hwEnabled()) return;
+  try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
+}
+window.hwBoot = hwBoot;
+/* ═══════════════ סוף מודול החלון החם ══════════════════════════════════ */
+
 /* ── חיבור schar-limud למודול ─────────────────────────────────────────────
    ⚠️ **כאן עדיין אין עבודה אופליין** (הפער המתועד מכלל ברזל 3; נסגר בשלב 2).
    לכן הסימון מכסה היום מקרה אחד ומדויק: **תשובה שאבדה ברשת**. הכתיבה נשלחה,
@@ -2144,7 +2424,13 @@ function slSanitizeRows(m, rows) {
   if (m === 'settings') return slStripSecrets(rows);
   return Array.isArray(rows) ? rows : [];
 }
-function slMirrorSave(m) { return lsSetArray(SL_MIRROR_PREFIX + m, slSanitizeRows(m, MIRROR[m] || []), slTs); }
+// ⭐ שער החלון החם יושב כאן (סבב 35) — כל כתיבה למראה עוברת דרך
+//    `hwDiskFilter`: תנועה משנה סגורה שראייתה העננית בידינו אינה נכתבת
+//    שוב לדיסק. בלי ראיה — נכתבת כרגיל (המסנן מחזיר את המערך כמו שהוא).
+function slMirrorSave(m) {
+  var rows = hwDiskFilter(SL_MIRROR_PREFIX + m, MIRROR[m] || []);
+  return lsSetArray(SL_MIRROR_PREFIX + m, slSanitizeRows(m, rows), slTs);
+}
 function slMirrorHasData() {
   return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
 }
@@ -2161,18 +2447,13 @@ function slMirrorHasData() {
    (`slSanitizeRows` בתוך `slMirrorSave`). שלוש נקודות ולא אחת — כך גם
    נתיב חדש שיתווסף בעתיד אינו יכול להדליף.
 
-   ⚠️ **`admin_pass` — שריד, לא מנגנון חי (סבב 26).** עד סבב 26 זו הייתה
-   סיסמת השער של מסך ההגדרות, שכבת הרשאה שנייה שהתקיימה כאן ולא בשלוש
-   האחיות. **השכבה בוטלה כולה**: ההרשאה נגזרת מ-`sl_users.role`, ואין
-   באפליקציה שום קוד שקורא, כותב או משווה מול הערך הזה.
-
-   ⛔ **ובכל זאת הוא נשאר ברשימה, וזו החלטה ולא שכחה.** השורה עדיין
-   קיימת במסד הייצור ומחזיקה ערך אמיתי בן שש ספרות — סיסמה שהמנהל בחר,
-   וסביר שהיא משמשת אותו גם במקום אחר. הוצאתה מהרשימה כאן הייתה מורידה
-   את הערך הזה **בטקסט גלוי** לכל מכשיר, כלומר מחליפה מנגנון שהוסר
-   בדליפה חדשה. הרשימה תתרוקן כשהשורה תימחק מהמסד — ולא לפני.
+   ⭐ **הרשימה ריקה מסבב 35 — והמנגנון נשאר.** שורת `admin_pass` (שריד
+   שער ההגדרות שבוטל בסבב 26) נמחקה מהמסד ע"י המנהל ב-17.8, יחד עם
+   העותקים בגיבויים, ואומת: אפס מופעים. לכן אין עוד מה להחריג — אבל
+   שלוש נקודות האכיפה נשארות בקוד כפי שהן: הן נקודת האכיפה של כל סוד
+   עתידי, וסוד חדש נכנס לרשימה הזו ולא למנגנון חדש.
    ═══════════════════════════════════════════════════════════════════════ */
-var SL_NEVER_MIRROR_SETTINGS = ['admin_pass'];
+var SL_NEVER_MIRROR_SETTINGS = [];
 function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
 function slStripSecrets(rows) {
   return (Array.isArray(rows) ? rows : []).filter(function (r) { return !(r && slIsSecretSetting(r.key)); });
@@ -2972,6 +3253,7 @@ async function syncAll(){
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
       rs[1].data.forEach(function(r){ remoteTxn[slKey(r)]=r; });
+      hwNoteCloud('sl_mirror_transactions', rs[1].data);
       MIRROR.transactions=slMerge(MIRROR.transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); slMirrorSave('transactions');
     }
     // הגדרות ורשימות — מאז 009 יש להן `updated_at`, ולכן הן ממוזגות ברמת
@@ -3013,6 +3295,7 @@ async function syncAll(){
     if(!errs.length){
       _slLastPullOk=Date.now();
       lsSet(SL_SYNCED_KEY,String(_slLastPullOk));
+      if(!_slPullLogged){_slPullLogged=true;slSyncLog('pull',null,null);}
     }
     // אזהרה פעם אחת ולא כל 3 שניות, וטוסט התאוששות כשהחיבור חוזר
     if(errs.length){
@@ -3030,6 +3313,15 @@ async function syncAll(){
 // אלה שעדיין לא עלו. שורה אחת שנכשלה אינה עוצרת את השאר: בניגוד לתור FIFO,
 // כאן אין תלות סדר בין הרשומות (המפתח הזר `student_id` נשמר כי תלמיד חדש
 // נדחף בקטגוריה שלו לפני התנועות — sl_students קודמת ב-syncAll).
+/* ⭐ יומן הפעולות של הסנכרון — הדפוס של hanhala-ruchanit (סבב 35): דחיפה
+   שהעלתה שורות נרשמת עם מספרן, ומשיכה מלאה נרשמת פעם אחת בסשן. הרישום
+   דרך `logAction` שבמודול הגיבוי — fire-and-forget, לעולם אינו חוסם.
+   ⛔ אין לרשום כל מחזור סנכרון (סבב 35) — `syncAll` רץ אחרי כל שמירה,
+   ו-`sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
+function slSyncLog(action, key, recordCount, details) {
+  try { logAction(action, key, recordCount, details); } catch (e) { }
+}
+var _slPullLogged = false;
 async function slPushTable(tbl,m,remoteByKey,prefix){
   var dirty=slDirtyRows(m,remoteByKey,function(k){return pendHas(prefix+k);}), still=[];
   for(var i=0;i<dirty.length;i++){
@@ -3049,6 +3341,8 @@ async function slPushTable(tbl,m,remoteByKey,prefix){
       if(!isNetErr(e)) pendFailed(pk); else still.push(pk);
     }
   }
+  var pushed=dirty.length-still.length;
+  if(pushed>0)slSyncLog('push',tbl,pushed);
   return still;
 }
 
@@ -3341,6 +3635,8 @@ function renderStudentCard(){
   document.getElementById('sc-meta').textContent=meta.join(' • ');
   var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
+  document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
+  var pastBox=document.getElementById('sc-past');if(pastBox)pastBox.innerHTML='';
   document.getElementById('sc-edit-start').value=normMonth(s.start_month);document.getElementById('sc-edit-end').value=normMonth(s.end_month);
   var ss=document.getElementById('sc-edit-section');ss.innerHTML='<option value="">-- ללא --</option>';
   (LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+esc(sec.value)+'"'+(cs.section===sec.value?' selected':'')+'>'+esc(sec.value)+'</option>';});
@@ -3365,7 +3661,14 @@ function renderScAnnual(){
     rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   document.getElementById('sc-annual-tbody').innerHTML=rows;
-  var tb=tP-tR;document.getElementById('sc-annual-tfoot').innerHTML='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  var tb=tP-tR,tf='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  /* ⭐ חוב משנים קודמות (סבב 35) — הזנה ידנית בלבד, בלי העברה אוטומטית
+     בין שנים בכוונה: המנהל קובע מה נגרר. שורה נפרדת ומסומנת — ⛔ אינו
+     מתווסף לשורת סה"כ של השנה (סבב 35) — ערבובו היה מסתיר האם החוב
+     נולד השנה או נגרר, בדיוק ההבחנה שהשדה בא לתת. */
+  var pd=parseInt(cs.prev_debt)||0;
+  if(pd>0)tf+='<tr style="background:var(--bgsec)"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="amt-red" style="text-align:center">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span style="font-size:.72rem;color:var(--text3)">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
+  document.getElementById('sc-annual-tfoot').innerHTML=tf;
   // יתרת זכות: שולם בשנה זו מעבר לסך החיוב בטווח החודשים של התלמיד. מוצגת
   // מתחת לטבלה כשורה נפרדת ובצבע נפרד — **אינה** נכנסת ל"סה"כ שולם" ואינה
   // מקזזת את שורת היתרה (שהיא החוב), בדיוק כפי שנדרש.
@@ -3376,6 +3679,16 @@ function renderScAnnual(){
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
   document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn(\''+esc(slKey(t))+'\')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+}
+async function scPastShow(){
+  var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
+  box.innerHTML='<div class="empty">טוען מהענן…</div>';
+  var sid=SC_STUDENT_ID;
+  var r=await hwPastLoad('sl_mirror_transactions',function(t){return t.student_id===sid;});
+  if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
+  if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
+  box.innerHTML='<div style="font-size:.78rem;color:var(--text3);padding:4px">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
+    r.rows.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date||'')+'</span><span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 function toggleStudentActive(){var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
@@ -3400,6 +3713,11 @@ function saveStudentSettings(){
   var cs=Object.assign({},s.card_settings||{});
   if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
+  var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
+  var debtVal=parseInt(debtRaw);
+  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast('❌ חוב קודם חייב להיות מספר חיובי');return;}
+  if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
+  if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
   var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
   if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000);return;}
   pendMark(pendStuKey(row));refreshUI();
@@ -3492,6 +3810,7 @@ function renderSettingsLists(){
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
   statusAreaMount();
   bkStatusMount();
+  hwRestoreMount();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
@@ -3578,6 +3897,7 @@ async function slBoot(){
   //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
   //    כמה שפחות תלוי במה שהמשתמש עושה.
   try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
+  try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
   // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא

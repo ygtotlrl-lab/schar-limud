@@ -133,6 +133,10 @@ function makeCtx(opts = {}) {
     MSG_BAD_LOGIN: '❌ שם משתמש או סיסמה שגויים',
     lsSet(k, v) { store[k] = String(v); return true; },
     lsSetArray(k, arr) { store[k] = JSON.stringify(arr); return true; },
+    // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות המראה — כאן שקוף
+    //    בכוונה; בדיקות החלון עצמו יושבות ב-test_round35_hotwin.
+    hwDiskFilter(k, rows) { return rows; },
+    hwNoteCloud() {},
     lsGet(k, d) { return k in store ? store[k] : d; },
     lsRemove(k) { delete store[k]; },
     lsLog(a, d) { calls.lsLog.push(a + ' | ' + d); },
@@ -371,11 +375,12 @@ async function main() {
       !/\|\|\s*'admin'/.test(SRC) && !/\|\|\s*"admin"/.test(SRC));
     ok("⛔ ואין השוואה כלשהי מול === 'admin' על ערך הגדרה",
       !/SETTINGS\s*\[\s*'admin_pass'\s*\]/.test(SRC));
-    // ⚠️ הסינון עצמו **נשאר** — השורה קיימת במסד ומחזיקה ערך אמיתי,
-    //    ואסור לה לרדת לדיסק. ר' ההערה מעל SL_NEVER_MIRROR_SETTINGS.
+    // ⭐ סבב 35: שורת admin_pass נמחקה מהמסד ומהגיבויים ע"י המנהל,
+    //    והרשימה רוקנה. מנגנון הסינון נשאר דרוך — test_round24 סעיף ז
+    //    מאמת את שלוש נקודות האכיפה עם מפתח בדיקה זמני.
     const h = makeCtx();
-    ok('⚠️ admin_pass עדיין ברשימת «לא יורד לדיסק»',
-      h.ctx.SL_NEVER_MIRROR_SETTINGS.indexOf('admin_pass') !== -1);
+    ok('הרשימה ריקה — admin_pass אינו עוד ברשימת «לא יורד לדיסק»',
+      h.ctx.SL_NEVER_MIRROR_SETTINGS.indexOf('admin_pass') === -1);
   }
 
   /* ── ו. הסכימה ───────────────────────────────────────────────────────── */

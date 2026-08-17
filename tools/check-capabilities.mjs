@@ -74,11 +74,18 @@ const CAPS = {
   backup: {
     name: 'גיבוי יומי אוטומטי',
     row: 13,
-    block: { sha: '1fc7a97b5740a1df', lines: 251,
+    block: { sha: 'b34407a6fcc1af8b', lines: 258,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],
     forbidden: ['bkMaybeDaily'],
+  },
+  hotwin: {
+    name: 'מודול החלון החם והשחזור המקומי',
+    block: { sha: '0a8ea3499a688691', lines: 221,
+             start: '/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35)',
+             end:   '/* ═══════════════ סוף מודול החלון החם' },
+    hooks: [{ fn: 'hwBoot', at: 'boot' }, { fn: 'hwRestoreMount', at: 'settings' }],
   },
   log: {
     name: 'יומן פעולות',
