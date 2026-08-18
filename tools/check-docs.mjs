@@ -53,10 +53,10 @@ const CANON = [
   ['iron-rule-8-docs',        'e751633a064dc070'],
   ['iron-rule-9-security-spread', '5412c7382b4daf61'],
   ['iron-rule-10-users',      'c822ccbf258e76a5'],
-  ['capability-matrix',       '7790101edf9f5c7e'],
+  ['capability-matrix',       '672d2274257b5b65'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
-  ['backup-module',           '0e866c7a4dec684e'],
+  ['backup-module',           '1097c48a7c872c8e'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',   'ff1455af8ca6230a'],
 ];
@@ -68,7 +68,13 @@ const PRIVATE_HEADINGS = [
 ];
 
 const STAMP_PREFIX = 'עודכן לאחרונה';
-const STAMP_RE = /^עודכן לאחרונה: סבב (\d+) · (\d{4})-(\d{2})-(\d{2})$/;
+/* ⚠️ מספר הסבב יכול לשאת סיומת עברית — «32ב», «35ג» (סבב 35ג): סבב-המשך
+ *    נושא את מספר הסבב שהוא ממשיך ולא מספר חדש, וזה הנוהג מסבב 32ב. עד
+ *    סבב 35ג הביטוי דרש ספרות בלבד, ולכן סבב-המשך שרץ **באותו יום** של
+ *    הסבב שהוא ממשיך לא יכול היה לקדם את השורה כלל: התאריך זהה, והמספר
+ *    נדחה. ⛔ הסיומת היא תו עברי אחד ולא טקסט חופשי — «סבב 35 (המשך)»
+ *    היה מחזיר את הסחיפה שהפורמט הקבוע בא למנוע. */
+const STAMP_RE = /^עודכן לאחרונה: סבב (\d+[א-ת]?) · (\d{4})-(\d{2})-(\d{2})$/;
 const START_RE = /^<!--\s*SHARED:start\s+id="([^"]*)"\s*-->\s*$/;
 const START_LOOSE = /^<!--\s*SHARED:start\b/;
 const END_RE   = /^<!--\s*SHARED:end\s*-->\s*$/;
