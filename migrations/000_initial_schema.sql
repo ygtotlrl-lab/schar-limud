@@ -70,16 +70,14 @@ CREATE TABLE IF NOT EXISTS public.sl_users (
   pass_fp    TEXT,
   role       TEXT NOT NULL,
   -- ⭐ `active` — המחיקה הרכה של משתמש (סבב 37, `migrations/013`).
-  --    ⛔ אין `deleted` על טבלת משתמשים — `active=false` הוא המנגנון בארגון
-  --    כולו (כלל קריטי 4 ב-gius), ועמודה שנייה לאותו מושג הייתה יוצרת שני
-  --    מקורות אמת למצב של משתמש.
+  --    ⛔ אין `deleted` על טבלת משתמשים, ואין להוסיף (סבב 37) — `active=false`
+  --    הוא המנגנון בארגון כולו (כלל קריטי 4 ב-gius), ועמודה שנייה לאותו
+  --    מושג היא מקור אמת שני. העמודה נוספה והוסרה באותו יום בהכרעת
+  --    המנהל; נמדד 2026-08-18: אינה קיימת.
   active     BOOLEAN NOT NULL DEFAULT TRUE,
-  -- ⚠️ `deleted` קיימת בטבלה (013) אך **אף מסלול בקוד אינו קורא אותה** —
-  --    הסרת משתמש כאן היא `active=false`. ר' שורת הפער ב-CLAUDE.md.
-  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  -- ⚠️ **בלי טריגר** — נמדד מול המסד ב-2026-08-18 (`pg_trigger` ריק על
-  --    הטבלה). החותמת נקבעת ב-INSERT ואינה מתעדכנת מאליה ב-UPDATE.
+  -- ⭐ `updated_at` — שובר-שוויון דטרמיניסטי להתנגשות על שורת משתמש
+  --    (סבב 37, `migrations/013`). הטריגר `sl_users_touch` נוצר בהמשך הקובץ.
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
@@ -96,10 +94,6 @@ ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 UPDATE public.sl_users SET updated_at = COALESCE(created_at, NOW()) WHERE updated_at IS NULL;
 ALTER TABLE public.sl_users ALTER COLUMN updated_at SET DEFAULT NOW();
 ALTER TABLE public.sl_users ALTER COLUMN updated_at SET NOT NULL;
-ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS deleted BOOLEAN;
-UPDATE public.sl_users SET deleted = FALSE WHERE deleted IS NULL;
-ALTER TABLE public.sl_users ALTER COLUMN deleted SET DEFAULT FALSE;
-ALTER TABLE public.sl_users ALTER COLUMN deleted SET NOT NULL;
 -- שדרוג התקנה שנוצרה לפני 011 — שלושה שלבים, ואי אפשר לקצר אותם:
 -- `ADD COLUMN … NOT NULL` בלי DEFAULT נכשל על טבלה שיש בה שורות.
 -- ⚠️ ה-UPDATE נוגע **רק** בשורות שקדמו לעמודה. ר' `migrations/011`.
@@ -427,10 +421,26 @@ CREATE TRIGGER sl_students_touch
   BEFORE UPDATE ON public.sl_students
   FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
 
--- ⚠️ **אין טריגר על `sl_users`, וזה מכוון בקובץ ולא השמטה** (סבב 37):
---    המיגרציה שרצה בפועל (`013`) לא כללה אותו, ו-`pg_trigger` על הטבלה
---    ריק. ⛔ אין להוסיף אותו כאן «לשם אחידות» — הקובץ מתאר את המסד, ולא
---    את מה שנראה נכון. ר' שורת הפער ב-CLAUDE.md.
+-- ---------- טריגר החותמת של טבלת המשתמשים (סבב 37, `migrations/013`) ----------
+-- ⚠️ **פונקציה נפרדת, ובכוונה:** `public.users_touch_updated_at()` היא
+--    פונקציה אחת לשתי טבלאות המשתמשים שבפרויקט המשותף — `sl_users` כאן
+--    ו-`ys_users` בהנהלה — והיא זו שהמנהל יצר ב-2026-08-18
+--    (`users_drop_deleted_add_touch_trigger`). ⛔ אין לחווט את
+--    `sl_users_touch` ל-`sl_touch_updated_at()` שלמעלה (סבב 37): שתי
+--    האפליקציות חולקות פרויקט אחד, והטריגר המשותף חייב להצביע על ההגדרה
+--    שקיימת במסד — אחרת נוצרת גרסה שנייה שאיש אינו יודע עליה (סבב 36).
+CREATE OR REPLACE FUNCTION public.users_touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS sl_users_touch ON public.sl_users;
+CREATE TRIGGER sl_users_touch
+  BEFORE UPDATE ON public.sl_users
+  FOR EACH ROW EXECUTE FUNCTION public.users_touch_updated_at();
 
 -- ============================================================
 -- 009 — sl_settings ו-sl_lists נכנסות לשכבת האופליין
