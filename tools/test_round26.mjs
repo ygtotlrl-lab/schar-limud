@@ -76,7 +76,7 @@ const NAMES_VAR = [
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
 ];
 const NAMES_FN = [
-  'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slIsMissingFpCol',
+  'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slMissingCol', 'slSelectUsers',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
   'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
   'slSaveSession', 'slReadSession', 'slResolveUser',
@@ -319,7 +319,7 @@ async function main() {
   {
     // המראה מנצחת: תפקיד שהשתנה בלוח הבקרה והגיע במשיכה גובר על הסשן.
     const h = makeCtx();
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'user' }];
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'user', active: true }];
     const merged = h.ctx.slResolveUser({ id: 1, username: 'shimon', role: 'admin' });
     eq('⭐ המראה גוברת על הסשן', merged.role, 'user');
     eq('ולכן הגישה נשללת', h.ctx.slSettingsAccess(merged), 'denied');
@@ -330,7 +330,7 @@ async function main() {
     // ⭐ המתנה ל**אירוע**: משיכת המשתמשים מרעננת את התפקיד של המחובר.
     const h = makeCtx({
       reply: (q) => (q.table === 'sl_users' && q.kind === 'select' && !q.eqs.username)
-        ? { data: [{ id: 1, username: 'shimon', role: 'user' }], error: null }
+        ? { data: [{ id: 1, username: 'shimon', role: 'user', active: true }], error: null }
         : { data: null, error: null },
     });
     h.ctx.CUR_USER = Object.assign({}, ADMIN);
@@ -349,10 +349,10 @@ async function main() {
     eq('slUserPub שומר role', h.ctx.slUserPub({ id: 1, username: 'a', role: 'admin' }).role, 'admin');
     ok('⛔ slUserPub מפיל password',
       !('password' in h.ctx.slUserPub({ id: 1, username: 'a', password: 'סוד', role: 'admin' })));
-    ok('slIsMissingFpCol מזהה גם את role חסר',
-      h.ctx.slIsMissingFpCol({ message: 'column sl_users.role does not exist' }));
-    ok('ועדיין את pass_fp', h.ctx.slIsMissingFpCol({ message: 'column pass_fp does not exist' }));
-    ok('ולא שגיאה אחרת', !h.ctx.slIsMissingFpCol({ message: 'timeout' }));
+    eq('slMissingCol מזהה גם את role חסר',
+      h.ctx.slMissingCol({ message: 'column sl_users.role does not exist' }, h.ctx.SL_USER_COLS), 'role');
+    eq('ועדיין את pass_fp', h.ctx.slMissingCol({ message: 'column pass_fp does not exist' }, h.ctx.SL_USER_COLS), 'pass_fp');
+    ok('ולא שגיאה אחרת', !h.ctx.slMissingCol({ message: 'timeout' }, h.ctx.SL_USER_COLS));
   }
 
   /* ── ה. המנגנון הישן הוסר לחלוטין ────────────────────────────────────── */
@@ -437,10 +437,10 @@ async function main() {
     const h = makeCtx();
     // כניסה אופליין עדיין עובדת, ומחזירה את התפקיד מהמראה.
     const made = await h.ctx.slMakePassFp('135790');
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'admin', pass_salt: made.salt, pass_fp: made.fp }];
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'admin', pass_salt: made.salt, pass_fp: made.fp, active: true }];
     eq('סיסמה נכונה ⇒ ok', await h.ctx.slVerifyOffline(h.ctx.SL_USERS[0], '135790'), 'ok');
     eq('סיסמה שגויה ⇒ bad', await h.ctx.slVerifyOffline(h.ctx.SL_USERS[0], '999999'), 'bad');
-    eq('בלי טביעה ⇒ no-fp', await h.ctx.slVerifyOffline({ username: 'x' }, '135790'), 'no-fp');
+    eq('בלי טביעה ⇒ no-fp', await h.ctx.slVerifyOffline({ username: 'x', active: true }, '135790'), 'no-fp');
 
     const h2 = makeCtx({ online: false });
     h2.ctx.SL_USERS = h.ctx.SL_USERS;

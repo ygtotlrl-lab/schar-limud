@@ -41,6 +41,18 @@ const APP = {
   settingsFn: 'renderSettingsLists',
   matrixCol: 3,
   offlineLoginFn: 'slVerifyOffline',
+  schemaFile: 'migrations/000_initial_schema.sql',
+  // ⚠️ שורה 7 «לא רלוונטי» — אין כאן פינוי כלל (שורה 6), ולכן אין מה לאמת.
+  naRows: [7],
+  matrixProbe: {
+    // ❌ מתועד: `doLogin` מריצה משיכה מלאה כפויה במקום נתיב חלקי.
+    4:  () => false,
+    // חמש טבלאות `sl_` מאז ההקמה — המראה נבנית מהן ישירות.
+    15: (c) => c.hasCode(/\bSL_TABLES\b/),
+    // ❌ מתועד: המנהל מנהל סיסמאות מלוח הבקרה של Supabase.
+    19: () => false,
+    23: (c) => /isPending\s*&&\s*isPending\(k\)/.test(c.fnBody('slMerge')),
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -73,7 +85,6 @@ const CAPS = {
   },
   backup: {
     name: 'גיבוי יומי אוטומטי',
-    row: 13,
     block: { sha: 'f17875916d7a4b3d', lines: 315,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
@@ -89,13 +100,16 @@ const CAPS = {
   },
   log: {
     name: 'יומן פעולות',
-    row: 14,
     probe: /logQueueKey\s*:/,
   },
-  offlineLogin: {
-    name: 'כניסה אופליין',
-    row: 1,
-    probeApp: true,
+  /*  ⚠️ למודול המזהים אין `hooks` — הוא אינו יכולת עלייה ואינו יכולת מסך,
+   *  אלא עוזר שנקרא מכל אתר יצירת רשומה. מה שנאכף כאן הוא **הליבה**,
+   *  ומה שנאכף במטריצה (שורה 25) הוא **שהוא באמת נקרא** מקוד האפליקציה. */
+  ids: {
+    name: 'מודול מזהי רשומות',
+    block: { sha: '3edcfd6f5b4be129', lines: 35,
+             start: '/* ═══ מזהי רשומות — מודול משותף (סבב 37א)',
+             end:   '/* ═══════════════ סוף מודול מזהי הרשומות' },
   },
 };
 
@@ -282,7 +296,6 @@ for (const key of Object.keys(CAPS)) {
   }
 }
 
-/* ── ג. מטריצת היכולות ─────────────────────────────────────────────────── */
 function matrixCell(row) {
   if (!fs.existsSync(APP.docs)) return null;
   const doc = fs.readFileSync(APP.docs, 'utf8');
@@ -299,24 +312,150 @@ if (CAPS.log.probe) {
   while ((m = re.exec(code)) !== null) if (!inShared(m.index)) off.push(m.index);
   present.log = off.length > 0;
 }
-present.offlineLogin = !!(APP.offlineLoginFn && fnRange(APP.offlineLoginFn));
 
-for (const key of Object.keys(CAPS)) {
-  const cap = CAPS[key];
-  if (!cap.row) continue;
-  const cell = matrixCell(cap.row);
-  if (cell === null) {
-    fail(`${cap.name}: שורה ${cap.row} לא נמצאה במטריצת היכולות שב-${APP.docs}`);
+/* ══════════════════════════════════════════════════════════════════════════
+   ג. מטריצת היכולות — כל השורות, ובשני הכיוונים (סבב 37)
+   ══════════════════════════════════════════════════════════════════════════
+   עד סבב 37 נבדקו כאן **שלוש שורות בלבד** (1, 13, 14). תשע-עשרה השורות
+   האחרות לא נבדקו כלל, ולכן ✅ שגוי יכול היה לשבת שם בלי שאיש ידע — וכך
+   אכן קרה: שורה 20 הכריזה «מטמון-CDN מראש עם ריפוי עצמי ✅» בארבעתן,
+   בזמן ש-`ensureCdnCached` פשוט לא היה קיים ב-gius.
+
+   ⭐ **האכיפה דו-כיוונית:** תא ✅ שה-probe שלו אינו מוצא מפיל את השער,
+   ותא ❌ שה-probe שלו **כן** מוצא מפיל אותו גם כן. טענת-חסר שגויה מטעה
+   בדיוק כמו טענת-יש — היא שולחת סבב עתידי לבנות מחדש משהו שכבר קיים.
+
+   ⚠️ **ה-probe רץ על הקוד המטוקן** (`code`), שבו הערות ומחרוזות מוחלפות
+   ברווחים — בדיוק כמו סריקת החיווט. ⛔ אין להחליף בחיפוש על המקור הגולמי:
+   כל אזכור בהערה היה נספר כמימוש. probe שחייב לראות קובץ אחר (`sw.js`,
+   קיום נתיב) מצהיר על כך במפורש.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/*  חיתוך אובייקט תצורה לפי שמו, בהתאמת סוגריים — על הקוד המטוקן. */
+function cfgBlock(name) {
+  const m = new RegExp('\\b' + name + '\\s*=\\s*\\{').exec(code);
+  if (!m) return '';
+  let i = code.indexOf('{', m.index), d = 0;
+  for (let j = i; j < code.length; j++) {
+    if (code[j] === '{') d++;
+    else if (code[j] === '}') { d--; if (!d) return code.slice(i, j + 1); }
+  }
+  return '';
+}
+const hasPath = (p) => fs.existsSync(p);
+function fileHas(p, re) {
+  try { return re.test(fs.readFileSync(p, 'utf8')); } catch (e) { return false; }
+}
+function fnBody(name) {
+  const r = fnRange(name);
+  return r ? code.slice(r[0], r[1]) : '';
+}
+const hasCode = (re) => re.test(code);
+/*  מדיניות הפינוי — `LS_CFG` **וגם** `lsRebuildPolicy()`. ⚠️ ביומן `tier2`
+ *  נבנית בזמן ריצה (המפתחות נושאים סיומת מוסד), ולכן היא אינה ליטרל בתוך
+ *  `LS_CFG`; probe שקרא את האובייקט בלבד היה מדווח «אין פינוי» על אפליקציה
+ *  שמפנה. הפונקציה פשוט אינה קיימת בשלוש האחרות והצירוף שקוף. */
+const policyBlock = () => cfgBlock('LS_CFG') + fnBody('lsRebuildPolicy');
+
+/*  שורות המטריצה. `probe` מחזירה true כשהיכולת **קיימת בפועל**.
+ *  `desc` — שורה תיאורית (לא ✅/❌): מחזירה את הטקסט שהתא חייב לשאת.
+ *  `exempt` — שורה שאינה ניתנת לאימות מהריפו, עם נימוק בן שורה.
+ *  `app: true` — ה-probe יושב ב-`APP.matrixProbe[row]` מפני שהוא נמדד
+ *  מקוד האפליקציה הזו ואינו ניתן לניסוח גנרי.                            */
+const MATRIX = [
+  { row: 1,  name: 'כניסה אופליין',
+    probe: () => !!(APP.offlineLoginFn && fnRange(APP.offlineLoginFn)) },
+  { row: 2,  name: 'עריכת נתונים אופליין',
+    probe: () => hasCode(/\bpendMark\s*\(/) },
+  { row: 3,  name: 'מודל משתמשים',
+    desc: () => (APP.offlineLoginFn ? 'רב-משתמשים' : 'אין') },
+  { row: 4,  name: 'נתיב עדכון חלקי למראת המשתמשים', app: true },
+  { row: 5,  name: 'סוד במכשיר',
+    desc: () => (hasCode(/\bpass_fp\b/) ? 'טביעה' : 'אין') },
+  { row: 6,  name: 'פינוי אוטומטי',
+    probe: () => /tier2\s*[:=]\s*\[\s*\{/.test(policyBlock()) },
+  { row: 7,  name: 'אימות פינוי מול הענן',
+    probe: () => /\bverify\s*:/.test(policyBlock()) },
+  { row: 8,  name: 'שיתוף קבצים',
+    probe: () => hasCode(/_androidShareImage|navigator\s*\.\s*share\b/) },
+  { row: 9,  name: 'מעטפת APK (WebView)',
+    probe: () => hasPath('android/app/src/main/AndroidManifest.xml') },
+  { row: 10, name: 'מפתח חתימה קבוע בריפו',
+    probe: () => hasPath('signing') &&
+                 fs.readdirSync('signing').some((f) => f.endsWith('.keystore')) },
+  { row: 11, name: 'מקור אמת יחיד לסכימה', probe: () => hasPath(APP.schemaFile) },
+  { row: 12, name: 'קובץ התקנה מלא',       probe: () => hasPath(APP.schemaFile) },
+  { row: 13, name: 'גיבוי יומי אוטומטי',   probe: () => present.backup === true },
+  { row: 14, name: 'יומן פעולות',          probe: () => present.log === true },
+  { row: 15, name: 'נתונים בטבלאות מובנות', app: true },
+  { row: 16, name: 'שער תקינות JS',        probe: () => hasPath('tools/check-js.mjs') },
+  { row: 17, name: 'חלון חם במכשיר',
+    probe: () => /\benabled\s*:\s*true\b/.test(cfgBlock('HW_CFG')) },
+  { row: 18, name: 'שחזור מקומי מהענן',
+    probe: () => callSites('hwRestoreMount').length > 0 },
+  { row: 19, name: 'מסך שינוי סיסמה עצמי', app: true },
+  { row: 20, name: 'מטמון-CDN מראש עם ריפוי עצמי',
+    probe: () => fileHas('sw.js', /CDN_ASSETS/) && fileHas('sw.js', /ensureCdnCached/) },
+  { row: 21, name: 'גיבוי יומי מטבלאות מובנות',
+    exempt: 'התא מצהיר שהגיבוי **קורא** מטבלאות מובנות, וזו עובדת מסד ולא ' +
+            'עובדת ריפו: מקור `kind:\'table\'` רשום ב-BK_CFG של הנהלה מסבב 36, ' +
+            'אך הטבלאות עצמן טרם נוצרו וגיבוי ממקור שאינו קיים מדלג בשקט. ' +
+            'הצד שכן נבדק — קיום המקורות — נאכף ב-test_round35c_cron.mjs.' },
+  { row: 22, name: 'פינוי גיבויים אוטומטי במסד',
+    exempt: 'התא מצהיר שמשימת `pg_cron` **רשומה ופעילה במסד**, ואין דרך ' +
+            'לראות זאת מהריפו. הצד שכן נבדק — `_bkRetention` וקובץ המיגרציה — ' +
+            'נאכף ב-test_round35c_cron.mjs, שנועל גם את התזמון.' },
+  { row: 23, name: 'מנוע מיזוג עם הגנת ⏳', app: true },
+  { row: 24, name: 'חסימת משתמש מושבת בכניסה אופליין',
+    probe: () => !!APP.offlineLoginFn &&
+                 /\bactive\s*!==\s*true\b/.test(fnBody(APP.offlineLoginFn)) },
+  /*  ⚠️ ה-probe בודק **קריאה מקוד האפליקציה** ולא את עצם קיום המודול:
+   *  `callSites` מדלגת על מה שבתוך הבלוקים המשותפים, ולכן מודול שיושב
+   *  בקובץ ואיש אינו קורא לו נספר כ-❌ — וזה בדיוק המצב ביומן, שמזהי
+   *  הרשומות שלו עדיין חותמות זמן. ר' הנימוק בשורה 25 שבמטריצה. */
+  { row: 25, name: 'מודול מזהי רשומות',
+    probe: () => callSites('newClientId').length > 0 },
+];
+
+const NA = 'לא רלוונטי';
+for (const m of MATRIX) {
+  const cell = matrixCell(m.row);
+  if (cell === null) { fail(`שורה ${m.row} («${m.name}») לא נמצאה במטריצת היכולות שב-${APP.docs}`); continue; }
+  if (m.exempt) { pass(`שורה ${m.row} («${m.name}»): חריגה מנומקת — ${m.exempt}`); continue; }
+  if (m.desc) {
+    const want = m.desc();
+    if (cell.indexOf(want) >= 0) pass(`שורה ${m.row} («${m.name}»): התא «${cell}» תואם לנמדד («${want}»)`);
+    else fail(`שורה ${m.row} («${m.name}»): התא אומר «${cell}» והקוד אומר «${want}»`);
     continue;
   }
+  // ⚠️ «לא רלוונטי» אינו «❌ מנומס» — הוא נאכף כערך משלו, ורק בשורות
+  //    שהאפליקציה הזו הכריזה עליהן כחסרות-מושג.
+  if ((APP.naRows || []).indexOf(m.row) >= 0) {
+    if (cell.indexOf(NA) >= 0) pass(`שורה ${m.row} («${m.name}»): «${NA}» כמוצהר`);
+    else fail(`שורה ${m.row} («${m.name}»): מוצהרת «${NA}» בבלוק APP אך התא אומר «${cell}»`);
+    continue;
+  }
+  if (cell.indexOf(NA) >= 0) {
+    fail(`שורה ${m.row} («${m.name}»): התא אומר «${NA}» אך השורה אינה ברשימת ה-naRows של APP — ` +
+         `«לא רלוונטי» חייב להיות החלטה רשומה, לא ברירת מחדל`);
+    continue;
+  }
+  let exists;
+  try {
+    exists = m.app ? !!(APP.matrixProbe[m.row] && APP.matrixProbe[m.row]({ code, src, hasCode, cfgBlock, fnBody, hasPath, fileHas }))
+                   : !!m.probe();
+  } catch (e) { fail(`שורה ${m.row} («${m.name}»): ה-probe זרק — ${e.message}`); continue; }
   const declared = cell.indexOf('✅') >= 0;
-  const exists = present[key] === true;
-  if (declared && !exists) {
-    fail(`${cap.name}: מסומנת ✅ במטריצה (שורה ${cap.row}) אך אינה קיימת בקוד`);
-  } else if (!declared && exists) {
-    fail(`${cap.name}: קיימת בקוד אך המטריצה (שורה ${cap.row}) אומרת «${cell}»`);
+  const denied = cell.indexOf('❌') >= 0;
+  if (!declared && !denied) {
+    fail(`שורה ${m.row} («${m.name}»): התא «${cell}» אינו ✅, אינו ❌ ואינו «${NA}»`);
+  } else if (declared && !exists) {
+    fail(`שורה ${m.row} («${m.name}»): מסומנת ✅ אך ה-probe אינו מוצא אותה בקוד`);
+  } else if (denied && exists) {
+    fail(`שורה ${m.row} («${m.name}»): מסומנת ❌ אך ה-probe **כן** מוצא אותה — ` +
+         `טענת-חסר שגויה שולחת סבב עתידי לבנות מחדש משהו שכבר קיים`);
   } else {
-    pass(`${cap.name}: המטריצה (שורה ${cap.row}: «${cell}») תואמת לקוד`);
+    pass(`שורה ${m.row} («${m.name}»): «${cell}» תואם לקוד`);
   }
 }
 
