@@ -47,7 +47,7 @@ const APP = {
           'check-comments.mjs', 'check-capabilities.mjs',
           'test_round24.mjs', 'test_round26.mjs',
           'test_round30_stage_a.mjs', 'test_round33_structure.mjs',
-          'test_round35_hotwin.mjs'],
+          'test_round35_hotwin.mjs', 'test_round35c_cron.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
