@@ -2047,6 +2047,42 @@ function pendBoot() {
 }
 /* ═══════════════ סוף מודול "ממתין לסנכרון" ═════════════════════════════ */
 
+/* ═══ מזהי רשומות — מודול משותף (סבב 37א) ═════════════════════════════════
+   ⭐ **מזהה שנוצר במכשיר, לפני שהרשומה ראתה שרת** — הדפוס שכלל ברזל 6
+   («מזהים») קובע לארגון כולו. עד סבב 37א חיה אותה יכולת **בחמישה שמות**:
+   `newClientId` בשכר לימוד, `newId` ב-gius, `ysNewId` בהנהלה, ודפוס בלי
+   פונקציה ייעודית ביומן — כולן `crypto.randomUUID` עם אותן נפילות-חזרה,
+   ואף שער לא אכף זאת. זו בדיוק הפרת כלל ברזל 14 כפי שנוסח: «קיים רק
+   באחת, בשקט» אינו מצב חוקי, וגם «קיים בארבעתן בארבעה שמות» אינו.
+   ⛔ **השם המשותף הוא `newClientId`** (סבב 37א) — הוותיק והברור מכולם,
+   וזה שכבר היה בשימוש בשכר לימוד; שינוי שם במקום אחד היה מחייב סבב נוסף.
+   ⛔ **אין כאן שינוי התנהגות (סבב 37א) — רק שם וליבה אחידים.** שלושת
+   המסלולים הם אלה שהיו: `randomUUID` כשקיים · `getRandomValues` · ולבסוף
+   `Math.random`. הנפילה-חזרה אינה תיאורטית: `randomUUID` קיים רק
+   ב-secure context ובדפדפנים מודרניים, וב-WebView ישן הוא פשוט חסר.
+   ⛔ **מזהה קיים אינו משתנה לעולם (סבב 37א)** — האיחוד נוגע ל**יצירה**
+   בלבד. מזהה הוא מפתח המיזוג, ושינוי שלו היה מפצל רשומה אחת לשתיים.
+   ⛔ **ומזהה מכשיר אינו מזהה רשומה (סבב 37א)** — `getDeviceId`/
+   `_randDeviceId` הם מושג אחר (זהות של מכשיר, לא של נתון), ואינם עוברים
+   דרך המודול הזה.
+   ═══════════════════════════════════════════════════════════════════════ */
+function newClientId(){
+  try{
+    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();
+  }catch(e){}
+  var b=null;
+  try{
+    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.getRandomValues==='function'){
+      b=new Uint8Array(16);crypto.getRandomValues(b);
+    }
+  }catch(e){b=null;}
+  if(!b){b=new Array(16);for(var i=0;i<16;i++)b[i]=Math.floor(Math.random()*256);}
+  b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;  // גרסה 4, variant RFC 4122
+  var h=[],j;for(j=0;j<16;j++)h.push((b[j]+0x100).toString(16).slice(1));
+  return h.slice(0,4).join('')+'-'+h.slice(4,6).join('')+'-'+h.slice(6,8).join('')+'-'+h.slice(8,10).join('')+'-'+h.slice(10,16).join('');
+}
+/* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
+
 /* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⭐ החלון החם כאן הוא תנועות שנת הלימודים הנוכחית (סבב 35) — הגבול הוא
    `acadYearOf` הקיימת (ספטמבר–אוגוסט), אותה הגדרה שכבר משמשת את הדשבורד
@@ -2928,23 +2964,11 @@ function _randDeviceId() {
 // תשובה שאבדה ברשת יוצרת שורה שנייה — בתנועה כספית זה תשלום כפול. `client_id`
 // הוא uuid שנוצר כאן לפני השליחה, והכתיבה היא UPSERT עליו: ניסיון חוזר מעדכן
 // את אותה שורה. **כל רשומה חדשה חייבת לקבל אותו.**
-function newClientId(){
-  try{
-    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();
-  }catch(e){}
-  // נפילה-חזרה: randomUUID קיים רק ב-secure context ובדפדפנים מודרניים, וב-WebView
-  // ישן הוא פשוט חסר. getRandomValues זמין רחב יותר; Math.random הוא המוצא האחרון.
-  var b=null;
-  try{
-    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.getRandomValues==='function'){
-      b=new Uint8Array(16);crypto.getRandomValues(b);
-    }
-  }catch(e){b=null;}
-  if(!b){b=new Array(16);for(var i=0;i<16;i++)b[i]=Math.floor(Math.random()*256);}
-  b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;  // גרסה 4, variant RFC 4122
-  var h=[],j;for(j=0;j<16;j++)h.push((b[j]+0x100).toString(16).slice(1));
-  return h.slice(0,4).join('')+'-'+h.slice(4,6).join('')+'-'+h.slice(6,8).join('')+'-'+h.slice(8,10).join('')+'-'+h.slice(10,16).join('');
-}
+// ⭐ **המחולל עצמו עבר למודול המשותף** (סבב 37א) — `newClientId()` זהה
+// בית-לבית בארבע האפליקציות, ו-`check-capabilities` אוכף את חתימתו.
+// ⛔ אין להחזיר לכאן מימוש מקומי (סבב 37א) — חמישה שמות לאותה יכולת הם
+//    בדיוק מה שהסבב הזה בא לסלק, והם נסחפים בשקט זה מזה.
+
 // המזהה של הרשומה ש**נרשמת עכשיו**. זו הנקודה שבה ה-UPSERT מקבל משמעות כבר
 // היום: משתמש שלוחץ "שמור" שוב אחרי כשל שולח את **אותו** client_id, ולכן אם
 // הכתיבה הראשונה בכל זאת נכנסה (תשובה שאבדה ברשת) — היא מתעדכנת ולא מוכפלת.
