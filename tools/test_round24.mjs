@@ -76,7 +76,7 @@ const NAMES_VAR = [
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
-  'slIsMissingFpCol', 'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
+  'slMissingCol', 'slSelectUsers', 'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slSaveSession', 'slReadSession',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
@@ -176,7 +176,9 @@ const B = { id: 2, username: 'levi', password: '246801' };
 
 async function userRow(h, u) {
   const made = await h.ctx.slMakePassFp(u.password);
-  return { id: u.id, username: u.username, pass_salt: made.salt, pass_fp: made.fp };
+  // ⚠️ `active: true` — במציאות כל שורה במראה עוברת דרך `slUserPub`, שמשלימה
+  //    את השדה. פיקסטורה בלעדיו הייתה בודקת מצב שאינו קיים בקוד הרץ.
+  return { id: u.id, username: u.username, pass_salt: made.salt, pass_fp: made.fp, active: true };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -230,8 +232,10 @@ async function main() {
     // ⚠️ **עודכן בסבב 26** — `role` נוסף לרשימה. הוא מקור האמת להרשאות
     // ולכן חייב לרדת למכשיר, אחרת מסך ההגדרות לא היה עובד אופליין.
     // הטענה שנשמרת כאן היא הצורה, לא המספר: רשימת-**היתר** סגורה.
-    eq('רשימת ההיתר היא חמש העמודות המוכרות',
-      h.ctx.SL_USER_COLS.join(','), 'id,username,pass_salt,pass_fp,role');
+    // ⚠️ **עודכן שוב בסבב 37** — `active` נוסף. בלעדיו `slVerifyOffline`
+    // לא יכלה לחסום משתמש מושבת, וההשבתה בלוח הבקרה לא הגיעה למכשיר.
+    eq('רשימת ההיתר היא שש העמודות המוכרות',
+      h.ctx.SL_USER_COLS.join(','), 'id,username,pass_salt,pass_fp,role,active');
 
     const dirty = { id: 7, username: 'x', password: 'סוד', pass_salt: 's', pass_fp: 'f',
                     role: 'admin', secret_note: 'עמודה רגישה חדשה' };
@@ -240,7 +244,12 @@ async function main() {
     // ⭐ זו הטענה שמצדיקה רשימת-היתר ולא רשימת-איסור: עמודה חדשה בטבלה
     //    נופלת מעצמה, בלי שאיש צריך לזכור להוסיף אותה לאיסור.
     ok('⭐ slUserPub מפיל עמודה זרה שנוספה לטבלה', !('secret_note' in pub));
-    eq('slUserPub שומר את חמש המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,role,username');
+    eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'active,id,pass_fp,pass_salt,role,username');
+    // ⛔ שורה בלי `active` היא שורה מלפני migrations/013 — **פעילה**, ולא
+    //    מושבתת. ברירת מחדל הפוכה הייתה נועלת בחוץ את כל המשתמשים.
+    eq('⛔ עמודה חסרה ⇒ פעיל, ולא מושבת', pub.active, true);
+    eq('   וערך מפורש false נשמר כמו שהוא',
+      h.ctx.slUserPub({ id: 1, username: 'a', active: false }).active, false);
     eq('slUserPub על קלט שאינו אובייקט מחזירה {}', JSON.stringify(h.ctx.slUserPub(null)), '{}');
   }
   {
@@ -252,7 +261,7 @@ async function main() {
     });
     eq('slPullUsers מצליחה', await h.ctx.slPullUsers(true), true);
     const q = h.calls.sb.find((x) => x.table === 'sl_users');
-    ok('⭐ ה-select מבקש עמודות מפורשות ולא `*`', q.cols === 'id,username,pass_salt,pass_fp,role', q.cols);
+    ok('⭐ ה-select מבקש עמודות מפורשות ולא `*`', q.cols === h.ctx.SL_USER_COLS.join(','), q.cols);
     ok('⛔ המראה שבזיכרון בלי `password`', !('password' in h.ctx.SL_USERS[0]));
     ok('⛔ המראה שעל הדיסק בלי `password`', h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1);
     ok('⛔ ערך הסיסמה עצמו אינו על הדיסק', h.store[h.ctx.SL_USERS_KEY].indexOf('135790') === -1);
@@ -267,7 +276,7 @@ async function main() {
   {
     // שער הדיסק מסנן גם כשהמראה שבזיכרון הורעלה ישירות (עקיפת המשיכה).
     const h = makeCtx();
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f' }];
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f', active: true }];
     h.ctx.slUsersSave();
     ok('⭐ שער הדיסק מסנן `password` גם ממראה שהורעלה',
       h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1 && h.store[h.ctx.SL_USERS_KEY].indexOf('סוד-גלוי') === -1);
@@ -292,7 +301,10 @@ async function main() {
       },
     });
     eq('נפילה-חזרה כשהמיגרציה טרם הורצה', await h.ctx.slPullUsers(true), true);
-    eq('הבקשה השנייה היא id,username', h.calls.sb[1].cols, 'id,username');
+    // ⭐ סבב 37 — הסולם מסיר **את העמודה שהמסד התלונן עליה בלבד**, ולא
+    //    נופל עד `id,username`: מסד שחסרה בו `pass_fp` שומר את `role`,
+    //    ולכן המנהל אינו נחסם ממסך ההגדרות בגלל מיגרציה אחרת שטרם רצה.
+    eq('הבקשה השנייה מסירה רק את pass_fp', h.calls.sb[1].cols, 'id,username,pass_salt,role,active');
     ok('המשתמש נשמר גם בלי טביעה', h.ctx.SL_USERS.length === 1 && !h.ctx.SL_USERS[0].pass_fp);
   }
   {
@@ -347,17 +359,17 @@ async function main() {
   }
   {
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ id: 9, username: 'noab' }];   // בלי טביעה
+    h.ctx.SL_USERS = [{ id: 9, username: 'noab', active: true }];   // בלי טביעה
     h.fields['au-user'] = 'noab'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⭐ משתמש בלי טביעה ⇒ MSG_OFF_NO_FP', h.calls.authErr[0], h.ctx.MSG_OFF_NO_FP);
     ok('   ⛔ ולא MSG_BAD_LOGIN', h.calls.authErr[0] !== h.ctx.MSG_BAD_LOGIN);
     eq('   ולא נכנס', h.calls.enter, 0);
-    eq('slVerifyOffline מחזירה no-fp', await h.ctx.slVerifyOffline({ username: 'x' }, 'p'), 'no-fp');
+    eq('slVerifyOffline מחזירה no-fp', await h.ctx.slVerifyOffline({ username: 'x', active: true }, 'p'), 'no-fp');
   }
   {
     const h = makeCtx({ online: false, noCrypto: true });
-    h.ctx.SL_USERS = [{ id: 9, username: 'shimon', pass_salt: 's', pass_fp: 'f' }];
+    h.ctx.SL_USERS = [{ id: 9, username: 'shimon', pass_salt: 's', pass_fp: 'f', active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('בלי crypto ⇒ MSG_OFF_NO_CRYPTO', h.calls.authErr[0], h.ctx.MSG_OFF_NO_CRYPTO);
@@ -373,7 +385,7 @@ async function main() {
   {
     // ⛔ מטמון מפורמט ישן — סיסמה גלויה אינה מתקבלת כטביעה.
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: '135790' }];
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: '135790', active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⛔ סיסמה גלויה במראה אינה מתקבלת כטביעה', h.calls.enter, 0);
@@ -383,7 +395,7 @@ async function main() {
     // סיסמה ישנה שאינה שש ספרות — נכנסת בכל זאת (סבב 19).
     const h = makeCtx({ online: false });
     const made = await h.ctx.slMakePassFp('admin');
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: made.salt, pass_fp: made.fp }];
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: made.salt, pass_fp: made.fp, active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = 'admin';
     await h.ctx.doLogin();
     eq('⭐ סיסמה ישנה שאינה שש ספרות — נכנסת', h.calls.enter, 1);
@@ -426,7 +438,7 @@ async function main() {
     eq('כניסה מקוונת מצליחה', h.calls.enter, 1);
     const q0 = h.calls.sb[0];
     ok('ההשוואה עדיין מול `password` שבמסד', q0.eqs.password === A.password);
-    ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === 'id,username,pass_salt,pass_fp,role', q0.cols);
+    ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === h.ctx.SL_USER_COLS.join(','), q0.cols);
     ok('⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
     // ההשלמה רצה ברקע — ממתינים לה עצמה ולא לשעון (ר' `waitFor`).
     await waitFor(() => h.calls.sb.some((x) => x.kind === 'update'), 'ההשלמה ברקע');
@@ -522,10 +534,25 @@ async function main() {
   }
   {
     const h = makeCtx();
-    ok('slIsMissingFpCol מזהה pass_fp', h.ctx.slIsMissingFpCol({ message: 'column sl_users.pass_fp does not exist' }));
-    ok('slIsMissingFpCol מזהה pass_salt', h.ctx.slIsMissingFpCol({ details: 'PASS_SALT missing' }));
-    ok('שגיאה אחרת אינה מזוהה בטעות', !h.ctx.slIsMissingFpCol({ message: 'permission denied' }));
-    ok('שגיאה ריקה אינה מזוהה', !h.ctx.slIsMissingFpCol(null));
+    const C = h.ctx.SL_USER_COLS;
+    eq('slMissingCol מזהה pass_fp', h.ctx.slMissingCol({ message: 'column sl_users.pass_fp does not exist' }, C), 'pass_fp');
+    eq('slMissingCol מזהה pass_salt', h.ctx.slMissingCol({ details: 'PASS_SALT missing' }, C), 'pass_salt');
+    eq('slMissingCol מזהה active (סבב 37)', h.ctx.slMissingCol({ message: 'column sl_users.active does not exist' }, C), 'active');
+    ok('שגיאה אחרת אינה מזוהה בטעות', !h.ctx.slMissingCol({ message: 'permission denied' }, C));
+    ok('שגיאה ריקה אינה מזוהה', !h.ctx.slMissingCol(null, C));
+    // ⛔ `id`/`username` לעולם אינם מוסרים — בלעדיהם אין זהות.
+    ok('⛔ id ו-username לעולם אינם מועמדים להסרה',
+      !h.ctx.slMissingCol({ message: 'column sl_users.username does not exist' }, C));
+    // ⭐ הסולם מסיר **רק** את העמודה שהמסד התלונן עליה, ולא נופל עד
+    //    id,username — כך `role` שורד מסד שחסרה בו `pass_fp`.
+    const seen = [];
+    const rr = await h.ctx.slSelectUsers(function (cols) {
+      seen.push(cols);
+      if (cols.indexOf('pass_fp') !== -1) return Promise.resolve({ error: { message: 'column sl_users.pass_fp does not exist' } });
+      return Promise.resolve({ data: [], error: null });
+    });
+    ok('⭐ הסולם מסיר עמודה אחת ומנסה שוב', seen.length === 2 && !rr.error);
+    ok('   ו-role שרד את הנפילה', seen[1].indexOf('role') !== -1);
   }
 
   /* ── ז. סינון הסודות — שלוש נקודות ───────────────────────────────────── */

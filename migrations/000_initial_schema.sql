@@ -69,12 +69,30 @@ CREATE TABLE IF NOT EXISTS public.sl_users (
   pass_salt  TEXT,
   pass_fp    TEXT,
   role       TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  -- ⭐ `active` — המחיקה הרכה של משתמש (סבב 37, `migrations/013`).
+  --    ⛔ אין `deleted` על טבלת משתמשים — `active=false` הוא המנגנון בארגון
+  --    כולו (כלל קריטי 4 ב-gius), ועמודה שנייה לאותו מושג הייתה יוצרת שני
+  --    מקורות אמת למצב של משתמש.
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
 ALTER TABLE public.sl_users
   ADD COLUMN IF NOT EXISTS pass_salt TEXT,
   ADD COLUMN IF NOT EXISTS pass_fp   TEXT;
+-- שדרוג התקנה שנוצרה לפני 013 — ⛔ ברירת המחדל היא TRUE (סבב 37):
+-- `DEFAULT false` היה נועל בחוץ את כל המשתמשים הקיימים ברגע ההרצה.
+ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS active BOOLEAN;
+UPDATE public.sl_users SET active = TRUE WHERE active IS NULL;
+ALTER TABLE public.sl_users ALTER COLUMN active SET DEFAULT TRUE;
+ALTER TABLE public.sl_users ALTER COLUMN active SET NOT NULL;
+ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+UPDATE public.sl_users SET updated_at = COALESCE(created_at, NOW()) WHERE updated_at IS NULL;
+ALTER TABLE public.sl_users ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE public.sl_users ALTER COLUMN updated_at SET NOT NULL;
+-- ⚠️ הטריגר עצמו נוצר בפרק `sl_touch_updated_at` שבהמשך הקובץ — `CREATE
+--    TRIGGER` דורש שהפונקציה כבר תהיה קיימת, ולכן אי אפשר ליצור אותו כאן.
 -- שדרוג התקנה שנוצרה לפני 011 — שלושה שלבים, ואי אפשר לקצר אותם:
 -- `ADD COLUMN … NOT NULL` בלי DEFAULT נכשל על טבלה שיש בה שורות.
 -- ⚠️ ה-UPDATE נוגע **רק** בשורות שקדמו לעמודה. ר' `migrations/011`.
@@ -179,9 +197,12 @@ GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated
 ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_students_all" ON public.sl_students;
 CREATE POLICY "sl_students_all" ON public.sl_students FOR ALL USING (true) WITH CHECK (true);
-CREATE INDEX IF NOT EXISTS sl_students_active_idx
-  ON public.sl_students (name)
-  WHERE deleted = false;
+-- ⛔ אינדקס **מלא** ולא חלקי (סבב 37, `migrations/014`) — מאז 008 המראה
+--    מושכת `select('*')` והסינון עבר ל-`slApplyMirror` בצד הלקוח, ולכן
+--    אינדקס עם `WHERE deleted = false` אינו משרת עוד אף שאילתה.
+CREATE INDEX IF NOT EXISTS sl_students_name_idx
+  ON public.sl_students (name);
+DROP INDEX IF EXISTS public.sl_students_active_idx;
 
 -- ---------- תשלומים (כספים) ----------
 -- מחיקה = soft-delete בלבד. כל שליפה/סיכום באפליקציה מסננת deleted = false.
@@ -227,9 +248,11 @@ GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authentic
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_transactions_all" ON public.sl_transactions;
 CREATE POLICY "sl_transactions_all" ON public.sl_transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE INDEX IF NOT EXISTS sl_transactions_active_idx
-  ON public.sl_transactions (student_id, date)
-  WHERE deleted = false;
+-- ⛔ אינדקס **מלא** ולא חלקי (סבב 37, `migrations/014`) — ר' ההסבר אצל
+--    `sl_students_name_idx` למעלה.
+CREATE INDEX IF NOT EXISTS sl_transactions_student_date_idx
+  ON public.sl_transactions (student_id, date);
+DROP INDEX IF EXISTS public.sl_transactions_active_idx;
 -- שדרוג התקנה שנוצרה לפני 003 (האילוץ הישן היה ON DELETE CASCADE).
 -- מדלג בשקט אם יש תנועות יתומות — הרצה חוזרת של הקובץ הזה לא אמורה
 -- להיכשל אף פעם. לטיפול מלא ביתומים ראה migrations/003.
@@ -395,6 +418,13 @@ CREATE TRIGGER sl_transactions_touch
 DROP TRIGGER IF EXISTS sl_students_touch ON public.sl_students;
 CREATE TRIGGER sl_students_touch
   BEFORE UPDATE ON public.sl_students
+  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+
+-- 013 (סבב 37) — אותה חותמת גם על טבלת המשתמשים. בלעדיה להתנגשות על שורת
+-- משתמש אין שובר-שוויון דטרמיניסטי, בניגוד לשתי טבלאות הליבה.
+DROP TRIGGER IF EXISTS sl_users_touch ON public.sl_users;
+CREATE TRIGGER sl_users_touch
+  BEFORE UPDATE ON public.sl_users
   FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
 
 -- ============================================================

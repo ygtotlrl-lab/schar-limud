@@ -22,6 +22,7 @@ const APP = {
   names: ['slTs', 'slKey', 'slMerge'],
   vars: [],
   globals: {},
+  offlineFn: 'slVerifyOffline',
   mutFn: 'slMerge',
   guard: /\(isPending && isPending\(k\)\) \|\| slTs\(l\) > slTs\(r\)/,
   mutate: (fn) => fn.replace('(isPending && isPending(k)) || slTs(l) > slTs(r)', 'slTs(l) > slTs(r)'),
@@ -87,6 +88,10 @@ function harness(src, pending) {
   vm.createContext(sandbox);
   for (const v of (APP.vars || [])) vm.runInContext(cutVar(v, src), sandbox);
   for (const n of APP.names) vm.runInContext(cut(n, src), sandbox, { filename: n + '.js' });
+  // ⚠️ פונקציית הכניסה האופליין נחתכת גם היא (סבב 37) — הצהרת פונקציה אינה
+  //    מריצה את הגוף, ולכן העוזרים שהיא קוראת להם (גזירת PBKDF2) אינם
+  //    נדרשים בסביבה כל עוד הבדיקה עוצרת לפניהם.
+  if (APP.offlineFn) vm.runInContext(cut(APP.offlineFn, src), sandbox, { filename: APP.offlineFn + '.js' });
   return sandbox;
 }
 
@@ -151,6 +156,42 @@ try {
 } catch (e) { caught = true; }
 assert(caught,
   '6ב · ⛔ מוטציה שמסירה את סעיף ה-⏳ מפילה את טענה 2א — ההגנה נאכפת ולא מוצהרת');
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4 · חסימת משתמש מושבת בכניסה אופליין (שורה 24 במטריצה)
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ הבדיקה נמנעת מ-PBKDF2 בכוונה: משתמש **בלי** טביעה מחזיר `'no-fp'`
+   כשאין הגנה, ו-`'bad'` כשההגנה קיימת — כלומר ההבדל בין שתי ההתנהגויות
+   נמדד בלי לגזור מפתח ובלי לתלות את הבדיקה ב-`crypto.subtle`.
+   ══════════════════════════════════════════════════════════════════════════ */
+if (!APP.offlineFn) {
+  ok('7 · «לא רלוונטי» — אין כאן כניסה, אין משתמשים ואין מה לחסום');
+} else {
+  const runVerify = async (src, user) => {
+    const sb = harness(src, new Set());
+    return await sb[APP.offlineFn](user, 'x');
+  };
+  const OFF = { username: 'x', active: false };   // מושבת, ובלי טביעה
+  const ON = { username: 'x', active: true };     // פעיל, ובלי טביעה
+
+  const guarded = await runVerify(SRC, OFF);
+  assert(guarded === 'bad',
+    '7א · ⭐ משתמש מושבת נחסם אופליין — ' + APP.offlineFn + '() החזירה ' + guarded);
+  const live = await runVerify(SRC, ON);
+  assert(live === 'no-fp',
+    '7ב · ⚠️ ומשתמש פעיל אינו נחסם — הבדיקה חוסמת השבתה ולא היעדר טביעה (' + live + ')');
+
+  /*  המוטציה: הסרת סעיף ה-`active` בלבד. ⛔ אם היא אינה מפילה את 7א,
+   *  הבדיקה מודדת משהו אחר.                                              */
+  const OFN = cut(APP.offlineFn, SRC);
+  const OMUT = OFN.replace(/\s*\|\|\s*\w+\.active !== true/, '');
+  assert(OMUT !== OFN, '7ג · המוטציה מצאה את סעיף ה-active והסירה אותו');
+  let caught7 = false;
+  try { caught7 = (await runVerify(SRC.replace(OFN, OMUT), OFF)) !== 'bad'; }
+  catch (e) { caught7 = true; }
+  assert(caught7,
+    '7ד · ⛔ מוטציה שמסירה את בדיקת ה-active מפילה את טענה 7א — משתמש מושבת היה נכנס');
+}
 
 console.log(failed ? `\n✗ סבב 37 — ${failed} טענות נכשלו` : '\n✓ סבב 37 — כל הטענות עברו');
 process.exit(failed ? 1 : 0);
