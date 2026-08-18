@@ -76,7 +76,7 @@ const NAMES_VAR = [
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
-  'slMissingCol', 'slSelectUsers', 'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
+  'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slSaveSession', 'slReadSession',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
@@ -291,21 +291,17 @@ async function main() {
     eq('שורה בלי username נזרקת', h.ctx.SL_USERS.length, 1);
   }
   {
-    // המיגרציה טרם הורצה ⇒ נפילה-חזרה לשתי עמודות.
-    let n = 0;
+    // ⭐ סבב 38 — אין יותר נפילה-חזרה. `migrations/010`/`011`/`013` רצו
+    //    כולן, ולכן שגיאת «עמודה חסרה» היא מעכשיו שגיאה לכל דבר: המשיכה
+    //    נכשלת, ⛔ **והמראה הקיימת אינה נדרסת** — היא נשארת כפי שהייתה
+    //    ומשרתת את הכניסה האופליין. זו בדיוק ההתנהגות של כשל רשת.
     const h = makeCtx({
-      reply: (q) => {
-        n++;
-        if (n === 1) return { data: null, error: { message: 'column sl_users.pass_fp does not exist' } };
-        return { data: [{ id: 1, username: 'shimon' }], error: null };
-      },
+      reply: () => ({ data: null, error: { message: 'column sl_users.pass_fp does not exist' } }),
     });
-    eq('נפילה-חזרה כשהמיגרציה טרם הורצה', await h.ctx.slPullUsers(true), true);
-    // ⭐ סבב 37 — הסולם מסיר **את העמודה שהמסד התלונן עליה בלבד**, ולא
-    //    נופל עד `id,username`: מסד שחסרה בו `pass_fp` שומר את `role`,
-    //    ולכן המנהל אינו נחסם ממסך ההגדרות בגלל מיגרציה אחרת שטרם רצה.
-    eq('הבקשה השנייה מסירה רק את pass_fp', h.calls.sb[1].cols, 'id,username,pass_salt,role,active');
-    ok('המשתמש נשמר גם בלי טביעה', h.ctx.SL_USERS.length === 1 && !h.ctx.SL_USERS[0].pass_fp);
+    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }];
+    eq('שגיאת עמודה חסרה מפילה את המשיכה', await h.ctx.slPullUsers(true), false);
+    eq('⛔ ואין ניסיון שני — שאילתה אחת בלבד', h.calls.sb.length, 1);
+    eq('⛔ והמראה הקיימת לא נדרסה', h.ctx.SL_USERS.length, 1);
   }
   {
     const h = makeCtx({ reply: () => ({ data: [], error: null }) });
@@ -533,26 +529,19 @@ async function main() {
     eq('   ואפס שאילתות', h.calls.sb.length, 0);
   }
   {
-    const h = makeCtx();
-    const C = h.ctx.SL_USER_COLS;
-    eq('slMissingCol מזהה pass_fp', h.ctx.slMissingCol({ message: 'column sl_users.pass_fp does not exist' }, C), 'pass_fp');
-    eq('slMissingCol מזהה pass_salt', h.ctx.slMissingCol({ details: 'PASS_SALT missing' }, C), 'pass_salt');
-    eq('slMissingCol מזהה active (סבב 37)', h.ctx.slMissingCol({ message: 'column sl_users.active does not exist' }, C), 'active');
-    ok('שגיאה אחרת אינה מזוהה בטעות', !h.ctx.slMissingCol({ message: 'permission denied' }, C));
-    ok('שגיאה ריקה אינה מזוהה', !h.ctx.slMissingCol(null, C));
-    // ⛔ `id`/`username` לעולם אינם מוסרים — בלעדיהם אין זהות.
-    ok('⛔ id ו-username לעולם אינם מועמדים להסרה',
-      !h.ctx.slMissingCol({ message: 'column sl_users.username does not exist' }, C));
-    // ⭐ הסולם מסיר **רק** את העמודה שהמסד התלונן עליה, ולא נופל עד
-    //    id,username — כך `role` שורד מסד שחסרה בו `pass_fp`.
-    const seen = [];
-    const rr = await h.ctx.slSelectUsers(function (cols) {
-      seen.push(cols);
-      if (cols.indexOf('pass_fp') !== -1) return Promise.resolve({ error: { message: 'column sl_users.pass_fp does not exist' } });
-      return Promise.resolve({ data: [], error: null });
-    });
-    ok('⭐ הסולם מסיר עמודה אחת ומנסה שוב', seen.length === 2 && !rr.error);
-    ok('   ו-role שרד את הנפילה', seen[1].indexOf('role') !== -1);
+    // ⭐ סבב 38 — הסולם נמחק, ושלוש נקודות הקריאה חוזרות ל-`SL_USER_COLS`
+    //    ישיר. `migrations/013` רצה ב-2026-08-18 והקוד נפרס, ולכן החלון
+    //    שהפיגום הגן עליו נסגר. הטענות כאן נועלות את **היעדרו**: שאילתה
+    //    אחת בלבד, עם כל שש העמודות.
+    const h = makeCtx({ reply: () => ({ data: [], error: null }) });
+    ok('⛔ slMissingCol אינה קיימת עוד', typeof h.ctx.slMissingCol === 'undefined');
+    ok('⛔ slSelectUsers אינה קיימת עוד', typeof h.ctx.slSelectUsers === 'undefined');
+    await h.ctx.slPullUsers(true);
+    eq('משיכת המשתמשים היא שאילתה אחת', h.calls.sb.length, 1);
+    eq('   ועם רשימת ההיתר המלאה', h.calls.sb[0].cols, h.ctx.SL_USER_COLS.join(','));
+    ok('   כולל active', h.calls.sb[0].cols.indexOf('active') !== -1);
+    ok('   וכולל role', h.calls.sb[0].cols.indexOf('role') !== -1);
+    ok('   ⛔ ובלי password', h.calls.sb[0].cols.indexOf('password') === -1);
   }
 
   /* ── ז. סינון הסודות — שלוש נקודות ───────────────────────────────────── */

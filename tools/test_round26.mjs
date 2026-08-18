@@ -76,7 +76,7 @@ const NAMES_VAR = [
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
 ];
 const NAMES_FN = [
-  'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slMissingCol', 'slSelectUsers',
+  'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
   'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
   'slSaveSession', 'slReadSession', 'slResolveUser',
@@ -349,10 +349,10 @@ async function main() {
     eq('slUserPub שומר role', h.ctx.slUserPub({ id: 1, username: 'a', role: 'admin' }).role, 'admin');
     ok('⛔ slUserPub מפיל password',
       !('password' in h.ctx.slUserPub({ id: 1, username: 'a', password: 'סוד', role: 'admin' })));
-    eq('slMissingCol מזהה גם את role חסר',
-      h.ctx.slMissingCol({ message: 'column sl_users.role does not exist' }, h.ctx.SL_USER_COLS), 'role');
-    eq('ועדיין את pass_fp', h.ctx.slMissingCol({ message: 'column pass_fp does not exist' }, h.ctx.SL_USER_COLS), 'pass_fp');
-    ok('ולא שגיאה אחרת', !h.ctx.slMissingCol({ message: 'timeout' }, h.ctx.SL_USER_COLS));
+    // ⭐ סבב 38 — הסולם נמחק; `role` יורד למכשיר ברשימת ההיתר הישירה,
+    //    ואין יותר מסלול שמסיר עמודות בזמן ריצה.
+    ok('⛔ slMissingCol אינה קיימת עוד', typeof h.ctx.slMissingCol === 'undefined');
+    ok('⛔ slSelectUsers אינה קיימת עוד', typeof h.ctx.slSelectUsers === 'undefined');
   }
 
   /* ── ה. המנגנון הישן הוסר לחלוטין ────────────────────────────────────── */

@@ -2596,7 +2596,7 @@ function slDropLegacyPassHash() {
    מראת המשתמשים נבנית מ**רשימת עמודות מותרות** (`SL_USER_COLS`), לא
    מהסרה של עמודה אחת: רשימת-היתר נשארת נכונה גם כשתיווסף לטבלה עמודה
    רגישה חדשה, ורשימת-איסור לא הייתה. בנוסף, ה-`select` עצמו מבקש רק את
-   ארבע העמודות האלה — הסיסמאות של המשתמשים האחרים **אינן מגיעות לזיכרון
+   העמודות שברשימה — הסיסמאות של המשתמשים האחרים **אינן מגיעות לזיכרון
    הדפדפן מלכתחילה**, ולא רק שאינן נשמרות.
    ═══════════════════════════════════════════════════════════════════════ */
 var SL_USERS_KEY = 'sl_mirror_users';
@@ -2670,48 +2670,6 @@ async function slPassFields(pass) {
   var made = await slMakePassFp(pass);
   return made ? { pass_salt: made.salt, pass_fp: made.fp } : { pass_salt: null, pass_fp: null };
 }
-// תשובת שרת שאומרת "העמודות עדיין לא קיימות" — כלומר `migrations/010`
-// (`pass_salt`/`pass_fp`) או `migrations/011` (`role`) טרם הורצה.
-// ⚠️ בלי הבדיקה הזו משיכת המשתמשים הייתה **נכשלת לגמרי** בחלון שבין
-// דחיפת הקוד להרצת המיגרציה, ומכשיר שנכנס אליו משתמש היה מאבד את המראה.
-// הנפילה-חזרה היא ל-`id,username` — שתי העמודות שקיימות מאז 000.
-// ⭐ סולם העמודות (סבב 37) — היה קודם שער בינארי: כל שגיאת «עמודה חסרה»
-// הפילה את השאילתה עד `id,username`, כלומר מסד שחסרה בו `pass_fp` איבד גם
-// את `role` והמנהל נחסם ממסך ההגדרות בלי סיבה. מעכשיו מסירים **את העמודה
-// שהמסד התלונן עליה בלבד** ומנסים שוב.
-//
-// ⚠️ **פיגום זמני — עם טריגר מחיקה כתוב (סבב 37).** `migrations/013` הורצה
-// ב-2026-08-18 ו-`active` **קיימת מעכשיו במסד**, כלומר הסולם כבר אינו נדרש
-// כדי לשרוד אותה. הוא נשאר מסיבה אחת בלבד: **הקוד טרם נפרס למכשירים**,
-// ובחלון שבין ההרצה לפריסה מכשיר עם מראה ישנה עדיין מגיע לכאן.
-// ⛔ **הוא נמחק בסבב הראשון שאחרי המיזוג והפריסה**, ואיתו `slMissingCol`
-// ו-`slSelectUsers`; שלושת אתרי הקריאה חוזרים ל-`select(SL_USER_COLS)`
-// ישיר, והבדיקה בכניסה האופליין תהיה זהה בית-לבית לשלוש האחיות:
-// `if (!u || u.active !== true) return 'bad';`
-// ⛔ `id` ו-`username` לעולם אינם מוסרים — בלעדיהם אין זהות, ותשובה כזו
-// חסרת ערך.
-function slMissingCol(err, cols) {
-  var m = ((err && (err.message || err.details || err.hint || err.code || '')) + '').toLowerCase();
-  for (var i = 0; i < cols.length; i++) {
-    if (cols[i] === 'id' || cols[i] === 'username') continue;
-    if (m.indexOf(cols[i]) !== -1) return cols[i];
-  }
-  return null;
-}
-// `build(cols)` מקבל מחרוזת עמודות ומחזיר Promise של תשובת PostgREST.
-// ⚠️ הלולאה חסומה באורך הרשימה — אין כאן ניסיון חוזר על שגיאת רשת, רק על
-// עמודה שאינה קיימת בסכימה.
-async function slSelectUsers(build) {
-  var cols = SL_USER_COLS.slice(), r = null;
-  for (var i = 0; i < SL_USER_COLS.length; i++) {
-    r = await build(cols.join(','));
-    if (!r || !r.error) return r;
-    var miss = slMissingCol(r.error, cols);
-    if (!miss) return r;
-    cols = cols.filter(function (c) { return c !== miss; });
-  }
-  return r;
-}
 
 /* ═══ הרשאה — נגזרת מהמשתמש, לא מסיסמה שנייה (סבב 26) ═══════════════════
    ⛔ **נכשל סגור, ובשלושה מצבים שונים בכוונה.** `slSettingsAccess`
@@ -2762,7 +2720,7 @@ async function slPullUsers(force) {
   if (!navigator.onLine) return false;
   _slUsersPulling = true;
   try {
-    var r = await slSelectUsers(function (cols) { return withTimeout(SB.from('sl_users').select(cols)); });
+    var r = await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')));
     if (!r || r.error || !Array.isArray(r.data)) return false;
     SL_USERS = r.data.map(slUserPub).filter(function (u) { return u && u.username; });
     slUsersSave();
@@ -2814,7 +2772,7 @@ async function slEnsurePassFp(u, pass) {
       body = { pass_salt: made.salt, pass_fp: made.fp };
     }
     var r = await withTimeout(SB.from('sl_users').update(body).eq('id', u.id));
-    if (r && r.error) { if (!slMissingCol(r.error, SL_USER_COLS)) console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
+    if (r && r.error) { console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
     u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
     return true;
   } catch (e) { console.warn('[pass-fp] השלמה נכשלה', e && e.message); return false; }
@@ -3231,7 +3189,7 @@ async function doLogin(){
     // מיגרציה שטרם הורצה ⇒ העמודה החסרה מוסרת מהרשימה והשאילתה חוזרת.
     // הכניסה המקוונת חייבת להמשיך לעבוד בחלון הזה; מה שלא יעבוד הוא
     // הכניסה האופליין, והיא תאמר זאת במפורש ('no-fp').
-    var r=await slSelectUsers(function(cols){ return SB.from('sl_users').select(cols).eq('username',u).eq('password',p).maybeSingle(); });
+    var r=await SB.from('sl_users').select(SL_USER_COLS.join(',')).eq('username',u).eq('password',p).maybeSingle();
     if(r.error)throw r.error;
     if(!r.data){
       // טבלה ריקה ⇒ אין כאן סיסמה שגויה אלא התקנה שטרם נוצר בה משתמש.
@@ -3338,7 +3296,7 @@ async function slRevalidateSession(sess){
   if(!sess||!navigator.onLine)return;
   try{
     // עמודות מפורשות ולא `*` (סבב 24) — `password` לא נכנס לזיכרון.
-    var r=await slSelectUsers(function(cols){ return withTimeout(SB.from('sl_users').select(cols).eq('username',sess.username).maybeSingle()); });
+    var r=await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')).eq('username',sess.username).maybeSingle());
     if(r&&r.error)return;                       // שגיאת שרת/רשת — משאירים מחובר
     if(!r||!r.data){ toast('⚠️ המשתמש אינו קיים עוד — נדרשת כניסה מחדש',5000); doLogout(); return; }
     CUR_USER=slUserPub(r.data);
