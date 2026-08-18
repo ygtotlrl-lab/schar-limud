@@ -24,7 +24,9 @@ import { fileURLToPath } from 'node:url';
 const APP = {
   name: 'schar-limud',
   keys: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
-  sqlKeys: ['sl_transactions', 'sl_students', 'sl_settings', 'sl_lists'],
+  prefixes: [''],
+  legacyKeys: [],
+  sisterKeys: [],
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/004_backup_retention_cron.sql',
 };
@@ -95,6 +97,38 @@ function simulateSweep(sql, rows, days, nowMs) {
   return { deleted: gone.length, left: left.map((r) => r.key).sort(), logged: logged };
 }
 
+/* ── מפתחות הגיבוי שהאפליקציה באמת כותבת — נגזרים מ-`BK_CFG.sources()` ──
+   ⚠️ נגזרים ולא מוצהרים (השלמת סבב 35ג): רשימה מוצהרת בקובץ הבדיקה היא
+      מקור אמת שני שמתיישן בשקט — וזה בדיוק מה שקרה כאן, כשארבעה שמות
+      גיבוי שיצאו משימוש נשארו מחוץ לרשימת-ההיתר ו-23 שורות במסד לא היו
+      מתפנות לעולם. */
+function bkKeysFromSrc(src) {
+  const m = /sources: function \(\) \{([\s\S]*?)\n  \}\n\};/.exec(src);
+  if (!m) return null;
+  let body = m[1]
+    .replace(/\/\*[\s\S]*?\*\//g, '')      // הערות בלוק
+    .replace(/\/\/[^\n]*/g, '')             // הערות שורה
+    .replace(/kind:\s*'[^']*'/g, '')
+    .replace(/table:\s*'[^']*'/g, '')
+    .replace(/cols:\s*'[^']*'/g, '')
+    .replace(/order:\s*'[^']*'/g, '')
+    .replace(/eq:\s*\[[^\]]*\]/g, '');
+  // מקור עם `key` מפורש — הוא מפתח הגיבוי, ולא ה-`name`.
+  body = body.replace(/name:\s*'[^']*'\s*,\s*key:\s*'([^']*)'/g, "key: '$1'");
+  return (body.match(/'([^']*)'/g) || []).map((s) => s.slice(1, -1));
+}
+
+/* התרומה של האפליקציה הזו לרשימת-ההיתר של הפרויקט שלה. */
+function contribution(src) {
+  const base = bkKeysFromSrc(src) || [];
+  const out = [];
+  APP.prefixes.forEach((p) => base.forEach((k) => out.push(p + k)));
+  APP.legacyKeys.forEach((k) => out.push(k));
+  return out;
+}
+
+const uniqSorted = (a) => Array.from(new Set(a)).sort();
+
 /* פיקסטורה: מפתח יומי ישן/טרי, גיבוי לפני-פעולה, יתום, ומפתח שאינו ברשימה. */
 function fixture(dailyKey) {
   return [
@@ -122,10 +156,12 @@ function t1() {
     '1ה · `retention` נרשם ליומן רק כשנמחק משהו בפועל');
   assert(/var BK_RETENTION_DAYS = 30;/.test(SRC),
     '1ו · חלון השמירה הוא 30 יום');
-  // מפתחות הגיבוי היומי של האפליקציה הזו מופיעים ב-`BK_CFG.sources`.
-  APP.keys.forEach(function (k) {
-    assert(SRC.indexOf("'" + k + "'") !== -1, '1ז · מפתח הגיבוי `' + k + '` קיים ב-BK_CFG');
-  });
+  // מפתחות הגיבוי היומי — נגזרים מ-`BK_CFG.sources()` ומושווים לרשימה שבבלוק APP.
+  const derived = bkKeysFromSrc(SRC);
+  assert(derived !== null, '1ז · `BK_CFG.sources()` נקראת מ-index.html');
+  assert(uniqSorted(derived || []).join(',') === uniqSorted(APP.keys).join(','),
+    '1ח · מפתחות הגיבוי בקוד תואמים לרשימה שבבלוק APP (' +
+    uniqSorted(derived || []).join(', ') + ')');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -156,16 +192,26 @@ function t2(sql) {
   const keys = sqlKeys(sql) || [];
   assert(keys.length > 0, '2כ · רשימת-ההיתר אינה ריקה (' + keys.length + ' מפתחות)');
   assert(!keys.some(PROTECTED), '2ל · ⛔ אף מפתח מוגן (`PRE_*`/`ORPHAN_*`) אינו ברשימה');
-  APP.sqlKeys.forEach(function (k) {
-    assert(keys.indexOf(k) !== -1, '2מ · `' + k + '` ברשימת-ההיתר');
-  });
+  /* ⭐ שקילות דו-כיוונית (השלמת סבב 35ג): כל מפתח שהאפליקציה כותבת נמצא
+     ברשימת-ההיתר, **וכל** מפתח ברשימה שייך למישהו — לאפליקציה הזו או
+     לאחיות שחולקות את הפרויקט. היסט שמות עתידי נתפס בשער ולא במסד. */
+  const mine = uniqSorted(contribution(SRC));
+  const expect = uniqSorted(mine.concat(APP.sisterKeys));
+  const missing = mine.filter((k) => keys.indexOf(k) === -1);
+  const extra = uniqSorted(keys).filter((k) => expect.indexOf(k) === -1);
+  assert(missing.length === 0, '2מ · כל מפתח שהאפליקציה כותבת נמצא ברשימת-ההיתר' +
+    (missing.length ? ' — חסרים: ' + missing.join(', ') : ''));
+  assert(extra.length === 0, '2נ · אין ברשימה מפתח שאינו של אף אפליקציה בפרויקט' +
+    (extra.length ? ' — עודפים: ' + extra.join(', ') : ''));
+  assert(uniqSorted(keys).join(',') === expect.join(','),
+    '2ס · רשימת-ההיתר שקולה בדיוק לסך התרומות (' + expect.length + ' מפתחות)');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    3 · המיגרציה — התנהגות: מה נמחק, מה שורד, ומתי היא מסרבת
    ══════════════════════════════════════════════════════════════════════════ */
 function t3(sql) {
-  const daily = APP.sqlKeys[0];
+  const daily = contribution(SRC)[0];
   const r = simulateSweep(sql, fixture(daily), 30, Date.now());
   assert(r.deleted === 1, '3א · עותק יומי בן 31 יום נגרע (' + r.deleted + ')');
   assert(r.left.indexOf(daily) !== -1, '3ב · העותק הטרי של אותו מפתח שורד');
@@ -183,7 +229,7 @@ function t3(sql) {
    4 · מוטציות — שתי הדרישות של סבב 35ג
    ══════════════════════════════════════════════════════════════════════════ */
 function t4(sql) {
-  const daily = APP.sqlKeys[0];
+  const daily = contribution(SRC)[0];
 
   /* מוטציה א — הרחבת רשימת-ההיתר לקידומת `PRE_*`. חייבת להיתפס. */
   {
@@ -240,8 +286,15 @@ if (APP.migration) {
   const sql = readFileSync(join(ROOT, APP.migration), 'utf8');
   t2(sql); t3(sql); t4(sql);
 } else {
-  ok('2–4 · המיגרציה יושבת בפרויקט המשותף (' + APP.migrationDoc +
-     ') ונבדקת בריפו שמחזיק אותה — כאן נבדק התיעוד בלבד');
+  /* ⚠️ אין כאן קובץ מיגרציה (הפרויקט משותף), ולכן נבדקת התרומה עצמה —
+     והשקילות מולה נאכפת בריפו שמחזיק את הקובץ. ⛔ העתקת המיגרציה לכאן
+     הייתה מקור אמת שני (סבב 35ג). */
+  const mine = uniqSorted(contribution(SRC));
+  assert(mine.length > 0, '2–3 · התרומה לרשימת-ההיתר נגזרה מהקוד: ' + mine.join(', '));
+  APP.legacyKeys.forEach(function (k) {
+    assert(DOC.indexOf(k) !== -1, '4 · שם הגיבוי שיצא משימוש `' + k + '` מתועד כאן');
+  });
+  ok('· השקילות מול ' + APP.migrationDoc + ' נאכפת בריפו שמחזיק את הקובץ');
 }
 t5();
 
