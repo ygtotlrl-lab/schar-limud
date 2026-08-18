@@ -19,13 +19,16 @@ import vm from 'node:vm';
 /* ── APP — הדבר היחיד שנבדל בין הריפו (schar-limud) ────────────────────── */
 const APP = {
   app: 'schar-limud',
-  names: ['slTs', 'slKey', 'slMerge'],
+  names: ['slTs', 'slKey', '_mergePick', 'mergeCore', 'slMerge'],
   vars: [],
   globals: {},
   offlineFn: 'slVerifyOffline',
-  mutFn: 'slMerge',
-  guard: /\(isPending && isPending\(k\)\) \|\| slTs\(l\) > slTs\(r\)/,
-  mutate: (fn) => fn.replace('(isPending && isPending(k)) || slTs(l) > slTs(r)', 'slTs(l) > slTs(r)'),
+  // ⭐ סבב 38 — כלל ההכרעה עבר לליבה המשותפת, ולכן גם המוטציה מכוונת
+  //    לשם. ⛔ הטענה לא נחלשה: היא עדיין דורשת שהסרת סעיף ה-⏳ תפיל את
+  //    טענת הבסיס — רק שעכשיו זה קורה **בארבע האפליקציות בבת אחת**.
+  mutFn: '_mergePick',
+  guard: /isPend \|\| tsOf\(loc\) > tsOf\(rem\)/,
+  mutate: (fn) => fn.replace('isPend || tsOf(loc) > tsOf(rem)', 'tsOf(loc) > tsOf(rem)'),
   rec: (id, ts, tag) => ({ client_id: id, updated_at: new Date(ts * 1000).toISOString(), name: tag }),
   keyOf: (r) => r.client_id,
   tag: (r) => r && r.name,

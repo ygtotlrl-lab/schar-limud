@@ -2479,26 +2479,115 @@ function slTs(r) {
 // יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
 // שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
 // "היעדר רשומה אינו מחיקה" — ספק ⇐ שומרים את מה שהמשתמש כתב.)
-function slMerge(local, remote, isPending, keyOf) {
-  local = Array.isArray(local) ? local : [];
-  remote = Array.isArray(remote) ? remote : [];
-  keyOf = keyOf || slKey;
+/* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
+   ליבת המיזוג של הארגון, זהה בית-לבית בארבע האפליקציות. עד סבב 38 חיו כאן
+   **ארבעה מנועים נפרדים** — `mergeRecords` · `ysMergeRecords` · `slMerge` ·
+   `mergeRows` — שכולם מימשו את אותם שלושה כללים של כלל ברזל 6:
+     • רשומה מקומית מסומנת ⏳ מנצחת, **ללא תלות בחותמת**;
+     • בשוויון חותמות — **הענן מנצח** (שובר-שוויון דטרמיניסטי);
+     • רשומה שקיימת רק מקומית **שורדת** — היעדרות אצל הצד השני אינה מחיקה.
+   ⛔ שלושת הכללים יושבים מעכשיו ב-`_mergePick` בלבד (סבב 38) — ארבעה
+   עותקים של כלל הכרעה הם ארבע הזדמנויות שאחד מהם ייסחף, וזה בדיוק מה
+   שקרה: ההגנה על ⏳ הייתה קיימת בשתיים מארבע במשך שמונה-עשר סבבים.
+
+   ⚠️ **מה שנבדל בין האפליקציות נשאר נבדל — כפרמטר מדוד ולא כקוד כפול.**
+   ארבע ידיות המדיניות (`dedupe` · `remoteDupe` · `keyless` · `localPick`)
+   אינן קישוט: הן מקודדות התנהגויות **קיימות** במצבי קצה, שנמדדו לפני
+   האיחוד ונשמרו בדיוק כפי שהיו. ⛔ אין לשנות אף אחת מהן «לשם אחידות»
+   (סבב 38) — היפוך `dedupe` בשכר לימוד, למשל, היה מכווץ שתי שורות כספיות
+   בעלות אותו מפתח לשורה אחת, בשקט. אובדן שקט גרוע מכפילות גלויה.
+
+   ⛔ ואין להוסיף כאן קריאה לרשת, ל-localStorage או ל-DOM (סבב 38) — הליבה
+   טהורה, וזה מה שמאפשר להריץ אותה בבדיקות דיפרנציאליות מול המנוע שהיא
+   החליפה.
+
+   **ה-API:** `_mergePick` · `mergeCore`.
+   ═══════════════════════════════════════════════════════════════════════ */
+// כלל ההכרעה בין שתי גרסאות של **אותה** רשומה — הנקודה היחידה בארגון שבה
+// הוא נכתב. ⛔ אין לשכפל אותה (סבב 38) — ר' הנימוק שבראש הבלוק.
+// `isPend` הוא הסימון ⏳ של הרשומה המקומית; `mergePair`, כשהוא קיים, מקבל
+// את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
+function _mergePick(loc, rem, k, isPend, tsOf, mergePair) {
+  if (mergePair) return mergePair(loc, rem, k, isPend);
+  return (isPend || tsOf(loc) > tsOf(rem)) ? loc : rem;   // שוויון → הענן
+}
+// `opts`: getKey · ts · isPending · mergePair · keepUnversionedLocal · onDrop
+//         ובנוסף ארבע ידיות המדיניות שבראש הבלוק.
+function mergeCore(local, remote, opts) {
+  var o = opts || {};
+  var getKey = o.getKey, tsOf = o.ts, mergePair = o.mergePair || null;
+  var keepUnversionedLocal = !!o.keepUnversionedLocal, onDrop = o.onDrop || null;
+  var dedupe = o.dedupe !== false;
+  var remoteDupe = o.remoteDupe || 'ts';        // 'ts' | 'last'
+  var keyless = o.keyless || 'drop';            // 'drop' | 'keep-remote'
+  var localPick = o.localPick || 'last';        // 'last' | 'first'
+  var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
+  var L = Array.isArray(local) ? local : [];
+  var R = Array.isArray(remote) ? remote : [];
+
+  // ── מסלול א: איחוד כפילויות (map+order) ────────────────────────────────
+  if (dedupe) {
+    var map = {}, order = [];
+    R.forEach(function (r) {
+      if (!r) return;
+      var k = getKey(r); if (k == null) return; k = String(k);
+      if (!(k in map)) { order.push(k); map[k] = r; return; }
+      // ⚠️ הסדר כאן הוא (הקיים, החדש) — שוויון נופל על ה**מאוחר** במערך.
+      //    היפוך הארגומנטים הופך את שובר-השוויון בשקט.
+      map[k] = (remoteDupe === 'last') ? r
+             : _mergePick(map[k], r, k, false, tsOf, mergePair);
+    });
+    L.forEach(function (r) {
+      if (!r) return;
+      var k = getKey(r); if (k == null) return; k = String(k);
+      if (!(k in map)) {
+        // רשומה מקומית-בלבד — היעדרות אצל הצד השני אינה מחיקה.
+        if (tsOf(r) > 0 || keepUnversionedLocal || remote == null) { order.push(k); map[k] = r; }
+        else if (onDrop) { try { onDrop(r, k); } catch (eD) {} }
+      } else { map[k] = _mergePick(r, map[k], k, pend(k), tsOf, mergePair); }
+    });
+    return order.map(function (k) { return map[k]; });
+  }
+
+  // ── מסלול ב: שימור כפילויות (דחיפה זורמת) ──────────────────────────────
   var out = [], seen = {}, byKey = {};
-  local.forEach(function (l) { var k = keyOf(l); if (k) byKey[k] = l; });
-  remote.forEach(function (r) {
-    var k = keyOf(r);
-    if (!k) { out.push(r); return; }
-    seen[k] = 1;
+  L.forEach(function (l) {
+    var k = getKey(l); if (k == null) return; k = String(k);
+    if (localPick === 'last' || !(k in byKey)) byKey[k] = l;
+  });
+  R.forEach(function (r) {
+    var k = getKey(r);
+    if (k == null) { if (keyless === 'keep-remote') out.push(r); return; }
+    k = String(k); seen[k] = 1;
     var l = byKey[k];
     if (!l) { out.push(r); return; }
-    var localWins = (isPending && isPending(k)) || slTs(l) > slTs(r);
-    out.push(localWins ? l : r);
+    out.push(_mergePick(l, r, k, pend(k), tsOf, mergePair));
   });
-  local.forEach(function (l) {
-    var k = keyOf(l);
-    if (k && !seen[k]) out.push(l);
+  L.forEach(function (l) {
+    var k = getKey(l); if (k == null) return; k = String(k);
+    if (!seen[k]) out.push(l);
   });
   return out;
+}
+/* ═══════════════ סוף מודול המיזוג ══════════════════════════════════════ */
+
+// חיבור שכר לימוד לליבה המשותפת (סבב 38). ⛔ החתימה לא השתנתה.
+// ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף** (סבב 38):
+//    שתי שורות עם אותו מפתח באותו מערך נשארות שתיהן, בדיוק כפי שהיה.
+//    איחוד היה מכווץ אותן לאחת **בשקט**, ואובדן שקט של תנועה כספית גרוע
+//    מכפילות גלויה שאפשר לראות ולתקן.
+// ⛔ `keyless: 'keep-remote'` — שורה מרוחקת בלי מפתח נפלטת כפי שהייתה
+//    (סבב 38); השמטתה הייתה מעלימה שורה שהמסד כן מחזיק.
+// ⚠️ `keyOf(r) || null` ולא `keyOf(r)` — `slKey` מחזירה `''` ולא `null`
+//    לשורה בלי זהות, והליבה בודקת `== null`. בלי ההמרה מחרוזת ריקה הייתה
+//    הופכת למפתח תקף שכל חסרי-הזהות מתנגשים בו.
+function slMerge(local, remote, isPending, keyOf) {
+  var kf = keyOf || slKey;
+  return mergeCore(local, remote, {
+    getKey: function (r) { return kf(r) || null; },
+    ts: slTs, isPending: isPending, keepUnversionedLocal: true,
+    dedupe: false, keyless: 'keep-remote', localPick: 'last'
+  });
 }
 
 function slMirrorLoad() {
