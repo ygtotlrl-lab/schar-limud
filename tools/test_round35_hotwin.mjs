@@ -29,6 +29,7 @@ const APP = {
   fileChecks: [
     ['sw.js', /supabase-js@2\.111\.0/, 'רשימת ה-CDN ב-sw.js נעוצה ל-supabase-js 2.111.0'],
     ['sw.js', /ensureCdnCached/, 'ריפוי עצמי של ה-CDN קיים (ensureCdnCached)'],
+    ['sw.js', /var CDN_ASSETS = \[/, 'רשימת ה-CDN נושאת את השם המשותף CDN_ASSETS (השלמת סבב 35)'],
     ['sw.js', /mode:\s*'cors'/, "משיכת ה-CDN ב-mode:'cors'"],
   ],
   mutations: [

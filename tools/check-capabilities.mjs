@@ -74,7 +74,7 @@ const CAPS = {
   backup: {
     name: 'גיבוי יומי אוטומטי',
     row: 13,
-    block: { sha: 'b34407a6fcc1af8b', lines: 258,
+    block: { sha: 'f17875916d7a4b3d', lines: 315,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],

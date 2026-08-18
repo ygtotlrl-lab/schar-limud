@@ -1,7 +1,7 @@
 // ⚠️ מוסכמות משותפות לשלושת הפרויקטים (סבב 8): שם קבוע הגרסה הוא CACHE_NAME,
 // מערך הליבה נקרא CORE ומשתמש בנתיבים יחסיים, וסדר המאזינים הוא
 // install → activate → fetch → message. אין לשנות שם/סדר בפרויקט אחד בלבד.
-var CACHE_NAME = 'schar-limud-v31';
+var CACHE_NAME = 'schar-limud-v32';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו
 // (‎/schar-limud/sw.js‎), ולכן './' הוא ‎/schar-limud/‎ בדיוק כמו הנתיב המוחלט שהיה כאן.
@@ -17,7 +17,7 @@ var CORE = [
 // רצה בלי supabase-js, והדשבורד לא מצויר בלי chart.js. נמשכים ב-mode:'cors'
 // דווקא — תגובת no-cors היא opaque עם status 0 ו-cache.put דוחה אותה, ולכן
 // עד היום הם נשמרו רק אם ה-fetch handler הספיק לתפוס תגובה שקופה בזמן-ריצה.
-var CDN = [
+var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1'
 ];
@@ -43,7 +43,7 @@ function cachePut(cache, url, opts) {
 // סקריפט CDN שחסר במטמון מושלם בכל עליית SW וב-activate, כשל בו שקט.
 function ensureCdnCached() {
   return caches.open(CACHE_NAME).then(cache =>
-    Promise.all(CDN.map(url =>
+    Promise.all(CDN_ASSETS.map(url =>
       cache.match(url).then(hit => {
         if (hit) return;
         return cachePut(cache, url, {mode: 'cors', credentials: 'omit'})
@@ -58,7 +58,7 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => {
     // כשל CDN בודד לא מפיל את ההתקנה — הריפוי העצמי ישלים אותו אחר-כך
     var jobs = CORE.map(url => c.add(url).catch(() => {}))
-      .concat(CDN.map(url => cachePut(c, url, {mode: 'cors', credentials: 'omit'}).catch(() => {})));
+      .concat(CDN_ASSETS.map(url => cachePut(c, url, {mode: 'cors', credentials: 'omit'}).catch(() => {})));
     return Promise.all(jobs);
   }).catch(() => {}));
   self.skipWaiting();

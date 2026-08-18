@@ -71,6 +71,8 @@ function makeEnv(opts = {}) {
     inserted: { kv_backup: [], sync_log: [] },
     net: opts.net !== false,
     lsBlocked: !!opts.lsBlocked,
+    backups: (opts.backups || []).slice(),
+    denyDelete: !!opts.denyDelete,
   };
 
   env.client = {
@@ -87,6 +89,16 @@ function makeEnv(opts = {}) {
         },
         // `select('*')` בלי maybeSingle — thenable, בדיוק כמו PostgREST
         then(res, rej) {
+          if (q.op === 'delete') {
+            env.calls.push({ op: 'delete', table: q.table, keys: q.inVals || null, lt: q.ltVal || null });
+            if (!env.net || env.denyDelete) {
+              return Promise.resolve({ data: null, error: { message: env.denyDelete ? 'permission denied' : 'net' } }).then(res, rej);
+            }
+            const gone = env.backups.filter((r) =>
+              (!q.inVals || q.inVals.indexOf(r.key) !== -1) && (!q.ltVal || r.created_at < q.ltVal));
+            env.backups = env.backups.filter((r) => gone.indexOf(r) === -1);
+            return Promise.resolve({ data: gone.map((r) => ({ id: r.key + '@' + r.created_at })), error: null }).then(res, rej);
+          }
           env.calls.push({ op: 'select', table: q.table, cols: q.cols, key: null });
           const out = env.net
             ? { data: env.tables[q.table] || [], error: null }
@@ -99,6 +111,10 @@ function makeEnv(opts = {}) {
           (env.inserted[q.table] = env.inserted[q.table] || []).push(row);
           return Promise.resolve({ data: [row], error: null });
         },
+        // תמיכת מחיקה — מדיניות השמירה (השלמת סבב 35): delete().in().lt().select()
+        delete() { q.op = 'delete'; return api; },
+        in(col, vals) { q.inCol = col; q.inVals = vals; return api; },
+        lt(col, val) { q.ltCol = col; q.ltVal = val; return api; },
       };
       return api;
     },
@@ -122,7 +138,7 @@ function makeEnv(opts = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(MODULE_SRC, sandbox, { filename: 'bk-module.js' });
+  vm.runInContext(opts.src || MODULE_SRC, sandbox, { filename: 'bk-module.js' });
   env.sb = sandbox;
   return env;
 }
@@ -368,8 +384,117 @@ async function t11() {
   eq(env.sb.bkToday(), TODAY, '11ה · התאריך הוא UTC, כמו בשני המימושים הקודמים');
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   12 · ⭐ מדיניות השמירה — עותק יומי בן 31 יום נגרע; PRE_* וזרים שורדים
+   ══════════════════════════════════════════════════════════════════════════ */
+async function t12() {
+  const OLD31 = new Date(Date.now() - 31 * 86400000).toISOString();
+  const NEW5 = new Date(Date.now() - 5 * 86400000).toISOString();
+  const env = makeEnv({ kv: { k1: 'A', k2: 'B' }, backups: [
+    { key: 'k1', created_at: OLD31 },
+    { key: 'k1', created_at: NEW5 },
+    { key: 'PRE_SYNC_UNIFY_k1', created_at: OLD31 },
+    { key: 'zar_kv', created_at: OLD31 },
+  ] });
+  env.sb.BK_CFG = cfgKv(env);
+  eq(await env.sb.bkMaybeDaily(), true, '12א · הגיבוי מצליח');
+  const left = env.backups.map((r) => r.key + (r.created_at === OLD31 ? ':old' : ':new')).sort().join(',');
+  eq(left, 'PRE_SYNC_UNIFY_k1:old,k1:new,zar_kv:old',
+    '12ב · עותק יומי בן 31 יום נגרע; הטרי, ה-PRE_* ומפתח זר שורדים');
+  const ret = env.inserted.sync_log.find((x) => x.action === 'retention');
+  ok(ret && ret.record_count === 1, '12ג · הגריעה נרשמה ליומן עם המונה');
+
+  // ⛔ נכשלת סגור: מסד שמסרב ל-DELETE אינו מפיל את הגיבוי ואינו רושם דבר
+  const env2 = makeEnv({ kv: { k1: 'A', k2: 'B' }, denyDelete: true,
+    backups: [{ key: 'k1', created_at: OLD31 }] });
+  env2.sb.BK_CFG = cfgKv(env2);
+  eq(await env2.sb.bkMaybeDaily(), true, '12ד · כשל מחיקה (אין הרשאה) אינו מפיל את הגיבוי');
+  eq(env2.backups.length, 1, '12ה · ולא נגרע דבר — נכשל סגור');
+  ok(!env2.inserted.sync_log.some((x) => x.action === 'retention'),
+    '12ו · ואין רישום retention — נרשם רק כשנמחק משהו בפועל');
+
+  // גיבוי שנכשל — הגריעה אינה רצה כלל
+  const env3 = makeEnv({ kv: { k1: 'A' }, net: false,
+    backups: [{ key: 'k1', created_at: OLD31 }] });
+  env3.sb.BK_CFG = cfgKv(env3);
+  await env3.sb.bkMaybeDaily();
+  ok(!env3.calls.some((c) => c.op === 'delete'), '12ז · גיבוי שנכשל אינו מפעיל גריעה');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   13 · ⛔ סינון סודות — מפתח-סוד וגם שדה-סוד אינם מגיעים לגיבוי
+   ══════════════════════════════════════════════════════════════════════════ */
+async function t13() {
+  const env = makeEnv({ kv: { k1: 'A', secret_k: 'SODI' },
+    tables: { t_set: [{ key: 'a', value: '1' }, { key: 'admin_pass', value: 'SODI2' }] } });
+  env.sb.BK_CFG = cfgKv(env, {
+    secrets: ['secret_k', 'admin_pass'],
+    sources: () => [
+      { kind: 'kv', table: 'kv', name: 'k1' },
+      { kind: 'kv', table: 'kv', name: 'secret_k' },
+      { kind: 'table', name: 't_set' },
+    ],
+  });
+  eq(await env.sb.bkMaybeDaily(), true, '13א · הגיבוי מצליח');
+  ok(!env.inserted.kv_backup.some((x) => x.key === 'secret_k'),
+    '13ב · ⛔ מפתח-סוד נחסם מכתיבה לגיבוי');
+  const tset = env.inserted.kv_backup.find((x) => x.key === 't_set');
+  ok(tset && tset.value.indexOf('admin_pass') === -1 && tset.value.indexOf('SODI') === -1,
+    '13ג · ⛔ שורת שדה-סוד סוננה לפני הסריאליזציה');
+  ok(env.inserted.kv_backup.some((x) => x.key === 'k1'), '13ד · והמקורות הרגילים גובו כרגיל');
+
+  // הרשימה ריקה — המנגנון דרוך ואינו משנה דבר
+  const env2 = makeEnv({ kv: { k1: 'A', k2: 'B' } });
+  env2.sb.BK_CFG = cfgKv(env2, { secrets: [] });
+  eq(await env2.sb.bkMaybeDaily(), true, '13ה · רשימה ריקה — הגיבוי מצליח');
+  eq(env2.inserted.kv_backup.length, 2, '13ו · והכול מגובה, בלי שינוי התנהגות');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   14 · מוטציות — שלוש הדרישות של מדיניות השמירה (השלמת סבב 35)
+   ══════════════════════════════════════════════════════════════════════════ */
+async function t14() {
+  const OLD31 = new Date(Date.now() - 31 * 86400000).toISOString();
+  // מוטציה א: ביטול רשימת-ההיתר — במוטנט נגרע גם PRE_*
+  {
+    const needle = ".in('key', keys)";
+    ok(MODULE_SRC.includes(needle), '14א · עוגן רשימת-ההיתר קיים במודול');
+    const mut = MODULE_SRC.split(needle).join('');
+    const env = makeEnv({ src: mut, kv: { k1: 'A', k2: 'B' },
+      backups: [{ key: 'PRE_SYNC_UNIFY_k1', created_at: OLD31 }] });
+    env.sb.BK_CFG = cfgKv(env);
+    await env.sb.bkMaybeDaily();
+    eq(env.backups.length, 0,
+      '14ב · מוטציה שמוחקת PRE_* נתפסת: במוטנט הוא נגרע — טענת 12ב הייתה נכשלת');
+  }
+  // מוטציה ב: ביטול דילוג הסוד — במוטנט הסוד נכתב לגיבוי
+  {
+    const needle = "if (s.kind === 'kv' && secrets.indexOf(s.name) !== -1) continue;";
+    ok(MODULE_SRC.includes(needle), '14ג · עוגן דילוג-הסוד קיים במודול');
+    const mut = MODULE_SRC.replace(needle, '');
+    const env = makeEnv({ src: mut, kv: { secret_k: 'SODI' } });
+    env.sb.BK_CFG = cfgKv(env, { secrets: ['secret_k'],
+      sources: () => [{ kind: 'kv', table: 'kv', name: 'secret_k' }] });
+    await env.sb.bkMaybeDaily();
+    ok(env.inserted.kv_backup.some((x) => x.key === 'secret_k'),
+      '14ד · מוטציה שכותבת סוד נתפסת: במוטנט הוא נכתב — טענת 13ב הייתה נכשלת');
+  }
+  // מוטציה ג: ניפוח חלון השמירה — במוטנט עותק בן 31 יום שורד
+  {
+    const needle = 'var BK_RETENTION_DAYS = 30;';
+    ok(MODULE_SRC.includes(needle), '14ה · עוגן קבוע-השמירה קיים במודול');
+    const mut = MODULE_SRC.replace(needle, 'var BK_RETENTION_DAYS = 100000;');
+    const env = makeEnv({ src: mut, kv: { k1: 'A', k2: 'B' },
+      backups: [{ key: 'k1', created_at: OLD31 }] });
+    env.sb.BK_CFG = cfgKv(env);
+    await env.sb.bkMaybeDaily();
+    eq(env.backups.length, 1,
+      '14ו · מוטציה שמנפחת את החלון נתפסת: במוטנט העותק בן ה-31 שרד — טענת 12ב הייתה נכשלת');
+  }
+}
+
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-const tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11];
+const tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14];
 for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }

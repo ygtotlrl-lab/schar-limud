@@ -1376,6 +1376,11 @@ var BK_CFG = {
   prefix: '',
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
   user: function () { try { return (CUR_USER && CUR_USER.username) ? CUR_USER.username : null; } catch (e) { return null; } },
+  // ⭐ רשימת הסודות של הגיבוי היא רשימת המראה (השלמת סבב 35) —
+  //    `SL_NEVER_MIRROR_SETTINGS`: שורת `sl_settings` שמפתחה שם אינה
+  //    נכתבת לא לדיסק ולא ל-`kv_backup`. הלקח: `admin_pass` שרד בגיבויים
+  //    אחרי שנמחק מהמקור, ונוקה ידנית ע"י המנהל (17.8).
+  secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   sources: function () {
     return ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'].map(function (t) {
       return { kind: 'table', name: t };
@@ -1409,9 +1414,26 @@ var BK_CFG = {
       ⛔ בספק — כותבים: חתימה חסרה, מכשיר חדש או ערך שלא ניתן לחישוב
       מביאים לכתיבה מלאה (סבב 30) — גיבוי חסר גרוע מגיבוי כפול.
 
-   ⛔ אין מסלול מחיקה ואין `update` (סבב 29) — `kv_backup` ו-`sync_log` הן
-      יומני ראיות, ולשני התפקידים יש בהן `insert`+`select` בלבד. המודול
-      הזה אינו מנסה לעדכן או למחוק שורה, וגריעה שלהן היא החלטת המנהל.
+   ⭐ מדיניות שמירה — `BK_RETENTION_DAYS` = 30 (השלמת סבב 35): אחרי גיבוי
+      יומי מוצלח נגרעים מ-`kv_backup` עותקים יומיים ישנים מ-30 יום, לפי
+      רשימת המפתחות המדויקת שנגזרה מ-`BK_CFG.sources()` באותה ריצה.
+      ⛔ הגריעה היא רשימת-היתר של מפתחות ולא קידומת (השלמת סבב 35) —
+      קידומת ריקה (הנהלה) הייתה תופסת את הכול, כולל מפתחות של אפליקציה
+      אחרת. המודול נוגע אך ורק בעותקים היומיים של האפליקציה הנוכחית.
+      ⛔ גיבוי חד-פעמי לפני-פעולה (`PRE_*` וכד') אינו נמחק אוטומטית
+      לעולם (סבב 30) — באחריות יוצרו למחקו כשהפער שהוא מגן עליו נסגר;
+      אין לו עותק אחר, והוא ממילא אינו ברשימת-ההיתר.
+      ⚠️ הגריעה נכשלת סגור ואינה מפילה את הגיבוי: כל כשל — רשת או היעדר
+      הרשאת `DELETE` — מדולג בשקט, ו-`retention` נרשם ליומן רק כשנמחק
+      משהו בפועל. נכון להשלמת סבב 35 שני התפקידים מחזיקים ב-`kv_backup`
+      `insert`+`select` בלבד (סבב 29, אומת מול שני הפרויקטים), ולכן
+      הגריעה בפועל ממתינה להרשאת `DELETE` סקופית — החלטת המנהל; המנגנון
+      דרוך, נכשל סגור, ונבדק מול לקוח מדומה.
+   ⛔ סינון סודות (השלמת סבב 35) — מפתח או שדה שברשימת `BK_CFG.secrets`
+      אינו נכתב לגיבוי לעולם: הלקח הוא `admin_pass`, ששרד בגיבויים אחרי
+      שנמחק מהמקור ונוקה ידנית (17.8). המנגנון דרוך גם כשהרשימה ריקה.
+   ⛔ `sync_log` נשארת בלי מסלול מחיקה ובלי `update` (סבב 29) — יומן
+      ראיות; המודול אינו נוגע בשורותיה לעולם.
 
    ⭐ נקודת הפעלה אחת ויחידה — `bkBoot()` (סבב 30, השלמה). כלל ברזל 12:
       יכולת משותפת נמדדת גם בנקודת ההפעלה שלה, לא רק בליבה. הליבה כאן
@@ -1443,6 +1465,7 @@ var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה 
 var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
 var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
+var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
 
 function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
@@ -1453,6 +1476,13 @@ function _bkCfg(name, dflt) {
   } catch (e) { return dflt; }
 }
 function _bkClient() { try { return BK_CFG.client(); } catch (e) { return null; } }
+
+// רשימת הסודות (`BK_CFG.secrets`) — מפתח או שדה שברשימה אינו נכתב לגיבוי
+// לעולם; המנגנון נשאר דרוך גם כשהרשימה ריקה.
+function _bkSecrets() {
+  var s = _bkCfg('secrets', []);
+  return Array.isArray(s) ? s : [];
+}
 
 function bkToday() { return new Date().toISOString().slice(0, 10); }
 
@@ -1543,8 +1573,17 @@ async function bkMaybeDaily() {
   var ok = true, wrote = 0, same = 0;
   try {
     var pre = _bkCfg('prefix', '') || '';
+    var secrets = _bkSecrets(), dailyKeys = [];
     for (var i = 0; i < src.length; i++) {
       var s = src[i], val = null;
+      // ⛔ מפתח שברשימת הסודות אינו נכתב לגיבוי לעולם (השלמת סבב 35) —
+      //    admin_pass שרד בגיבויים אחרי שנמחק מהמקור, ונוקה ידנית (17.8).
+      if (s.kind === 'kv' && secrets.indexOf(s.name) !== -1) continue;
+      // ⭐ `key` פר-מקור (סבב 35) — מקור-טבלה שמפתחו היה מתנגש במקור
+      //    ה-kv ההיסטורי באותו שם מקבל מפתח גיבוי משלו. הרשימה שנצברת
+      //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
+      var bkey = pre + (s.key || s.name);
+      dailyKeys.push(bkey);
       if (s.kind === 'kv') {
         var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
         if (!res || res.error) { ok = false; continue; }
@@ -1560,13 +1599,17 @@ async function bkMaybeDaily() {
         if (s.order) q = q.order(s.order);
         var rt = await q;
         if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
-        val = JSON.stringify(rt.data);
+        var rows = rt.data;
+        // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
+        //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
+        //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
+        if (secrets.length) rows = rows.filter(function (r) {
+          return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
+        });
+        val = JSON.stringify(rows);
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
-      // ⭐ `key` פר-מקור (סבב 35) — מקור-טבלה שמפתחו היה מתנגש במקור
-      //    ה-kv ההיסטורי באותו שם מקבל מפתח גיבוי משלו.
-      var bkey = pre + (s.key || s.name);
       var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
@@ -1578,6 +1621,9 @@ async function bkMaybeDaily() {
       lsSet(flag, today);
       lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
+      // ⭐ הגריעה רצה רק אחרי גיבוי מוצלח (השלמת סבב 35) — אין יום שבו
+      //    עותק ישן נגרע לפני שהעותק החדש נכתב, וכשל גריעה אינו כשל גיבוי.
+      try { await _bkRetention(c, dailyKeys); } catch (e2) { }
     } else {
       // ⛔ בלי כתיבת הדגל — ההזדמנות הבאה באותו יום תנסה שוב (נרשם בסבב 6
       //    בהנהלה): גיבוי שנכשל ודילג על יממה שלמה הוא בדיוק מה שהדגל
@@ -1588,6 +1634,22 @@ async function bkMaybeDaily() {
   } catch (e) { ok = false; }
   _bkRunning = false;
   return ok;
+}
+
+/* ── מדיניות השמירה — גריעת עותקים יומיים ישנים מ-30 יום ──────────────── */
+// ⛔ הגריעה מוגבלת ב-`in('key', keys)` לרשימת המפתחות היומיים של
+//    האפליקציה הנוכחית בלבד (השלמת סבב 35) — רשימת-היתר, לא קידומת:
+//    גיבויי `PRE_*` וגיבויים של אפליקציה אחרת אינם מועמדים כלל.
+// ⚠️ נכשלת סגור: `error` (כולל היעדר הרשאת DELETE — סבב 29) מוחזר כאפס
+//    בשקט, בלי להפיל את הגיבוי ובלי רישום-סרק יומי ליומן הראיות.
+async function _bkRetention(c, keys) {
+  if (!c || !Array.isArray(keys) || !keys.length) return 0;
+  var cutoff = new Date(Date.now() - BK_RETENTION_DAYS * 86400000).toISOString();
+  var del = await c.from(BK_TABLE)['delete']().in('key', keys).lt('created_at', cutoff).select('id');
+  if (!del || del.error || !Array.isArray(del.data)) return 0;
+  var n = del.data.length;
+  if (n > 0) logAction('retention', null, n, { days: BK_RETENTION_DAYS, keys: keys.length });
+  return n;
 }
 
 /* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */

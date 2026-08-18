@@ -53,10 +53,10 @@ const CANON = [
   ['iron-rule-8-docs',        'e751633a064dc070'],
   ['iron-rule-9-security-spread', '5412c7382b4daf61'],
   ['iron-rule-10-users',      'c822ccbf258e76a5'],
-  ['capability-matrix',       '000b6d830afc37dd'],
+  ['capability-matrix',       '7790101edf9f5c7e'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
-  ['backup-module',           '101487dce2947720'],
+  ['backup-module',           '0e866c7a4dec684e'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',   'ff1455af8ca6230a'],
 ];
