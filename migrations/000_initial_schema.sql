@@ -74,7 +74,12 @@ CREATE TABLE IF NOT EXISTS public.sl_users (
   --    כולו (כלל קריטי 4 ב-gius), ועמודה שנייה לאותו מושג הייתה יוצרת שני
   --    מקורות אמת למצב של משתמש.
   active     BOOLEAN NOT NULL DEFAULT TRUE,
+  -- ⚠️ `deleted` קיימת בטבלה (013) אך **אף מסלול בקוד אינו קורא אותה** —
+  --    הסרת משתמש כאן היא `active=false`. ר' שורת הפער ב-CLAUDE.md.
+  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- ⚠️ **בלי טריגר** — נמדד מול המסד ב-2026-08-18 (`pg_trigger` ריק על
+  --    הטבלה). החותמת נקבעת ב-INSERT ואינה מתעדכנת מאליה ב-UPDATE.
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
@@ -91,8 +96,10 @@ ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 UPDATE public.sl_users SET updated_at = COALESCE(created_at, NOW()) WHERE updated_at IS NULL;
 ALTER TABLE public.sl_users ALTER COLUMN updated_at SET DEFAULT NOW();
 ALTER TABLE public.sl_users ALTER COLUMN updated_at SET NOT NULL;
--- ⚠️ הטריגר עצמו נוצר בפרק `sl_touch_updated_at` שבהמשך הקובץ — `CREATE
---    TRIGGER` דורש שהפונקציה כבר תהיה קיימת, ולכן אי אפשר ליצור אותו כאן.
+ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS deleted BOOLEAN;
+UPDATE public.sl_users SET deleted = FALSE WHERE deleted IS NULL;
+ALTER TABLE public.sl_users ALTER COLUMN deleted SET DEFAULT FALSE;
+ALTER TABLE public.sl_users ALTER COLUMN deleted SET NOT NULL;
 -- שדרוג התקנה שנוצרה לפני 011 — שלושה שלבים, ואי אפשר לקצר אותם:
 -- `ADD COLUMN … NOT NULL` בלי DEFAULT נכשל על טבלה שיש בה שורות.
 -- ⚠️ ה-UPDATE נוגע **רק** בשורות שקדמו לעמודה. ר' `migrations/011`.
@@ -420,12 +427,10 @@ CREATE TRIGGER sl_students_touch
   BEFORE UPDATE ON public.sl_students
   FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
 
--- 013 (סבב 37) — אותה חותמת גם על טבלת המשתמשים. בלעדיה להתנגשות על שורת
--- משתמש אין שובר-שוויון דטרמיניסטי, בניגוד לשתי טבלאות הליבה.
-DROP TRIGGER IF EXISTS sl_users_touch ON public.sl_users;
-CREATE TRIGGER sl_users_touch
-  BEFORE UPDATE ON public.sl_users
-  FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
+-- ⚠️ **אין טריגר על `sl_users`, וזה מכוון בקובץ ולא השמטה** (סבב 37):
+--    המיגרציה שרצה בפועל (`013`) לא כללה אותו, ו-`pg_trigger` על הטבלה
+--    ריק. ⛔ אין להוסיף אותו כאן «לשם אחידות» — הקובץ מתאר את המסד, ולא
+--    את מה שנראה נכון. ר' שורת הפער ב-CLAUDE.md.
 
 -- ============================================================
 -- 009 — sl_settings ו-sl_lists נכנסות לשכבת האופליין
