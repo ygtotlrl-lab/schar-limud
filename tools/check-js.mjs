@@ -27,24 +27,27 @@ import { fileURLToPath } from 'node:url';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
-  /* ⚠️ הכללים נמדדו מ-sw.js ומ-index.html של האפליקציה הזו (סבב 33) —
-     לא הועתקו מריפו אחר. [file, regex, expect, msg]
-     ⚠️ אין כאן כללי mode:'cors' ודף-אופליין — ל-sw.js של schar (נמדד)
-     אין רשימת CDN במטמון ואין דף אופליין; ה-fetch handler שומר תגובות
-     GET בזמן-ריצה. הוספת כלל על מה שאינו קיים הייתה הצהרה, לא מדידה. */
+  /* ⚠️ הכללים נמדדו מ-sw.js ומ-index.html של האפליקציה הזו (סבב 33,
+     הורחבו בסבב 35) — לא הועתקו מריפו אחר. [file, regex, expect, msg]
+     ⚠️ מסבב 35 יש כאן רשימת CDN במטמון-מראש עם ריפוי עצמי (התבנית של
+     שלוש האחיות), ולכן נוסף כלל mode:'cors' — נמדד, לא הוצהר. עדיין אין
+     דף אופליין, ולכן אין כלל עליו. */
   rules: [
     ['sw',   "CACHE_NAME\\s*=\\s*'schar-limud-v\\d+'", true,
              "sw.js: CACHE_NAME בתבנית 'schar-limud-v<N>' (תבנית, לא מספר קבוע)"],
     ['sw',   "supabase\\.co", true, "sw.js: דילוג על בקשות supabase.co"],
     ['sw',   "startsWith\\('schar-limud-'\\)", true,
              "sw.js: ניקוי מטמון לפי הקידומת 'schar-limud-' בלבד"],
+    ['sw',   "mode:\\s*'cors'", true, "sw.js: משיכת CDN ב-mode:'cors'"],
+    ['sw',   "supabase-js@2\\.111\\.0", true, "sw.js: supabase-js נעוץ ברשימת ה-CDN"],
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
   gates: ['check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs',
           'test_round24.mjs', 'test_round26.mjs',
-          'test_round30_stage_a.mjs', 'test_round33_structure.mjs'],
+          'test_round30_stage_a.mjs', 'test_round33_structure.mjs',
+          'test_round35_hotwin.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 

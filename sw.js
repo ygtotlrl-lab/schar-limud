@@ -1,7 +1,7 @@
 // ⚠️ מוסכמות משותפות לשלושת הפרויקטים (סבב 8): שם קבוע הגרסה הוא CACHE_NAME,
 // מערך הליבה נקרא CORE ומשתמש בנתיבים יחסיים, וסדר המאזינים הוא
 // install → activate → fetch → message. אין לשנות שם/סדר בפרויקט אחד בלבד.
-var CACHE_NAME = 'schar-limud-v30';
+var CACHE_NAME = 'schar-limud-v32';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו
 // (‎/schar-limud/sw.js‎), ולכן './' הוא ‎/schar-limud/‎ בדיוק כמו הנתיב המוחלט שהיה כאן.
@@ -13,6 +13,15 @@ var CORE = [
   './icons/icon-512.png'
 ];
 
+// סקריפטי CDN — מטמון-מראש בתבנית של שלוש האחיות (סבב 35): האפליקציה לא
+// רצה בלי supabase-js, והדשבורד לא מצויר בלי chart.js. נמשכים ב-mode:'cors'
+// דווקא — תגובת no-cors היא opaque עם status 0 ו-cache.put דוחה אותה, ולכן
+// עד היום הם נשמרו רק אם ה-fetch handler הספיק לתפוס תגובה שקופה בזמן-ריצה.
+var CDN_ASSETS = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1'
+];
+
 // בקשות ל-Supabase לא עוברות דרך ה-SW בכלל: לא מיירטים, לא שומרים, לא מגישים
 // מהמטמון. תשובת PostgREST שנשמרת היא נתון כספי ישן שמוגש כאילו הוא טרי —
 // יתרה שכבר שולמה, תנועה שנמחקה. באופליין עדיף שהבקשה תיכשל באמת, כך
@@ -22,8 +31,36 @@ function isSupabaseRequest(url) {
   return url.indexOf('.supabase.co') !== -1;
 }
 
+function cachePut(cache, url, opts) {
+  return fetch(url, opts).then(resp => {
+    if (!resp || !resp.ok) throw new Error('HTTP ' + (resp ? resp.status : '?'));
+    if (resp.type === 'opaque') throw new Error('opaque response');
+    return cache.put(url, resp);
+  });
+}
+
+// ריפוי עצמי של מטמון ה-CDN — הדפוס של hanhala-ruchanit/yoman (סבב 35):
+// סקריפט CDN שחסר במטמון מושלם בכל עליית SW וב-activate, כשל בו שקט.
+function ensureCdnCached() {
+  return caches.open(CACHE_NAME).then(cache =>
+    Promise.all(CDN_ASSETS.map(url =>
+      cache.match(url).then(hit => {
+        if (hit) return;
+        return cachePut(cache, url, {mode: 'cors', credentials: 'omit'})
+          .then(() => { console.log('[SW] healed cdn:', url.slice(0, 60)); });
+      }).catch(() => {})
+    ))
+  ).catch(() => {});
+}
+ensureCdnCached(); // קוד עליון = רץ פעם אחת בכל עליית SW
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(CORE)).catch(() => {}));
+  e.waitUntil(caches.open(CACHE_NAME).then(c => {
+    // כשל CDN בודד לא מפיל את ההתקנה — הריפוי העצמי ישלים אותו אחר-כך
+    var jobs = CORE.map(url => c.add(url).catch(() => {}))
+      .concat(CDN_ASSETS.map(url => cachePut(c, url, {mode: 'cors', credentials: 'omit'}).catch(() => {})));
+    return Promise.all(jobs);
+  }).catch(() => {}));
   self.skipWaiting();
 });
 
@@ -34,7 +71,7 @@ self.addEventListener('activate', e => {
   // hanhala-ruchanit ו-yoman-avoda ושברה להן את האופליין. אין להסיר את הסינון.
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => k.startsWith('schar-limud-') && k !== CACHE_NAME).map(k => caches.delete(k)))
-  ));
+  ).then(() => ensureCdnCached()));
   self.clients.claim();
 });
 
