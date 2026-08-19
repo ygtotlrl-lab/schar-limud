@@ -443,6 +443,13 @@ const MATRIX = [
    *  זהות הליבה בית-לבית נאכפת בנפרד, בחתימת `mergecore` שלמעלה. */
   { row: 27, name: 'ליבת מיזוג משותפת',
     probe: () => callSites('mergeCore').length > 0 },
+  /*  ⭐ סבב 40 — מעטפת ה-WebView חתומה. ה-probe דורש את **שני** השערים:
+   *  קובץ הבדיקה שקיים, ו-`shellSha` שמוצהר בתוכו. ⛔ שער שקיים בלי
+   *  חתימה מוצהרת הוא שער שאינו נועל דבר — בדיוק המצב שהיה עד הסבב הזה,
+   *  שבו ל-`MainActivity.java` לא נגעה שום בדיקה.                     */
+  { row: 28, name: 'מעטפת WebView חתומה',
+    probe: () => hasPath('tools/test_round40_shell.mjs') &&
+                 fileHas('tools/test_round40_shell.mjs', /shellSha:\s*'[0-9a-f]{16}'/) },
 ];
 
 const NA = 'לא רלוונטי';
