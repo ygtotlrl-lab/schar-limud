@@ -2,6 +2,18 @@ name: Build Signed APK
 
 on:
   workflow_dispatch:
+  # Also build whenever the shell itself changes. Web-only changes (index.html,
+  # sw.js, …) do NOT need a new APK — the app loads the live site — so those
+  # paths are deliberately not listed here.
+  #
+  # This trigger is also what makes the workflow runnable before it reaches the
+  # default branch: GitHub only offers "Run workflow" for files that already
+  # exist on the default branch, while push events fire from any branch.
+  push:
+    paths:
+      - 'android/**'
+      - 'signing/**'
+      - '.github/workflows/build-apk.yml'
 
 jobs:
   build:
