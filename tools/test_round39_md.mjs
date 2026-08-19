@@ -7,6 +7,10 @@
  *  של גיוס חסרו שני פרקים שלמים. סעיף ו של `check-docs.mjs` אוכף מעכשיו
  *  את השלד, והבדיקה הזו מוודאת שהוא **באמת נופל** כשהשלד נשבר.
  *
+ *  ⭐ סבב 41 הוסיף לה שכבה שנייה: שש הפסקאות המשותפות שבשלושת הקבצים
+ *  מסומנות ב-`SHARED` ונחתמות ב-sha256 (סעיף ז), ושלוש מוטציות מודדות
+ *  שהאכיפה היא על **תוכן** ולא על שלד.
+ *
  *  ⚠️ הקובץ זהה בית-לבית בארבעת הריפו — אין בו בלוק `APP`, הוא נגזר
  *  מהקבצים שלצידו.                                                        */
 import fs from 'node:fs';
@@ -57,5 +61,51 @@ for (const [f, re, name] of CASES) {
     `   והשגיאה מצביעה על השלד ולא על משהו אחר`);
 }
 
-console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב (שלד md) — ${n} טענות עברו`);
+/* ── 4 — סבב 41: הפסקאות המשותפות נאכפות בתוכן, ולא בשלד ────────────────
+ *  ⚠️ סעיף ו רואה כותרות בלבד, ולכן פרק שאיבד את גופו עובר אותו. סעיף ז
+ *  שנוסף בסבב 41 חותם את שש הפסקאות המשותפות ב-sha256; שלוש המוטציות
+ *  כאן מודדות שהוא **באמת** תופס מחיקה ושינוי-בית, ⛔ ושהוא **אינו**
+ *  נופל על פסקה פרטית — שער שנופל על תוכן פר-אפליקציה היה בדיוק כלל
+ *  ברזל 8 סעיף 4 בהיפוך.                                                 */
+console.log('· סבב 41 — תוכן הפסקאות המשותפות');
+
+const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); cpSync(baseDir, d, { recursive: true }); return d; };
+
+/* 4א — מחיקת פסקה משותפת שלמה (עם הסימונים) מפילה */
+{
+  const d = mutDir(), p = join(d, 'CONTEXT.md');
+  const src = fs.readFileSync(p, 'utf8');
+  const i = src.indexOf('<!-- SHARED:start id="context-grant" -->');
+  const j = src.indexOf('<!-- SHARED:end -->', i) + '<!-- SHARED:end -->'.length;
+  t(i > 0, 'CONTEXT.md: הפסקה המשותפת «context-grant» מסומנת לפני המוטציה');
+  fs.writeFileSync(p, src.slice(0, i) + src.slice(j), 'utf8');
+  const r = run(d);
+  t(r.status !== 0, '⛔ מחיקת פסקה משותפת מ-CONTEXT.md מפילה את check-docs');
+  t(/פסקאות משותפות חסרות/.test(r.stderr + r.stdout), '   והשגיאה אומרת שהפסקה חסרה');
+}
+
+/* 4ב — שינוי בית אחד בתוך פסקה משותפת מפיל */
+{
+  const d = mutDir(), p = join(d, 'README.md');
+  const src = fs.readFileSync(p, 'utf8');
+  const needle = 'שחרור קוד web אינו מצריך APK חדש.';
+  t(src.includes(needle), 'README.md: הפסקה המשותפת «readme-apk» נושאת את המשפט לפני המוטציה');
+  fs.writeFileSync(p, src.replace(needle, 'שחרור קוד web אינו מצריך APK חדש'), 'utf8');
+  const r = run(d);
+  t(r.status !== 0, '⛔ שינוי בית בפסקה משותפת מפיל את check-docs');
+  t(/אינה זהה לחתימה/.test(r.stderr + r.stdout), '   והשגיאה מצביעה על החתימה');
+}
+
+/* 4ג — שינוי בפסקה פרטית ⛔ אינו מפיל */
+{
+  const d = mutDir(), p = join(d, 'README.md');
+  const src = fs.readFileSync(p, 'utf8');
+  const m = /^##\s+מסכים\s*$/m.exec(src);
+  t(!!m, 'README.md: פרק «מסכים» — פרטי לאפליקציה — קיים');
+  const at = src.indexOf('\n', m.index + m[0].length) + 1;
+  fs.writeFileSync(p, src.slice(0, at) + '\n- **פרק בדיקה פרטי** — נוסף במוטציה.\n' + src.slice(at), 'utf8');
+  t(run(d).status === 0, '⛔ שינוי בפסקה פרטית אינו מפיל את check-docs');
+}
+
+console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב+41 (שלושת קובצי ה-md) — ${n} טענות עברו`);
 process.exit(bad ? 1 : 0);

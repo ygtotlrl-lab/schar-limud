@@ -30,15 +30,20 @@
 node tools/check-js.mjs   # חובה לפני כל push
 ```
 
+<!-- SHARED:start id="readme-gate" -->
 השער מחלץ את ה-JS המוטבע מ-`index.html`, מריץ `node --check` עליו ועל `sw.js`,
 ומריץ את כל שערי האחידות ואת חבילות בדיקות הסבבים.
+<!-- SHARED:end -->
+
 ⚠️ קידום `CACHE_NAME` ב-`sw.js` הוא חובה בכל שינוי קוד — בלי זה המשתמשים
 ממשיכים לקבל את הקליפה הישנה מהמטמון.
 
+<!-- SHARED:start id="readme-apk" -->
 ## APK
 
 מעטפת אנדרואיד מסוג **WebView** (⛔ לא TWA) ב-[`android/`](android/README.md),
-שטוענת את כתובת ה-Pages מהרשת. בנייה: Actions → **Build Signed APK** → Run workflow.
+שטוענת את כתובת ה-Pages מהרשת. בנייה: Actions → **Build APK** → Run workflow.
 שחרור קוד web אינו מצריך APK חדש.
 
 הכללים המחייבים והתיעוד המלא — ב-[CLAUDE.md](CLAUDE.md).
+<!-- SHARED:end -->
