@@ -37,11 +37,16 @@ import { fileURLToPath } from 'node:url';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
+  /* ⭐ הליבה המשותפת (סבב 41) — זהה בית-לבית בארבעת הריפו פרט לשורת
+     ה-`package`, וכל חוזה ההתנהגות יושב בה. */
+  core:  'android/app/src/main/java/com/schar/limud/ShellActivity.java',
+  /* המעטפת הפר-אפליקציתית — זהות בלבד, ואצל יומן גם הגשר. */
   shell: 'android/app/src/main/java/com/schar/limud/MainActivity.java',
   /* אין `navigator.share` בקוד (אומת ב-grep) — ולכן אין גשר, ואין צורך באחד. */
   shareBridge: false,
-  /* חתימת הלוגיקה — הערות, מחרוזות ושם החבילה מנורמלים החוצה. */
-  shellSha: '9d13db21feb1f616',
+  /* חתימות הלוגיקה — הערות, מחרוזות ושם החבילה מנורמלים החוצה. */
+  coreSha:  'd8efd10bc6d47354',
+  shellSha: 'ca9797653ad5d17e',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -51,9 +56,11 @@ let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
 const pass = (m) => console.log('✅ ' + m);
 
-const path = join(ROOT, APP.shell);
-if (!fs.existsSync(path)) { fail(`${APP.shell} אינו קיים — אין מעטפת`); process.exit(1); }
-const src = fs.readFileSync(path, 'utf8');
+for (const p of [APP.core, APP.shell]) {
+  if (!fs.existsSync(join(ROOT, p))) { fail(`${p} אינו קיים — אין מעטפת`); process.exit(1); }
+}
+const coreSrc  = fs.readFileSync(join(ROOT, APP.core),  'utf8');
+const shellSrc = fs.readFileSync(join(ROOT, APP.shell), 'utf8');
 
 /*  ⚠️ טוקניזציה ולא ביטוי רגולרי (סבב 40) — בדיוק הלקח של
  *  `check-comments.mjs`: כל URL מכיל `//`, ולכן `"https://…"` היה נקרא
@@ -89,7 +96,13 @@ function normalize(text) {
  *  שהוכרזה חסרת-גשר חייבת לשאת אותה, אחרת שלוש האחיות יכולות להיסחף זו
  *  מזו בשקט — בדיוק מה שכלל ברזל 14 אוסר. ליומן חתימה משלה, מפני שגשר
  *  השיתוף מכפיל את המעטפת; זו חריגה **מדודה** ורשומה במטריצה.        */
-const SHELL_SHA_NO_BRIDGE = '9d13db21feb1f616';
+const SHELL_SHA_NO_BRIDGE = 'ca9797653ad5d17e';
+
+/*  ⭐⭐ החתימה הקנונית של **הליבה**, וזה החידוש של סבב 41: עד אז ליומן
+ *  הייתה חתימה משלה, מפני שגשר השיתוף הכפיל אצלה את המעטפת ולא ניתן היה
+ *  להשוות. אחרי החילוץ הליבה זהה בית-לבית ב**ארבעתן** — כולל יומן — והגשר
+ *  יושב מחוצה לה. ⛔ סחיפה של שורה אחת בליבה נתפסת בארבעת הריפו בנפרד. */
+const CORE_SHA = 'd8efd10bc6d47354';
 
 /*  ── א. חוזה ההתנהגות המשותף ─────────────────────────────────────────────
  *  ארבעת הדברים שכל מעטפת בארגון מממשת, ולמה כל אחד מהם קיים. ⛔ שורה
@@ -119,10 +132,14 @@ const CONTRACT = [
     why: '⛔ המעטפת אינה טוענת דבר מהדיסק, ולכן זו הרשאה מיותרת שדף מרוחק יכול לנצל' },
 ];
 
-const norm = normalize(src);
+/*  ⭐ חוזה ההתנהגות נבדק ב**ליבה** (סבב 41) — שם הוא יושב מאז החילוץ,
+ *  ובאותה צורה בארבעתן. ⛔ מעטפת פר-אפליקציה שתממש אחד מהם בעצמה היא
+ *  בדיוק הסטייה שהחילוץ בא למנוע, ולכן היא נופלת על חתימת ה-`shellSha`. */
+const coreNorm  = normalize(coreSrc);
+const shellNorm = normalize(shellSrc);
 for (const c of CONTRACT) {
-  if (c.re.test(norm)) pass(`חוזה המעטפת: ${c.name}`);
-  else fail(`חוזה המעטפת נשבר — ${c.name} אינו במעטפת. ${c.why}`);
+  if (c.re.test(coreNorm)) pass(`חוזה המעטפת: ${c.name}`);
+  else fail(`חוזה המעטפת נשבר — ${c.name} אינו בליבה המשותפת. ${c.why}`);
 }
 
 /*  ── ב. הגשר המקורי — מותר רק למי שהוכרז ─────────────────────────────────
@@ -130,7 +147,15 @@ for (const c of CONTRACT) {
  *  frame בלי שום מושג של origin. ליומן הוא נחוץ (שיתוף דוח כתמונה) והוא
  *  נעול-כפליים; לשלוש האחרות אין `navigator.share` כלל, ולכן גשר שם הוא
  *  הרחבת-הישג בלי צורך.                                                */
-const hasBridge = /addJavascriptInterface|addWebMessageListener/.test(norm);
+/*  ⛔ הליבה המשותפת אינה נושאת גשר לעולם (סבב 41) — גשר בליבה היה מגיע
+ *  לארבעתן בבת אחת, כלומר בדיוק ההפך ממה שהחריגה המדודה של יומן אומרת. */
+if (/addJavascriptInterface|addWebMessageListener/.test(coreNorm)) {
+  fail('⛔ נמצא גשר בליבה המשותפת — גשר שייך למעטפת הפר-אפליקציתית בלבד');
+} else {
+  pass('הליבה המשותפת נקייה מגשר');
+}
+
+const hasBridge = /addJavascriptInterface|addWebMessageListener/.test(shellNorm);
 if (APP.shareBridge && !hasBridge) {
   fail('הוכרז גשר שיתוף — ואין במעטפת אף מסלול גשר');
 } else if (!APP.shareBridge && hasBridge) {
@@ -141,19 +166,28 @@ if (APP.shareBridge && !hasBridge) {
                        : 'אין גשר מקורי, כמוכרז');
 }
 if (APP.shareBridge) {
-  if (/ALLOWED_ORIGINS|allowedOriginRules|addWebMessageListener/.test(norm)) {
+  if (/ALLOWED_ORIGINS|allowedOriginRules|addWebMessageListener/.test(shellNorm)) {
     pass('⭐ מסלול הגשר המאובטח (רשימת מקורות) קיים');
   } else {
     fail('⛔ גשר בלי רשימת מקורות — האכיפה שהפלטפורמה נותנת בחינם ננטשה');
   }
 }
 
-/* ── ג. חתימת הלוגיקה ──────────────────────────────────────────────────── */
-const sha = crypto.createHash('sha256').update(norm, 'utf8').digest('hex').slice(0, 16);
-if (sha === APP.shellSha) {
-  pass(`חתימת הלוגיקה של המעטפת תואמת: ${sha} (${norm.length} תווים מנורמלים)`);
+/* ── ג. חתימות הלוגיקה ─────────────────────────────────────────────────── */
+const sha16 = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex').slice(0, 16);
+const coreSha  = sha16(coreNorm);
+const shellSha = sha16(shellNorm);
+
+if (coreSha === APP.coreSha) {
+  pass(`חתימת הליבה המשותפת תואמת: ${coreSha} (${coreNorm.length} תווים מנורמלים)`);
 } else {
-  fail(`חתימת הלוגיקה של המעטפת השתנתה: ${APP.shellSha} → ${sha}\n` +
+  fail(`חתימת הליבה המשותפת השתנתה: ${APP.coreSha} → ${coreSha}\n` +
+       '   ⛔ שינוי בליבה הוא שינוי בארבע האפליקציות — מעדכנים את הבלוק ואת החתימה בארבעתן, באותו סבב.');
+}
+if (shellSha === APP.shellSha) {
+  pass(`חתימת המעטפת הפר-אפליקציתית תואמת: ${shellSha} (${shellNorm.length} תווים מנורמלים)`);
+} else {
+  fail(`חתימת המעטפת השתנתה: ${APP.shellSha} → ${shellSha}\n` +
        '   שינוי מכוון = עדכון `shellSha` באותו סבב, ואז שער ה-versionCode דורש גם קידום גרסה.\n' +
        '   ⚠️ הערות, שם האפליקציה, צבע וכתובת אינם בחתימה — אם היא נפלה, **הזרימה** השתנתה.');
 }
@@ -161,6 +195,13 @@ if (sha === APP.shellSha) {
 /*  ── ד. זהות בין האחיות ─────────────────────────────────────────────────
  *  ⛔ כל ריפו אוכף כאן שהחתימה שהוא מצהיר עליה היא הקנונית — כך שסחיפה
  *  בין שלוש המעטפות נתפסת בכל אחת מהן בנפרד, ולא רק בהשוואה ידנית.   */
+if (APP.coreSha !== CORE_SHA) {
+  fail(`⛔ הליבה חייבת לשאת את החתימה הקנונית ${CORE_SHA}, וכאן הוכרז ${APP.coreSha} — ` +
+       'ארבע הליבות נסחפו זו מזו');
+} else {
+  pass(`⭐ חתימת הליבה היא הקנונית בארבעתן: ${CORE_SHA}`);
+}
+
 if (!APP.shareBridge && APP.shellSha !== SHELL_SHA_NO_BRIDGE) {
   fail(`מעטפת בלי גשר חייבת לשאת את החתימה הקנונית ${SHELL_SHA_NO_BRIDGE}, ` +
        `וכאן הוכרז ${APP.shellSha} — שלוש האחיות נסחפו זו מזו`);
