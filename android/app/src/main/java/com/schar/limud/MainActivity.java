@@ -1,7 +1,7 @@
 package com.schar.limud;
 
 /**
- * The schar-limud shell — identity only.
+ * The app shell — identity only.
  *
  * <p>All of the behaviour lives in {@link ShellActivity}, which is byte-for-byte
  * identical in the organisation's four repos; this class supplies the three
@@ -10,10 +10,8 @@ package com.schar.limud;
  * מה שנחוץ לכולן נכנס ל-`ShellActivity`, ומה שנחוץ לאחת עובר דרך
  * `installBridge()`/`onShellNavigation()` ונרשם כחריגה מנומקת.
  *
- * <p>אין כאן גשר מקורי: בקוד של שכר לימוד אין `navigator.share`. ⚠️ והנתונים
- * כאן הם כסף — לכן אזהרת מעבר ה-origin שב-`android/README.md` חלה בכפליים.
- */
-public class MainActivity extends ShellActivity {
+ * <p>אין כאן גשר מקורי: בקוד של האפליקציה הזו אין `navigator.share`.
+ */public class MainActivity extends ShellActivity {
 
     @Override
     protected String appUrl() { return "https://ygtotlrl-lab.github.io/schar-limud/"; }

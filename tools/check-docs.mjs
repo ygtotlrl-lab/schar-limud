@@ -13,6 +13,8 @@
  *    ג. שורת «עודכן לאחרונה» חסרה, אינה בראש הקובץ, או בפורמט שגוי.
  *    ד. פרק שהוא פרטי בהגדרה («חתימת APK» / «בדיקה») נמצא בתוך בלוק
  *       `SHARED` — סעיף 5 של כלל ברזל 8.
+ *    ז. (סבב 41) פסקה משותפת בשלושת הקבצים הנלווים אינה תואמת
+ *       לחתימת ה-sha256 שלה, נמחקה, או נוספה בלי רישום קנוני.
  *    ה. (סבב 20) הקובץ שונה מול `origin/main` אבל שורת «עודכן לאחרונה»
  *       זהה לזו שב-`origin/main` — כלומר לא קודמה. סעיף ג בודק את
  *       **צורת** השורה; זה בודק שהיא באמת התקדמה.
@@ -50,7 +52,7 @@ const CANON = [
   ['round-15-tech-info',      '61819c0a62fc9e0a'],
   ['round-16-pend-delay',     '994d3cb66d4ced7c'],
   ['iron-rule-7-status-area', '3acd979daa17a205'],
-  ['iron-rule-8-docs',        'e751633a064dc070'],
+  ['iron-rule-8-docs',        'be8e241ccd5b1ad4'],
   ['iron-rule-9-security-spread', '5412c7382b4daf61'],
   ['iron-rule-10-users',      '54d578f69f5b3690'],
   ['capability-matrix',       '280023153ddfc0fc'],
@@ -309,6 +311,94 @@ for (const spec of MD_SKELETONS) {
     } else at = found + 1;
   }
   if (ok) pass(`${spec.file} — ${spec.need.length} פרקי השלד קיימים ובסדר`);
+}
+
+/* ── ז. פסקאות משותפות בשלושת הקבצים הנלווים (סבב 41 — השלמה) ───────────
+ *  ⚠️ **סעיף ו אוכף שלד, ולא תוכן** — כותרות `##` בסדר יחסי, וזה כל מה
+ *  שהוא רואה. סבב 41 מדד את המחיר: ל-`android/README.md` של gius חסרה
+ *  הייתה פסקת הסיכום שבסוף פרק החתימה, והשלד עבר — הכותרת הייתה שם.
+ *  ⛔ שלד שעובר על פרק חסר-תוכן נותן בדיוק את הביטחון השווא שכלל ברזל 8
+ *  סעיף 6 אוסר.
+ *
+ *  לכן הפסקאות שהן **משותפות באמת** — אותן שש — מסומנות בשלושת הקבצים
+ *  באותם סימוני `SHARED` של `CLAUDE.md`, ונאכפות ב-sha256 מלא. ⛔ לא
+ *  בהשוואת כותרות ולא בספירת פסקאות (סבב 41) — שתיהן עוברות על פסקה
+ *  שהוחלפה בפסקה אחרת באותו אורך.
+ *
+ *  ⚠️ **ומה שמחוץ לסימון נשאר פרטי, בכוונה** — כותרת הריפו, «הפעלה
+ *  ראשונה», «מסכים», טבלת הטבלאות, «מצב נוכחי», אזהרת `CACHE_NAME`
+ *  (שנבדלת פר-אפליקציה ונמדדה ככזו) ופרקי ה-smali. ⛔ אין להרחיב את
+ *  הסימון לפסקה שאינה זהה בארבעתן בפועל — זה בדיוק כלל ברזל 8 סעיף 4,
+ *  בציר אחר.                                                             */
+const CANON_MD = [
+  ['README.md',         'readme-gate',         'fd4654765f8ed749'],
+  ['README.md',         'readme-apk',          '81445890f0e496dc'],
+  ['CONTEXT.md',        'context-grant',       'f81b753212d412f0'],
+  ['android/README.md', 'android-why-twa',     '253ef8b2c0658ef0'],
+  ['android/README.md', 'android-web-update',  'dbfd1b661d1b6b25'],
+  ['android/README.md', 'android-shell-split', '0d21596f22cb2e39'],
+];
+
+/* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */
+function scanShared(file) {
+  const ls = fs.readFileSync(file, 'utf8').split('\n');
+  const mask = fenceMask(ls);
+  const out = [];
+  let open = null, err = false;
+  for (let i = 0; i < ls.length; i++) {
+    if (mask[i]) { if (open) open.body.push(ls[i]); continue; }
+    const l = ls[i];
+    if (START_LOOSE.test(l)) {
+      const m = START_RE.exec(l);
+      if (!m || !m[1].trim()) { fail(`${file} שורה ${i + 1}: SHARED:start בלי id תקין`); err = true; continue; }
+      if (open) { fail(`${file} שורה ${i + 1}: קינון SHARED אסור`); err = true; continue; }
+      open = { id: m[1], from: i + 1, body: [] };
+      continue;
+    }
+    if (END_RE.test(l)) {
+      if (!open) { fail(`${file} שורה ${i + 1}: SHARED:end בלי start תואם`); err = true; continue; }
+      out.push({ id: open.id, from: open.from, to: i + 1, body: open.body.join('\n').trim() });
+      open = null;
+      continue;
+    }
+    if (open) open.body.push(l);
+  }
+  if (open) { fail(`${file}: בלוק id="${open.id}" (שורה ${open.from}) לא נסגר`); err = true; }
+  return { blocks: out, err };
+}
+
+{
+  const byFile = new Map();
+  for (const [f, id, sha] of CANON_MD) {
+    if (!byFile.has(f)) byFile.set(f, []);
+    byFile.get(f).push([id, sha]);
+  }
+  for (const [file, want] of byFile) {
+    if (!fs.existsSync(file)) continue;          // כבר דווח בסעיף ו
+    const { blocks, err } = scanShared(file);
+    const ids = blocks.map(b => b.id);
+    const dup = ids.filter((id, k) => ids.indexOf(id) !== k);
+    if (dup.length) fail(`${file}: מזהי SHARED כפולים — ${[...new Set(dup)].join(', ')}`);
+    const miss = want.map(w => w[0]).filter(id => !ids.includes(id));
+    const extra = ids.filter(id => !want.some(w => w[0] === id));
+    if (miss.length)  fail(`${file}: פסקאות משותפות חסרות — ${miss.join(', ')}. ` +
+                           'פסקה משותפת שנמחקה היא בדיוק הסחיפה שסעיף ז בא לתפוס.');
+    if (extra.length) fail(`${file}: בלוקי SHARED שאינם ברשימה הקנונית — ${extra.join(', ')} ` +
+                           '— פסקה משותפת חדשה מחייבת עדכון של ארבעת עותקי הבדיקה');
+    let ok = !err && !miss.length && !extra.length && !dup.length;
+    for (const [id, sha] of want) {
+      const b = blocks.find(x => x.id === id);
+      if (!b) continue;
+      const got = crypto.createHash('sha256').update(b.body).digest('hex').slice(0, 16);
+      if (got !== sha) {
+        ok = false;
+        fail(`${file} — פסקה "${id}" (שורות ${b.from}–${b.to}): אינה זהה לחתימה ` +
+             `הקנונית — ${got} במקום ${sha}. שינוי בפסקה משותפת נעשה בארבעת ` +
+             'הריפו ובארבעת עותקי הבדיקה, באותו סבב.');
+      }
+    }
+    if (ok) pass(`${file} — ${want.length} הפסקאות המשותפות זהות לחתימה הקנונית`);
+  }
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');

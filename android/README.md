@@ -12,11 +12,13 @@ with one deliberate difference — see "אין גשר שיתוף" below.
 
 ## Why WebView and never a TWA
 
+<!-- SHARED:start id="android-why-twa" -->
 **Do not rebuild this as a TWA, and do not use PWABuilder** (it only produces
 TWAs). A TWA is not a standalone component — it runs the site *inside Chrome*
 and merely hides the address bar. The content filtering installed on the users'
 devices blocks Chrome, so a TWA build never opens at all. A WebView renders
 in-process and never goes through Chrome, so the filter does not touch it.
+<!-- SHARED:end -->
 
 This is measured, not theoretical: gius shipped a PWABuilder TWA and did not
 open on the users' devices, while yoman and hanhala — both WebView — work.
@@ -34,9 +36,11 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 | **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` (תשתית — אין כרגע input כזה בדף) |
 | **אופליין** | ה-service worker + שכבת ה-MIRROR של האתר. המעטפת מציגה דף שגיאה בעברית **רק** בהפעלה ראשונה בלי רשת |
 
+<!-- SHARED:start id="android-web-update" -->
 **עדכוני קוד web לא מצריכים APK חדש.** כל דחיפה ל-`main` מגיעה למכשירים דרך
 אותו מנגנון service worker + באנר "גרסה חדשה זמינה" שכבר עובד בדפדפן. APK חדש
 נדרש רק כששינוי נוגע במעטפת עצמה.
+<!-- SHARED:end -->
 
 ## ⛔ אין גשר שיתוף — וזה ההבדל היחיד מהתבנית של יומן
 
@@ -72,6 +76,7 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 **לפני מעבר מכשיר ל-APK, ודא בדפדפן שמסך ההגדרות ← «⏳ ממתין לסנכרון» מציג 0.**
 רשומה שמסומנת ⏳ יושבת רק באותה מחיצת אחסון, ומעבר ה-origin ישאיר אותה מאחור.
 
+<!-- SHARED:start id="android-shell-split" -->
 ## המעטפת — ליבה משותפת ומעטפת פר-אפליקציה (סבב 41)
 
 `MainActivity.java` היה עד סבב 41 **ארבעה עותקים חופשיים** של אותה מעטפת:
@@ -95,6 +100,7 @@ hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח
 נושאת חתימה אחת בארבעתן (`d8efd10bc6d47354`), ורק המעטפת של yoman נבדלת.
 `tools/test_round40_shell.mjs` אוכף את שתי החתימות, ו⛔ **נכשל אם נמצא גשר
 בליבה** — גשר שם היה מגיע לארבע האפליקציות בבת אחת.
+<!-- SHARED:end -->
 
 ## Build
 
