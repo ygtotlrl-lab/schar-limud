@@ -1,4 +1,14 @@
-name: Build Signed APK
+name: Build APK
+
+# Builds the native WebView shell in android/ (NOT a TWA — see CLAUDE.md) and
+# signs it with the project's permanent key, which lives in the repo. No secret,
+# no manual input: there is no way to accidentally produce an APK signed with a
+# different key.
+#
+# Signing runs through signing/sign-apk.sh — the same script used by hand — so
+# the fingerprint gate exists in exactly one place.
+# ⛔ אין לשכפל כאן את לוגיקת החתימה (סבב 41) — מסלול חתימה שני הוא מסלול
+# בלי שער, וטעות בו אינה ניתנת לתיקון אצל אף משתמש מותקן.
 
 on:
   workflow_dispatch:
@@ -37,35 +47,33 @@ jobs:
       # and worse, it lives in the file:// storage origin, a different localStorage
       # partition from the https site. Anything typed into it offline would be invisible
       # to the real app — and here that data is money. See android/README.md.
-
       - name: Generate Gradle wrapper
         run: |
+          set -euo pipefail
           cd android
           gradle wrapper --gradle-version 8.7 --no-daemon
 
       - name: Build release APK (unsigned)
         run: |
+          set -euo pipefail
           cd android
           ./gradlew :app:assembleRelease --no-daemon
 
-      - name: Sign APK with permanent keystore
+      - name: Sign with the permanent key
         run: |
-          cd android
-          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          set -euo pipefail
+          # The signing tools live in build-tools, which is not on PATH by default.
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using build-tools: $BT"
-          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
-          "$BT/zipalign" -p -f 4 "$UNSIGNED" aligned.apk
-          "$BT/apksigner" sign \
-            --ks ../signing/schar.keystore \
-            --ks-key-alias schar \
-            --ks-pass pass:schar123 \
-            --key-pass pass:schar123 \
-            --out schar-limud-signed.apk \
-            aligned.apk
-          "$BT/apksigner" verify --print-certs schar-limud-signed.apk
+          echo "$BT" >> "$GITHUB_PATH"
+          export PATH="$BT:$PATH"
+          ./signing/sign-apk.sh \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            schar-limud.apk
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: schar-limud-signed-apk
-          path: android/schar-limud-signed.apk
+          name: schar-limud-apk
+          path: schar-limud.apk
+          if-no-files-found: error

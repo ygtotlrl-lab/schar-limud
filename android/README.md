@@ -27,7 +27,7 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 |---|---|
 | **Package ID** | `com.schar.limud` |
 | **טוען** | `https://ygtotlrl-lab.github.io/schar-limud/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 1 — המעטפת הראשונה של שכר לימוד, טוענת מהרשת מהיום הראשון (לא היה כאן שלב `file://`) |
+| **versionCode** | 2 — קודם בסבב 41 (חילוץ המעטפת). 1 = המעטפת הראשונה של שכר לימוד, טוענת מהרשת מהיום הראשון (לא היה כאן שלב `file://`) |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
@@ -76,8 +76,8 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 
 ### הדרך המומלצת — GitHub Actions (לא צריך שום דבר מותקן)
 
-`.github/workflows/build-apk.yml`: Actions → **Build Signed APK** → **Run workflow**.
-ה-APK **החתום** יורד כ-artifact בשם `schar-limud-signed-apk`.
+`.github/workflows/build-apk.yml`: Actions → **Build APK** → **Run workflow**.
+ה-APK **החתום** יורד כ-artifact בשם `schar-limud-apk`.
 
 ### בנייה מקומית (דורשת Android SDK + Gradle)
 
@@ -91,7 +91,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ## Sign with the PERMANENT key (required so it installs over previous builds)
 
 ```bash
-../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk schar.apk
+../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk schar-limud.apk
 ```
 
 או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/schar.keystore`,

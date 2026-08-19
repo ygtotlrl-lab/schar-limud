@@ -1,6 +1,6 @@
 # שכר לימוד — CLAUDE.md
 
-עודכן לאחרונה: סבב 40 · 2026-08-19
+עודכן לאחרונה: סבב 41 · 2026-08-19
 
 ## סביבת עבודה
 - **ריפו:** `ygtotlrl-lab/schar-limud`
@@ -255,7 +255,7 @@ APK שנחתם במפתח אחר נחשב אפליקציה **זרה**, וההת�
 ### חתימה
 
 ```bash
-./signing/sign-apk.sh app-unsigned.apk schar.apk
+./signing/sign-apk.sh app-unsigned.apk schar-limud.apk
 ```
 
 הסקריפט מריץ `zipalign` ואז `apksigner`, ובסוף `apksigner verify --print-certs`.
@@ -286,7 +286,7 @@ keytool -list -v -keystore signing/schar.keystore -storepass schar123
 - **לעולם לא TWA ולא PWABuilder** — TWA מריץ את האתר בתוך כרום, וסינון התוכן
   במכשירי המשתמשים חוסם את כרום (נמדד בפועל ב-gius). WebView מרנדר בתוך
   התהליך ולא נחסם.
-- **package `com.schar.limud`, versionCode 1** — המעטפת הראשונה כאן, טוענת
+- **package `com.schar.limud`, versionCode 2** — המעטפת הראשונה כאן, טוענת
   מהרשת מהיום הראשון (בניגוד ליומן, לא היה כאן שלב `file://`).
   `usesCleartextTraffic=false`, minSdk 21 / targetSdk 34.
 - ⛔ **אין נכסים מוטבעים, ואין להוסיף** — עותק `file://` הוא origin אחסון
@@ -305,7 +305,7 @@ keytool -list -v -keystore signing/schar.keystore -storepass schar123
 - **צנרת בנייה:** `.github/workflows/build-apk.yml` — Actions → **Build Signed
   APK** → Run workflow (temurin 17, בנייה, חתימה עם `signing/schar.keystore`
   הקבוע alias `schar`, אימות `apksigner verify`). ה-artifact:
-  **`schar-limud-signed-apk`**.
+  **`schar-limud-apk`**.
 
 ### ⚠️ אזהרת מעבר-origin חד-פעמי (אותו עיקרון כמו ביומן)
 ה-WebView של ה-APK מחזיק **מחיצת אחסון נפרדת** מזו של הדפדפן באותו מכשיר.

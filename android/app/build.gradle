@@ -12,8 +12,11 @@ android {
         targetSdk 34
         // 1 = the first shell, loading the live site (https://ygtotlrl-lab.github.io/schar-limud/)
         // from day one — schar-limud never had a file:// build.
-        versionCode 1
-        versionName "1.0"
+        // 2 = סבב 41 — יישור שכבת הבנייה והחילוץ של המעטפת לתבנית
+        // משותפת. ⛔ כל שינוי תחת android/ מחייב קידום כאן,
+        // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
+        versionCode 2
+        versionName "2.0"
     }
 
     buildTypes {
