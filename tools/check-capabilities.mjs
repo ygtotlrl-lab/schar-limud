@@ -460,6 +460,19 @@ const MATRIX = [
   { row: 28, name: 'מעטפת WebView חתומה',
     probe: () => hasPath('tools/test_round40_shell.mjs') &&
                  fileHas('tools/test_round40_shell.mjs', /shellSha:\s*'[0-9a-f]{16}'/) },
+  /*  ⭐ סבב 40 — אימות מול טביעה בענן. ה-probe **קורא את הצהרת השער**
+   *  (`verifyFn`) ואז מוודא שהפונקציה הזו באמת נקראת ב-`index.html` —
+   *  כלומר הוא נשען על הקוד ולא על קיום הקובץ בלבד. ⛔ הצהרה בלי קריאה
+   *  היא בדיוק המצב שהמטריצה אמורה לתפוס.                            */
+  { row: 29, name: 'אימות מול טביעה בענן',
+    probe: () => {
+      const p = 'tools/test_round40_passwords.mjs';
+      if (!hasPath(p)) return false;
+      const t = fs.readFileSync(p, 'utf8');   /* ⚠️ נתיב יחסי, כמו `hasPath` — הבודק רץ מתיקיית הריפו */
+      const m = /verifyFn:\s*'(\w+)'/.exec(t);
+      if (!m) return false;
+      return new RegExp(m[1] + '\\s*\\(').test(code);
+    } },
 ];
 
 const NA = 'לא רלוונטי';
