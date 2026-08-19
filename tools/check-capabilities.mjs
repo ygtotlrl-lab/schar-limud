@@ -473,6 +473,21 @@ const MATRIX = [
       if (!m) return false;
       return new RegExp(m[1] + '\\s*\\(').test(code);
     } },
+  /*  ⭐ סבב 41 — בניית APK אחידה עם שער חתימה. ה-probe דורש את **שלושת**
+   *  התנאים, מפני שכל אחד מהם לבדו עובר גם במצב שהסבב בא לסגור: קובץ
+   *  השער שקיים · ה-workflow שקורא ל-`./signing/sign-apk.sh` · ו⛔
+   *  **`apksigner` שאינו מופיע ב-YAML** (אחרי ניקוי הערות — הערה
+   *  הסברתית אינה לוגיקת חתימה). ⛔ workflow שקורא לסקריפט וגם משאיר
+   *  חתימה משלו הוא בדיוק מסלול החתימה השני, והוא ייתפס כאן.        */
+  { row: 30, name: 'בניית APK אחידה עם שער חתימה',
+    probe: () => {
+      if (!hasPath('tools/test_round41_build.mjs')) return false;
+      const yml = '.github/workflows/build-apk.yml';
+      if (!hasPath(yml)) return false;
+      const bare = fs.readFileSync(yml, 'utf8').split('\n')
+        .map((l) => (/^\s*#/.test(l) ? '' : l.replace(/\s#(?![{}]).*$/, ''))).join('\n');
+      return /\.\/signing\/sign-apk\.sh/.test(bare) && !/apksigner/.test(bare);
+    } },
 ];
 
 const NA = 'לא רלוונטי';
