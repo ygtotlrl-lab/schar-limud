@@ -43,7 +43,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',            '46a0bd36bbc06499'],
-  ['iron-rules-storage',      '3230732a3b1a8005'],
+  ['iron-rules-storage',      'bee24a8c8b37d418'],
   ['pending-module',          '09e22a5adc623814'],
   ['iron-rule-6-sync',        '58f809376bdf981d'],
   ['round-14-verified-sweep', '4979f68cf39fc7c4'],
@@ -58,7 +58,9 @@ const CANON = [
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
   ['backup-module',           '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',   'ff1455af8ca6230a'],
+  ['iron-rule-14-org-wide',   'eb3bbe43a2a82788'],
+  ['iron-rule-15-gaps-verified', '0c5e079f0137ce9f'],
+  ['iron-rule-16-remnant',    '768bb00a3cdc5caa'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -249,6 +251,63 @@ for (const [id, sha] of CANON) {
       /* here === null כבר דווח בסעיף ג — אין טעם לדווח פעמיים. */
     }
   }
+}
+
+/* ── ו. שלד קבוע לשלושת קובצי ה-md הנלווים (סבב 39 — השלמה שנייה) ────────
+ *  `CLAUDE.md` נשמר ע"י בלוקי ה-SHARED, אבל שלושת הקבצים שלצידו —
+ *  `README.md`, `CONTEXT.md` ו-`android/README.md` — לא נבדקו כלל, והם
+ *  נסחפו בדיוק כפי שכלל ברזל 8 מתאר: ל-CONTEXT של יומן חסרה הייתה אזהרת
+ *  ה-GRANT שקיימת בשלוש האחיות, ול-`android/README` של גיוס חסרו שני
+ *  פרקים שלמים.
+ *
+ *  ⚠️ מה שנאכף כאן הוא **שלד ולא תוכן** (סבב 39) — כותרות `##` נדרשות,
+ *  בסדר יחסי קבוע. ⛔ אין לאכוף כאן זהות בית-לבית: התוכן פר-אפליקציה
+ *  מעצם טבעו, וכפייה של נוסח אחיד היא בדיוק מה שכלל ברזל 8 סעיף 4 אוסר.
+ *  ⚠️ ופרק **נוסף** בין הנדרשים אינו כישלון — «אייקונים» ב-gius ו-«Notes»
+ *  ביומן הם תוספות פרטיות לגיטימיות.                                     */
+const MD_SKELETONS = [
+  { file: 'README.md', need: [
+      [/^##\s+הפעלה ראשונה\s*$/,  '## הפעלה ראשונה'],
+      [/^##\s+מסכים\s*$/,          '## מסכים'],
+      [/^##\s+פיתוח\s*$/,          '## פיתוח'],
+      [/^##\s+APK\s*$/,            '## APK'],
+    ] },
+  { file: 'CONTEXT.md', need: [
+      [/^##\s+פרטי ריפו\s*$/,                        '## פרטי ריפו'],
+      [/^##\s+.*Supabase — GRANT חובה לטבלאות חדשות/, '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות'],
+      [/^##\s+כללים קריטיים לפיתוח\s*$/,             '## כללים קריטיים לפיתוח'],
+      [/^##\s+טבלאות\s*$/,                            '## טבלאות'],
+      [/^##\s+מצב נוכחי\s*$/,                        '## מצב נוכחי'],
+      [/^##\s+פרטי מערכת\s*$/,                       '## פרטי מערכת'],
+    ] },
+  { file: 'android/README.md', need: [
+      [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
+      [/^##\s+מה בפנים\s*$/,                          '## מה בפנים'],
+      [/^##\s+.*גשר/,                                  '## …גשר… (הגשר המקורי / אין גשר שיתוף)'],
+      [/^##\s+למה אין( יותר)? נכסים מוטבעים\s*$/,     '## למה אין נכסים מוטבעים'],
+      [/^##\s+Build\s*$/,                              '## Build'],
+      [/^##\s+Sign with the PERMANENT key/,            '## Sign with the PERMANENT key …'],
+    ] },
+];
+
+for (const spec of MD_SKELETONS) {
+  if (!fs.existsSync(spec.file)) { fail(`${spec.file} חסר — שלושת קובצי ה-md הנלווים חובה בארבעת הריפו`); continue; }
+  const ls = fs.readFileSync(spec.file, 'utf8').split('\n');
+  const mask = fenceMask(ls);
+  const heads = ls.map((l, i) => (mask[i] ? '' : l)).filter(l => /^##\s/.test(l));
+  let at = 0, ok = true;
+  for (const [re, label] of spec.need) {
+    let found = -1;
+    for (let i = at; i < heads.length; i++) if (re.test(heads[i])) { found = i; break; }
+    if (found < 0) {
+      ok = false;
+      const anywhere = heads.some(h => re.test(h));
+      fail(`${spec.file}: הפרק «${label}» ` +
+           (anywhere ? 'קיים אך לא בסדר הקנוני' : 'חסר') +
+           ' — שלד הקובץ נקבע בסבב 39 והוא זהה בארבעת הריפו.');
+    } else at = found + 1;
+  }
+  if (ok) pass(`${spec.file} — ${spec.need.length} פרקי השלד קיימים ובסדר`);
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');

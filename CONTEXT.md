@@ -11,36 +11,42 @@
 
 ## ⚠️ Supabase — GRANT חובה לטבלאות חדשות
 
-כל טבלה חדשה שנוצרת ב-`public` schema חייבת לכלול GRANT מפורש — אחרת supabase-js לא יוכל לגשת אליה:
+כל טבלה חדשה שנוצרת ב-`public` schema חייבת לכלול GRANT מפורש — אחרת supabase-js
+לא יוכל לגשת אליה. **⛔ וכאן הסדר הוא `revoke` ואז `grant`, ולא `grant` לבדו:**
 
 ```sql
-grant select, insert, update, delete on public.TABLE_NAME to anon;
-grant select, insert, update, delete on public.TABLE_NAME to authenticated;
-grant select, insert, update, delete on public.TABLE_NAME to service_role;
+revoke all on public.TABLE_NAME from anon, authenticated;
+grant select, insert, update on public.TABLE_NAME to anon, authenticated;
+grant all on public.TABLE_NAME to service_role;
 alter table public.TABLE_NAME enable row level security;
 ```
 
-יש ליישם זאת על כל טבלה חדשה מעתה ואילך.
+⚠️ **הסיבה:** `GRANT` הוא **אדיטיבי בלבד ואינו מסיר דבר**, ופרויקט Supabase
+סטנדרטי מגיע עם `alter default privileges … grant all on tables` — כלומר
+**כל טבלה נולדת עם `DELETE` ו-`TRUNCATE`**. מחיקה בארגון היא תמיד `deleted=true`
+(כלל קריטי 5, וכלל ברזל 6 סעיף 1), ולכן ההרשאות האלה מיותרות בהגדרה ומסוכנות
+בפועל: מפתח ה-anon יושב גלוי ב-`index.html` הציבורי. ר' `migrations/012`.
+⚠️ **הניסוח הקודם כאן כלל `delete` לשלושת התפקידים** — הוא קדם למיגרציה 012
+ולכלל ברזל 10 סעיף 9, ותוקן בסבב 39.
+
 מקור האמת המלא לסכימה: `migrations/000_initial_schema.sql` (כלל קריטי 7 ב-CLAUDE.md).
 
 ---
 
 ## כללים קריטיים לפיתוח
 
-1. **node --check לפני כל push** — חובה מוחלטת (חילוץ ה-JS מ-`index.html` + `sw.js`)
-2. **`node tools/check-status-area.mjs` + `node tools/check-docs.mjs`** — חובה לצד בדיקת התחביר
-3. **קידום `CACHE_NAME` ב-`sw.js`** בכל שינוי קוד — בלי זה העדכון לא מגיע למשתמשים
-4. **`sl_transactions` = כספים** — soft-delete בלבד (`deleted=true`), לעולם לא `DELETE` פיזי
-5. **`esc()`** על כל ערך משתמש שנכנס ל-`innerHTML`
-
-```python
-import re, subprocess
-content = open('index.html', encoding='utf-8').read()
-scripts = re.findall(r'<script(?![^>]*src)[^>]*>(.*?)</script>', content, re.DOTALL)
-with open('/tmp/test_syntax.js','w') as f: f.write('\n'.join(scripts))
-r = subprocess.run(['node','--check','/tmp/test_syntax.js'],capture_output=True,text=True)
-print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
-```
+1. **`node tools/check-js.mjs` לפני כל push** — חובה מוחלטת. השער מחלץ את ה-JS
+   המוטבע מ-`index.html`, מריץ `node --check` עליו ועל `sw.js`, ומריץ את כל
+   שערי האחידות ואת חבילות בדיקות הסבבים.
+   ⚠️ **מסבב 33 זו פקודה אחת ולא רשימה** — הניסוח הקודם כאן מנה את הבודקים
+   בנפרד, וזה בדיוק המצב שהשער האחד בא לסלק.
+2. **קידום `CACHE_NAME` ב-`sw.js`** בכל שינוי קוד — בלי זה העדכון לא מגיע
+   למשתמשים.
+3. **`sl_transactions` = כספים** — soft-delete בלבד (`deleted=true`),
+   ⛔ לעולם לא `DELETE` פיזי; אותו כלל חל על `sl_students`.
+4. **`client_id` בכל רשומה חדשה**, וכתיבה ב-`upsert` עליו — ⛔ לא `insert`.
+5. **כתיבה ל-localStorage אך ורק דרך `lsSet`/`lsSetArray`** (כלל ברזל 1).
+6. **`esc()`** על כל ערך משתמש שנכנס ל-`innerHTML`.
 
 ---
 
@@ -51,7 +57,7 @@ print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
 | `sl_users` | משתמשים | ⛔ אין ברירת מחדל (סבב 24) · `role` קובע הרשאה (סבב 26) |
 | `sl_students` | תלמידים | soft-delete (migrations/002); `start_month`/`end_month` = טווח החיוב (migrations/004) |
 | `sl_transactions` | תשלומים (כספים!) | soft-delete בלבד; FK ל-`sl_students` ב-RESTRICT (migrations/003) |
-| `sl_settings` | הגדרות (key/value) | `default_tuition`. ⛔ `admin_pass` — שריד של שער שבוטל בסבב 26, אינו יורד לדיסק |
+| `sl_settings` | הגדרות (key/value) | `default_tuition`. ⚠️ שורת `admin_pass` **נמחקה מהמסד ומהגיבויים** בסבב 35; מנגנון סינון הסודות (`SL_NEVER_MIRROR_SETTINGS`) נשאר דרוך וריק |
 | `sl_lists` | רשימות בחירה | אמצעי תשלום, סעיפים; כולל את סעיף המערכת «זוכה על חשבון יתרת זכות» |
 
 ⚠️ **התנגשות שמות:** הקידומת `sl` כאן = **שכר לימוד**; ב-`hanhala-ruchanit` קיימת
@@ -71,10 +77,15 @@ print("✅ OK" if r.returncode==0 else "❌ "+r.stderr[:300])
 - יתרת זכות (עודף תשלום) כשדה נפרד + סעיף «זוכה על חשבון יתרת זכות» ✅ (`sw.js` v11;
   `migrations/005` לא תורץ בכוונה — זריעת נתון בלבד, האפליקציה זורעת בעצמה)
 
-**מצב המיגרציות במסד הייצור:** 001–004 הורצו ואומתו (soft-delete לתשלומים ולתלמידים,
-FK ב-RESTRICT, `start_month`/`end_month` קיימות ו-`handled_months` הוסרה). 005 — לא תורץ.
+**מצב המיגרציות במסד הייצור:** `001`–`014` הורצו ואומתו, **פרט ל-`005`** —
+⛔ שלא תורץ בכוונה (זריעת נתון בלבד; האפליקציה זורעת בעצמה). הטבלה המלאה
+יושבת ב-CLAUDE.md, פרק «מצב המיגרציות במסד הייצור» — ⚠️ הניסוח הקודם כאן
+נעצר ב-`004` ותוקן בסבב 39.
 
 ## פרטי מערכת
-- אין APK — האפליקציה היא PWA בלבד (בניגוד ל-hanhala ול-yoman)
+- מעטפת APK: **WebView מקורי** ב-`android/` שטוען מהרשת — ⛔ לא TWA ולא
+  PWABuilder. ⚠️ הניסוח הקודם כאן («אין APK — PWA בלבד») קדם למעטפת ותוקן
+  בסבב 39.
+- חתימה: `signing/schar.keystore` (alias `schar`) — ⛔ המפתח הקבוע
 - סנכרון: `syncAll` בפולינג של 3 שניות; שומר חפיפה `_syncBusy` (שחרור ב-`finally`)
 - נעילה אוטומטית אחרי 5 דקות חוסר פעילות

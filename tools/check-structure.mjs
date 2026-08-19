@@ -9,7 +9,7 @@
  *       חסרה או תיקייה עודפת מפילות את השער.
  *    ב. **קובצי שורש** — קובץ שאינו ברשימה הסגורה המשותפת ואינו ברשימת
  *       ההיתר הפר-אפליקציתית (שכל שורה בה נושאת נימוק).
- *    ג. **tools/** — ששת הבודקים המשותפים חייבים להתקיים; כל קובץ אחר
+ *    ג. **tools/** — שבעת הבודקים המשותפים חייבים להתקיים; כל קובץ אחר
  *       חייב להיות קובץ בדיקת-סבב (test_round*) או חריגה מנומקת.
  *
  *  ⚠️ הרקע (סבב 33): שער check-js חי ב-gius לבדה עשרה סבבים, קבצים
@@ -37,10 +37,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /* הסט הקנוני המשותף — זהה בארבעת הריפו. */
 const DIRS = ['.github', 'android', 'icons', 'migrations', 'signing', 'tools'];
-const ROOT_FILES = ['CLAUDE.md', 'CONTEXT.md', 'README.md',
+const ROOT_FILES = ['.nojekyll', 'CLAUDE.md', 'CONTEXT.md', 'README.md',
                     'index.html', 'manifest.json', 'sw.js'];
 const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs',
-                  'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs'];
+                  'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs',
+                  // ⭐ סבב 39 — אכיפת פרק «פערים פתוחים» (כלל ברזל 15).
+                  'check-gaps.mjs'];
 const TEST_RE = /^test_round\d+[\w-]*\.mjs$/;
 
 let failures = 0;
@@ -82,7 +84,7 @@ const tDirs  = tEntries.filter((e) => e.isDirectory()).map((e) => e.name).sort()
 
 const missingC = CHECKERS.filter((c) => !tFiles.includes(c));
 if (missingC.length) fail('בודקים משותפים חסרים ב-tools/: ' + missingC.join(', '));
-else pass('ששת הבודקים המשותפים קיימים ב-tools/');
+else pass('שבעת הבודקים המשותפים קיימים ב-tools/');
 
 const tAllowed = (f) => CHECKERS.includes(f) || TEST_RE.test(f) || (f in APP.toolsExtra);
 const badT = tFiles.filter((f) => !tAllowed(f));
