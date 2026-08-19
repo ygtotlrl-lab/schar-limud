@@ -43,7 +43,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',            '46a0bd36bbc06499'],
-  ['iron-rules-storage',      '3230732a3b1a8005'],
+  ['iron-rules-storage',      '7da09c244bdb4658'],
   ['pending-module',          '09e22a5adc623814'],
   ['iron-rule-6-sync',        '58f809376bdf981d'],
   ['round-14-verified-sweep', '4979f68cf39fc7c4'],
@@ -58,7 +58,8 @@ const CANON = [
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
   ['backup-module',           '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',   'ff1455af8ca6230a'],
+  ['iron-rule-14-org-wide',   '5e17540f55dd7647'],
+  ['iron-rule-15-gaps-verified', 'ac2c80ec40659f44'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
