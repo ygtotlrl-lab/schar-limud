@@ -69,6 +69,33 @@ const TAG = /\[(מדיד|לא-מדיד):\s*([^\]]+)\]/;
 const SRC_PATH = path.join(ROOT, 'index.html');
 const SRC = fs.existsSync(SRC_PATH) ? fs.readFileSync(SRC_PATH, 'utf8') : null;
 
+/* ⚠️ נרמול רווחים — ורק רווחים (סבב 39, השלמה שנייה). רצף רווחים, טאבים
+   ושורות חדשות מתקפל לרווח יחיד **בשני הצדדים**, ולכן עיצוב מחדש של אותה
+   שורה אינו נקרא כשינוי. ⛔ שמות, מרכאות ותוכן אינם מנורמלים — נרמול שלהם
+   היה הופך את העוגן לשער שעובר על קוד אחר.
+   ⭐ זה נמדד ולא הונח: החלפת `X = true` ב-`X  =  true` הפילה את השער עם
+   «⭐ הפער נסגר», כלומר כשל **בכיוון המסוכן** — הודעה שאומרת «הפער נסגר»
+   על קוד שלא השתנה. */
+const squash = (s) => s.replace(/\s+/g, ' ');
+const SRC_N = SRC === null ? null : squash(SRC);
+
+/* ⭐ עוגן הבסיס — שם הסמל לבדו (סבב 39, השלמה שנייה).
+   ⛔ עוגן בסיס שאינו נמצא ⇒ «העוגן נרקב», ⛔ ולעולם לא «הפער נסגר»:
+   הסמל עצמו נעלם (שינוי שם, מחיקה, ריפקטור), ואין שום דרך לדעת מהריפו אם
+   הפער נסגר או שרק העוגן הפסיק להצביע עליו. ההכרעה חוזרת לבן-אדם.
+   ⚠️ מילות המפתח מדולגות — «הסמל» ב-`function migrateOutbox` הוא
+   `migrateOutbox`, לא `function`. */
+const KEYWORDS = new Set(['var', 'let', 'const', 'function', 'class', 'new',
+                          'return', 'if', 'else', 'async', 'await', 'typeof',
+                          'true', 'false', 'null', 'undefined', 'this',
+                          'import', 'export', 'window', 'document']);
+function baseAnchor(arg) {
+  for (const id of arg.match(/[A-Za-z_$][\w$]*/g) || []) {
+    if (!KEYWORDS.has(id)) return id;
+  }
+  return null;
+}
+
 /* ⛔ ארבעת התנאים, וזה הסט כולו (כלל ברזל 15) — תנאי שאינו כאן הוא שגיאה
       ולא «מדולג», אחרת שגיאת כתיב בתג הייתה הופכת לפטור שקט. */
 function evaluate(cond) {
@@ -77,8 +104,12 @@ function evaluate(cond) {
   const kind = m[1], arg = m[2].trim();
   if (kind === 'code' || kind === 'no-code') {
     if (SRC === null) return { known: true, ok: null, why: 'אין index.html' };
-    const hit = SRC.includes(arg);
-    return { known: true, ok: kind === 'code' ? hit : !hit };
+    const hit = SRC_N.includes(squash(arg));
+    if (kind === 'no-code') return { known: true, ok: !hit };
+    if (hit) return { known: true, ok: true };
+    const base = baseAnchor(arg);
+    if (base && !SRC_N.includes(base)) return { known: true, ok: false, rot: base };
+    return { known: true, ok: false, base };
   }
   const exists = fs.existsSync(path.join(ROOT, arg));
   return { known: true, ok: kind === 'file' ? exists : !exists };
@@ -120,10 +151,23 @@ for (const item of items) {
     continue;
   }
 
-  /* ג. ⭐ פער שנסגר */
+  /* ג. ⚠️ העוגן נרקב — הסמל עצמו נעלם */
+  if (res.rot) {
+    err(`⚠️ העוגן נרקב — דורש בדיקה ידנית: הסמל «${res.rot}» אינו קיים ב-index.html\n` +
+        `   התנאי: «${m[2].trim()}»\n` +
+        `   «${head}»\n` +
+        '   ⛔ אין לקרוא את זה כ«הפער נסגר» (סבב 39) — סמל שנעלם אינו ראיה\n' +
+        '   לכך שהפער נסגר, אלא לכך שהעוגן הפסיק להצביע על משהו. יש לבדוק\n' +
+        '   מה קרה לסמל, ואז לתקן את העוגן או למחוק את השורה.');
+    continue;
+  }
+
+  /* ד. ⭐ פער שנסגר */
   if (!res.ok) {
     err(`⭐ הפער נסגר — התנאי «${m[2].trim()}» כבר אינו מתקיים:\n` +
         `   «${head}»\n` +
+        (res.base ? `   ⚠️ עוגן הבסיס «${res.base}» כן נמצא — כלומר הסמל קיים,\n` +
+                    '   והערך או ההקשר שסביבו הם שהשתנו.\n' : '') +
         '   ⛔ שורת הפער חייבת להימחק (כלל ברזל 14, «פער שנסגר בפעולת מנהל»).\n' +
         '   ⚠️ הבודק מדווח ואינו מוחק — המחיקה והניסוח הם החלטת הסבב.');
     continue;

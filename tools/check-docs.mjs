@@ -59,7 +59,7 @@ const CANON = [
   ['backup-module',           '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',   '5e17540f55dd7647'],
-  ['iron-rule-15-gaps-verified', 'ac2c80ec40659f44'],
+  ['iron-rule-15-gaps-verified', '0c5e079f0137ce9f'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
