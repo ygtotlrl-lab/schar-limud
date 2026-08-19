@@ -52,14 +52,15 @@ const CANON = [
   ['iron-rule-7-status-area', '3acd979daa17a205'],
   ['iron-rule-8-docs',        'e751633a064dc070'],
   ['iron-rule-9-security-spread', '5412c7382b4daf61'],
-  ['iron-rule-10-users',      'c822ccbf258e76a5'],
-  ['capability-matrix',       'b88277d960738761'],
+  ['iron-rule-10-users',      '54d578f69f5b3690'],
+  ['capability-matrix',       '78f6a388484cdb68'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
   ['backup-module',           '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',   'eb3bbe43a2a82788'],
   ['iron-rule-15-gaps-verified', '0c5e079f0137ce9f'],
+  ['sw-strategies',           '3f1636e99044b723'],
   ['iron-rule-16-remnant',    '768bb00a3cdc5caa'],
 ];
 

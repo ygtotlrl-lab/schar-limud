@@ -418,12 +418,17 @@ async function main() {
   /* ── ה. כניסה מקוונת ─────────────────────────────────────────────────── */
   sect('ה. כניסה מקוונת — המסלול לא השתנה');
   {
+    /*  ⭐ סבב 40 — הפיקסטורה נושאת **טביעה**, והשאילתה נשלפת לפי שם
+     *  המשתמש בלבד. עד סבב 40 היא החזירה שורה בלי טביעה כשה-`.eq` על
+     *  `password` התאים; ⛔ הטענה שאכפה זאת התהפכה במכוון — ר' למטה.  */
+    const seed = makeCtx({ reply: () => ({ data: null, error: null }) });
+    const rowA = await userRow(seed, A);
     const h = makeCtx({
       reply: (q) => {
         if (q.kind === 'update') return { data: null, error: null };
-        if (q.eqs.password) {
-          return q.eqs.password === A.password
-            ? { data: { id: A.id, username: A.username, pass_salt: null, pass_fp: null }, error: null }
+        if (q.eqs.username) {
+          return q.eqs.username === A.username
+            ? { data: rowA, error: null }
             : { data: null, error: null };
         }
         return { data: [{ id: A.id }], error: null };
@@ -433,14 +438,17 @@ async function main() {
     await h.ctx.doLogin();
     eq('כניסה מקוונת מצליחה', h.calls.enter, 1);
     const q0 = h.calls.sb[0];
-    ok('ההשוואה עדיין מול `password` שבמסד', q0.eqs.password === A.password);
+    ok('⛔ ההשוואה **אינה** מול `password` שבמסד (סבב 40)', !q0.eqs.password);
+    ok('⭐ והשליפה היא לפי שם המשתמש', q0.eqs.username === A.username);
     ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === h.ctx.SL_USER_COLS.join(','), q0.cols);
     ok('⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
-    // ההשלמה רצה ברקע — ממתינים לה עצמה ולא לשעון (ר' `waitFor`).
-    await waitFor(() => h.calls.sb.some((x) => x.kind === 'update'), 'ההשלמה ברקע');
+    /*  ⚠️ סבב 40 — הטביעה כבר תואמת, ולכן `slEnsurePassFp` יוצאת מוקדם
+     *  ואינה כותבת. זו התנהגות קיימת שלא השתנתה («תואמת — אין מה
+     *  להשלים»); מה שהשתנה הוא שהפיקסטורה מגיעה עם טביעה מלכתחילה.
+     *  ⛔ מה שכן נאכף כאן: גם כשההשלמה **כן** רצה, היא אינה נוגעת
+     *  ב-`password`.                                                   */
     const upd = h.calls.sb.find((x) => x.kind === 'update');
-    ok('⭐ ההשלמה נכתבה — pass_salt+pass_fp', !!(upd && upd.body.pass_salt && upd.body.pass_fp));
-    ok('⛔ ההשלמה אינה נוגעת ב-password', upd && !('password' in upd.body));
+    ok('⛔ אף כתיבה במסלול הכניסה אינה נוגעת ב-password', !upd || !('password' in upd.body));
   }
   {
     const h = makeCtx({ reply: () => ({ data: null, error: null }) });
