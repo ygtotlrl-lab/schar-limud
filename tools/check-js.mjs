@@ -45,6 +45,7 @@ const APP = {
   ],
   gates: ['check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs', 'check-gaps.mjs',
+          'test_round40_gradle.mjs',
           'test_round39_gaps.mjs', 'test_round39_md.mjs',
           'test_round24.mjs', 'test_round26.mjs',
           'test_round30_stage_a.mjs', 'test_round33_structure.mjs',
