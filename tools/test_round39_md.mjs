@@ -7,7 +7,7 @@
  *  של גיוס חסרו שני פרקים שלמים. סעיף ו של `check-docs.mjs` אוכף מעכשיו
  *  את השלד, והבדיקה הזו מוודאת שהוא **באמת נופל** כשהשלד נשבר.
  *
- *  ⭐ סבב 41 הוסיף לה שכבה שנייה: שש הפסקאות המשותפות שבשלושת הקבצים
+ *  ⭐ סבב 41 הוסיף לה שכבה שנייה: הפסקאות המשותפות שבשלושת הקבצים
  *  מסומנות ב-`SHARED` ונחתמות ב-sha256 (סעיף ז), ושלוש מוטציות מודדות
  *  שהאכיפה היא על **תוכן** ולא על שלד.
  *
@@ -107,5 +107,51 @@ const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); 
   t(run(d).status === 0, '⛔ שינוי בפסקה פרטית אינו מפיל את check-docs');
 }
 
-console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב+41 (שלושת קובצי ה-md) — ${n} טענות עברו`);
+/* ── 5 — סבב 42ב: ארבעת הפרקים שהוכרעו כמשותפים ביישור תיעוד האנדרואיד ──
+ *  ⚠️ סבב 42ב מדד ששלושה נושאים בתיעוד האנדרואיד חיו בשלוש כותרות שונות
+ *  לאותו דבר, ושפרק «אייקונים» קיים בריפו אחד בלבד אף שהמבנה שהוא מתאר
+ *  זהה בארבעתן (עשרה `mipmap` ו-XML אדפטיבי אחד — נמדד). ארבעת הפרקים
+ *  הוכרעו כמשותפים ונכנסו ל-`CANON_MD`, ⛔ ולכן הם נאכפים בתוכן ולא
+ *  בכותרת. ⚠️ ומה שיושב **מתחת** לכל אחד מהם — שורת הנימוק הפר-אפליקציתית
+ *  — נשאר פרטי, והמוטציה השנייה מודדת שהשער אינו נופל עליו.               */
+console.log('· סבב 42ב — הפרקים המשותפים של תיעוד האנדרואיד');
+
+const NEW_SHARED = [
+  ['CONTEXT.md',        'context-smali-scope'],
+  ['CONTEXT.md',        'context-cache-apk'],
+  ['android/README.md', 'android-origin-switch'],
+  ['android/README.md', 'android-icons'],
+];
+
+for (const [f, id] of NEW_SHARED) {
+  const START = `<!-- SHARED:start id="${id}" -->`;
+  const END = '<!-- SHARED:end -->';
+
+  /* 5א — שינוי בית בתוך הפסקה המשותפת מפיל */
+  {
+    const d = mutDir(), p = join(d, f);
+    const src = fs.readFileSync(p, 'utf8');
+    const i = src.indexOf(START);
+    t(i > 0, `${f}: «${id}» מסומן כמשותף לפני המוטציה`);
+    const j = src.indexOf(END, i);
+    const head = src.slice(0, i + START.length);
+    const body = src.slice(i + START.length, j);
+    const at = body.search(/\S/);
+    fs.writeFileSync(p, head + body.slice(0, at) + 'x' + body.slice(at) + src.slice(j), 'utf8');
+    const r = run(d);
+    t(r.status !== 0, `⛔ שינוי בית ב-«${id}» מפיל את check-docs`);
+    t(/אינה זהה לחתימה/.test(r.stderr + r.stdout), '   והשגיאה מצביעה על החתימה');
+  }
+
+  /* 5ב — שינוי בשורת הנימוק הפר-אפליקציתית שמתחתיו ⛔ אינו מפיל */
+  {
+    const d = mutDir(), p = join(d, f);
+    const src = fs.readFileSync(p, 'utf8');
+    const j = src.indexOf(END, src.indexOf(START)) + END.length;
+    fs.writeFileSync(p, src.slice(0, j) + '\n\n⚠️ שורת נימוק פרטית שנוספה במוטציה.' + src.slice(j), 'utf8');
+    t(run(d).status === 0, `⛔ שינוי בנימוק הפרטי שמתחת ל-«${id}» אינו מפיל`);
+  }
+}
+
+console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב+41+42ב (שלושת קובצי ה-md) — ${n} טענות עברו`);
 process.exit(bad ? 1 : 0);

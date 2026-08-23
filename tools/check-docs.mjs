@@ -283,12 +283,15 @@ const MD_SKELETONS = [
       [/^##\s+טבלאות\s*$/,                            '## טבלאות'],
       [/^##\s+מצב נוכחי\s*$/,                        '## מצב נוכחי'],
       [/^##\s+פרטי מערכת\s*$/,                       '## פרטי מערכת'],
+      [/^##\s+תיקון URL ב-APK/,                       '## תיקון URL ב-APK … — smali בלבד'],
     ] },
   { file: 'android/README.md', need: [
       [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
       [/^##\s+מה בפנים\s*$/,                          '## מה בפנים'],
       [/^##\s+.*גשר/,                                  '## …גשר… (הגשר המקורי / אין גשר שיתוף)'],
-      [/^##\s+למה אין( יותר)? נכסים מוטבעים\s*$/,     '## למה אין נכסים מוטבעים'],
+      [/^##\s+למה אין נכסים מוטבעים\s*$/,             '## למה אין נכסים מוטבעים'],
+      [/^##\s+.*מעבר-origin חד-פעמי/,                  '## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK'],
+      [/^##\s+אייקונים\s*$/,                           '## אייקונים'],
       [/^##\s+Build\s*$/,                              '## Build'],
       [/^##\s+Sign with the PERMANENT key/,            '## Sign with the PERMANENT key …'],
     ] },
@@ -332,12 +335,16 @@ for (const spec of MD_SKELETONS) {
  *  הסימון לפסקה שאינה זהה בארבעתן בפועל — זה בדיוק כלל ברזל 8 סעיף 4,
  *  בציר אחר.                                                             */
 const CANON_MD = [
-  ['README.md',         'readme-gate',         'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',          '81445890f0e496dc'],
-  ['CONTEXT.md',        'context-grant',       'f81b753212d412f0'],
-  ['android/README.md', 'android-why-twa',     '253ef8b2c0658ef0'],
-  ['android/README.md', 'android-web-update',  'dbfd1b661d1b6b25'],
-  ['android/README.md', 'android-shell-split', '0d21596f22cb2e39'],
+  ['README.md',         'readme-gate',           'fd4654765f8ed749'],
+  ['README.md',         'readme-apk',            '81445890f0e496dc'],
+  ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
+  ['CONTEXT.md',        'context-smali-scope',   '15ad22e158b45086'],
+  ['CONTEXT.md',        'context-cache-apk',     '898e51f7bb6048db'],
+  ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
+  ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
+  ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
+  ['android/README.md', 'android-icons',         '9824d699371d309a'],
+  ['android/README.md', 'android-shell-split',   '0d21596f22cb2e39'],
 ];
 
 /* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */
