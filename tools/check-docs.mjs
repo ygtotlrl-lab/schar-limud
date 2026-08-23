@@ -55,7 +55,7 @@ const CANON = [
   ['iron-rule-8-docs',        'be8e241ccd5b1ad4'],
   ['iron-rule-9-security-spread', '5412c7382b4daf61'],
   ['iron-rule-10-users',      '54d578f69f5b3690'],
-  ['capability-matrix',       '1311d3bcc417b5a0'],
+  ['capability-matrix',       'd170e21d4380674b'],
   ['iron-rule-11-comments',   'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
   ['backup-module',           '15352739fcf8bd26'],
@@ -406,6 +406,50 @@ function scanShared(file) {
       }
     }
     if (ok) pass(`${file} — ${want.length} הפסקאות המשותפות זהות לחתימה הקנונית`);
+  }
+}
+
+/* ── ח. manifest.json — **ערכי** המפתחות המשותפים (סבב 44) ───────────────
+   ⚠️ עד הסבב הזה שום בודק לא נגע בתוכן של `manifest.json` — רק בקיומו
+   (`check-structure.mjs`). ⛔ **וזו בדיוק צורת הכשל שאיפשרה לשני הבדלים
+   לשרוד**: `display` היה `fullscreen` בהנהלה ו-`standalone` בשלוש,
+   ו-`orientation` היה `portrait-primary` בגיוס ו-`portrait` בשלוש.
+   ⚠️ **וזה אותו לקח של סבב 39 בציר אחר** — שם הושוו **שמות** הכותרות
+   ולא תוכנן, וכאן הושווה **קיום** הקובץ ולא ערכיו.
+   ⛔ מה שנשאר פרטי בכוונה, ואין להוסיף אותו לרשימה: `name` ·
+   `short_name` · `description` · `start_url` · `scope` · `icons` ·
+   `theme_color` · `background_color` — זהות חזותית פר-אפליקציה.
+   ⚠️ `start_url` פרטי **גם מטעם שני**: ב-gius הוא `./` ובשלוש
+   `./index.html`, וה-id המשתמע נגזר ממנו; יישור שלו היה הופך אפליקציה
+   **מותקנת** לאפליקציה זרה (סבב 39). */
+const CANON_MANIFEST = [
+  ['display',     'standalone'],
+  ['orientation', 'portrait'],
+  ['lang',        'he'],
+  ['dir',         'rtl'],
+];
+{
+  const file = 'manifest.json';
+  if (!fs.existsSync(file)) {
+    fail('manifest.json חסר — הוא בסט הקנוני של check-structure');
+  } else {
+    let mf = null;
+    try { mf = JSON.parse(fs.readFileSync(file, 'utf8')); }
+    catch (e) { fail(`manifest.json אינו JSON תקין — ${e.message}`); }
+    if (mf) {
+      let ok = true;
+      for (const [key, want] of CANON_MANIFEST) {
+        if (!(key in mf)) {
+          ok = false;
+          fail(`manifest.json: המפתח המשותף "${key}" חסר — ערכו הקנוני «${want}»`);
+        } else if (mf[key] !== want) {
+          ok = false;
+          fail(`manifest.json: "${key}" הוא «${mf[key]}» במקום «${want}». ` +
+               'ערך משותף משתנה בארבעת הריפו ובארבעת עותקי הבדיקה, באותו סבב.');
+        }
+      }
+      if (ok) pass(`manifest.json — ${CANON_MANIFEST.length} ערכי המפתחות המשותפים תואמים`);
+    }
   }
 }
 

@@ -42,7 +42,10 @@ for (const [f] of CASES) t(fs.existsSync(join(ROOT, f)), `${f} קיים`);
 const run = (cwd) => spawnSync(process.execPath, [join(cwd, 'tools', 'check-docs.mjs')],
                                { cwd, encoding: 'utf8' });
 const baseDir = mkdtempSync(join(tmpdir(), 'md-skel-'));
-for (const f of ['CLAUDE.md', 'README.md', 'CONTEXT.md']) cpSync(join(ROOT, f), join(baseDir, f));
+// ⚠️ manifest.json נוסף לרשימה בסבב 44 — מסעיף ח של check-docs ואילך
+//    הבודק אוכף גם את **ערכי** המפתחות המשותפים שבו, ורתמה שלא העתיקה
+//    אותו הייתה מפילה את check-docs על קובץ חסר במקום על סחיפה במד.
+for (const f of ['CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json']) cpSync(join(ROOT, f), join(baseDir, f));
 cpSync(join(ROOT, 'android'), join(baseDir, 'android'), { recursive: true });
 cpSync(join(ROOT, 'tools'), join(baseDir, 'tools'), { recursive: true });
 t(run(baseDir).status === 0, 'check-docs עובר על עותק נקי של העץ');
