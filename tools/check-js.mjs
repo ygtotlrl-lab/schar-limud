@@ -30,15 +30,20 @@ const APP = {
   /* ⚠️ הכללים נמדדו מ-sw.js ומ-index.html של האפליקציה הזו (סבב 33,
      הורחבו בסבב 35) — לא הועתקו מריפו אחר. [file, regex, expect, msg]
      ⚠️ מסבב 35 יש כאן רשימת CDN במטמון-מראש עם ריפוי עצמי (התבנית של
-     שלוש האחיות), ולכן נוסף כלל mode:'cors' — נמדד, לא הוצהר. עדיין אין
-     דף אופליין, ולכן אין כלל עליו. */
+     שלוש האחיות), ולכן נוסף כלל mode:'cors' — נמדד, לא הוצהר.
+     ⭐ ומסבב 42ג יש כאן גם דף אופליין (הליבה המשותפת), ולכן נוסף כלל
+     ה-Content-Type — כבשלוש האחיות. */
   rules: [
     ['sw',   "CACHE_NAME\\s*=\\s*'schar-limud-v\\d+'", true,
              "sw.js: CACHE_NAME בתבנית 'schar-limud-v<N>' (תבנית, לא מספר קבוע)"],
     ['sw',   "supabase\\.co", true, "sw.js: דילוג על בקשות supabase.co"],
-    ['sw',   "startsWith\\('schar-limud-'\\)", true,
-             "sw.js: ניקוי מטמון לפי הקידומת 'schar-limud-' בלבד"],
+    ['sw',   "prefix:\\s*'schar-limud-'", true,
+             "sw.js: SW_CFG.prefix = 'schar-limud-'"],
+    ['sw',   "indexOf\\(SW_CFG\\.prefix\\)\\s*===\\s*0", true,
+             "sw.js: ניקוי המטמון לפי SW_CFG.prefix בלבד"],
     ['sw',   "mode:\\s*'cors'", true, "sw.js: משיכת CDN ב-mode:'cors'"],
+    ['sw',   "text/html;\\s*charset=utf-8", true,
+             "sw.js: דף האופליין עם Content-Type מפורש"],
     ['sw',   "supabase-js@2\\.111\\.0", true, "sw.js: supabase-js נעוץ ברשימת ה-CDN"],
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
