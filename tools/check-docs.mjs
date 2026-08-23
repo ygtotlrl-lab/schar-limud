@@ -45,7 +45,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',            '46a0bd36bbc06499'],
-  ['iron-rules-storage',      'bee24a8c8b37d418'],
+  ['iron-rules-storage',      '2303b29611902680'],
   ['pending-module',          '09e22a5adc623814'],
   ['iron-rule-6-sync',        '58f809376bdf981d'],
   ['round-14-verified-sweep', '4979f68cf39fc7c4'],
@@ -64,6 +64,7 @@ const CANON = [
   ['iron-rule-15-gaps-verified', '0c5e079f0137ce9f'],
   ['sw-strategies',           '3f1636e99044b723'],
   ['iron-rule-16-remnant',    '84f2658bb8580565'],
+  ['iron-rule-17-touch-scan', '7171fb74b830c3ff'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -282,12 +283,15 @@ const MD_SKELETONS = [
       [/^##\s+טבלאות\s*$/,                            '## טבלאות'],
       [/^##\s+מצב נוכחי\s*$/,                        '## מצב נוכחי'],
       [/^##\s+פרטי מערכת\s*$/,                       '## פרטי מערכת'],
+      [/^##\s+תיקון URL ב-APK/,                       '## תיקון URL ב-APK … — smali בלבד'],
     ] },
   { file: 'android/README.md', need: [
       [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
       [/^##\s+מה בפנים\s*$/,                          '## מה בפנים'],
       [/^##\s+.*גשר/,                                  '## …גשר… (הגשר המקורי / אין גשר שיתוף)'],
-      [/^##\s+למה אין( יותר)? נכסים מוטבעים\s*$/,     '## למה אין נכסים מוטבעים'],
+      [/^##\s+למה אין נכסים מוטבעים\s*$/,             '## למה אין נכסים מוטבעים'],
+      [/^##\s+.*מעבר-origin חד-פעמי/,                  '## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK'],
+      [/^##\s+אייקונים\s*$/,                           '## אייקונים'],
       [/^##\s+Build\s*$/,                              '## Build'],
       [/^##\s+Sign with the PERMANENT key/,            '## Sign with the PERMANENT key …'],
     ] },
@@ -331,12 +335,16 @@ for (const spec of MD_SKELETONS) {
  *  הסימון לפסקה שאינה זהה בארבעתן בפועל — זה בדיוק כלל ברזל 8 סעיף 4,
  *  בציר אחר.                                                             */
 const CANON_MD = [
-  ['README.md',         'readme-gate',         'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',          '81445890f0e496dc'],
-  ['CONTEXT.md',        'context-grant',       'f81b753212d412f0'],
-  ['android/README.md', 'android-why-twa',     '253ef8b2c0658ef0'],
-  ['android/README.md', 'android-web-update',  'dbfd1b661d1b6b25'],
-  ['android/README.md', 'android-shell-split', '0d21596f22cb2e39'],
+  ['README.md',         'readme-gate',           'fd4654765f8ed749'],
+  ['README.md',         'readme-apk',            '81445890f0e496dc'],
+  ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
+  ['CONTEXT.md',        'context-smali-scope',   '15ad22e158b45086'],
+  ['CONTEXT.md',        'context-cache-apk',     '898e51f7bb6048db'],
+  ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
+  ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
+  ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
+  ['android/README.md', 'android-icons',         '9824d699371d309a'],
+  ['android/README.md', 'android-shell-split',   '0d21596f22cb2e39'],
 ];
 
 /* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */

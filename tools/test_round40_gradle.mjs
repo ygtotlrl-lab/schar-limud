@@ -97,8 +97,16 @@ let base = null, changed = null;
 try {
   git(['rev-parse', '--verify', 'origin/main']);
   base = parseGradle(git(['show', 'origin/main:' + GRADLE]));
+  /* ⛔ תיעוד אינו מעטפת (סבב 42ב) — קובץ `.md` תחת `android/` יוצא מרשימת
+   *  השינויים. הוא אינו נכנס ל-APK ואינו משנה שום בית במעטפת, ולכן דרישת
+   *  קידום עליו הייתה **קידום סרק**: `versionCode` שקופץ בלי שהמעטפת
+   *  השתנתה הוא בדיוק אותו רעש ש-`CACHE_NAME` נבנה נגדו בשכבת ה-web
+   *  (סבב 26 השלמה), והוא גם שולח את המשתמשים להתקנה מחדש לשום שינוי.
+   *  ⚠️ נמדד בסבב 42ב: יישור `android/README.md` בארבעת הריפו הפיל את
+   *  השער הזה בארבעתם, ⛔ בלי ששורה אחת של קוד מעטפת נגעה.                */
   changed = git(['diff', '--name-only', 'origin/main', '--', 'android/'])
-              .split('\n').map((s) => s.trim()).filter(Boolean);
+              .split('\n').map((s) => s.trim())
+              .filter((f) => f && !f.endsWith('.md'));
 } catch (_) { base = null; }
 
 if (base === null) {
