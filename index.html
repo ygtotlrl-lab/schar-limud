@@ -2083,6 +2083,117 @@ function newClientId(){
 }
 /* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
 
+/* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
+/* ⚠️ בשכר לימוד הריקון הוא `syncAll` עצמה — משיכה, מיזוג ודחיפת מה
+   שמקומי-וחדש-יותר. ⛔ אין כאן פונקציית דחיפה נפרדת ואין ליצור אחת
+   (סבב 44) — דחיפה בלי משיכה שקדמה לה מחזירה לחיים שורה שנמחקה
+   במכשיר אחר (כלל ברזל 6 סעיף 4). */
+var RTY_CFG = {
+  flush:   function () { return syncAll(); },
+  pending: function () { try { return pendCount() > 0; } catch (e) { return false; } },
+};
+/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44) ══════════════════════════
+   ⭐ **הבאג שנמדד:** פעולה נשארת מסומנת ⏳ למרות שהרשת מחוברת, ומשתחררת
+   רק כשפעולה חדשה גוררת אותה. הסימון אמין — הפעולה באמת לא סונכרנה.
+   הסיבה: מסלול הריקון הופעל בשלושה טריגרים בלבד — עליית האפליקציה,
+   אירוע `online`, ופעולת שמירה חדשה. דחיפה שנכשלה **בזמן שהרשת מחוברת**
+   (תקלת שרת רגעית, חריגת timeout) נשארה תקועה, מפני שאירוע `online`
+   לעולם לא יופעל: הרשת מעולם לא ירדה.
+   ⛔ **הטיימר מותנה ואינו קבוע (סבב 44) — אין טיימר פעיל כשהתור ריק.**
+   הוא נדרך רק כשיש משהו ממתין, ונעצר ברגע שהתור מתרוקן. טיימר קבוע היה
+   מתעורר כל 15 שניות לנצח, על כל מכשיר, גם כשאין מה לעשות — בזבוז סוללה
+   שאינו קונה דבר.
+   ⛔ **שלושת התנאים נבדקים יחד לפני כל ניסיון (סבב 44)** — תור לא ריק
+   **וגם** `navigator.onLine` **וגם** מסמך גלוי. ניסיון במסמך מוסתר הוא
+   בקשת רשת שאיש אינו ממתין לתשובתה, ובמכשיר נייד היא מתבצעת ברקע על
+   חשבון הסוללה.
+   ⛔ **אין ריצה כפולה (סבב 44)** — `_rtyBusy` חוסם ניסיון חדש כל עוד
+   הקודם רץ. בלעדיו, רשת איטית הייתה ערמת דחיפות זו על זו והמכשיר היה
+   שולח את אותו צילום מצב פעמיים.
+   ⛔ **נסיגה אקספוננציאלית על כישלון חוזר (סבב 44)** — 15 ⇐ 30 ⇐ 60
+   שניות, תקרה 60, ומתאפסת להצלחה ולכל פעולה חדשה של המשתמש. שרת שנפל
+   אינו זקוק לניסיון כל 15 שניות מכל מכשיר בשטח.
+   ⚠️ **«הצלחה» נמדדת מהתור ולא מערך מוחזר** — אם אחרי הריקון עדיין יש
+   ממתינים, זה כישלון לכל דבר וההשהיה גדלה. כך המודול אינו תלוי בכך
+   שפונקציית הריקון של כל אפליקציה תדווח נכון.
+   ⚠️ **`rtyGate()` היא ידית לאפליקציה שכבר יש לה פולינג שדוחף** — היא
+   מחזירה `true` בזמן ניסיון פעיל או בזמן נסיגה, כדי שהפולינג ידלג ולא
+   יבטל את הנסיגה. אפליקציה שהפולינג שלה מושך בלבד אינה צריכה אותה.
+   ⚠️ **`rtyNote()` היא ידית הדריכה מחדש** — נקראת מ**נקודה אחת** בכל
+   אפליקציה: המשפך שבו נרשמת פעולה מקומית חדשה. היא־היא מה שמאפשר
+   לטיימר להיעצר כשהתור מתרוקן ולחזור כשנוספת פעולה.
+   ⛔ **נקודת ההפעלה היחידה היא `rtyBoot()` מפונקציית העלייה (סבב 44)** —
+   זו שקוראת גם ל-`lsBoot()`, ל-`pendBoot()` ול-`bkBoot()`. מנגנון בטיחות
+   שתלוי במסלול אחר נעצר בדיוק כשהמסלול ההוא אינו רץ, וזה הלקח שהשבית
+   את הגיבוי ל-25 יום (כלל ברזל 12).
+   ה-API: `rtyBoot` · `rtyNote` · `rtyKick` · `rtyArm`/`rtyStop` ·
+   `rtyReady` · `rtyGate` · `rtyState`. מעליו `RTY_CFG` — הדבר היחיד
+   שנבדל בין האפליקציות.
+   ═══════════════════════════════════════════════════════════════════════ */
+var RTY_BASE_MS = 15000;   // המרווח הראשון אחרי כישלון
+var RTY_MAX_MS  = 60000;   // תקרת הנסיגה — מעבר לה אין טעם להאט עוד
+var _rtyTimer = null, _rtyDelay = RTY_BASE_MS, _rtyBusy = false, _rtyWired = false;
+
+function _rtyPending() {
+  try { return !!(typeof RTY_CFG !== 'undefined' && RTY_CFG && RTY_CFG.pending && RTY_CFG.pending()); }
+  catch (e) { return false; }
+}
+function _rtyOnline() {
+  try { return typeof navigator === 'undefined' || navigator.onLine !== false; } catch (e) { return true; }
+}
+function _rtyVisible() {
+  try { return typeof document === 'undefined' || document.visibilityState !== 'hidden'; } catch (e) { return true; }
+}
+function rtyReady() { return _rtyPending() && _rtyOnline() && _rtyVisible(); }
+function rtyGate()  { return _rtyBusy || _rtyDelay > RTY_BASE_MS; }
+function rtyState() { return { armed: !!_rtyTimer, delay: _rtyDelay, busy: _rtyBusy }; }
+
+function rtyStop() { if (_rtyTimer) { clearTimeout(_rtyTimer); _rtyTimer = null; } }
+
+function rtyArm() {
+  if (_rtyTimer) return false;
+  if (!_rtyPending()) return false;
+  _rtyTimer = setTimeout(_rtyFire, _rtyDelay);
+  return true;
+}
+
+function _rtyFire() {
+  _rtyTimer = null;
+  if (!_rtyPending()) { _rtyDelay = RTY_BASE_MS; return; }
+  if (!_rtyOnline() || !_rtyVisible()) { rtyArm(); return; }
+  rtyKick();
+}
+
+function rtyKick() {
+  if (_rtyBusy) return Promise.resolve(false);
+  if (!_rtyPending()) { rtyStop(); _rtyDelay = RTY_BASE_MS; return Promise.resolve(false); }
+  if (!_rtyOnline() || !_rtyVisible()) { rtyArm(); return Promise.resolve(false); }
+  _rtyBusy = true;
+  rtyStop();
+  var p;
+  try { p = Promise.resolve(RTY_CFG.flush()); } catch (e) { p = Promise.reject(e); }
+  var grow = function () { _rtyDelay = Math.min(_rtyDelay * 2, RTY_MAX_MS); };
+  return p.then(function () { if (_rtyPending()) grow(); else _rtyDelay = RTY_BASE_MS; }, grow)
+          .then(function () { _rtyBusy = false; rtyArm(); return true; });
+}
+
+function rtyNote() { _rtyDelay = RTY_BASE_MS; rtyArm(); }
+
+function rtyBoot() {
+  if (!_rtyWired) {
+    _rtyWired = true;
+    try {
+      window.addEventListener('online', function () { _rtyDelay = RTY_BASE_MS; rtyKick(); });
+      document.addEventListener('visibilitychange', function () {
+        if (_rtyVisible()) { _rtyDelay = RTY_BASE_MS; rtyKick(); }
+      });
+    } catch (e) { console.warn('[rty] wiring', e); }
+  }
+  rtyArm();
+}
+/* ═══════════════ סוף מודול הניסיון החוזר ════════════════════════════════ */
+
+
 /* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⭐ החלון החם כאן הוא תנועות שנת הלימודים הנוכחית (סבב 35) — הגבול הוא
    `acadYearOf` הקיימת (ספטמבר–אוגוסט), אותה הגדרה שכבר משמשת את הדשבורד
@@ -2943,6 +3054,9 @@ function slLocalWrite(tbl, row) {
   if (!hit) arr.push(row);
   if (!slMirrorSave(m)) return false;
   slApplyMirror();
+  // ⚠️ משפך הכתיבה המקומית היחיד כאן, ולכן זו נקודת הדריכה היחידה של
+  //    מודול הניסיון החוזר (סבב 44).
+  rtyNote();
   return true;
 }
 
@@ -3393,7 +3507,11 @@ function enterApp(){
   slApplyMirror();
   refreshUI();
   syncAll();                                   // רענון ברקע
-  SYNC_INT=setInterval(syncAll,3000);
+  // ⚠️ הפולינג כאן **דוחף** ולא רק מושך, ולכן הוא עובר דרך `rtyGate()`
+  //    (סבב 44): בזמן נסיגה אחרי כישלון חוזר הוא מדלג, והמודול הוא
+  //    שמחליט מתי לנסות שוב. ⛔ בלי השער הזה הנסיגה הייתה חסרת משמעות —
+  //    הפולינג היה מציף את השרת כל שלוש שניות בדיוק כשהוא נפל.
+  SYNC_INT=setInterval(function(){ if (rtyGate()) return; syncAll(); },3000);
   // ⛔ `slMaybeDailyBackup()` הוסרה מכאן (סבב 30, השלמה) — הגיבוי עבר
   //    ל-`slBoot()`, נקודת ההפעלה המוצהרת, לצד `lsBoot()`/`pendBoot()`.
   //    הוא אינו תלוי בכניסה, ולכן אין סיבה שיחכה לה.
@@ -4131,6 +4249,8 @@ async function slBoot(){
   //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
   //    כמה שפחות תלוי במה שהמשתמש עושה.
   try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
+  // ניסיון חוזר בסנכרון (סבב 44) — נקודת ההפעלה היחידה של המודול.
+  try { rtyBoot(); } catch (e) { console.warn('[rty] rtyBoot', e); }
   try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת (כלל ברזל 3).
   try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }

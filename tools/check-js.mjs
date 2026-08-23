@@ -50,6 +50,7 @@ const APP = {
   ],
   gates: ['check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs', 'check-gaps.mjs',
+          'test_round44_retry.mjs',
           'test_round42_sw.mjs',
           'test_round42c_swcore.mjs',
           'test_round41_build.mjs',
