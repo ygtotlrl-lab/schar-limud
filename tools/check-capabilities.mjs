@@ -129,6 +129,18 @@ const CAPS = {
              start: '/* ═══ מזהי רשומות — מודול משותף (סבב 37א)',
              end:   '/* ═══════════════ סוף מודול מזהי הרשומות' },
   },
+  /*  ⭐ סבב 42ג — ליבת ה-service worker. ⚠️ זה הבלוק המשותף הראשון שאינו
+   *  יושב ב-`index.html` אלא ב-`sw.js`, ולכן הוא נושא `file`. אין לו
+   *  `hooks`: `sw.js` אינו נטען בהקשר הדף ואין בו «פונקציית עלייה» —
+   *  נקודות ההפעלה שלו הן מאזיני `install`/`activate`/`fetch`, שיושבים
+   *  **בתוך** הליבה ולכן נאכפים בחתימה עצמה. מה שנאכף במטריצה (שורה 31)
+   *  הוא ש-`SW_CFG` באמת מוגדר מעליו — ליבה בלי פרמטרים אינה מודול. */
+  swcore: {
+    name: 'מודול ה-service worker',
+    block: { file: 'sw.js', sha: '568ecbd986b69a14', lines: 294,
+             start: '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)',
+             end:   '/* ═══════════════ סוף מודול ה-service worker' },
+  },
 };
 
 const src = fs.readFileSync(APP.file, 'utf8');
@@ -137,14 +149,22 @@ const fail = (m) => { failures++; console.error('❌ ' + m); };
 const pass = (m) => console.log('✅ ' + m);
 
 /* ── חיתוך הבלוקים — אותה סמנטיקה בדיוק כמו check-status-area.mjs ──────── */
+/*  ⚠️ `spec.file` — בלוק משותף שאינו יושב ב-index.html (סבב 42ג): ליבת
+ *  ה-service worker חיה ב-`sw.js`. ⛔ בלוק כזה אינו נכנס ל-`ranges`,
+ *  מפני ש-`ranges` הוא טווח **בתוך index.html** לצורך סריקת החיווט —
+ *  היסט מקובץ אחר היה מחריג שם קוד אקראי. */
 function grab(spec) {
-  const i = src.indexOf(spec.start);
+  const text = spec.file ? readSafe(spec.file) : src;
+  const i = text.indexOf(spec.start);
   if (i < 0) return null;
-  const j = src.indexOf(spec.end, i);
+  const j = text.indexOf(spec.end, i);
   if (j < 0) return null;
-  const k = src.indexOf('*/', j);
+  const k = text.indexOf('*/', j);
   if (k < 0) return null;
-  return { at: i, text: src.slice(i, k + 2) };
+  return { at: i, text: text.slice(i, k + 2), external: !!spec.file };
+}
+function readSafe(p) {
+  try { return fs.readFileSync(p, 'utf8'); } catch (e) { return ''; }
 }
 
 /*  ⚠️ הסריקה נעשית על **קוד בלבד** (סבב 30, השלמה) — הערות, מחרוזות
@@ -231,7 +251,7 @@ for (const key of Object.keys(CAPS)) {
   const got = grab(cap.block);
   if (!got) { present[key] = false; fail(`${cap.name}: הבלוק לא נמצא (סמן פתיחה/סגירה חסר)`); continue; }
   present[key] = true;
-  ranges.push([got.at, got.at + got.text.length]);
+  if (!got.external) ranges.push([got.at, got.at + got.text.length]);
   const sha = crypto.createHash('sha256').update(got.text).digest('hex').slice(0, 16);
   if (sha !== cap.block.sha) {
     fail(`${cap.name}: הליבה אינה זהה לחתימה הקנונית — ${sha} במקום ${cap.block.sha} ` +
@@ -488,6 +508,12 @@ const MATRIX = [
         .map((l) => (/^\s*#/.test(l) ? '' : l.replace(/\s#(?![{}]).*$/, ''))).join('\n');
       return /\.\/signing\/sign-apk\.sh/.test(bare) && !/apksigner/.test(bare);
     } },
+  /*  ⭐ סבב 42ג — מודול ה-service worker. ה-probe דורש את **שני** התנאים:
+   *  הליבה המשותפת שנמצאה וחתימתה תואמת (`present.swcore`), ו-`SW_CFG`
+   *  שמוגדר ב-`sw.js` מעליה. ⛔ ליבה בלי `SW_CFG` היא קוד שהועתק ולא
+   *  מודול — הפרמטרים הם מה שמאפשר לליבה להיות זהה בית-לבית.        */
+  { row: 31, name: 'מודול ה-service worker',
+    probe: () => present.swcore === true && fileHas('sw.js', /var\s+SW_CFG\s*=/) },
 ];
 
 const NA = 'לא רלוונטי';
