@@ -42,33 +42,34 @@ const APP = {
   expects: {
     'nav-online':            'body:NET-OK|status:200',
     'nav-offline-cached':    'body:CORE-ROOT|status:200',
-    /* ⛔ ה-handler הוא `fetch(...).catch(() => caches.match(e.request))`,
-       ו-`caches.match` מחזירה **undefined** כשאין התאמה. respondWith על
-       Promise<undefined> זורק TypeError — כלומר כל בקשה שנכשלת ברשת
-       ואינה במטמון נכשלת פעמיים. מתוקן בשלב א3. */
-    'nav-offline-empty':   { be: 'undefined', defect: true,
-      why: 'schar: respondWith(undefined) בניווט בלי עותק — TypeError במקום דף אופליין' },
-    /* ⛔ אין ignoreSearch בניווט, ולכן ה-APK עם '?apk=1' אינו מוצא את './'
-       ונופל לאותו undefined. אותו שורש בדיוק. מתוקן בשלב א3. */
-    'nav-offline-query':   { be: 'undefined', defect: true,
-      why: "schar: ניווט עם '?apk=1' אינו מוצא את הקליפה ונופל ל-undefined" },
+    /* ⭐ תוקן בסבב 42ג (שלב א2): ה-handler הישן היה
+       `fetch(...).catch(() => caches.match(e.request))`, ו-`caches.match`
+       מחזירה **undefined** כשאין התאמה — respondWith על Promise<undefined>
+       זורק TypeError, כלומר כל בקשה שנכשלת ברשת ואינה במטמון נכשלה
+       פעמיים. הליבה המשותפת מחזירה תמיד תשובה תקפה, ולכן ניווט בלי עותק
+       מקבל מעכשיו את **דף האופליין** — שנוצר כאן לראשונה. */
+    'nav-offline-empty':     'body:html|status:503',
+    /* ⭐ תוקן בסבב 42ג: ניווט עם '?apk=1' נפל לאותו undefined. מעכשיו הוא
+       מחפש התאמה מדויקת (⛔ `navIgnoreSearch: false` — התנהגות שנמדדה
+       ונשמרה), ובהיעדרה נופל לקליפה. */
+    'nav-offline-query':     'body:CORE-INDEX|status:200',
     'sub-cached-online':     'body:NET-OK|status:200',
     'sub-cached-offline':    'body:CORE-ASSET|status:200',
-    'sub-missing-offline': { be: 'undefined', defect: true,
-      why: 'schar: respondWith(undefined) לתת-משאב חסר — TypeError במקום שגיאת רשת' },
+    /* ⭐ תוקן בסבב 42ג: תת-משאב חסר החזיר undefined; מעכשיו שגיאת רשת
+       אמיתית, ⛔ לעולם לא HTML בגוף תשובה של סקריפט. */
+    'sub-missing-offline':   'network-error',
     'sub-404':               'body:NET-404|status:404',
-    /* ⛔ אין בדיקת `r.ok` ואין בדיקת opaque: תשובת 404 של GitHub Pages
-       נכנסת למטמון תחת מפתח הבקשה ומוגשת ממנו אופליין. שלוש האחיות
-       בודקות סטטוס לפני שמירה. מתוקן בשלב א3. */
-    'sub-404-stored':      { be: 'stored', defect: true,
-      why: 'schar: תשובת 404 נשמרת במטמון ומוגשת ממנו אופליין' },
+    /* ⭐ תוקן בסבב 42ג: לא הייתה כאן בדיקת `r.ok` ולא בדיקת opaque, ולכן
+       תשובת 404 של GitHub Pages נכנסה למטמון תחת מפתח הבקשה והוגשה ממנו
+       אופליין. `swStore` שבליבה שומרת ⛔ אך ורק תשובה שאומתה. */
+    'sub-404-stored':        'not-stored',
     'supabase':              'passthrough',
     'cdn-cached-online':     'body:NET-OK|status:200',
     'version-probe':         'body:NET-OK|status:200',
     'non-get':               'passthrough',
-    'sweep-scope':           'schar-limud-v38,sister-app-v9',
+    'sweep-scope':           'schar-limud-v39,sister-app-v9',
   },
-  defectCount: 4,
+  defectCount: 0,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
