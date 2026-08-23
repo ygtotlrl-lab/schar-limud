@@ -15,8 +15,10 @@ android {
         // 2 = סבב 41 — יישור שכבת הבנייה והחילוץ של המעטפת לתבנית
         // משותפת. ⛔ כל שינוי תחת android/ מחייב קידום כאן,
         // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
-        versionCode 2
-        versionName "2.0"
+        // 3 = סבב 45 — יישור `AndroidManifest.xml` (`configChanges` לסופרסט)
+        // ואכיפת חתימה על החלק המשותף של המניפסט ושל קובץ הבנייה.
+        versionCode 3
+        versionName "3.0"
     }
 
     buildTypes {
