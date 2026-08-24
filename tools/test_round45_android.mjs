@@ -35,7 +35,9 @@
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -73,6 +75,7 @@ const CONFIG_CHANGES =
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
 const pass = (m) => console.log('✅ ' + m);
+const skip = (m) => console.log('⏭️  ' + m);
 
 for (const p of [MANIFEST, GRADLE]) {
   if (!fs.existsSync(join(ROOT, p))) { fail(`${p} אינו קיים — אין שכבת אנדרואיד`); process.exit(1); }
@@ -220,6 +223,86 @@ mut('מזהה החבילה אינו בחתימת קובץ הבנייה',
     gNorm, normGradle(gradleSrc.replace(/applicationId\s+"[^"]*"/, 'applicationId "com.x.y"')), false);
 mut('הערה אינה בחתימת קובץ הבנייה',
     gNorm, normGradle(gradleSrc.replace('plugins {', '// הערה חדשה\nplugins {')), false);
+
+/* ── ה. מוטציות על שער ה-versionCode (סבב 45ב) ──────────────────────────
+ *  ⚠️ **למה כאן ולא ב-`test_round40_gradle.mjs` עצמו:** השער ההוא נשען על
+ *  `origin/main` דרך git, ולכן מוטציה עליו אינה יכולה לרוץ «בזיכרון»
+ *  כמו מוטציות החתימה שלמעלה — היא חייבת עץ עם git. ⛔ ולא על העץ
+ *  האמיתי (הלקח של סבב 42ג): הרתמה בונה **ריפו git זמני** משלה, מריצה
+ *  בו את השער האמיתי, ומוחקת אותו.
+ *
+ *  ⭐ **וזו מוטציה על השער ולא על הקוד** — היא מוכיחה שהשער **נופל**
+ *  כשהמעטפת השתנתה בלי קידום, ולא רק שהוא עובר כשהכול תקין. ⛔ שער
+ *  שאיש לא ראה אותו נכשל אינו שער.                                      */
+const RUN_MUT = process.env.R45_NO_MUT !== '1';
+if (!RUN_MUT) skip('מוטציות שער ה-versionCode מדולגות (R45_NO_MUT=1)');
+else {
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'r45gate-'));
+  const g = (args, cwd) => execFileSync('git', ['-C', cwd, ...args],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const put = (rel, txt) => {
+    const dst = join(tmp, rel);
+    fs.mkdirSync(dirname(dst), { recursive: true });
+    fs.writeFileSync(dst, txt);
+  };
+  /* עץ מינימלי: השער, קובץ הבנייה, המניפסט, וטבלת ה-README. */
+  const readmeSrc = fs.readFileSync(join(ROOT, 'android/README.md'), 'utf8');
+  const seed = () => {
+    put('tools/test_round40_gradle.mjs',
+        fs.readFileSync(join(ROOT, 'tools/test_round40_gradle.mjs'), 'utf8'));
+    put(GRADLE, gradleSrc);
+    put(MANIFEST, manifestSrc);
+    put('android/README.md', readmeSrc);
+  };
+  const runGate = () => {
+    try {
+      execFileSync(process.execPath, [join(tmp, 'tools/test_round40_gradle.mjs')],
+                   { encoding: 'utf8', stdio: 'pipe' });
+      return 0;
+    } catch (e) { return e.status === undefined ? -1 : e.status; }
+  };
+  const gateMut = (label, mutate, wantFail) => {
+    fs.rmSync(join(tmp, 'android'), { recursive: true, force: true });
+    seed();
+    mutate();
+    const code = runGate();
+    if ((code !== 0) === wantFail) pass(`מוטציית שער: ${label}`);
+    else fail(`מוטציית שער: ${label} — השער החזיר ${code}, ` +
+              (wantFail ? 'כלומר הוא אינו תופס את הסטייה' : 'כלומר הוא נופל על מצב תקין'));
+  };
+  try {
+    seed();
+    g(['init', '-q'], tmp);
+    g(['add', '-A'], tmp);
+    execFileSync('git', ['-C', tmp, '-c', 'user.email=t@t', '-c', 'user.name=t',
+                         'commit', '-q', '-m', 'base'], { stdio: 'ignore' });
+    g(['update-ref', 'refs/remotes/origin/main', 'HEAD'], tmp);
+
+    gateMut('עץ נקי מול origin/main — השער עובר', () => {}, false);
+    gateMut('שינוי במניפסט בלי קידום versionCode מפיל',
+            () => put(MANIFEST, manifestSrc.replace('<manifest ', '<!-- שינוי -->\n<manifest ')), true);
+    gateMut('שינוי במניפסט **עם** קידום versionCode עובר', () => {
+      put(MANIFEST, manifestSrc.replace('<manifest ', '<!-- שינוי -->\n<manifest '));
+      const next = Number(/^\s*versionCode\s+(\d+)\s*$/m.exec(gradleSrc)[1]) + 1;
+      put(GRADLE, gradleSrc.replace(/^(\s*)versionCode\s+\d+\s*$/m, `$1versionCode ${next}`));
+      put('android/README.md',
+          readmeSrc.replace(/^(\|\s*\*\*versionCode\*\*\s*\|\s*)\d+/m, `$1${next}`));
+    }, false);
+    gateMut('קובץ `.md` תחת android/ בלבד ⛔ אינו דורש קידום',
+            () => put('android/README.md', readmeSrc + '\n<!-- שורה חדשה -->\n'), false);
+    gateMut('נסיגה ב-versionCode מפילה',
+            () => put(GRADLE, gradleSrc.replace(/^(\s*)versionCode\s+(\d+)\s*$/m,
+                        (_, s, n) => `${s}versionCode ${Math.max(1, Number(n) - 1)}`)), true);
+    gateMut('versionCode מתועד שנסחף מפיל',
+            () => put('android/README.md',
+                      readmeSrc.replace(/^(\|\s*\*\*versionCode\*\*\s*\|\s*)\d+/m, '$1999')), true);
+    gateMut('שורת ה-versionCode שנמחקה מהטבלה מפילה',
+            () => put('android/README.md',
+                      readmeSrc.replace(/^\|\s*\*\*versionCode\*\*\s*\|.*$/m, '| **x** | y |')), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`
                      : `\n✅ ${APP.app}: שער שכבת האנדרואיד עבר`);

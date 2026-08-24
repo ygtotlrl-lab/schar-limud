@@ -307,7 +307,7 @@ keytool -list -v -keystore signing/schar.keystore -storepass schar123
 - **לעולם לא TWA ולא PWABuilder** — TWA מריץ את האתר בתוך כרום, וסינון התוכן
   במכשירי המשתמשים חוסם את כרום (נמדד בפועל ב-gius). WebView מרנדר בתוך
   התהליך ולא נחסם.
-- **package `com.schar.limud`, versionCode 2** — המעטפת הראשונה כאן, טוענת
+- **package `com.schar.limud`, versionCode 3** — המעטפת הראשונה כאן, טוענת
   מהרשת מהיום הראשון (בניגוד ליומן, לא היה כאן שלב `file://`).
   `usesCleartextTraffic=false`, minSdk 21 / targetSdk 34.
 - ⛔ **אין נכסים מוטבעים, ואין להוסיף** — עותק `file://` הוא origin אחסון
