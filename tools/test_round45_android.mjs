@@ -32,6 +32,11 @@
  *  + `<provider>` במניפסט ושתי תלויות ה-`androidx` בקובץ הבנייה, כלומר
  *  גשר השיתוף ותו לא. חריגה **מדודה**, לא סחיפה.
  *
+ *  ⭐ **סבב 46ב הפך כאן את ברירת המחדל.** עד אז ההפרש של יומן היה
+ *  **מוצהר** — חתימה משלה, בלי מול מה להשוות. מעכשיו בלוקי הגשר
+ *  מופשטים החוצה וארבעת הריפו נושאים את החתימה חסרת-הגשר הקנונית:
+ *  ⛔ הפרש שאינו הגשר מפיל את השער, גם אם החתימה הפרטית עודכנה.
+ *
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
  */
 import fs from 'node:fs';
@@ -122,6 +127,23 @@ function normManifest(text) {
     .replace(/\s+/g, ' ').trim();
 }
 
+/*  ⭐ הפשטת גשר השיתוף — היפוך ברירת המחדל (סבב 46ב).
+ *  ⚠️ **מה שהיה חסר עד כאן:** ליומן חתימה **משלה**, ואין לה מול מה
+ *  להישמר — שורה שנוספה שם לבדה (הרשאה, `configChanges` אחר, כל דבר)
+ *  הזיזה את החתימה, סשן עדכן את `APP.manifestSha`, והשער אישר.
+ *  ⛔ כלומר ההפרש היה **מוצהר** («זה הגשר») ולא **מדוד**.
+ *  ⭐ מעכשיו שני בלוקי הגשר מופשטים החוצה, ו**ארבעת הריפו** חייבים לשאת
+ *  את החתימה הקנונית של חסרי-הגשר. ⛔ מה שנשאר פרטי הוא הגשר ותו לא —
+ *  כל שאר הקובץ משותף, וזו ההגדרה של ההיפוך.                           */
+function stripBridgeManifest(text) {
+  return text
+    .replace(/<queries>[\s\S]*?<\/queries>/g, '')
+    .replace(/<provider[\s\S]*?<\/provider>/g, '');
+}
+function stripBridgeGradle(text) {
+  return stripGradleComments(text).replace(/\bdependencies\s*\{[\s\S]*?\n\}/g, '');
+}
+
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 
 /* ── א. חוזה שכבת האנדרואיד ─────────────────────────────────────────────
@@ -195,6 +217,21 @@ const gNorm = normGradle(gradleSrc);
 checkSha('חתימת המניפסט',    mNorm, APP.manifestSha, MANIFEST_SHA_NO_BRIDGE);
 checkSha('חתימת קובץ הבנייה', gNorm, APP.gradleSha,   GRADLE_SHA_NO_BRIDGE);
 
+/* ── ב2+ג2. ⭐ החתימה חסרת-הגשר — נאכפת בארבעתן (סבב 46ב) ──────────────
+ *  ⛔ ריפו שההפרש שלו מהשלושה אינו **בדיוק** גשר השיתוף נופל כאן, גם
+ *  כשחתימתו הפרטית עודכנה. זה מה שהופך את «חריגה מדודה» למדידה.       */
+const bare = (label, stripped, canon) => {
+  const got = sha(stripped);
+  if (got === canon) pass(`${label} ללא הגשר: תואם לקנונית (${got})`);
+  else fail(`${label} ללא הגשר: ${got} במקום הקנונית ${canon} — ⛔ ההפרש בין ` +
+            'הריפו הזה לשלושת האחרים אינו גשר השיתוף בלבד. כל שורה אחרת חייבת ' +
+            'להיות זהה בארבעתן, או מוכרזת פרטית עם נימוק (כלל ברזל 14)');
+};
+const bareM = normManifest(stripBridgeManifest(manifestSrc));
+const bareG = normGradle(stripBridgeGradle(gradleSrc));
+bare('חתימת המניפסט',     bareM, MANIFEST_SHA_NO_BRIDGE);
+bare('חתימת קובץ הבנייה', bareG, GRADLE_SHA_NO_BRIDGE);
+
 /* ── ד. מוטציות ─────────────────────────────────────────────────────────
  *  ⛔ רצות על עותק **בזיכרון** ולא על העץ (הלקח של סבב 42ג) — מוטציה
  *  שנכתבת לקובץ האמיתי ומוחזרת ב-`finally` מותירה את הריפו שבור אם
@@ -223,6 +260,20 @@ mut('מזהה החבילה אינו בחתימת קובץ הבנייה',
     gNorm, normGradle(gradleSrc.replace(/applicationId\s+"[^"]*"/, 'applicationId "com.x.y"')), false);
 mut('הערה אינה בחתימת קובץ הבנייה',
     gNorm, normGradle(gradleSrc.replace('plugins {', '// הערה חדשה\nplugins {')), false);
+
+/* ⭐ מוטציות ההיפוך (סבב 46ב) — מה שמופשט החוצה, ומה שדווקא לא. */
+mut('הרשאה שנוספה בריפו אחד מפילה את החתימה חסרת-הגשר',
+    bareM, normManifest(stripBridgeManifest(manifestSrc.replace('<application',
+      '<uses-permission android:name="android.permission.CAMERA" />\n    <application'))), true);
+mut('בלוק גשר שנוסף למניפסט ⛔ אינו מזיז את החתימה חסרת-הגשר',
+    bareM, normManifest(stripBridgeManifest(manifestSrc.replace('</application>',
+      '<provider android:name="x"><meta-data android:name="y" /></provider>\n    </application>'))), false);
+mut('שדה שנוסף לקובץ הבנייה מפיל את החתימה חסרת-הגשר',
+    bareG, normGradle(stripBridgeGradle(gradleSrc.replace(/\bcompileSdk 34/,
+      "compileSdk 34\n    buildToolsVersion '34.0.0'"))), true);
+mut('בלוק dependencies שנוסף ⛔ אינו מזיז את החתימה חסרת-הגשר',
+    bareG, normGradle(stripBridgeGradle(gradleSrc +
+      "\ndependencies {\n    implementation 'a:b:1'\n}\n")), false);
 
 /* ── ה. מוטציות על שער ה-versionCode (סבב 45ב) ──────────────────────────
  *  ⚠️ **למה כאן ולא ב-`test_round40_gradle.mjs` עצמו:** השער ההוא נשען על
