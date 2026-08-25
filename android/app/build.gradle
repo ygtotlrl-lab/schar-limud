@@ -10,6 +10,8 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
+        // ⛔ versionCode לעולם אינו יורד (סבב 46ב) — מספר נמוך ממה
+        // שמותקן במכשיר חוסם את העדכון.
         // 1 = the first shell, loading the live site (https://ygtotlrl-lab.github.io/schar-limud/)
         // from day one — schar-limud never had a file:// build.
         // 2 = סבב 41 — יישור שכבת הבנייה והחילוץ של המעטפת לתבנית
@@ -17,8 +19,10 @@ android {
         // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
         // 3 = סבב 45 — יישור `AndroidManifest.xml` (`configChanges` לסופרסט)
         // ואכיפת חתימה על החלק המשותף של המניפסט ושל קובץ הבנייה.
-        versionCode 3
-        versionName "3.0"
+        // 4 = סבב 46ב — היפוך ברירת המחדל בקובצי התצורה: חתימה חסרת-גשר
+        // על המניפסט ועל קובץ הבנייה, וחתימה אחת לשני ה-workflows.
+        versionCode 4
+        versionName "4.0"
     }
 
     buildTypes {
