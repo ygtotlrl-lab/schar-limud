@@ -18,6 +18,9 @@
  *    ה. (סבב 20) הקובץ שונה מול `origin/main` אבל שורת «עודכן לאחרונה»
  *       זהה לזו שב-`origin/main` — כלומר לא קודמה. סעיף ג בודק את
  *       **צורת** השורה; זה בודק שהיא באמת התקדמה.
+ *    ח. (סבב 44) ערך של מפתח משותף ב-`manifest.json` נסחף או נמחק.
+ *    ט. (סבב 49) `CLAUDE.md` מחזיק יותר משישה פרקי סבבים, או יותר
+ *       מ-3,000 שורות — תקציב התיעוד של כלל ברזל 18.
  *
  *  ⚠️ סעיף ה — ורק הוא — **מדלג ואינו מפיל** כשאין בסיס להשוואה: אין
  *  git בסביבה, אין `origin/main`, או שהקובץ אינו קיים שם. clone רדוד או
@@ -44,27 +47,26 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['branch-rules',            '46a0bd36bbc06499'],
-  ['iron-rules-storage',      '2303b29611902680'],
-  ['pending-module',          '09e22a5adc623814'],
-  ['iron-rule-6-sync',        '58f809376bdf981d'],
-  ['round-14-verified-sweep', '4979f68cf39fc7c4'],
-  ['round-15-tech-info',      '61819c0a62fc9e0a'],
-  ['round-16-pend-delay',     '994d3cb66d4ced7c'],
-  ['iron-rule-7-status-area', '3acd979daa17a205'],
-  ['iron-rule-8-docs',        'be8e241ccd5b1ad4'],
-  ['iron-rule-9-security-spread', '5412c7382b4daf61'],
-  ['iron-rule-10-users',      '54d578f69f5b3690'],
-  ['capability-matrix',       'd170e21d4380674b'],
-  ['iron-rule-11-comments',   'd03e5416ced01f6c'],
-  ['iron-rule-12-capabilities', '8223e5ba345c4ab3'],
-  ['backup-module',           '15352739fcf8bd26'],
-  ['iron-rule-13-shared-scope', 'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',   'cc7f0808b6dffeb7'],
-  ['iron-rule-15-gaps-verified', '0c5e079f0137ce9f'],
-  ['sw-strategies',           'fb8bb2e9b479275d'],
-  ['iron-rule-16-remnant',    '84f2658bb8580565'],
-  ['iron-rule-17-touch-scan', '7171fb74b830c3ff'],
+  ['branch-rules',                 '46a0bd36bbc06499'],
+  ['iron-rules-storage',           'e53cfc7d6b172a52'],
+  ['pending-module',               'dc0f2a513dcc7969'],
+  ['iron-rule-6-sync',             '58f809376bdf981d'],
+  ['iron-rule-7-status-area',      '4b4c9272b35b9c40'],
+  ['iron-rule-8-docs',             'be8e241ccd5b1ad4'],
+  ['iron-rule-9-security-spread',  '5412c7382b4daf61'],
+  ['iron-rule-10-users',           '54d578f69f5b3690'],
+  ['capability-matrix',            'f673b334785012bd'],
+  ['iron-rule-11-comments',        'd03e5416ced01f6c'],
+  ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
+  ['backup-module',                '15352739fcf8bd26'],
+  ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
+  ['iron-rule-14-org-wide',        'cc7f0808b6dffeb7'],
+  ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
+  ['sw-strategies',                'fb8bb2e9b479275d'],
+  ['iron-rule-16-remnant',         '84f2658bb8580565'],
+  ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
+  ['iron-rule-18-doc-budget',      '187f859160a107f6'],
+  ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -450,6 +452,41 @@ const CANON_MANIFEST = [
       }
       if (ok) pass(`manifest.json — ${CANON_MANIFEST.length} ערכי המפתחות המשותפים תואמים`);
     }
+  }
+}
+
+/* ── ט. תקציב התיעוד — חלון של שישה סבבים ותקרה של 3,000 שורות (סבב 49) ──
+   ⚠️ **תשעה סשנים נחנקו בשבוע אחד**, ונמדד ש-`CLAUDE.md` תפח מ-1,782
+   שורות (אחרי הגיזום של סבב 34) ל-4,447 — ⛔ מפני שכל סבב מוסיף פרק ואף
+   סבב אינו מוחק אחד. כלל ברזל 18 קובע שני תנאים: **חלון של שישה פרקי
+   סבבים** ו**תקרה קשיחה של 3,000 שורות**; סבב שביעי נכנס ⇒ הראשון נמחק
+   באותו קומיט, וסבב שחוצה את התקרה גוזם באותו קומיט.
+   ⚠️ פרק סבב הוא כותרת `## ` שנפתחת ב«סבב N» (עם ⭐ או בלי), והוא נגמר
+   בכותרת `## ` הבאה. ⛔ כותרת שבתוך גדר קוד אינה נספרת — אחרת דוגמה
+   בתיעוד הייתה נקראת כפרק אמיתי, בדיוק כמו בסעיף א.
+   ⛔ **והמדידה היא על הקובץ ולא על הצהרה** (סבב 49) — פרק «פערים
+   פתוחים» לימד שתיעוד שאיש אינו מודד ממשיך לתאר עולם שהשתנה. */
+const DOC_MAX_LINES  = 3000;
+const DOC_MAX_ROUNDS = 6;
+const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
+{
+  const rounds = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!inFence[i] && ROUND_H2.test(lines[i])) rounds.push(lines[i].replace(/^##\s+/, '').trim());
+  }
+  if (rounds.length > DOC_MAX_ROUNDS) {
+    const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS);
+    fail(`${APP.file}: ${rounds.length} פרקי סבבים, והחלון הוא ${DOC_MAX_ROUNDS} ` +
+         `(כלל ברזל 18). יש למחוק באותו קומיט — הישנים ראשונים: ${over.join(' · ')}`);
+  } else {
+    pass(`תקציב התיעוד — ${rounds.length}/${DOC_MAX_ROUNDS} פרקי סבבים`);
+  }
+  const n = src.endsWith('\n') ? lines.length - 1 : lines.length;
+  if (n > DOC_MAX_LINES) {
+    fail(`${APP.file}: ${n} שורות — ${n - DOC_MAX_LINES} מעל התקרה של ${DOC_MAX_LINES} ` +
+         '(כלל ברזל 18). סבב שחוצה את התקרה גוזם פרקי סבבים באותו קומיט.');
+  } else {
+    pass(`תקציב התיעוד — ${n}/${DOC_MAX_LINES} שורות`);
   }
 }
 
