@@ -50,6 +50,7 @@ const APP = {
   ],
   gates: ['check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs', 'check-gaps.mjs',
+          'test_round51_pull.mjs',
           'test_round49_budget.mjs', 'test_round50_icons.mjs',
           'test_round46b_workflows.mjs',
           'test_round45_android.mjs', 'test_round45_lists.mjs',
