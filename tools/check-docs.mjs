@@ -62,10 +62,10 @@ const CANON = [
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',        'cc7f0808b6dffeb7'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
-  ['sw-strategies',                'fb8bb2e9b479275d'],
+  ['sw-strategies',                'ba3680abbd0b0667'],
   ['iron-rule-16-remnant',         '84f2658bb8580565'],
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
-  ['iron-rule-18-doc-budget',      '344087c781a8f0ef'],
+  ['iron-rule-18-doc-budget',      '3696bf9cc1b3d994'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
 ];
 
