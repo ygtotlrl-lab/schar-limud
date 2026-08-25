@@ -109,6 +109,50 @@ for (const [d, why] of Object.entries(APP.toolsDirs)) {
   else pass(`תת-תיקיית tools מנומקת: ${d} — ${why}`);
 }
 
+/* ── ד. `icons/` ו-`design/` — היפוך ברירת המחדל (סבב 50) ──────────────
+   ⚠️ עד היום שתי התיקיות היו **בסט הקנוני של השורש** ותו לא: השער דרש
+   שהן יתקיימו, ⛔ ולא נגע במה שבתוכן. וזו בדיוק צורת הכשל שנמדדה —
+   `icons/favicon-64.png` חי ב-gius לבדו עם שלושה קוראים, ואף שער לא
+   ראה אותו (בדיוק כמו ערכי `manifest.json` לפני סבב 44ב, שם נאכף
+   **קיום** הקובץ ולא **תוכנו**).
+   ⛔ **מה שנאכף הוא הסט, ולא התמונה** — גודל, צבע ותוכן פיקסלים נגזרים
+   מהעיצוב הייחודי של כל אפליקציה ואינם ניתנים ליישור.
+   ⛔ **ו-`design/` אינו נטען בדף** (סבב 50) — קובץ המאסטר הוא נכס עיצוב
+   במגה-בייט, והפניה אליו מ-`index.html` או מ-`sw.js` היא הורדה שהמשתמש
+   משלם עליה לשום צורך. הנכסים הנגזרים יושבים ב-`icons/`. */
+const ICONS = ['apple-touch-icon.png', 'favicon-16.png', 'favicon-32.png',
+               'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
+const MASTER_RE = /^icon-master\.(svg|png)$/;
+
+const iFiles = fs.readdirSync(join(ROOT, 'icons'), { withFileTypes: true })
+  .filter((e) => e.isFile()).map((e) => e.name).sort();
+const iMissing = ICONS.filter((f) => !iFiles.includes(f));
+const iExtra   = iFiles.filter((f) => !ICONS.includes(f));
+if (iMissing.length) fail('נכסים חסרים ב-icons/: ' + iMissing.join(', ') +
+                          ' — ⛔ ששת הנכסים קנוניים בארבעת הריפו');
+if (iExtra.length)   fail('נכסים עודפים ב-icons/: ' + iExtra.join(', ') +
+                          ' — ⛔ גם שם תמים אינו היתר: נכס שביעי הוא «קיים רק כאן, בשקט»');
+if (!iMissing.length && !iExtra.length) pass(`icons/ — בדיוק ששת הנכסים הקנוניים`);
+
+const dFiles = fs.readdirSync(join(ROOT, 'design'), { withFileTypes: true })
+  .filter((e) => e.isFile()).map((e) => e.name).sort();
+if (dFiles.length !== 1) {
+  fail(`design/ מחזיקה ${dFiles.length} קבצים (${dFiles.join(', ') || '—'}) — ⛔ קובץ מאסטר אחד בלבד`);
+} else if (!MASTER_RE.test(dFiles[0])) {
+  fail(`design/${dFiles[0]} — ⛔ שם המאסטר הוא icon-master.svg או icon-master.png בלבד`);
+} else {
+  pass(`design/ — קובץ מאסטר אחד: ${dFiles[0]}`);
+}
+
+const servedRefs = [];
+for (const f of ['index.html', 'sw.js']) {
+  const body = fs.readFileSync(join(ROOT, f), 'utf8');
+  if (body.includes('design/')) servedRefs.push(f);
+}
+if (servedRefs.length) fail('הפניה ל-design/ מתוך ' + servedRefs.join(' ו-') +
+                            ' — ⛔ קובץ המאסטר הוא נכס עיצוב ואינו נטען בדף (סבב 50)');
+else pass('⛔ אף קובץ מוגש אינו מפנה ל-design/');
+
 console.log(failures ? `\n❌ בדיקת המבנה נכשלה (${failures})`
                      : '\n✅ בדיקת המבנה עברה');
 process.exit(failures ? 1 : 0);

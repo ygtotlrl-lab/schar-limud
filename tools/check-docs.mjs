@@ -60,7 +60,7 @@ const CANON = [
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
   ['backup-module',                '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',        'cc7f0808b6dffeb7'],
+  ['iron-rule-14-org-wide',        '648eafacdbfa21af'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
   ['sw-strategies',                'ba3680abbd0b0667'],
   ['iron-rule-16-remnant',         '84f2658bb8580565'],
