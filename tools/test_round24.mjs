@@ -71,6 +71,7 @@ const body = (name) => fn(name);
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_USERS_PULL_MS', 'SL_NEVER_MIRROR_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_OF',
+  'SL_STAMP_KEY',
   'SL_SESSION_KEY', 'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
   'MSG_NO_USERS',
 ];
@@ -78,6 +79,7 @@ const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
+  'slStripMeta',
   'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slSaveSession', 'slReadSession',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
 ];
@@ -101,7 +103,9 @@ function makeCtx(opts = {}) {
     MIRROR: {},
     STUDENTS: [], TRANSACTIONS: [], SETTINGS: {}, LISTS: {},
     CUR_USER: null,
-    SYNC_INT: null,
+    // ⭐ סבב 51 — קידום חותמת המשיכה. הרתמה מחליפה אותו בפעולה שקטה:
+    //    מה שנבדק כאן הוא מסלול הסיסמאות, לא מנגנון המשיכה.
+    plTouch() { return Promise.resolve(0); },
     MSG_BAD_LOGIN: '❌ שם משתמש או סיסמה שגויים',
     // חוזה `lsSet`/`lsSetArray`/`lsGet` כפי שהמודול המשותף מקיים אותו.
     // הבדיקה «אין password בדיסק» סורקת בדיוק את ה-`store` הזה.
