@@ -4,7 +4,7 @@
  * ⚠️ **תשעה סשנים נחנקו בשבוע אחד**, ונמדד ש-`CLAUDE.md` תפח מ-1,782
  * שורות (אחרי הגיזום של סבב 34) ל-4,447 — ⛔ מפני שכל סבב מוסיף פרק ואף
  * סבב אינו מוחק אחד. כלל ברזל 18 קובע שני תנאים, ושניהם נאכפים בסעיף ט
- * של `check-docs.mjs`: **חלון של שישה פרקי סבבים** ו**תקרה של 3,000
+ * של `check-docs.mjs`: **חלון של שני פרקי סבבים** ו**תקרה של 3,000
  * שורות**.
  *
  * ⛔ הבדיקה מריצה את `check-docs` **האמיתי** על עותק מוטב בתיקייה זמנית
@@ -23,7 +23,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
 const MAX_LINES = 3000;
-const MAX_ROUNDS = 6;
+const MAX_ROUNDS = 2;
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 
 let pass = 0, fail = 0;
@@ -49,7 +49,7 @@ t(n++, rounds.length > 0, '⚠️ ויש בו לפחות פרק סבב אחד �
 
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
 t(n++, /const DOC_MAX_LINES\s*=\s*3000;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 3000');
-t(n++, /const DOC_MAX_ROUNDS\s*=\s*6;/.test(docs), 'check-docs מחזיק DOC_MAX_ROUNDS = 6');
+t(n++, /const DOC_MAX_ROUNDS\s*=\s*2;/.test(docs), 'check-docs מחזיק DOC_MAX_ROUNDS = 2');
 t(n++, /const ROUND_H2\s*=/.test(docs), 'check-docs מזהה פרק סבב לפי ביטוי ייעודי');
 t(n++, /!inFence\[i\]\s*&&\s*ROUND_H2\.test/.test(docs),
   '⛔ והזיהוי מדלג על כותרת שבתוך גדר קוד — אחרת דוגמה בתיעוד נספרת כפרק');
@@ -74,13 +74,13 @@ function runDocsOn(mutate) {
 t(n++, runDocsOn(s => s) === true, '⭐ קו הבסיס — check-docs עובר על הקובץ כפי שהוא');
 
 /* ⚠️ המוטציה מוסיפה **מספיק** פרקים כדי לחצות את החלון, ולא פרק אחד
-   (סבב 49) — ⛔ ריפו שגזם מתחת לשישה היה עובר מוטציה של פרק בודד, כלומר
+   (סבב 49) — ⛔ ריפו שגזם מתחת לתקרה היה עובר מוטציה של פרק בודד, כלומר
    המוטציה הייתה no-op והבדיקה הייתה מדווחת «נאכף» על שער שלא נבדק. */
 const need = MAX_ROUNDS - rounds.length + 1;
 const extra = Array.from({ length: need }, (_, k) =>
   `\n## סבב 9${k} (2026-12-31) — פרק סבב עודף, לצורך המוטציה\nגוף.\n`).join('');
 t(n++, runDocsOn(s => s + extra) === false,
-  `⛔ מוטציה: ${need} פרקי סבבים נוספים **מפילים** את check-docs (חלון של שישה)`);
+  `⛔ מוטציה: ${need} פרקי סבבים נוספים **מפילים** את check-docs (חלון של שניים)`);
 
 const padTo = 3001 - nlines + 1;
 t(n++, padTo > 0, `יש מה לרפד — ${padTo} שורות עד 3,001`);
