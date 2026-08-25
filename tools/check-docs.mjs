@@ -65,7 +65,7 @@ const CANON = [
   ['sw-strategies',                'ba3680abbd0b0667'],
   ['iron-rule-16-remnant',         '84f2658bb8580565'],
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
-  ['iron-rule-18-doc-budget',      '3696bf9cc1b3d994'],
+  ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
 ];
 
@@ -489,6 +489,38 @@ const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
          '(כלל ברזל 18). סבב שחוצה את התקרה גוזם פרקי סבבים באותו קומיט.');
   } else {
     pass(`תקציב התיעוד — ${n}/${DOC_MAX_LINES} שורות`);
+  }
+}
+
+/* ── ⭐ תקרת התוכן הפרטי-הקבוע — 900 שורות (סבב 50) ────────────────────
+   ⚠️ החלון של שני הסבבים ותקרת ה-3,000 אינם מספיקים לבדם: שניהם מודדים
+   את הקובץ **כולו**, ולכן תפיחה של החלק הפרטי — מה שאינו בלוק `SHARED`
+   ואינו פרק סבב — נבלעת בהם ואינה נראית עד שהיא חוצה את התקרה הגלובלית.
+   ⛔ והחלק הפרטי הוא בדיוק מה ששום ריפו אחר אינו מיישר, כלומר החלק
+   שאיש אינו מודד מלבד השער הזה.
+   ⚠️ **המדידה מודעת לגדרות קוד** (`inFence`), בדיוק כמו ספירת פרקי
+   הסבבים — ⛔ סמן `SHARED` או כותרת `## סבב` שבתוך דוגמה בתיעוד אינם
+   אזור אמיתי, וספירה גולמית הייתה מדווחת מספר שגוי **בשקט**. */
+const DOC_MAX_PRIVATE = 900;
+{
+  const total = src.endsWith('\n') ? lines.length - 1 : lines.length;
+  const kind  = new Array(total).fill(0);          // 0 = פרטי · 1 = משותף · 2 = פרק סבב
+  for (const b of found)
+    for (let i = b.from - 1; i <= b.to - 1 && i < total; i++) kind[i] = 1;
+  let head = -1;
+  for (let i = 0; i < total; i++) {
+    if (inFence[i] || !/^##\s/.test(lines[i])) continue;
+    if (head >= 0) { for (let j = head; j < i; j++) if (!kind[j]) kind[j] = 2; head = -1; }
+    if (ROUND_H2.test(lines[i])) head = i;
+  }
+  if (head >= 0) for (let j = head; j < total; j++) if (!kind[j]) kind[j] = 2;
+  const priv = kind.filter(k => k === 0).length;
+  if (priv > DOC_MAX_PRIVATE) {
+    fail(`${APP.file}: החלק הפרטי-הקבוע הוא ${priv} שורות — ${priv - DOC_MAX_PRIVATE} ` +
+         `מעל התקרה של ${DOC_MAX_PRIVATE} (כלל ברזל 18). גוזמים באותו קומיט, ` +
+         'ולקח שראוי להישמר עולה לכלל ברזל או להערה בקוד לפני המחיקה.');
+  } else {
+    pass(`תקציב התיעוד — ${priv}/${DOC_MAX_PRIVATE} שורות בחלק הפרטי-הקבוע`);
   }
 }
 
