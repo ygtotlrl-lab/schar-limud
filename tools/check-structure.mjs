@@ -36,7 +36,7 @@ const APP = {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /* הסט הקנוני המשותף — זהה בארבעת הריפו. */
-const DIRS = ['.github', 'android', 'icons', 'migrations', 'signing', 'tools'];
+const DIRS = ['.github', 'android', 'design', 'icons', 'migrations', 'signing', 'tools'];
 const ROOT_FILES = ['.nojekyll', 'CLAUDE.md', 'CONTEXT.md', 'README.md',
                     'index.html', 'manifest.json', 'sw.js'];
 const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs',
