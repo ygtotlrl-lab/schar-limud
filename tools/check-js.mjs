@@ -48,7 +48,7 @@ const APP = {
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
-  gates: ['test_round52_pendflush.mjs',
+  gates: ['test_round52_pendflush.mjs', 'test_round52_lock.mjs',
           'check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs', 'check-gaps.mjs',
           'test_round51_pull.mjs',
