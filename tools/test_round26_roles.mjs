@@ -71,15 +71,16 @@ const hasFn = (name) =>
 
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
-  'SL_USERS_PULL_MS', 'SL_NEVER_MIRROR_SETTINGS', 'SL_OLD_PASS_HASH_KEY',
-  'SL_SESSION_KEY', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
+  'SL_NEVER_MIRROR_SETTINGS', 'SL_OLD_PASS_HASH_KEY',
+  '_sessUser', '_sessBooted', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
   'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
-  'slSaveSession', 'slReadSession', 'slResolveUser',
+  /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף. */
+  'sessSet', 'sessGet', 'sessClear', 'sessActive', 'slResolveUser',
   'showPanel', 'renderSettingsPanel', 'refreshUI',
   'doLogin', 'doLoginOffline',
 ];
@@ -129,7 +130,7 @@ function makeCtx(opts = {}) {
     document: dom.document,
     setTimeout, clearTimeout, setInterval: () => 0, clearInterval: () => {},
     MIRROR: {}, STUDENTS: [], TRANSACTIONS: [], SETTINGS: { default_tuition: '2500' }, LISTS: {},
-    CUR_USER: null, SYNC_INT: null, SC_STUDENT_ID: null,
+    SYNC_INT: null, SC_STUDENT_ID: null,
     MSG_BAD_LOGIN: '❌ שם משתמש או סיסמה שגויים',
     lsSet(k, v) { store[k] = String(v); return true; },
     lsSetArray(k, arr) { store[k] = JSON.stringify(arr); return true; },
@@ -149,9 +150,9 @@ function makeCtx(opts = {}) {
     // קוראים חיצוניים שאינם בתחום הסבב הזה.
     renderSettingsLists() { calls.lists++; },
     updateDropdowns() {}, renderDash() {}, renderTxnLog() {}, renderStudentCard() {},
-    slApplyMirror() {}, slClearSession() { delete store['sl_session']; },
+    slApplyMirror() {},
     slEnsurePassFp: () => Promise.resolve(false),
-    _slUsersPulling: false, _slUsersPulledAt: 0,
+    _slUsersPulling: false,
     refreshUI() {}, syncAll() {},
   };
   // לקוח Supabase מזויף — רושם כל שאילתה, כדי שאפשר יהיה לטעון
@@ -212,11 +213,11 @@ async function main() {
     eq('תפקיד ריק ⇒ no-role', h.ctx.slSettingsAccess({ role: '' }), 'no-role');
     eq('⛔ אין משתמש כלל ⇒ denied ולא no-role', h.ctx.slSettingsAccess(null), 'denied');
 
-    h.ctx.CUR_USER = { role: 'admin' };
+    h.ctx.sessSet({ role: 'admin' });
     ok('slIsAdmin קורא את CUR_USER כברירת מחדל', h.ctx.slIsAdmin());
-    h.ctx.CUR_USER = { role: 'user' };
+    h.ctx.sessSet({ role: 'user' });
     ok('ומחזיר false ללא-admin', !h.ctx.slIsAdmin());
-    h.ctx.CUR_USER = null;
+    h.ctx.sessSet(null);
     ok('ובלי משתמש מחובר', !h.ctx.slIsAdmin());
   }
 
@@ -224,7 +225,7 @@ async function main() {
   sect('ב. ⭐ admin נכנס · לא-admin נחסם עם ההודעה הנכונה');
   {
     const h = makeCtx();
-    h.ctx.CUR_USER = Object.assign({}, ADMIN);
+    h.ctx.sessSet(Object.assign({}, ADMIN));
     h.ctx.showPanel('settings');
     eq('⭐ admin — מסך ההגדרות מוצג', h.dom.els['settings-main'].style.display, 'block');
     eq('וכרטיס החסימה מוסתר', h.dom.els['settings-denied'].style.display, 'none');
@@ -234,7 +235,7 @@ async function main() {
   }
   {
     const h = makeCtx();
-    h.ctx.CUR_USER = Object.assign({}, PLAIN);
+    h.ctx.sessSet(Object.assign({}, PLAIN));
     h.ctx.showPanel('settings');
     eq('⭐ לא-admin — ההגדרות מוסתרות', h.dom.els['settings-main'].style.display, 'none');
     eq('וכרטיס החסימה מוצג', h.dom.els['settings-denied'].style.display, 'block');
@@ -249,7 +250,7 @@ async function main() {
     // להיבדל — «אין לך הרשאה» למנהל שרק צריך להריץ מיגרציה שולח אותו
     // לחפש באג בהרשאות במקום להריץ את השורה שתפתור.
     const h = makeCtx();
-    h.ctx.CUR_USER = { id: 1, username: 'shimon' };
+    h.ctx.sessSet({ id: 1, username: 'shimon' });
     h.ctx.showPanel('settings');
     eq('אין עמודת role — ההגדרות מוסתרות', h.dom.els['settings-main'].style.display, 'none');
     eq('⭐ וההודעה היא MSG_SET_NO_ROLE', h.dom.els['set-denied-msg'].innerHTML, h.ctx.MSG_SET_NO_ROLE);
@@ -260,7 +261,7 @@ async function main() {
     // `refreshUI` רץ כל 3 שניות עם הסנכרון. הוא לא אמור לרנדר את מסך
     // ההגדרות למי שאינו רואה אותו — לא מחוסר הרשאה, ולא כשהפאנל סגור.
     const h = makeCtx();
-    h.ctx.CUR_USER = Object.assign({}, ADMIN);
+    h.ctx.sessSet(Object.assign({}, ADMIN));
     h.ctx.refreshUI = undefined;
     vm.runInContext(fn('refreshUI'), h.ctx);
     h.ctx.refreshUI();
@@ -268,7 +269,7 @@ async function main() {
     h.dom.els['panel-settings'].classList.add('active');
     h.ctx.refreshUI();
     eq('ומרנדר כשהוא פתוח ויש הרשאה', h.calls.lists, 1);
-    h.ctx.CUR_USER = Object.assign({}, PLAIN);
+    h.ctx.sessSet(Object.assign({}, PLAIN));
     h.ctx.refreshUI();
     eq('⛔ ואינו מרנדר ללא-admin גם כשהפאנל פתוח', h.calls.lists, 1);
   }
@@ -304,27 +305,27 @@ async function main() {
       /addEventListener\(\s*'DOMContentLoaded'\s*,\s*slBoot\s*\)/.test(SRC));
   }
 
-  /* ── ד. התפקיד שורד סשן, ואופליין ────────────────────────────────────── */
-  sect('ד. התפקיד זמין גם בעלייה בלי רשת');
+  /* ── ד. התפקיד — מהמראה, ⛔ ולא מסשן ששרד על הדיסק ────────────────────── */
+  sect('ד. התפקיד זמין גם בכניסה בלי רשת');
   {
+    /*  ⭐ סבב 53 — `sl_session` הוסר, ולכן «התפקיד שורד עלייה מחדש» כבר
+     *  אינו המבחן. מה שנבדק כאן הוא מה שנשאר נכון: התפקיד מגיע **מהמראה**,
+     *  שיורדת לדיסק בלי סיסמאות, ולכן הוא זמין גם בכניסה אופליין. */
     const h = makeCtx({ online: false });
-    h.ctx.slSaveSession(Object.assign({}, ADMIN));
-    const s = JSON.parse(h.store['sl_session']);
-    eq('הסשן מחזיק role', s.role, 'admin');
-    ok('⛔ והסשן אינו מחזיק סיסמה', !('password' in s) && !('pass_fp' in s));
-    const sess = h.ctx.slReadSession();
-    eq('⭐ בעלייה מחדש בלי רשת — התפקיד קיים',
-      h.ctx.slSettingsAccess(h.ctx.slResolveUser(sess)), 'ok');
+    h.ctx.SL_USERS = [{ id: 1, username: ADMIN.username, role: 'admin', active: true }];
+    eq('⭐ התפקיד נקרא מהמראה בכניסה בלי רשת',
+      h.ctx.slSettingsAccess(h.ctx.slResolveUser({ id: 1, username: ADMIN.username })), 'ok');
+    ok('⛔ ואין מפתח סשן על הדיסק', !('sl_session' in h.store));
   }
   {
-    // המראה מנצחת: תפקיד שהשתנה בלוח הבקרה והגיע במשיכה גובר על הסשן.
+    // המראה מנצחת: תפקיד שהשתנה בלוח הבקרה והגיע במשיכה גובר על הערך שביד.
     const h = makeCtx();
     h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'user', active: true }];
     const merged = h.ctx.slResolveUser({ id: 1, username: 'shimon', role: 'admin' });
-    eq('⭐ המראה גוברת על הסשן', merged.role, 'user');
+    eq('⭐ המראה גוברת', merged.role, 'user');
     eq('ולכן הגישה נשללת', h.ctx.slSettingsAccess(merged), 'denied');
     const noMirror = h.ctx.slResolveUser({ id: 9, username: 'ploni', role: 'admin' });
-    eq('מי שאינו במראה — נשאר עם מה שהסשן זוכר', noMirror.role, 'admin');
+    eq('מי שאינו במראה — נשאר עם הערך שביד', noMirror.role, 'admin');
   }
   {
     // ⭐ המתנה ל**אירוע**: משיכת המשתמשים מרעננת את התפקיד של המחובר.
@@ -333,12 +334,12 @@ async function main() {
         ? { data: [{ id: 1, username: 'shimon', role: 'user', active: true }], error: null }
         : { data: null, error: null },
     });
-    h.ctx.CUR_USER = Object.assign({}, ADMIN);
-    h.ctx.slPullUsers(true);
-    await waitFor(() => h.ctx.CUR_USER && h.ctx.CUR_USER.role === 'user',
+    h.ctx.sessSet(Object.assign({}, ADMIN));
+    h.ctx.slPullUsers();
+    await waitFor(() => h.ctx.sessGet() && h.ctx.sessGet().role === 'user',
       'רענון התפקיד אחרי משיכת המשתמשים');
-    eq('⭐ תפקיד שהורד בלוח הבקרה מגיע למכשיר', h.ctx.CUR_USER.role, 'user');
-    eq('והסשן עודכן איתו', JSON.parse(h.store['sl_mirror_users'] ? h.store['sl_session'] : '{}').role, 'user');
+    eq('⭐ תפקיד שהורד בלוח הבקרה מגיע למכשיר', h.ctx.sessGet().role, 'user');
+    ok('⛔ ואין מפתח סשן על הדיסק (סבב 53)', !('sl_session' in h.store));
     eq('⛔ ולא נשמרה סיסמה במראת המשתמשים',
       String(h.store['sl_mirror_users']).indexOf('password'), -1);
   }
@@ -449,9 +450,10 @@ async function main() {
     await h2.ctx.doLoginOffline('shimon', '135790');
     eq('⭐ כניסה אופליין עדיין עובדת', h2.calls.enter, 1);
     eq('ובלי שגיאה', h2.calls.authErr.length, 0);
-    eq('⭐ והתפקיד ירד עם המשתמש', h2.ctx.CUR_USER.role, 'admin');
-    ok('⛔ הסשן שנשמר אינו מחזיק סיסמה',
-      String(h2.store['sl_session']).indexOf('135790') === -1);
+    eq('⭐ והתפקיד ירד עם המשתמש', h2.ctx.sessGet().role, 'admin');
+    /*  ⭐ סבב 53 — אין סשן שנשמר; הטענה הופכת ל«אין סיסמה באף מפתח». */
+    ok('⛔ ואין את הסיסמה באף מפתח על הדיסק',
+      Object.keys(h2.store).every((k) => String(h2.store[k]).indexOf('135790') === -1));
 
     ok('⛔ אין אכיפת פורמט שש ספרות בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);

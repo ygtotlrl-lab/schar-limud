@@ -70,9 +70,9 @@ const body = (name) => fn(name);
 
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
-  'SL_USERS_PULL_MS', 'SL_NEVER_MIRROR_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_OF',
-  'SL_STAMP_KEY',
-  'SL_SESSION_KEY', 'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
+  'SL_NEVER_MIRROR_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_OF',
+  'SL_STAMP_KEY', '_sessUser', '_sessBooted',
+  'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
   'MSG_NO_USERS',
 ];
 const NAMES_FN = [
@@ -80,7 +80,10 @@ const NAMES_FN = [
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slStripMeta',
-  'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slSaveSession', 'slReadSession',
+  'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slWhoName',
+  /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף, ולכן הרתמה מריצה
+   *  את הפונקציות **האמיתיות** שלו ולא בדל. */
+  'sessSet', 'sessGet', 'sessClear', 'sessActive',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
 ];
 
@@ -102,7 +105,6 @@ function makeCtx(opts = {}) {
     document: { getElementById: (id) => el(id) },
     MIRROR: {},
     STUDENTS: [], TRANSACTIONS: [], SETTINGS: {}, LISTS: {},
-    CUR_USER: null,
     // ⭐ סבב 51 — קידום חותמת המשיכה. הרתמה מחליפה אותו בפעולה שקטה:
     //    מה שנבדק כאן הוא מסלול הסיסמאות, לא מנגנון המשיכה.
     plTouch() { return Promise.resolve(0); },
@@ -127,7 +129,7 @@ function makeCtx(opts = {}) {
     slKeyOf: (m, r) => (m === 'settings' ? 'k:' + r.key : (r.client_id ? 'c:' + r.client_id : 'i:' + r.id)),
     slResetLock() {}, slMaybeDailyBackup() {}, ensureCreditMethod() {},
     // מצב המודול של המשיכה — מוצהר ב-index.html בשורה נפרדת מהפונקציה.
-    _slUsersPulling: false, _slUsersPulledAt: 0,
+    _slUsersPulling: false,
     refreshUI() {}, syncAll() {}, setInterval() { return 0; },
   };
   // לקוח Supabase מזויף — רושם כל שאילתה, כדי שאפשר יהיה לטעון «אפס
@@ -303,19 +305,23 @@ async function main() {
       reply: () => ({ data: null, error: { message: 'column sl_users.pass_fp does not exist' } }),
     });
     h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }];
-    eq('שגיאת עמודה חסרה מפילה את המשיכה', await h.ctx.slPullUsers(true), false);
+    eq('שגיאת עמודה חסרה מפילה את המשיכה', await h.ctx.slPullUsers(), false);
     eq('⛔ ואין ניסיון שני — שאילתה אחת בלבד', h.calls.sb.length, 1);
     eq('⛔ והמראה הקיימת לא נדרסה', h.ctx.SL_USERS.length, 1);
   }
   {
     const h = makeCtx({ reply: () => ({ data: [], error: null }) });
-    eq('משיכה ראשונה עוברת', await h.ctx.slPullUsers(true), true);
-    eq('משיכה מיד אחריה מווסתת (בלי force)', await h.ctx.slPullUsers(false), false);
-    eq('ויסות של 60 שניות', h.ctx.SL_USERS_PULL_MS, 60000);
+    eq('משיכה ראשונה עוברת', await h.ctx.slPullUsers(), true);
+    /*  ⭐ סבב 53 — הוויסות הזמני הוסר: הוא נולד כשה-`syncAll` רץ כל שלוש
+     *  שניות בלי תנאי, ומסבב 51 הוא רץ רק כשהחותמת התקדמה. */
+    eq('⭐ ואין ויסות זמן — משיכה שנייה עוברת גם היא', await h.ctx.slPullUsers(), true);
+    /*  ⚠️ ההצהרה ולא האזכור — ההערה שמסבירה את ההסרה מזכירה את השם. */
+    ok('⛔ הצהרת `SL_USERS_PULL_MS` ירדה מהקובץ (סבב 53)',
+      !/^var SL_USERS_PULL_MS\s*=/m.test(SRC));
   }
   {
     const h = makeCtx({ online: false });
-    eq('⛔ אופליין — slPullUsers אינה נוגעת ברשת', await h.ctx.slPullUsers(true), false);
+    eq('⛔ אופליין — slPullUsers אינה נוגעת ברשת', await h.ctx.slPullUsers(), false);
     eq('ואפס שאילתות נשלחו', h.calls.sb.length, 0);
   }
 
@@ -332,8 +338,8 @@ async function main() {
     eq('⭐ משתמש שאינו האחרון שנכנס — נכנס אופליין', h.calls.enter, 1);
     eq('   בלי הודעת שגיאה', h.calls.authErr.length, 0);
     eq('   ⭐ באפס קריאות רשת', h.calls.sb.length, 0);
-    eq('   CUR_USER הוא המשתמש הנכון', h.ctx.CUR_USER.username, B.username);
-    ok('   ⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
+    eq('   המשתמש המחובר הוא הנכון', h.ctx.sessGet().username, B.username);
+    ok('   ⛔ והוא בלי password', !('password' in h.ctx.sessGet()));
     ok('   טוסט מצב אופליין הוצג', h.calls.toast.some((t) => /אופליין/.test(t)));
 
     // הראשון ממשיך לעבוד גם הוא
@@ -401,18 +407,19 @@ async function main() {
     eq('⭐ סיסמה ישנה שאינה שש ספרות — נכנסת', h.calls.enter, 1);
   }
 
-  /* ── ד. הסשן, ואין סיסמה על הדיסק ─────────────────────────────────────── */
-  sect('ד. הסשן — id+username בלבד, ואין סיסמה באף מפתח');
+  /* ── ד. ⛔ אין סשן על הדיסק, ואין סיסמה באף מפתח ──────────────────────── */
+  sect('ד. ⛔ המשתמש המחובר בזיכרון בלבד, ואין סיסמה באף מפתח');
   {
     const h = makeCtx({ online: false });
     h.ctx.SL_USERS = [await userRow(h, A)];
     h.fields['au-user'] = A.username; h.fields['au-pass'] = A.password;
     await h.ctx.doLogin();
-    const s = JSON.parse(h.store[h.ctx.SL_SESSION_KEY]);
-    eq('הסשן מחזיק שני שדות בלבד', Object.keys(s).sort().join(','), 'id,username');
-    ok('⛔ אין בסשן password', !('password' in s));
-    ok('⛔ אין בסשן טביעה', !('pass_fp' in s) && !('pass_salt' in s));
-    eq('slReadSession מחזירה את הסשן', h.ctx.slReadSession().username, A.username);
+    /*  ⭐ סבב 53 — `sl_session` הוסר. המשתמש קיים בזיכרון, ⛔ ואף מפתח
+     *  על הדיסק אינו מחזיק אותו. */
+    eq('⭐ המשתמש המחובר קיים בזיכרון', h.ctx.sessGet().username, A.username);
+    ok('⛔ ואין מפתח סשן על הדיסק', !('sl_session' in h.store));
+    ok('⛔ ואין שם המשתמש באף מפתח', Object.keys(h.store)
+      .every((k) => String(h.store[k]).indexOf('"username"') === -1 || k.indexOf('users') >= 0));
 
     const all = Object.keys(h.store).map((k) => k + '=' + h.store[k]).join('\n');
     ok('⭐⭐ המחרוזת `password` אינה באף מפתח localStorage', all.indexOf('password') === -1);
@@ -445,7 +452,7 @@ async function main() {
     ok('⛔ ההשוואה **אינה** מול `password` שבמסד (סבב 40)', !q0.eqs.password);
     ok('⭐ והשליפה היא לפי שם המשתמש', q0.eqs.username === A.username);
     ok('⭐ ה-select מבקש עמודות מפורשות', q0.cols === h.ctx.SL_USER_COLS.join(','), q0.cols);
-    ok('⛔ CUR_USER בלי password', !('password' in h.ctx.CUR_USER));
+    ok('⛔ המשתמש המחובר בלי password', !('password' in h.ctx.sessGet()));
     /*  ⚠️ סבב 40 — הטביעה כבר תואמת, ולכן `slEnsurePassFp` יוצאת מוקדם
      *  ואינה כותבת. זו התנהגות קיימת שלא השתנתה («תואמת — אין מה
      *  להשלים»); מה שהשתנה הוא שהפיקסטורה מגיעה עם טביעה מלכתחילה.
@@ -627,7 +634,7 @@ async function main() {
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-slVerifyOffline', body('slVerifyOffline').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ PASS_SIX_RE ירד מהקובץ (סבב 26)', !/^var PASS_SIX_RE\s*=/m.test(SRC));
-    ok('⛔ הסשן אינו כותב password', body('slSaveSession').indexOf('password') === -1);
+    ok('⛔ אין קבוע `SESSION_KEY` בקובץ (סבב 53)', !/SESSION_KEY/.test(SRC));
     ok('⛔ אין password ברשימת ההיתר שבמקור', !/SL_USER_COLS\s*=\s*\[[^\]]*password/.test(SRC));
     // ⚠️ תבנית ולא מספר קבוע (סבב 26) — טענה שמקבעת מספר נכשלת על כל
     //    קידום עתידי, כלומר חוסמת בדיוק את מה שכלל קריטי 2 מחייב.
