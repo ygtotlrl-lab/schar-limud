@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* ── APP — הדבר היחיד שנבדל בין הריפו (schar-limud) ────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /* ⚠️ schar חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם yoman,
    ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`.
    ⛔ עותק שני שלה כאן היה מקור אמת שני שמתיישן (סבב 35ג). */
@@ -30,6 +30,7 @@ const APP = {
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/004_backup_retention_cron.sql',
 };
+/* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
