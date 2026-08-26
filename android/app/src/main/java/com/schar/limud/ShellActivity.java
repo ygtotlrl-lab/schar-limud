@@ -155,12 +155,7 @@ public abstract class ShellActivity extends Activity {
             if (scheme.equals("http") || scheme.equals("https")) return false;
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                // ⛔ No FLAG_ACTIVITY_NEW_TASK here (round 58) — this call leaves a live
-                // Activity, and from one the flag is unnecessary and harmful: it puts the
-                // target in a task of its own, so coming back from tel:/mailto:/whatsapp:
-                // does not return to the app and it appears twice in Recents. The flag is
-                // only needed when the caller is not an Activity (Application, Service,
-                // BroadcastReceiver), where its absence throws.
+                // ⛔ אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי (סבב 58) — ר' share-bridge-rule ב-CLAUDE.md
                 startActivity(intent);
             } catch (ActivityNotFoundException e) {
                 Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();
