@@ -97,13 +97,47 @@ function runDocsOn(mutate) {
 
 t(n++, runDocsOn(s => s) === true, '⭐ קו הבסיס — check-docs עובר על הקובץ כפי שהוא');
 
+/* ⭐⭐ **פינוי מקום לפני כל מוטציה שמוסיפה שורות — ⛔ ולא ויתור עליה
+   (סבב 61).** ⚠️ **הבעיה שנמדדה:** ככל שהקובץ מתקרב לתקרת 3,000, כל
+   מוטציה שמוסיפה שורות חוצה אותה **לפני** שהיא מגיעה לתנאי שהיא באה
+   לבדוק — ⛔ ואז «נאכף» מדווח על שער שלא נבדק, וזה כשל בכיוון המסוכן.
+   ⭐ **הפתרון: פינוי שורות מגוף פרקי הסבבים בעותק הזמני** — הן היחידות
+   שנספרות בתקרה הגלובלית ו⛔ **אינן** נספרות בחלק הפרטי ואינן בבלוק
+   `SHARED`. ⚠️ כלומר הפינוי מקטין את הכולל, ⛔ ומשאיר את `privateLines`
+   ואת חתימות ה-SHARED בדיוק כפי שהם — וזה מה שמבודד את התנאי הנבדק.
+   ⛔ כותרות `##` וגדרות קוד מדולגות: הסרת כותרת הייתה משנה את מניין
+   פרקי הסבבים, והסרת שורה מתוך גדר הייתה משאירה גדר לא מאוזנת. */
+function roundBodyIdx(ls) {
+  const m = new Array(ls.length).fill(false);
+  { let f = false;
+    for (let i = 0; i < ls.length; i++) {
+      if (ls[i].startsWith('```')) { f = !f; m[i] = true; continue; } m[i] = f; } }
+  const idx = []; let inRound = false;
+  for (let i = 0; i < ls.length; i++) {
+    if (!m[i] && /^##\s/.test(ls[i])) { inRound = ROUND_H2.test(ls[i]); continue; }
+    if (inRound && !m[i]) idx.push(i);
+  }
+  return idx;
+}
+function freeRoundLines(s, k) {
+  if (k <= 0) return s;
+  const ls = s.split('\n');
+  const drop = new Set(roundBodyIdx(ls).slice(-k));
+  return ls.filter((_, i) => !drop.has(i)).join('\n');
+}
+/* ⚠️ כמה שורות לפנות כדי שתוספת של `k` שורות תישאר **מתחת** לתקרה. */
+const roomFor = k => Math.max(0, (nlines + k) - (MAX_LINES - 1));
+
 /* ⚠️ המוטציה מוסיפה **מספיק** פרקים כדי לחצות את החלון, ולא פרק אחד
    (סבב 49) — ⛔ ריפו שגזם מתחת לתקרה היה עובר מוטציה של פרק בודד, כלומר
    המוטציה הייתה no-op והבדיקה הייתה מדווחת «נאכף» על שער שלא נבדק. */
 const need = MAX_ROUNDS - rounds.length + 1;
 const extra = Array.from({ length: need }, (_, k) =>
   `\n## סבב 9${k} (2026-12-31) — פרק סבב עודף, לצורך המוטציה\nגוף.\n`).join('');
-t(n++, runDocsOn(s => s + extra) === false,
+/* ⚠️ הפינוי נדרש כאן מאותה סיבה בדיוק שבמוטציית ה-900 שלמטה (סבב 61) —
+   ⛔ בקובץ שקרוב לתקרה, שלוש שורות הפרק היו מפילות את השער על התקרה
+   הגלובלית, והטענה הייתה מדווחת «נאכף» על **חלון הסבבים** שלא נבדק. */
+t(n++, runDocsOn(s => freeRoundLines(s, roomFor(extra.split('\n').length)) + extra) === false,
   `⛔ מוטציה: ${need} פרקי סבבים נוספים **מפילים** את check-docs (חלון של שניים)`);
 
 const padTo = 3001 - nlines + 1;
@@ -120,14 +154,22 @@ t(n++, privateLines <= MAX_PRIVATE,
 const needPriv = MAX_PRIVATE - privateLines + 1;
 const privChunk = `\n## פרק פרטי עודף, לצורך המוטציה\n` +
                   Array(needPriv).join('שורה פרטית לצורך המוטציה.\n');
-t(n++, nlines + needPriv + 2 < MAX_LINES,
+
+const freeBy = roomFor(needPriv + 2);
+const bodyAvail = roundBodyIdx(lines).length;
+t(n++, bodyAvail >= freeBy,
+  `⚠️ יש מגוף פרקי הסבבים מה לפנות למוטציה — ${freeBy}/${bodyAvail} שורות`);
+const base = s => freeRoundLines(s, freeBy);
+t(n++, nlines - freeBy + needPriv + 2 < MAX_LINES,
   `⚠️ מוטציית החלק הפרטי נשארת מתחת ל-${MAX_LINES} — היא בודקת את התקרה הנכונה`);
-t(n++, runDocsOn(s => s + privChunk) === false,
+t(n++, runDocsOn(s => base(s)) === true,
+  '⭐ ⛔ ובסיס המוטציה עצמו **עובר** — הפינוי לא שבר חתימה ולא מניין פרקים');
+t(n++, runDocsOn(s => base(s) + privChunk) === false,
   `⛔ מוטציה: ${needPriv} שורות פרטיות נוספות **מפילות** את check-docs (תקרת 900)`);
-t(n++, runDocsOn(s => s + Array(needPriv + 1).join('שורה בתוך פרק הסבב האחרון.\n')) === true,
+t(n++, runDocsOn(s => base(s) + Array(needPriv + 1).join('שורה בתוך פרק הסבב האחרון.\n')) === true,
   '⭐ ואותה כמות שורות **בתוך פרק סבב** ⛔ **אינה** מפילה — המדידה מבחינה ביניהם');
 
-t(n++, runDocsOn(s => s + '\n## פרק שאינו פרק סבב\nגוף.\n') === true,
+t(n++, runDocsOn(s => freeRoundLines(s, roomFor(3)) + '\n## פרק שאינו פרק סבב\nגוף.\n') === true,
   '⭐ ומוטציה שאינה פרק סבב — כותרת `##` רגילה — ⛔ **אינה** מפילה');
 
 console.log(fail ? `\n✗ סבב 49 (תקציב תיעוד) — ${fail} נכשלו, ${pass} עברו`

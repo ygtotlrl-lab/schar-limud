@@ -48,7 +48,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           'e53cfc7d6b172a52'],
+  ['iron-rules-storage',           'a0f1f7bd6b379c1c'],
   ['pending-module',               'dc0f2a513dcc7969'],
   ['iron-rule-6-sync',             '58f809376bdf981d'],
   ['iron-rule-7-status-area',      '4b4c9272b35b9c40'],
@@ -58,7 +58,7 @@ const CANON = [
   ['capability-matrix',            '28f670d77ce67bff'],
   ['iron-rule-11-comments',        'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
-  ['backup-module',                '15352739fcf8bd26'],
+  ['backup-module',                'f7d06bb6d9529648'],
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',        'e60f2cf05885ac4d'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
@@ -70,6 +70,7 @@ const CANON = [
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
   ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
+  ['iron-rule-20-backup-policy',   'fa68eae3173ca510'],
   ['share-bridge-rule',            '12c79fad9258909e'],
 ];
 
