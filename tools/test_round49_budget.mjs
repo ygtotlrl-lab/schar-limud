@@ -120,11 +120,50 @@ t(n++, privateLines <= MAX_PRIVATE,
 const needPriv = MAX_PRIVATE - privateLines + 1;
 const privChunk = `\n## פרק פרטי עודף, לצורך המוטציה\n` +
                   Array(needPriv).join('שורה פרטית לצורך המוטציה.\n');
-t(n++, nlines + needPriv + 2 < MAX_LINES,
+
+/* ⭐⭐ **פינוי מקום לפני המוטציה — ⛔ ולא ויתור עליה (סבב 61).**
+   ⚠️ **הבעיה שנמדדה:** ככל שהקובץ מתקרב לתקרת 3,000, `needPriv` השורות
+   שהמוטציה מוסיפה חוצות אותה **לפניה** — ⛔ ואז שתי הטענות שלמטה מודדות
+   את התקרה הלא-נכונה: הראשונה נופלת על הגלובלית ומדווחת «נאכף» על
+   תקרת ה-900, והשנייה (מוטציית-הנגד) נופלת אף שהיא אמורה לעבור.
+   ⛔ **וזה כשל בכיוון המסוכן** — שער שמדווח «נאכף» על תנאי שלא נבדק.
+   ⭐ **הפתרון: פינוי שורות מגוף פרקי הסבבים בעותק הזמני** — הן היחידות
+   שנספרות בתקרה הגלובלית ו⛔ **אינן** נספרות בחלק הפרטי ואינן בבלוק
+   `SHARED`. ⚠️ כלומר הפינוי מקטין את הכולל, ⛔ ומשאיר את `privateLines`
+   ואת חתימות ה-SHARED בדיוק כפי שהם — וזה מה שמבודד את התנאי הנבדק.
+   ⛔ כותרות `##` וגדרות קוד מדולגות: הסרת כותרת הייתה משנה את מניין
+   פרקי הסבבים, והסרת שורה מתוך גדר הייתה משאירה גדר לא מאוזנת. */
+function roundBodyIdx(ls) {
+  const m = new Array(ls.length).fill(false);
+  { let f = false;
+    for (let i = 0; i < ls.length; i++) {
+      if (ls[i].startsWith('```')) { f = !f; m[i] = true; continue; } m[i] = f; } }
+  const idx = []; let inRound = false;
+  for (let i = 0; i < ls.length; i++) {
+    if (!m[i] && /^##\s/.test(ls[i])) { inRound = ROUND_H2.test(ls[i]); continue; }
+    if (inRound && !m[i]) idx.push(i);
+  }
+  return idx;
+}
+function freeRoundLines(s, k) {
+  if (k <= 0) return s;
+  const ls = s.split('\n');
+  const drop = new Set(roundBodyIdx(ls).slice(-k));
+  return ls.filter((_, i) => !drop.has(i)).join('\n');
+}
+const roomNeeded = (nlines + needPriv + 2) - (MAX_LINES - 1);
+const freeBy = Math.max(0, roomNeeded);
+const bodyAvail = roundBodyIdx(lines).length;
+t(n++, bodyAvail >= freeBy,
+  `⚠️ יש מגוף פרקי הסבבים מה לפנות למוטציה — ${freeBy}/${bodyAvail} שורות`);
+const base = s => freeRoundLines(s, freeBy);
+t(n++, nlines - freeBy + needPriv + 2 < MAX_LINES,
   `⚠️ מוטציית החלק הפרטי נשארת מתחת ל-${MAX_LINES} — היא בודקת את התקרה הנכונה`);
-t(n++, runDocsOn(s => s + privChunk) === false,
+t(n++, runDocsOn(s => base(s)) === true,
+  '⭐ ⛔ ובסיס המוטציה עצמו **עובר** — הפינוי לא שבר חתימה ולא מניין פרקים');
+t(n++, runDocsOn(s => base(s) + privChunk) === false,
   `⛔ מוטציה: ${needPriv} שורות פרטיות נוספות **מפילות** את check-docs (תקרת 900)`);
-t(n++, runDocsOn(s => s + Array(needPriv + 1).join('שורה בתוך פרק הסבב האחרון.\n')) === true,
+t(n++, runDocsOn(s => base(s) + Array(needPriv + 1).join('שורה בתוך פרק הסבב האחרון.\n')) === true,
   '⭐ ואותה כמות שורות **בתוך פרק סבב** ⛔ **אינה** מפילה — המדידה מבחינה ביניהם');
 
 t(n++, runDocsOn(s => s + '\n## פרק שאינו פרק סבב\nגוף.\n') === true,
