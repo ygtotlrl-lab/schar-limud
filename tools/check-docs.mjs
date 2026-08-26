@@ -58,7 +58,7 @@ const CANON = [
   ['capability-matrix',            '28f670d77ce67bff'],
   ['iron-rule-11-comments',        'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
-  ['backup-module',                'f7d06bb6d9529648'],
+  ['backup-module',                '66fe6980b7c81606'],
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
   ['iron-rule-14-org-wide',        'e60f2cf05885ac4d'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
