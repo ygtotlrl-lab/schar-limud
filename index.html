@@ -1581,7 +1581,7 @@ async function bkMaybeDaily() {
   var src = _bkCfg('sources', []) || [];
   if (!src.length) return false;
   _bkRunning = true;
-  var ok = true, wrote = 0, same = 0;
+  var ok = true, wrote = 0, same = 0, failed = [];
   try {
     var pre = _bkCfg('prefix', '') || '';
     var secrets = _bkSecrets(), dailyKeys = [];
@@ -1595,9 +1595,17 @@ async function bkMaybeDaily() {
       //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
       var bkey = pre + (s.key || s.name);
       dailyKeys.push(bkey);
+      /* ⭐ דגל-יום פר-מקור (סבב 62) — מקור שכבר גובה היום מדולג, גם
+         כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל החזיק את כל
+         השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
+         גיבתה מחדש את מה שכבר גובה — נמדד ב-26.8, 66 גיבויים ביום.
+         ⚠️ הדחיפה ל-`dailyKeys` קודמת לדילוג בכוונה: הרשימה היא
+         רשימת-ההיתר של הגריעה, ומפתח שנופל ממנה אינו מתפנה לעולם. */
+      var dayKey = 'bk_day_' + bkey;
+      if (lsGet(dayKey, '') === today) { same++; continue; }
       if (s.kind === 'kv') {
         var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
-        if (!res || res.error) { ok = false; continue; }
+        if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
         // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
@@ -1609,7 +1617,7 @@ async function bkMaybeDaily() {
         if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
         if (s.order) q = q.order(s.order);
         var rt = await q;
-        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
+        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; failed.push(bkey); continue; }
         var rows = rt.data;
         // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
         //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
@@ -1624,23 +1632,30 @@ async function bkMaybeDaily() {
       var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
-      if (!ins || ins.error) { ok = false; continue; }
+      if (!ins || ins.error) { ok = false; failed.push(bkey); continue; }
       lsSet(sigKey, sig);
+      lsSet(dayKey, today);
       wrote++;
     }
+    /* ⭐ הגריעה אינה מותנית עוד בהצלחת **כל** המקורות (סבב 62) — היא רצה
+       על רשימת-ההיתר המלאה בכל פעם שנכתב עותק חדש. ⛔ הכריכה הישנה היא
+       ששיתקה אותה: מקור אחד שנכשל מנע גריעה של כל השאר, וזה שורש מצבור
+       ה-503 השורות שנוקה ב-26.8. ⚠️ והיא עדיין רצה **אחרי** הכתיבה, כדי
+       שלא ייגרע עותק ישן לפני שהחדש נכתב (השלמת סבב 35). */
+    if (wrote) { try { await _bkRetention(c, dailyKeys); } catch (e2) { } }
     if (ok) {
       lsSet(flag, today);
       lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
-      // ⭐ הגריעה רצה רק אחרי גיבוי מוצלח (השלמת סבב 35) — אין יום שבו
-      //    עותק ישן נגרע לפני שהעותק החדש נכתב, וכשל גריעה אינו כשל גיבוי.
-      try { await _bkRetention(c, dailyKeys); } catch (e2) { }
     } else {
-      // ⛔ בלי כתיבת הדגל — ההזדמנות הבאה באותו יום תנסה שוב (נרשם בסבב 6
-      //    בהנהלה): גיבוי שנכשל ודילג על יממה שלמה הוא בדיוק מה שהדגל
-      //    שנכתב-מראש גרם.
-      logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
-      console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בהזדמנות הבאה');
+      /* ⛔ בלי כתיבת הדגל הגלובלי — ההזדמנות הבאה באותו יום תנסה שוב
+         (נרשם בסבב 6 בהנהלה): גיבוי שנכשל ודילג על יממה שלמה הוא בדיוק
+         מה שהדגל שנכתב-מראש גרם. ⚠️ ומה שכן השתנה (סבב 62): המקורות
+         שהצליחו נושאים דגל-יום משלהם ואינם נגבים שוב, ולכן הניסיון החוזר
+         מכוון למי שנכשל בלבד. ⛔ וכשל חלקי מדווח ואינו נבלע — `failed`
+         נושא את שמות המקורות, אחרת «נכשל» היה מספר בלי מען. */
+      logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same, failed: failed });
+      console.warn('[backup] מקורות שנכשלו: ' + (failed.join(', ') || '?') + ' — ייבחנו שוב בהזדמנות הבאה');
     }
   } catch (e) { ok = false; }
   _bkRunning = false;

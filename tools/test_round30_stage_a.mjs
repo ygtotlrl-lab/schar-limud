@@ -62,6 +62,17 @@ const MODULE_SRC = (() => {
 })();
 
 /* ── הרתמה ─────────────────────────────────────────────────────────────── */
+/* ⭐ יום חדש (סבב 62) — ⛔ מחיקת הדגל הגלובלי לבדה כבר אינה מספיקה:
+   מסבב 62 לכל מקור יש **דגל-יום משלו** (`bk_day_<מפתח>`), וזה מה שמונע
+   מהלולאה לרוץ מחדש בכל עלייה. ⚠️ במציאות כולם פגים יחד כש-`bkToday()`
+   מתקדם; כאן מדמים בדיוק את זה. */
+function newDay(env) {
+  delete env.store['x_last_backup'];
+  Object.keys(env.store).forEach((k) => {
+    if (k.indexOf('bk_day_') === 0) delete env.store[k];
+  });
+}
+
 function makeEnv(opts = {}) {
   const env = {
     store: Object.assign({}, opts.store || {}),
@@ -222,6 +233,59 @@ async function t3() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   3ב · ⭐ כשל חלקי מדווח ⛔ אך אינו משתק (סבב 62)
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ הכשל שנמדד ב-26.8: מקור-טבלה שאינו קיים החזיר `error` ⇒ `ok=false` ⇒
+      הדגל הגלובלי לעולם לא נכתב ⇒ הגריעה לעולם לא רצה ⇒ **הלולאה רצה בכל
+      עלייה** — 66 גיבויים ביום במקום ~13.
+   ⛔ שלוש הטענות כאן הן בדיוק שלוש החוליות שנשברו.
+   ══════════════════════════════════════════════════════════════════════════ */
+async function t3b() {
+  const env = makeEnv({ kv: { k1: 'AAA', k2: 'BBB' } });
+  env.sb.BK_CFG = cfgKv(env);
+  // ⚠️ `k2` נכשל בקריאה — הדמיה של מקור שאין לו טבלה במסד.
+  const orig = env.client.from;
+  env.client.from = function (t) {
+    const api = orig.call(env.client, t);
+    if (t === 'kv') {
+      const eqf = api.eq;
+      api.eq = function (col, val) {
+        const q = eqf.call(api, col, val);
+        if (val === 'k2') return { maybeSingle: async () => ({ error: { message: 'relation does not exist' } }) };
+        return q;
+      };
+    }
+    return api;
+  };
+
+  const r = await env.sb.bkMaybeDaily();
+  eq(r, false, '3ב-א · כשל חלקי מחזיר false ואינו מתחזה להצלחה');
+  eq(env.store['x_last_backup'], undefined, '3ב-ב · ⛔ והדגל הגלובלי אינו נכתב');
+  // ⭐ החוליה הראשונה: המקור הבריא כן נכתב וכן סומן.
+  eq(env.inserted.kv_backup.length, 1, '3ב-ג · ⭐ המקור הבריא נכתב למרות הכשל של השני');
+  eq(env.store['bk_day_k1'], TODAY, '3ב-ד · ⭐ וקיבל דגל-יום משלו');
+  eq(env.store['bk_day_k2'], undefined, '3ב-ה · ⛔ והנכשל לא — הוא ינוסה שוב');
+  // ⭐ החוליה השנייה: הכשל מדווח **עם השם**, ולא כמספר בלי מען.
+  const failLog = env.inserted.sync_log.filter((x) => x.action === 'backup_fail').pop();
+  ok(failLog && JSON.stringify(failLog).indexOf('k2') !== -1,
+     '3ב-ו · ⭐ היומן נושא את שם המקור שנכשל');
+  /* ⭐ החוליה השלישית — ⚠️ והערך **משתנה** בין הריצות בכוונה: החתימה
+     הדיפרנציאלית לבדה כבר מדלגת על ערך זהה, ולכן טענה על ערך זהה אינה
+     בודקת דבר. ⛔ הלולאה שנמדדה בשטח היא בדיוק המקרה ההפוך — מפתח
+     הנוכחות משתנה בכל סימון, ולכן הוא נכתב מחדש בכל עלייה. */
+  const before = env.inserted.kv_backup.length;
+  env.kv.k1 = 'AAA-שונה';
+  await env.sb.bkMaybeDaily();
+  eq(env.inserted.kv_backup.length, before,
+     '3ב-ז · ⛔ ריצה נוספת באותו יום אינה מגבה שוב את הבריא — גם כשערכו השתנה');
+  /* ⭐ וביום חדש הוא כן נכתב — ⛔ הדגל חוסם יממה, לא לנצח. */
+  newDay(env);
+  await env.sb.bkMaybeDaily();
+  eq(env.inserted.kv_backup.length, before + 1,
+     '3ב-ח · ⭐ וביום חדש הוא כן נגבה — הדגל חוסם יממה ולא לנצח');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    4 · ⭐ גיבוי דיפרנציאלי — ערך שלא השתנה אינו נכתב שוב
    ══════════════════════════════════════════════════════════════════════════ */
 async function t4() {
@@ -230,18 +294,18 @@ async function t4() {
   await env.sb.bkMaybeDaily();
   eq(env.inserted.kv_backup.length, 2, '4א · היום הראשון כותב הכל');
   // יום חדש, אותם ערכים
-  delete env.store['x_last_backup'];
+  newDay(env);
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '4ב · היום השני מצליח');
   eq(env.inserted.kv_backup.length, 2, '4ג · ⭐ ולא נכתבה אף שורה חדשה — הערכים זהים');
   // ערך אחד השתנה
-  delete env.store['x_last_backup'];
+  newDay(env);
   env.kv.k2 = 'CCC';
   await env.sb.bkMaybeDaily();
   eq(env.inserted.kv_backup.length, 3, '4ד · רק המקור שהשתנה נכתב');
   eq(env.inserted.kv_backup[2].key, 'k2', '4ה · והוא הנכון');
   // ⛔ בספק — כותבים: חתימה שנמחקה מחזירה כתיבה מלאה
-  delete env.store['x_last_backup'];
+  newDay(env);
   delete env.store['bk_sig_k1'];
   await env.sb.bkMaybeDaily();
   eq(env.inserted.kv_backup.length, 4, '4ו · ⛔ חתימה חסרה ⇒ כותבים שוב (בספק — מגבים)');
@@ -494,7 +558,7 @@ async function t14() {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-const tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14];
+const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14];
 for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }
