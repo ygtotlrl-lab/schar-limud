@@ -55,12 +55,12 @@ const CANON = [
   ['iron-rule-8-docs',             'be8e241ccd5b1ad4'],
   ['iron-rule-9-security-spread',  '5412c7382b4daf61'],
   ['iron-rule-10-users',           '54d578f69f5b3690'],
-  ['capability-matrix',            '077cf225e9e3eeda'],
+  ['capability-matrix',            '28f670d77ce67bff'],
   ['iron-rule-11-comments',        'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
   ['backup-module',                '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',        '648eafacdbfa21af'],
+  ['iron-rule-14-org-wide',        'e60f2cf05885ac4d'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
   ['sw-strategies',                'ba3680abbd0b0667'],
   ['pull-module',                  'f3abef4730689d84'],
@@ -70,6 +70,7 @@ const CANON = [
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
   ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
+  ['share-bridge-rule',            '12c79fad9258909e'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */

@@ -3679,124 +3679,6 @@ function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)ret
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),parseInt(el.getAttribute('data-id')),el.getAttribute('data-label'));}
 function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
-/* ══════════════════════════════════════════════════════════════════════════
-   מסך ההגדרה הראשונית — הסכימה נמשכת מקובץ המיגרציה
-   ══════════════════════════════════════════════════════════════════════════
-   ⛔ אין להחזיר לכאן עותק מוטבע של הסכימה (השלמת סבב 24) — שני
-   עותקים מתיישנים בשקט, וההתקנה הטרייה היא המקום שבו זה מתגלה
-   מאוחר מדי. מקור האמת הוא `migrations/000_initial_schema.sql`.
-   ══════════════════════════════════════════════════════════════════════════ */
-// ===== סכימת ההגדרה הראשונית =====
-// ⭐ סבב 24 (השלמה) — **מקור אמת אחד, בלי עותק מוטבע.**
-// עד כאן ישב כאן `SETUP_SQL_FALLBACK`: עותק מיוצר של
-// migrations/000_initial_schema.sql, ששכפל את הסכימה לתוך index.html
-// והצריך כלי (tools/sync-setup-sql.py) כדי לשמור על עקביות בין השניים.
-// הוא הוסר, ואיתו הכלי:
-// ⛔ ה-fetch נעשה **מאותו origin שממנו נטענה האפליקציה עצמה**. אם הוא
-//    נכשל — האפליקציה כבר לא הייתה עולה מלכתחילה. כלומר הגיבוי הגן מפני
-//    תרחיש שאינו קיים, בעוד שהמחיר — מקור אמת שני שמתיישן בשקט — הוא
-//    אמיתי ומדוד (זה בדיוק מה שקרה בסבב 6).
-// כשל משיכה מציג מעכשיו הודעה מפורשת עם קישור ישיר לקובץ ב-GitHub,
-// ולעולם לא סכימה שאיננו יודעים אם היא עדכנית.
-// ⛔ אין להחזיר סכימה מוטבעת ל-index.html בשום צורה — היא הופכת את
-//    כלל קריטי 7 («מקור אמת יחיד לסכימה») לאכיפה ידנית בכלי חיצוני.
-var SETUP_SQL_URL = './migrations/000_initial_schema.sql';
-var SETUP_SQL_GITHUB = 'https://github.com/ygtotlrl-lab/schar-limud/blob/main/migrations/000_initial_schema.sql';
-
-// מושך את מקור האמת. מחזירה {ok, text}:
-// ⛔ כשל ⇒ **לא מוצגת שום סכימה** (השלמת סבב 24) — סכימה שאיננו יודעים אם היא עדכנית,
-//    שמוצגת בתיבה שהמשתמש מעתיק ומריץ על המסד, גרועה מהודעת שגיאה גלויה.
-async function loadSetupSql(){
-  try{
-    var r = await fetch(SETUP_SQL_URL, {cache:'no-store'});
-    if(r && r.ok){
-      var t = await r.text();
-      // שמירה מפני דף שגיאה של Pages שחוזר עם 200
-      if(t && t.indexOf('sl_transactions') !== -1) return {ok:true, text:t};
-    }
-  }catch(e){}
-  return {ok:false, text:''};
-}
-
-var _setupPollInt = null;
-
-function copySql(){
-  var ta = document.getElementById('setup-sql-ta');
-  // המשיכה נכשלה ⇒ התיבה מוסתרת ואין מה להעתיק. השומר הזה אינו קישוט:
-  // בלעדיו לחיצה על כפתור שנשאר גלוי הייתה זורקת TypeError.
-  if(!ta || !ta.value) return;
-  if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(function(){document.getElementById('setup-copy-btn').textContent='✓ הועתק!';setTimeout(function(){document.getElementById('setup-copy-btn').textContent='&#128203; העתק SQL';},2000);});}
-  else{ta.select();document.execCommand('copy');document.getElementById('setup-copy-btn').textContent='✓ הועתק!';}
-}
-
-function startSetupPoll(){
-  if(_setupPollInt) return;
-  var statusEl = document.getElementById('setup-status');
-  _setupPollInt = setInterval(async function(){
-    var r = await SB.from('sl_users').select('id').limit(1);
-    if(!r.error){
-      clearInterval(_setupPollInt);_setupPollInt=null;
-      if(statusEl){statusEl.style.color='var(--green)';statusEl.textContent='✅ הטבלאות נמצאו! טוען את האפליקציה...';}
-      setTimeout(function(){location.reload();},1200);
-    }
-  }, 2500);
-}
-
-function showSetupScreen(){
-  var box = document.querySelector('.auth-box');
-  box.innerHTML =
-    '<div style="font-size:1.15rem;font-weight:900;color:var(--navy);margin-bottom:3px">&#9881; הגדרה ראשונית</div>'+
-    '<div style="font-size:.78rem;color:var(--text3);margin-bottom:14px">טבלאות הנתונים טרם נוצרו — פעולה חד פעמית</div>'+
-    '<div style="display:flex;gap:6px;margin-bottom:8px">'+
-      '<button id="setup-copy-btn" onclick="copySql()" style="flex:1;background:var(--navy);color:#fff;border:none;border-radius:9px;padding:9px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer">&#128203; העתק SQL</button>'+
-      '<a href="https://supabase.com/dashboard/project/'+SB_PROJECT+'/sql/new" target="_blank" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center">&#128279; פתח SQL Editor</a>'+
-    '</div>'+
-    '<textarea id="setup-sql-ta" readonly dir="ltr" style="width:100%;height:130px;font-size:.6rem;direction:ltr;text-align:left;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;resize:none;background:#f8f9fb;color:#2d3748"></textarea>'+
-    // ⛔ אין עותק מוטבע של הסכימה (השלמת סבב 24) — ר\' ההערה מעל SETUP_SQL_URL. כשל משיכה
-    //    מציג את התיבה הזו במקום התיבה שלמעלה — קישור למקור האמת עצמו.
-    '<div id="setup-sql-err" style="display:none;font-size:.74rem;color:#8a2b2b;background:#fdecec;border:1px solid #f3c2c2;border-radius:8px;padding:8px;text-align:right;line-height:1.6">'+
-      '<b>&#9888;&#65039; לא ניתן היה למשוך את קובץ הסכימה.</b><br>'+
-      'פתח אותו ישירות ב-GitHub, העתק את כל תוכנו והרץ ב-SQL Editor:'+
-      '<div style="margin-top:5px"><a href="'+esc(SETUP_SQL_GITHUB)+'" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;word-break:break-all">migrations/000_initial_schema.sql</a></div>'+
-    '</div>'+
-    '<div style="font-size:.72rem;color:var(--text2);margin:10px 0 6px;text-align:right;line-height:1.5">&#9312; העתק את ה-SQL &#8592; &#9313; פתח SQL Editor &#8592; &#9314; הדבק והרץ (F5) &#8592; &#9315; צור משתמש ראשון &#8592; &#9316; חזור לכאן</div>'+
-    // ⛔ סבב 24 — אין יותר משתמש ברירת מחדל בסכימה. הסכימה נולדה עם
-    //    admin/admin, כלומר כל התקנה טרייה הייתה נגישה לכל מי שמכיר את
-    //    הדפוס. יצירת המשתמש הראשון היא מעכשיו פעולה ידנית ומודעת.
-    '<div style="font-size:.7rem;color:var(--text2);margin:0 0 8px;text-align:right;line-height:1.5;background:#fff8e6;border:1px solid #f0dfa8;border-radius:8px;padding:7px 8px">'+
-      '<b>&#9315; משתמש ראשון</b> — אין משתמש ברירת מחדל. הרץ ב-SQL Editor, אחרי החלפת הערכים:'+
-      '<div dir="ltr" style="direction:ltr;text-align:left;font-family:monospace;font-size:.66rem;margin-top:4px;word-break:break-all">'+
-        // ⚠️ סבב 26 — `role` במפורש. הוא מקור האמת היחיד להרשאות, והמשתמש
-        //    הראשון חייב להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
-        esc("INSERT INTO public.sl_users (username, password, role) VALUES ('<שם המשתמש>', '<שש ספרות>', 'admin');")+
-      '</div></div>'+
-    '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
-  var ta = document.getElementById('setup-sql-ta');
-  ta.value = '-- טוען את הסכימה...';
-  loadSetupSql().then(function(res){
-    var el = document.getElementById('setup-sql-ta');
-    if(res && res.ok){ if(el) el.value = res.text; return; }
-    // כשל משיכה — מסתירים את התיבה ואת כפתור ההעתקה, ומפנים למקור.
-    if(el){ el.value=''; el.style.display='none'; }
-    var cb = document.getElementById('setup-copy-btn'); if(cb) cb.style.display='none';
-    var er = document.getElementById('setup-sql-err'); if(er) er.style.display='block';
-  });
-  startSetupPoll();
-}
-
-async function ensureSetup(){
-  try{
-    var r = await SB.from('sl_users').select('id').limit(1);
-    if(r.error){
-      var m=(r.error.message||'')+(r.error.code||'');
-      if(m.indexOf('42P01')!==-1||m.indexOf('does not exist')!==-1||m.indexOf('sl_users')!==-1){
-        showSetupScreen(); return false;
-      }
-    }
-    return true;
-  }catch(e){showSetupScreen();return false;}
-}
-
 function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').style.display='none';document.getElementById('auth-btn').disabled=false;}
 function startAuthLoad(){document.getElementById('auth-err').textContent='';document.getElementById('auth-spinner').style.display='block';document.getElementById('auth-btn').disabled=true;}
 // ⭐ סבב 24 — כניסה גם בלי רשת.
@@ -3885,7 +3767,7 @@ async function doLoginOffline(u,p){
   enterApp();
   toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
 }
-function doLogout(){sessClear();lkStop();if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+function doLogout(){sessClear();lkStop();document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת (כלל ברזל 3).
 // אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
 // איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
@@ -4642,10 +4524,9 @@ async function slBoot(){
 
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
-  // מסך ההתקנה נבדק מול השרת. בלי רשת אין לו מה לומר, ובלעדי הדילוג הוא
-  // היה מציג "צריך להתקין" למשתמש שרק אין לו קליטה.
-  var ok = navigator.onLine ? await ensureSetup() : true;
-  if(ok)setTimeout(function(){document.getElementById('au-user').focus();},50);
+  // ⛔ מסך ההתקנה הוסר (סבב 58) — אין יותר בדיקת סכימה מול השרת בעלייה,
+  //    ולכן אין גם מה לדלג עליו כשאין רשת.
+  setTimeout(function(){document.getElementById('au-user').focus();},50);
 }
 document.addEventListener('DOMContentLoaded', slBoot);
 /* ══════════════════════════════════════════════════════════════════════════

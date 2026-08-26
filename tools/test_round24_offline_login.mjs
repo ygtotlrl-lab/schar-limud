@@ -595,7 +595,7 @@ async function main() {
   /* ── ח. הסכימה, והסרת העותק המוטבע ───────────────────────────────────── */
   sect('ח. הסכימה — אין משתמש זרוע, ואין סכימה מוטבעת');
   {
-    // ההנחיה בהערה (ובמסך ההגדרה) היא **מצייני מקום** ולא זריעה — לכן
+    // ההנחיה שבהערת קובץ ההתקנה היא **מצייני מקום** ולא זריעה — לכן
     // הבדיקה על SQL חי בלבד, אחרי הסרת ההערות.
     const live = (t) => t.replace(/--.*$/gm, '');
     ok('⛔ אין INSERT חי ל-sl_users ב-000', !/insert\s+into\s+public\.sl_users/i.test(live(SQL000)));
@@ -604,7 +604,6 @@ async function main() {
     // ⚠️ סבב 26 — ההוראה כוללת עכשיו גם `role`, כי המשתמש הראשון חייב
     //    להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
     ok('000 מסביר איך יוצרים משתמש ראשון', /sl_users \(username, password, role\)/.test(SQL000));
-    ok('⭐ מסך ההגדרה מציג את ההנחיה עם מצייני מקום', /שם המשתמש/.test(SRC));
 
     const adds = (SQL010.match(/add\s+column\s+if\s+not\s+exists/gi) || []).length;
     eq('010 אדיטיבית — בדיוק שני ADD COLUMN IF NOT EXISTS', adds, 2);
@@ -616,8 +615,14 @@ async function main() {
     ok('⭐ ⛔ ואין סמני הבלוק המיוצר', SRC.indexOf('BEGIN GENERATED SQL FALLBACK') === -1);
     ok('⭐ ⛔ אין CREATE TABLE מוטבע ב-index.html', !/create\s+table\s+if\s+not\s+exists\s+public\./i.test(SRC));
     ok('⛔ ואין יותר tools/sync-setup-sql.py', !fs.existsSync(path.join(ROOT, 'tools', 'sync-setup-sql.py')));
-    ok('מסך ההגדרה מושך את מקור האמת ב-fetch', /fetch\(SETUP_SQL_URL/.test(SRC));
-    ok('⭐ וכשל משיכה מפנה לקובץ ב-GitHub', /SETUP_SQL_GITHUB/.test(SRC) && /setup-sql-err/.test(SRC));
+    // ⛔ מסך ההתקנה הוסר מהאפליקציה (סבב 58) — ההתקנה נעשית מול המסד
+    //    מ-`migrations/`, ומה שנשאר בקוד הוא היעדרו. ⚠️ הטענות שקדמו כאן
+    //    («התיבה מתמלאת ב-fetch», «כשל מפנה ל-GitHub») היו על המסך עצמו,
+    //    ולכן הן ירדו איתו — והוחלפו בטענת ההיעדר.
+    ok('⛔ אין `showSetupScreen` בקוד', !/function\s+showSetupScreen\s*\(/.test(SRC));
+    ok('⛔ ואין `startSetupPoll` — הסקר האוטומטי ירד איתו',
+       !/function\s+startSetupPoll\s*\(/.test(SRC));
+    ok('⛔ ואין משיכת קובץ ההתקנה לתוך הדף', !/SETUP_SQL_URL|loadSetupSql/.test(SRC));
   }
 
   /* ── ט. אינווריאנטות במקור עצמו ──────────────────────────────────────── */
