@@ -70,7 +70,7 @@ const CANON = [
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
   ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
-  ['share-bridge-rule',            '4125935f318642aa'],
+  ['share-bridge-rule',            '12c79fad9258909e'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
