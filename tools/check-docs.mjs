@@ -48,7 +48,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           '376af663e127736c'],
+  ['iron-rules-storage',           'e53cfc7d6b172a52'],
   ['pending-module',               'dc0f2a513dcc7969'],
   ['iron-rule-6-sync',             '58f809376bdf981d'],
   ['iron-rule-7-status-area',      '4b4c9272b35b9c40'],
@@ -60,7 +60,7 @@ const CANON = [
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
   ['backup-module',                '15352739fcf8bd26'],
   ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',        '648eafacdbfa21af'],
+  ['iron-rule-14-org-wide',        'e60f2cf05885ac4d'],
   ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
   ['sw-strategies',                'ba3680abbd0b0667'],
   ['pull-module',                  'f3abef4730689d84'],
@@ -70,8 +70,7 @@ const CANON = [
   ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
   ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
   ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
-  ['iron-rule-20-spreading-capability', '47a410b8aafdd7d0'],
-  ['share-bridge-rule',            '5fb406e91544a844'],
+  ['share-bridge-rule',            '4125935f318642aa'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
