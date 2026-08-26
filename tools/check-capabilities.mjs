@@ -45,6 +45,8 @@ const APP = {
   offlineLoginFn: 'slVerifyOffline',
   schemaFile: 'migrations/000_initial_schema.sql',
   // ⚠️ שורה 7 «לא רלוונטי» — אין כאן פינוי כלל (שורה 6), ולכן אין מה לאמת.
+  /*  ⭐ שם משפך ה-`kv` (סבב 56) — `null` כשאין כאן `kv` כלל. */
+  kvFallbackFn: null,
   naRows: [7],
   matrixProbe: {
     // ❌ מתועד: `doLogin` מריצה משיכה מלאה כפויה במקום נתיב חלקי.
@@ -644,6 +646,18 @@ const MATRIX = [
     probe: () => hasCode(/TOMBSTONE_TTL_MS/) },
   { row: 42, name: 'אוטו-אפדייט מ-raw.githubusercontent',
     probe: () => hasCode(/UPDATE_INTERVAL_MS/) && hasCode(/\bRAW_URL\b/) },
+  /*  ⭐ סבב 56 — מקור הקריאה. ⚠️ **שורה תיאורית ולא ✅/❌**: היא מודדת
+   *  מאיפה נקראים הנתונים, ולא אם יכולת קיימת. `APP.kvFallbackFn` מצהיר
+   *  את שם משפך ה-`kv`, ⛔ וה-probe דורש שהוא יימצא בפועל בקוד — הצהרה
+   *  שאינה נמדדת היא בדיוק מה שכלל ברזל 12 אוסר. ⛔ ובאפליקציה שהצהירה
+   *  «אין» הוא נכשל גם על קריאת `kv` שאיש לא הצהיר עליה.            */
+  { row: 43, name: 'מקור הקריאה',
+    desc: () => {
+      const fn = APP.kvFallbackFn;
+      if (fn) return fnRange(fn) ? 'טבלאות ← kv' : `⚠️ ${fn} מוצהר ואינו קיים בקוד`;
+      return (hasCode(/\bKV_TABLE\b/) || hasCode(/function\s+\w*[kK]vGet\s*\(/))
+        ? '⚠️ נמצאה קריאת kv שאינה מוצהרת' : 'טבלאות בלבד';
+    } },
 ];
 
 const NA = 'לא רלוונטי';
