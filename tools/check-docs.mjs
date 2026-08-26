@@ -55,7 +55,7 @@ const CANON = [
   ['iron-rule-8-docs',             'be8e241ccd5b1ad4'],
   ['iron-rule-9-security-spread',  '5412c7382b4daf61'],
   ['iron-rule-10-users',           '54d578f69f5b3690'],
-  ['capability-matrix',            '2002a95a7759690b'],
+  ['capability-matrix',            '28f670d77ce67bff'],
   ['iron-rule-11-comments',        'd03e5416ced01f6c'],
   ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
   ['backup-module',                '15352739fcf8bd26'],
