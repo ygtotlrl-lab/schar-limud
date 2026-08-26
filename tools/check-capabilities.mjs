@@ -436,6 +436,24 @@ function cfgBlock(name) {
   }
   return '';
 }
+/*  ⭐ סבב 57 — קריאת קוד ה-Java של המעטפת. ⚠️ **נדרש עץ ולא נתיב
+ *  קבוע** — תיקיית החבילה נבדלת בין ארבע האפליקציות (`com.yoman.avoda`
+ *  מול `com.gius.app` וכו'), ⛔ ונתיב שנכתב לאחת מהן היה probe שעובר
+ *  בשקט בשלוש האחרות מפני שהקובץ פשוט אינו שם.                     */
+function javaSrc() {
+  const root = 'android/app/src/main/java';
+  let out = '';
+  const walk = (d) => {
+    let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const e of ents) {
+      const f = d + '/' + e.name;
+      if (e.isDirectory()) walk(f);
+      else if (e.name.endsWith('.java')) { try { out += fs.readFileSync(f, 'utf8') + '\n'; } catch (e2) {} }
+    }
+  };
+  walk(root);
+  return out;
+}
 const hasPath = (p) => fs.existsSync(p);
 function fileHas(p, re) {
   try { return re.test(fs.readFileSync(p, 'utf8')); } catch (e) { return false; }
@@ -658,6 +676,15 @@ const MATRIX = [
       return (hasCode(/\bKV_TABLE\b/) || hasCode(/function\s+\w*[kK]vGet\s*\(/))
         ? '⚠️ נמצאה קריאת kv שאינה מוצהרת' : 'טבלאות בלבד';
     } },
+  /*  ⭐ סבב 57 — גשר השיתוף המקורי. ⚠️ **וזו אינה שורה 8 בשם אחר:** שם
+   *  נמדד הצד ה**דפדפני** (`_androidShareImage`/`navigator.share`) — האם
+   *  הדף יודע לבקש שיתוף; ⛔ וכאן נמדד הצד ה**מקורי** — מה המעטפת עושה
+   *  כשביקשו ממנה. ⚠️ ה-probe דורש `Intent.createChooser` בקוד ה-Java,
+   *  מפני שזה בדיוק מה שהכלל המשותף מחייב (ר' «הכלל של גשר השיתוף»);
+   *  ⛔ גשר שקיים ומפעיל `startActivity` ישיר אינו עומד בכלל, והשורה
+   *  הזו היא מה שיתפוס אותו כשאפליקציה חמישית תעתיק את התבנית.       */
+  { row: 44, name: 'גשר שיתוף',
+    probe: () => javaSrc().indexOf('Intent.createChooser') >= 0 },
 ];
 
 const NA = 'לא רלוונטי';
