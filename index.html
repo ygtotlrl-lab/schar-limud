@@ -476,7 +476,10 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 var SB = supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg');
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
-var CUR_USER=null,DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
+/* ⭐ המשתמש המחובר יושב במודול הסשן המשותף (סבב 53) ולא במשתנה כאן —
+   ⛔ בזיכרון בלבד, ואינו יורד לדיסק. `sessGet()`/`sessSet()` הן הגישה
+   היחידה אליו. */
+var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 // ⭐ סבב 51 — מצב מנגנון המשיכה. `_slSeenTs` היא החותמת האחרונה שהמכשיר
 //    ראה, ו-`_slLastSeenOk` היא חותמת **תצוגה** בלבד (שיחה מוצלחת עם הענן).
 //    ⛔ אין להזין מהן את עֵד הפינוי (סבב 51) — ר' `PL_CFG` ו-`SL_SYNCED_KEY`.
@@ -1383,7 +1386,7 @@ var BK_CFG = {
   logQueueKey: 'sl_log_queue',
   prefix: '',
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
-  user: function () { try { return (CUR_USER && CUR_USER.username) ? CUR_USER.username : null; } catch (e) { return null; } },
+  user: function () { try { var u = sessGet(); return (u && u.username) ? u.username : null; } catch (e) { return null; } },
   // ⭐ רשימת הסודות של הגיבוי היא רשימת המראה (השלמת סבב 35) —
   //    `SL_NEVER_MIRROR_SETTINGS`: שורת `sl_settings` שמפתחה שם אינה
   //    נכתבת לא לדיסק ולא ל-`kv_backup`. הלקח: `admin_pass` שרד בגיבויים
@@ -2207,7 +2210,7 @@ function rtyBoot() {
    הליבה הוא ההודעה, והטוסט «🔒 ננעל עקב חוסר פעילות» שהיה כאן הוסר
    מאותה סיבה בדיוק: הוא היה ההפרש היחיד מול הנוסח של האחיות. */
 var LK_CFG = {
-  active: function () { return !!CUR_USER; },
+  active: function () { return sessActive(); },
   lock:   function () { doLogout(); },
 };
 /* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52) ════════════════════════════
@@ -2344,6 +2347,92 @@ function lkState() {
 }
 /* ═══════════════ סוף מודול נעילת חוסר-הפעילות ═══════════════════════════ */
 
+/* ── SESS_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
+/* ⚠️ `legacy` הוא רשימת מפתחות ה-localStorage שהאפליקציה **שמרה בהם סשן
+   עד סבב 53** ואינה שומרת בהם עוד. ⛔ אין למחוק שם מהרשימה גם אחרי
+   שהמנגנון הישן ירד מהקוד (סבב 53) — המפתח עצמו עדיין יושב על הדיסק של
+   כל מכשיר שכבר נכנסו בו פעם, והוא מחזיק `id`, `username` ו-`role`. */
+var SESS_CFG = {
+  legacy: ['sl_session'],
+};
+
+/* ═══ מודל הסשן — מודול משותף (סבב 53) ════════════════════════════════════
+   ⭐ **המשתמש המחובר חי בזיכרון בלבד, ואינו יורד לדיסק לעולם.** כלומר כל
+   טעינה מחדש של הדף דורשת כניסה. זו הכרעת המנהל מ-2026-08-26, והיא יישרה
+   את שלוש האפליקציות שיש בהן כניסה לדפוס שכבר היה ב-hanhala-ruchanit
+   מאז ההקמה.
+
+   ⛔ **אין לשמור את המשתמש ב-localStorage (סבב 53)** — סשן שנשמר בלי
+   תפוגה הוא כניסה קבועה על מכשיר משותף: מי שמחזיק את המכשיר מחזיק את
+   החשבון, גם חודש אחרי. ⚠️ ולא זו בלבד — סשן ששמר גם `role` הפך את
+   ההרשאה עצמה לערך שיושב על הדיסק וניתן לעריכה ביד.
+
+   ⚠️ **וזו אינה כפילות של נעילת חוסר-הפעילות (סבב 52).** הנעילה נמדדת
+   מהפעולה האחרונה ומוציאה החוצה משתמש ששכח את המסך פתוח; ⛔ היא אינה
+   עוזרת למי שסגר את הלשונית וחזר אליה מחר, מפני שהטיימר מת יחד עם הדף.
+   המודול הזה סוגר בדיוק את החור ההוא.
+
+   ⚠️ **הכניסה האופליין אינה נשענת על המודול הזה** — היא מוכרעת מול
+   `pass_fp` שבמראת המשתמשים (כלל ברזל 10 סעיף 4). ⛔ ולכן הסרת שמירת
+   הסשן אינה פוגעת בה: מי שנכנס בלי רשת ממשיך להיכנס בלי רשת, והשינוי
+   היחיד הוא שהוא מקליד סיסמה גם אחרי רענון.
+
+   ⛔ **`sessBoot()` מנקה את שרידי הסשן הישנים מהמכשיר (סבב 53)** — מפתח
+   שנכתב בגרסה קודמת אינו נעלם מאליו, והוא נשאר קריא בדפדפן לנצח. הניקוי
+   אידמפוטנטי, נכשל-סגור באחסון חסום, ונרשם ביומן הפינוי רק כשנמחק משהו
+   בפועל.
+
+   ה-API: `sessBoot` · `sessSet`/`sessGet`/`sessClear` · `sessActive` ·
+   `sessState`. מעליו `SESS_CFG` — הדבר היחיד שנבדל בין האפליקציות.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _sessUser = null;
+var _sessBooted = false;
+
+function sessSet(u) { _sessUser = u || null; return _sessUser; }
+function sessGet() { return _sessUser; }
+function sessClear() { _sessUser = null; }
+function sessActive() { return !!_sessUser; }
+
+/*  רשימת מפתחות השריד, נכשלת-סגור על תצורה חסרה. */
+function _sessLegacy() {
+  try {
+    var k = (typeof SESS_CFG === 'object' && SESS_CFG && SESS_CFG.legacy) || [];
+    return Object.prototype.toString.call(k) === '[object Array]' ? k : [];
+  } catch (e) { return []; }
+}
+
+/*  ניקוי שרידי הסשן; מחזירה את מספר המפתחות שנמחקו בפועל.
+    ⚠️ הקריאה קודמת למחיקה בכוונה — כדי שהיומן יירשם רק כשבאמת היה שם
+    משהו, ולא בכל עלייה של כל מכשיר. */
+function _sessPurge() {
+  var keys = _sessLegacy(), gone = [];
+  for (var i = 0; i < keys.length; i++) {
+    try {
+      if (lsGet(keys[i], null) === null) continue;
+      lsRemove(keys[i]);
+      gone.push(keys[i]);
+    } catch (e) { /* אחסון חסום — לא נוגעים, וננסה שוב בעלייה הבאה */ }
+  }
+  if (gone.length) { try { lsLog('sess-purge', gone.join(',')); } catch (e) { } }
+  return gone.length;
+}
+
+/*  מצב המודול — לבדיקות ולאבחון. ⛔ אינו מחזיר את אובייקט המשתמש עצמו
+    (סבב 53) — צרכן שהיה מקבל אותו יכול היה לכתוב אותו לדיסק, וזה בדיוק
+    מה שהמודול בא למנוע. */
+function sessState() {
+  return { active: !!_sessUser, booted: _sessBooted, legacy: _sessLegacy().slice() };
+}
+
+/*  ⛔ נקודת ההפעלה היחידה — פונקציית העלייה של האפליקציה (כלל ברזל 12),
+    זו שקוראת גם ל-`lsBoot()` ול-`pendBoot()`. */
+function sessBoot() {
+  if (_sessBooted) return 0;
+  _sessBooted = true;
+  return _sessPurge();
+}
+/* ═══════════════ סוף מודול הסשן ═════════════════════════════════════════ */
+
 
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ בשכר לימוד החותמת היא שורת `sl_settings` שמפתחה `SL_STAMP_KEY`. היא
@@ -2354,7 +2443,7 @@ function lkState() {
    הייתה הופכת חותמת תצוגה לעֵד פינוי — בדיוק מה שכלל ברזל 7 אוסר. */
 var PL_CFG = {
   every:  3000,
-  active: function () { return !!CUR_USER; },
+  active: function () { return sessActive(); },
   seen:   function () { return _slSeenTs; },
   note:   function (ts) { _slSeenTs = ts; },
   ok:     function () { _slLastSeenOk = Date.now(); },
@@ -3175,7 +3264,7 @@ async function slPassFields(pass) {
    ⚠️ כל מה שאינו בדיוק `'admin'` — כולל תפקיד שהוקלד בטעות — אינו מקבל
    גישה. תפקיד לא מוכר שולל הרשאה, לעולם לא מעניק אותה. */
 function slSettingsAccess(u) {
-  var who = (u === undefined) ? CUR_USER : u;
+  var who = (u === undefined) ? sessGet() : u;
   if (!who) return 'denied';
   var r = who.role;
   if (r === undefined || r === null || r === '') return 'no-role';
@@ -3205,12 +3294,16 @@ function slUserByName(username) {
 //    (סבב 24) —
 // הסיסמאות אינן מגיעות לזיכרון הדפדפן כלל. נפילה-חזרה לשתי עמודות כשהמיגרציה
 // טרם הורצה: אז אין טביעות, והכניסה האופליין תאמר זאת במפורש ('no-fp').
-// מווסתת בזמן: הסנכרון רץ כל 3 שניות, ורשימת המשתמשים כמעט אינה משתנה.
-var _slUsersPulledAt = 0, _slUsersPulling = false;
-var SL_USERS_PULL_MS = 60000;
-async function slPullUsers(force) {
+// ⭐ **אין כאן יותר ויסות זמן (סבב 53)** — `SL_USERS_PULL_MS = 60000` נולד
+// כשה-`syncAll` רץ כל שלוש שניות **בלי תנאי**, ומאז סבב 51 הוא רץ רק
+// כשחותמת השינוי התקדמה. כלומר הוויסות היה מנגנון פיצוי ששרד את המבנה
+// שהוליד אותו (כלל ברזל 12, הממד הרביעי), והוא גם מה שהבדיל את schar
+// משתי האחיות — שם מראת המשתמשים נמשכת מתוך המשיכה המווסתת עצמה.
+// ⛔ שומר הריצה הכפולה **נשאר** (סבב 53) — ברשת איטית שתי משיכות היו
+// נערמות זו על זו, וזה קיים גם עכשיו.
+var _slUsersPulling = false;
+async function slPullUsers() {
   if (_slUsersPulling) return false;
-  if (!force && (Date.now() - _slUsersPulledAt) < SL_USERS_PULL_MS) return false;
   if (!navigator.onLine) return false;
   _slUsersPulling = true;
   try {
@@ -3221,8 +3314,8 @@ async function slPullUsers(force) {
     // סבב 26: תפקיד שהשתנה בלוח הבקרה מגיע דרך המשיכה הזו, ולכן המשתמש
     // המחובר מסונכרן מולה. **הרענון קורה אחרי שהמראה נשמרה** — הפוך מזה,
     // הוא היה קורא ערך שעוד לא נכתב.
-    if (CUR_USER) { CUR_USER = slResolveUser(CUR_USER); slSaveSession(CUR_USER); }
-    _slUsersPulledAt = Date.now();
+    var _cu = sessGet();
+    if (_cu) sessSet(slResolveUser(_cu));
     return true;
   } catch (e) { return false; }
   finally { _slUsersPulling = false; }
@@ -3675,7 +3768,7 @@ function showSetupScreen(){
       '<div dir="ltr" style="direction:ltr;text-align:left;font-family:monospace;font-size:.66rem;margin-top:4px;word-break:break-all">'+
         // ⚠️ סבב 26 — `role` במפורש. הוא מקור האמת היחיד להרשאות, והמשתמש
         //    הראשון חייב להיות 'admin' אחרת מסך ההגדרות לא ייפתח לאיש.
-        esc("INSERT INTO public.sl_users (username, password, role) VALUES ('שם המשתמש', '123456', 'admin');")+
+        esc("INSERT INTO public.sl_users (username, password, role) VALUES ('<שם המשתמש>', '<שש ספרות>', 'admin');")+
       '</div></div>'+
     '<div id="setup-status" style="font-size:.78rem;color:var(--text3);text-align:center;min-height:18px">&#128260; ממתין... האפליקציה תיטען אוטומטית לאחר הרצת ה-SQL</div>';
   var ta = document.getElementById('setup-sql-ta');
@@ -3759,13 +3852,12 @@ async function doLogin(){
       return;
     }
     var pub=slUserPub(r.data);
-    CUR_USER=pub;
-    slSaveSession(pub);
+    sessSet(pub);
     document.getElementById('auth-spinner').style.display='none';
     enterApp();
     // ── ברקע, אחרי שהמסך כבר עלה: השלמת הטביעה של המשתמש הזה ואז רענון
     //    המראה. הסדר חשוב — משיכה לפני ההשלמה הייתה מחזירה טביעה ישנה.
-    slEnsurePassFp(pub,p).then(function(){ return slPullUsers(true); })
+    slEnsurePassFp(pub,p).then(function(){ return slPullUsers(); })
       .catch(function(e){ console.warn('[pass-fp]',e); });
   }catch(e){
     // רשת שנפלה באמצע (navigator.onLine משקר לא פעם ב-WebView) — לא
@@ -3788,20 +3880,19 @@ async function doLoginOffline(u,p){
   if(verdict==='no-fp'){ showAuthErr(MSG_OFF_NO_FP); return; }
   if(verdict==='no-crypto'){ showAuthErr(MSG_OFF_NO_CRYPTO); return; }
   if(verdict!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
-  CUR_USER=slUserPub(cu);
-  slSaveSession(CUR_USER);
+  sessSet(slUserPub(cu));
   document.getElementById('auth-spinner').style.display='none';
   enterApp();
   toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
 }
-function doLogout(){CUR_USER=null;slClearSession();lkStop();if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+function doLogout(){sessClear();lkStop();if(_setupPollInt){clearInterval(_setupPollInt);_setupPollInt=null;}document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת (כלל ברזל 3).
 // אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
 // איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
 function enterApp(){
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
-  document.getElementById('nav-username').textContent=CUR_USER.username;
+  document.getElementById('nav-username').textContent=sessGet().username;
   slApplyMirror();
   refreshUI();
   syncAll();                                   // רענון ברקע
@@ -3818,56 +3909,29 @@ function enterApp(){
   lkReset();ensureCreditMethod();
 }
 
-/* ── סשן מקומי ────────────────────────────────────────────────────────────
-   ⚠️ **הסשן אינו מחזיק סיסמה, וגם לא טביעה.** הוא מחזיק `id`+`username`
-   בלבד: מי שכבר נכנס ממשיך לעבוד אופליין בלי להזדהות שוב. אותה החלטה
-   בדיוק כמו `gius.session`. ⛔ אין להוסיף כאן סיסמאות.
+/* ── המשתמש המחובר ────────────────────────────────────────────────────────
+   ⭐ **הסשן אינו נשמר במכשיר (סבב 53)** — עד הסבב הזה `sl_session` החזיק
+   `id`+`username`+`role` ב-localStorage **בלי תפוגה**, ולכן מי שנכנס פעם
+   אחת נשאר מחובר לנצח על אותו מכשיר. ⛔ ההחלטה בוטלה ע"י המנהל
+   ב-2026-08-26, והמשתמש חי מעכשיו בזיכרון בלבד — ר' «מודל הסשן» למטה.
+   ⛔ אין להחזיר שמירה כזו (סבב 53): על מכשיר משותף היא כניסה קבועה, והיא
+   גם הורידה את **ההרשאה** (`role`) לדיסק.
 
-   ⭐ **מסבב 24 הסשן אינו הדרך היחידה להיכנס בלי רשת.** עד אז «כניסה חדשה
-   דורשת רשת» — ולכן מכשיר שמישהו אחר נכנס בו אחרון נעל בחוץ את כל השאר.
-   עכשיו יש `slVerifyOffline` מול `pass_fp` שבמראת המשתמשים, והסשן הוא
-   קיצור דרך למי שכבר מזוהה ולא התנאי לכניסה.
+   ⚠️ **הכניסה האופליין לא נפגעה** — היא מוכרעת ב-`slVerifyOffline` מול
+   `pass_fp` שבמראת המשתמשים (סבב 24), ולא מול הסשן. ⛔ אין לערבב בין
+   השניים: המראה היא מה שמאפשר לכל משתמש להיכנס בכל מכשיר בלי רשת.
    ───────────────────────────────────────────────────────────────────────── */
-var SL_SESSION_KEY='sl_session';
-/* ⚠️ **`role` נשמר בסשן (סבב 26) — וזה הכרחי, לא נוחות.** בלעדיו, מכשיר
-   שנפתח מחדש **בלי רשת** היה מעלה `CUR_USER` בלי תפקיד, כלומר נועל את
-   מסך ההגדרות בפני המנהל עד לחיבור הבא — בדיוק הפגם שהמנגנון הישן סבל
-   ממנו («פתיחה ראשונה במכשיר דורשת רשת»), רק בכיסוי אחר.
-   ⛔ הוא **אינו** סוד ואינו מחליף את מקור האמת: `slResolveUser` מעדיפה
-   תמיד את מראת המשתמשים, ו-`slRevalidateSession` מרעננת מהענן. הסשן הוא
-   הערך האחרון הידוע, ותו לא. אותה החלטה בדיוק כמו `gius.session`. */
-function slSaveSession(u){
-  if(!u)return;
-  var s={id:u.id,username:u.username};
-  if(u.role!==undefined&&u.role!==null)s.role=u.role;
-  lsSet(SL_SESSION_KEY,JSON.stringify(s));
-}
-function slReadSession(){
-  try{var v=JSON.parse(lsGet(SL_SESSION_KEY,'null'));return (v&&v.username)?v:null;}catch(e){return null;}
-}
-// מיזוג הסשן עם מראת המשתמשים: **המראה מנצחת** כשהמשתמש קיים בה, כי היא
-// מתרעננת מהענן כל דקה ותופסת שינוי תפקיד שנעשה במכשיר אחר. אין אותו
-// במראה (מכשיר שטרם סנכרן) ⇒ נשארים עם מה שהסשן זוכר.
+// מיזוג המשתמש המחובר עם מראת המשתמשים: **המראה מנצחת** כשהוא קיים בה, כי
+// היא מתרעננת מהענן בכל משיכה ותופסת שינוי תפקיד שנעשה במכשיר אחר. אין
+// אותו במראה (מכשיר שטרם סנכרן) ⇒ נשארים עם הערך שביד.
 function slResolveUser(sess){
   if(!sess)return null;
   var m=slUserByName(sess.username);
   return m?Object.assign({},sess,slUserPub(m)):sess;
 }
-function slClearSession(){ lsRemove(SL_SESSION_KEY); }
+// שם המשתמש המחובר לשדות `created_by`/`deleted_by`, או `null`.
+function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
 
-// אימות מחדש ברקע, **אחרי** שהאפליקציה כבר עלתה. מנתק אך ורק על תשובה
-// סמכותית (המשתמש אינו קיים) — כשל רשת אינו ראיה לכלום, וניתוק עליו היה
-// זורק החוצה בדיוק את מי שעובד אופליין.
-async function slRevalidateSession(sess){
-  if(!sess||!navigator.onLine)return;
-  try{
-    // עמודות מפורשות ולא `*` (סבב 24) — `password` לא נכנס לזיכרון.
-    var r=await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')).eq('username',sess.username).maybeSingle());
-    if(r&&r.error)return;                       // שגיאת שרת/רשת — משאירים מחובר
-    if(!r||!r.data){ toast('⚠️ המשתמש אינו קיים עוד — נדרשת כניסה מחדש',5000); doLogout(); return; }
-    CUR_USER=slUserPub(r.data);
-  }catch(e){ /* רשת — לא מנתקים */ }
-}
 // שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
 // **חובה לשחרר ב-finally** ולא בסוף ה-try — כשל אחד שמשאיר את הדגל דלוק
 // מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
@@ -3939,7 +4003,8 @@ async function syncAll(){
     // שאינו ברשימת ה"עדיין ממתין". קטגוריה שלא נמשכה אינה מיוצגת שם, ולכן
     // די בכשל אחד מארבעה כדי שהורדת הסימון תהיה הסקה ולא ראיה.
     if(pulledStu&&pulledTxn&&pulledSet&&pulledLst) pendSyncScan(stillPending,_t0);
-    // מראת המשתמשים (סבב 24) — מווסתת בזמן ולכן אינה נוגעת ברשת בכל סבב.
+    // מראת המשתמשים (סבב 24) — נמשכת מתוך המשיכה המווסתת (סבב 53), כלומר
+    // רק כשחותמת השינוי התקדמה או על אירוע.
     // ⛔ **אינה חלק מ-`MIRROR` ואינה נדחפת לעולם**: היא מחזיקה טביעות ולא
     //    סיסמאות, ודחיפת-מצב שלה הייתה כותבת `password` ריק לכל המשתמשים.
     slPullUsers();
@@ -4239,7 +4304,7 @@ async function saveTxn(){
   // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
   // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
-  var row={client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:(CUR_USER?CUR_USER.username:null),deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:cid,student_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
   // מסלול קריטי (כלל ברזל 2): כשל כתיבה מקומית עוצר כאן ברעש. בכסף אסור
   // בשום מצב להציג "נשמר" על משהו שלא נכתב לשום מקום.
   if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000);return;}
@@ -4272,7 +4337,7 @@ function txnMethodPill(t){
 function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
   var t=(MIRROR.transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
   if(!t){toast('⚠️ התשלום לא נמצא');return;}
-  var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:(CUR_USER?CUR_USER.username:null)});
+  var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
   pendMark(pendTxnKey(row));
   refreshUI();
@@ -4414,7 +4479,7 @@ function saveStudentSettings(){
    עד כאן היה כאן שער `unlockSettings` שביקש סיסמה נוספת (`admin_pass`),
    שכבת הרשאה שהתקיימה כאן ולא בשלוש האחיות. מעכשיו ההרשאה נגזרת
    מהמשתמש שכבר נכנס, כמו בהנהלה, בגיוס וביומן.
-   ⚠️ **אין כאן קריאת רשת ואין המתנה** — `CUR_USER.role` יורד עם מראת
+   ⚠️ **אין כאן קריאת רשת ואין המתנה** — התפקיד יורד עם מראת
    המשתמשים, ולכן ההרשאה עובדת אופליין בדיוק כמו הכניסה עצמה. השער הישן,
    לעומת זאת, דרש חיבור אחד לפני שנפתח אי-פעם במכשיר. */
 function showPanel(key,btn){
@@ -4497,7 +4562,7 @@ function deleteListItem(key){
   showConfirm('מחיקה','למחוק פריט זה?',function(){
     var r0=(MIRROR.lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
     if(!r0){toast('⚠️ הפריט לא נמצא');return;}
-    var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:(CUR_USER?CUR_USER.username:null)});
+    var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
     if(!slLocalWrite('sl_lists',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
     pendMark(pendLstKey(row));
     refreshUI();
@@ -4520,7 +4585,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
 function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){return slKey(x)===String(key);})[0];
  showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',function(){
   if(!s){toast('⚠️ התלמיד לא נמצא');return;}
-  var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:(CUR_USER?CUR_USER.username:null)});
+  var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_students',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
   pendMark(pendStuKey(row));
   if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
@@ -4545,6 +4610,8 @@ async function slBoot(){
   // משותפת לארבע האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
   try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
+  // מודל הסשן (סבב 53) — נקודת ההפעלה היחידה של המודול.
+  try { sessBoot(); } catch (e) { console.warn('[sess] sessBoot', e); }
   // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
@@ -4569,16 +4636,9 @@ async function slBoot(){
   // ניקוי חד-פעמי של שריד שער ההגדרות שבוטל (סבב 26).
   try { slDropLegacyPassHash(); } catch (e) { console.warn('[migrate] legacy hash', e); }
 
-  // סשן קיים ⇒ נכנסים מיד, גם בלי רשת. האימות מול השרת רץ ברקע.
-  var _sess=slReadSession();
-  if(_sess){
-    // התפקיד נלקח מהמראה כשהיא מכירה את המשתמש (סבב 26) — היא הטרייה
-    // מבין השתיים. הסשן הוא נפילה-חזרה למכשיר שטרם סנכרן.
-    CUR_USER=slResolveUser(_sess);
-    enterApp();
-    slRevalidateSession(_sess);
-    return;
-  }
+  // ⛔ **אין כאן שחזור סשן (סבב 53)** — כל עלייה מתחילה במסך הכניסה, גם
+  //    כשהמשתמש נכנס לפני דקה. ⛔ אין להחזיר: סשן שנשמר בלי תפוגה הוא
+  //    כניסה קבועה על מכשיר משותף, ר' «המשתמש המחובר» למעלה.
 
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
