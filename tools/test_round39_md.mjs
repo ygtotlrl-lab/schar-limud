@@ -29,7 +29,7 @@ const t  = (c, m) => (c ? ok(m) : no(m));
 /* שלושת הקבצים והפרק שנמחק בכל מוטציה — הכותרת הראשונה שהשלד דורש. */
 const CASES = [
   ['README.md',         /^##\s+מסכים\s*$/m,                 'מסכים'],
-  ['CONTEXT.md',        /^##\s+טבלאות\s*$/m,                'טבלאות'],
+  ['CONTEXT.md',        /^##\s+מצב נוכחי\s*$/m,             'מצב נוכחי'],
   ['android/README.md', /^##\s+Build\s*$/m,                 'Build'],
 ];
 
@@ -120,8 +120,8 @@ const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); 
 console.log('· סבב 42ב — הפרקים המשותפים של תיעוד האנדרואיד');
 
 const NEW_SHARED = [
-  ['CONTEXT.md',        'context-smali-scope'],
-  ['CONTEXT.md',        'context-cache-apk'],
+  ['android/README.md', 'context-smali-scope'],
+  ['android/README.md', 'context-cache-apk'],
   ['android/README.md', 'android-origin-switch'],
   ['android/README.md', 'android-icons'],
 ];

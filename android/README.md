@@ -181,3 +181,40 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
 `usesCleartextTraffic=false`. ⚠️ המעטפת הראשונה כאן טוענת מהרשת מהיום
 הראשון — ⛔ לא היה כאן שלב `file://`.
+
+<!-- SHARED:start id="context-smali-scope" -->
+## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
+
+⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
+היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
+ולכן אין בה URL שצריך לתקן.
+⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
+ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
+«חתימת APK» ב-CLAUDE.md.
+<!-- SHARED:end -->
+
+```bash
+apktool d <app>.apk -o /tmp/schar_work -f
+# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
+rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
+apktool b /tmp/schar_work -o built.apk
+zipalign -f 4 built.apk aligned.apk
+apksigner sign --ks signing/schar.keystore --ks-key-alias schar \
+  --ks-pass pass:schar123 --key-pass pass:schar123 --out output.apk aligned.apk
+```
+
+⚠️ **כאן אין APK ותיק בלי מקור** — המעטפת הראשונה בריפו הזה נבנתה מ-`android/`
+מהיום הראשון. הפרק נשמר כדפוס ארגוני אחיד, ⛔ ולא מפני שיש כאן APK שצריך
+לתקן.
+
+<!-- SHARED:start id="context-cache-apk" -->
+### ⚠️ Cache APK — כלל זהב
+
+שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
+מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
+חותמת זמן:
+<!-- SHARED:end -->
+
+```bash
+TS=$(date +%s) && apksigner sign ... --out schar-limud-${TS}.apk
+```

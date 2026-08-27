@@ -35,39 +35,6 @@ alter table public.TABLE_NAME enable row level security;
 
 ---
 
-## כללים קריטיים לפיתוח
-
-1. **`node tools/check-js.mjs` לפני כל push** — חובה מוחלטת. השער מחלץ את ה-JS
-   המוטבע מ-`index.html`, מריץ `node --check` עליו ועל `sw.js`, ומריץ את כל
-   שערי האחידות ואת חבילות בדיקות הסבבים.
-   ⚠️ **מסבב 33 זו פקודה אחת ולא רשימה** — הניסוח הקודם כאן מנה את הבודקים
-   בנפרד, וזה בדיוק המצב שהשער האחד בא לסלק.
-2. **קידום `CACHE_NAME` ב-`sw.js`** בכל שינוי קוד — בלי זה העדכון לא מגיע
-   למשתמשים.
-3. **`sl_transactions` = כספים** — soft-delete בלבד (`deleted=true`),
-   ⛔ לעולם לא `DELETE` פיזי; אותו כלל חל על `sl_students`.
-4. **`client_id` בכל רשומה חדשה**, וכתיבה ב-`upsert` עליו — ⛔ לא `insert`.
-5. **כתיבה ל-localStorage אך ורק דרך `lsSet`/`lsSetArray`** (כלל ברזל 1).
-6. **`esc()`** על כל ערך משתמש שנכנס ל-`innerHTML`.
-
----
-
-## טבלאות
-
-| טבלה | תפקיד | הערות |
-|---|---|---|
-| `sl_users` | משתמשים | ⛔ אין ברירת מחדל (סבב 24) · `role` קובע הרשאה (סבב 26) |
-| `sl_students` | תלמידים | soft-delete (migrations/002); `start_month`/`end_month` = טווח החיוב (migrations/004) |
-| `sl_transactions` | תשלומים (כספים!) | soft-delete בלבד; FK ל-`sl_students` ב-RESTRICT (migrations/003) |
-| `sl_settings` | הגדרות (key/value) | `default_tuition`. ⚠️ שורת `admin_pass` **נמחקה מהמסד ומהגיבויים** בסבב 35; מנגנון סינון הסודות (`SL_NEVER_MIRROR_SETTINGS`) נשאר דרוך וריק |
-| `sl_lists` | רשימות בחירה | אמצעי תשלום, סעיפים; כולל את סעיף המערכת «זוכה על חשבון יתרת זכות» |
-
-⚠️ **התנגשות שמות:** הקידומת `sl` כאן = **שכר לימוד**; ב-`hanhala-ruchanit` קיימת
-קידומת `sl` שפירושה **שינה** (`slSaveData`, `slOpenSession`...) — פונקציות JS בלבד,
-באותו פרויקט Supabase. פירוט מלא ב-CLAUDE.md של שני הפרויקטים.
-
----
-
 ## מצב נוכחי
 - ניהול תלמידים ותשלומים ✅ (soft-delete בשניהם)
 - לוח מחוונים עם Chart.js ✅
@@ -83,49 +50,8 @@ alter table public.TABLE_NAME enable row level security;
 יושבת ב-CLAUDE.md, פרק «מצב המיגרציות במסד הייצור» — ⚠️ הניסוח הקודם כאן
 נעצר ב-`004` ותוקן בסבב 39.
 
-## פרטי מערכת
-- מעטפת APK: **WebView מקורי** ב-`android/` שטוען מהרשת — ⛔ לא TWA ולא
-  PWABuilder. ⚠️ הניסוח הקודם כאן («אין APK — PWA בלבד») קדם למעטפת ותוקן
-  בסבב 39.
-- חתימה: `signing/schar.keystore` (alias `schar`) — ⛔ המפתח הקבוע
-- סנכרון: `syncAll` בפולינג של 3 שניות; שומר חפיפה `_syncBusy` (שחרור ב-`finally`)
-- נעילה אוטומטית אחרי 5 דקות חוסר פעילות
+---
 
-<!-- SHARED:start id="context-smali-scope" -->
-## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
-
-⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
-היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
-ולכן אין בה URL שצריך לתקן.
-⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
-ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
-«חתימת APK» ב-CLAUDE.md.
-<!-- SHARED:end -->
-
-```bash
-apktool d <app>.apk -o /tmp/schar_work -f
-# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
-rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
-apktool b /tmp/schar_work -o built.apk
-zipalign -f 4 built.apk aligned.apk
-apksigner sign --ks signing/schar.keystore --ks-key-alias schar \
-  --ks-pass pass:schar123 --key-pass pass:schar123 --out output.apk aligned.apk
-```
-
-⚠️ **כאן אין APK ותיק בלי מקור** — המעטפת הראשונה בריפו הזה נבנתה מ-`android/`
-מהיום הראשון. הפרק נשמר כדפוס ארגוני אחיד, ⛔ ולא מפני שיש כאן APK שצריך
-לתקן.
-
-<!-- SHARED:start id="context-cache-apk" -->
-### ⚠️ Cache APK — כלל זהב
-
-שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
-מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
-חותמת זמן:
-<!-- SHARED:end -->
-
-```bash
-TS=$(date +%s) && apksigner sign ... --out schar-limud-${TS}.apk
-```
-
-הכללים המחייבים והתיעוד המלא — ב-[CLAUDE.md](CLAUDE.md).
+⛔ **הקובץ הזה מחזיק לקוח וצורך בלבד** (כלל ברזל 23) — כללי הפיתוח,
+הסכימה ופרטי המערכת יושבים ב-[CLAUDE.md](CLAUDE.md), ב-[README.md](README.md)
+וב-[android/README.md](android/README.md). ⛔ תיאור שחוזר משם נסחף בשקט.

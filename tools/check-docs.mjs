@@ -278,14 +278,15 @@ const MD_SKELETONS = [
       [/^##\s+פיתוח\s*$/,          '## פיתוח'],
       [/^##\s+APK\s*$/,            '## APK'],
     ] },
+  /* ⭐ סבב 65 — `CONTEXT.md` מחזיק **לקוח וצורך** בלבד (כלל ברזל 23), ולכן
+   *  השלד שלו קצר: זהות הריפו, ה-GRANT, ומצב המוצר. ⛔ «כללים קריטיים»,
+   *  «טבלאות» ו«פרטי מערכת» ירדו — הם היו עותק שני של `CLAUDE.md` ושל
+   *  `README.md`, ⛔ ועותק שני נסחף בשקט. פרק ה-smali עבר ל-`android/README.md`,
+   *  שם יושב תיעוד ה-APK.                                                  */
   { file: 'CONTEXT.md', need: [
       [/^##\s+פרטי ריפו\s*$/,                        '## פרטי ריפו'],
       [/^##\s+.*Supabase — GRANT חובה לטבלאות חדשות/, '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות'],
-      [/^##\s+כללים קריטיים לפיתוח\s*$/,             '## כללים קריטיים לפיתוח'],
-      [/^##\s+טבלאות\s*$/,                            '## טבלאות'],
       [/^##\s+מצב נוכחי\s*$/,                        '## מצב נוכחי'],
-      [/^##\s+פרטי מערכת\s*$/,                       '## פרטי מערכת'],
-      [/^##\s+תיקון URL ב-APK/,                       '## תיקון URL ב-APK … — smali בלבד'],
     ] },
   { file: 'android/README.md', need: [
       [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
@@ -296,6 +297,7 @@ const MD_SKELETONS = [
       [/^##\s+אייקונים\s*$/,                           '## אייקונים'],
       [/^##\s+Build\s*$/,                              '## Build'],
       [/^##\s+Sign with the PERMANENT key/,            '## Sign with the PERMANENT key …'],
+      [/^##\s+תיקון URL ב-APK/,                        '## תיקון URL ב-APK … — smali בלבד'],
     ] },
 ];
 
@@ -340,8 +342,8 @@ const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
   ['README.md',         'readme-apk',            '81445890f0e496dc'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['CONTEXT.md',        'context-smali-scope',   '15ad22e158b45086'],
-  ['CONTEXT.md',        'context-cache-apk',     '898e51f7bb6048db'],
+  ['android/README.md', 'context-smali-scope',   '15ad22e158b45086'],
+  ['android/README.md', 'context-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
   ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
