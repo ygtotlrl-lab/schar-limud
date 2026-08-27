@@ -3948,7 +3948,7 @@ function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn(\''+esc(slKey(t))+'\')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
@@ -3962,6 +3962,30 @@ function txnMethodPill(t){
 }
 // מקבלת את **מפתח המיזוג** ולא את ה-id: תשלום שנרשם אופליין עדיין אין לו id
 // (הוא SERIAL של המסד), ובלי זה אי אפשר היה למחוק אותו לפני שהסתנכרן.
+/* ══════════════════════════════════════════════════════════════════════════
+   העברת מזהה ל-DOM — `data-id` ודלגציה (סבב 67, כלל ברזל 27)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ מזהה רשומה עובר ב-`data-id` ובדלגציה — ⛔ לעולם לא מוטבע ב-`onclick`.
+   ⚠️ מזהה שנשתל בתוך מחרוזת קוד הוא ציטוט שיכול להישבר; `data-id` הוא
+   ערך שהדפדפן מוסר כמות שהוא. ⛔ **והוא תמיד מחרוזת** — ההשוואות כאן
+   כבר עוברות ב-`String(key)`, ⛔ ואין להחליפן ב-`===` על מספר.
+   ⛔ ומאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — הרשימות כאן
+   נבנות מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם.
+   ══════════════════════════════════════════════════════════════════════════ */
+var DOM_ACTIONS = {
+  'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
+  'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
+  'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
+};
+document.addEventListener('click', function (ev) {
+  var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+  if (!el) return;
+  var fn = DOM_ACTIONS[el.getAttribute('data-act')];
+  if (!fn) return;
+  ev.preventDefault();
+  fn(el);
+});
+
 function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
   var t=(MIRROR.transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
   if(!t){toast('⚠️ התשלום לא נמצא');return;}
@@ -4027,7 +4051,7 @@ function renderScAnnual(){
   if(applied>0)ch+='<div class="credit-sub" style="color:var(--credit);font-weight:600">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn(\''+esc(slKey(t))+'\')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
@@ -4160,7 +4184,7 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(todayStr());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent(\''+esc(slKey(s))+'\')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
   statusAreaMount();
   bkStatusMount();
@@ -4171,7 +4195,7 @@ function renderSettingsLists(){
 // אינו נשען על הפריט הזה — ראה ההערה ליד CREDIT_METHOD.)
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" onclick="deleteListItem(\''+esc(i.key)+'\')">&#10005;</button></div>';
+  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
 // כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — ה-`id` הוא
 // SERIAL שהמסד מקצה, ולכן פריט שנוצר אופליין חסר זהות בלעדיו, וניסיון
