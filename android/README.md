@@ -156,5 +156,28 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk schar-limud.apk
 ```
 
-או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/schar.keystore`,
-alias `schar`). אחרי חתימה מאמתים שה-SHA256 תואם לטבלה שם.
+### המפתח הקבוע — ⛔ לעולם לא להחליף
+
+| | |
+|---|---|
+| **קובץ** | `signing/schar.keystore` (PKCS12, RSA 2048) |
+| **alias** | `schar` |
+| **storepass / keypass** | `schar123` (זהה לשניהם) |
+| **תוקף** | 10,000 יום — 07.08.2026 עד 23.12.2053 |
+| **SHA256** | `29:32:D9:B5:94:69:D4:E4:53:EF:C7:EE:3B:10:55:C9:CE:4B:EE:D6:9B:BB:78:EC:EE:18:BD:C6:BE:2D:0F:87` |
+| **SHA1** | `F5:BD:6A:6E:BE:EF:B5:85:78:9F:70:B1:19:60:8F:1B:DE:90:1B:D4` |
+| **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |
+
+⭐ **מסלול חתימה אחד ויחיד** (סבב 53) — `signing/sign-apk.sh`. ⛔ החלופות
+הידניות אינן מתועדות כאן: מסלול חתימה שני בתיעוד הוא בדיוק הדרך שבה APK
+נחתם במפתח הלא-נכון. אימות:
+`keytool -list -v -keystore signing/schar.keystore -storepass schar123`.
+
+⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית היא
+ה-workflow שלמעלה (`Build Signed APK`, temurin 17, artifact `schar-limud-apk`).
+⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
+
+### פרטי המעטפת
+package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
+`usesCleartextTraffic=false`. ⚠️ המעטפת הראשונה כאן טוענת מהרשת מהיום
+הראשון — ⛔ לא היה כאן שלב `file://`.
