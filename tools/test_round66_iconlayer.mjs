@@ -29,7 +29,7 @@
  */
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, cpSync, writeFileSync,
          rmSync, statSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { inflateSync, deflateSync } from 'node:zlib';
@@ -241,6 +241,15 @@ function audit(root) {
   return v;
 }
 
+/* ⭐ `audit` מיוצא, ⛔ ואין לשכפל אותו ל-probe נפרד (סבב 66) —
+   `check-capabilities` מייבא אותה כדי לאמת את שורה 46 במטריצה, ומימוש
+   שני היה נסחף ומדווח ✅ על מה שהשער כאן מפיל. ⚠️ הריצה העצמית מוגנת,
+   אחרת ייבוא היה מריץ את המוטציות. */
+export { audit };
+const SELF = process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (SELF) {
+
 console.log(`\n── סבב 66 — שכבת האייקונים (${APP.name}) ──────────────────────────────`);
 const base = audit(ROOT);
 let n = 1;
@@ -413,3 +422,5 @@ rmSync(tmp, { recursive: true, force: true });
 
 console.log(`\n✅ סבב 66 (שכבת האייקונים) — ${pass} טענות עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);
+
+}
