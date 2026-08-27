@@ -273,7 +273,7 @@ async function main() {
     ok('⛔ המראה שעל הדיסק בלי `password`', h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1);
     ok('⛔ ערך הסיסמה עצמו אינו על הדיסק', h.store[h.ctx.SL_USERS_KEY].indexOf('135790') === -1);
 
-    // round-trip
+    // הלוך-ושוב: כתיבה לדיסק וקריאה חזרה
     h.ctx.SL_USERS = [];
     h.ctx.slUsersLoad();
     eq('טעינה מהדיסק מחזירה את המשתמש', h.ctx.SL_USERS.length, 1);

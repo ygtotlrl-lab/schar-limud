@@ -15,6 +15,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+/*  ⛔ ה-javadoc כאן נשאר באנגלית — חריגה מנומקת (סבב 67, כלל ברזל 11):
+ *  זהו תקן Java, הכלים שקוראים אותו מצפים לאנגלית, והוא זהה בארבע
+ *  המעטפות. ⛔ שאר ההערות בארגון בעברית. */
 /**
  * ══════════════════════════════════════════════════════════════════════════
  * The organisation's WebView shell — the shared core (round 41).
