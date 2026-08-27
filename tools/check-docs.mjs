@@ -48,13 +48,13 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           'e674b1680c9f5f58'],
+  ['iron-rules-storage',           '9a7233dfcbc9c1bc'],
   ['iron-rule-6-sync',             '22bfada1c63388b7'],
   ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
   ['iron-rule-8-docs',             '2afc208280a1ac2d'],
   ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
   ['iron-rule-10-users',           'ff7d10749b689428'],
-  ['capability-matrix',            'cbbb28c311bdae3f'],
+  ['capability-matrix',            '8b48d65cae5eadf7'],
   ['iron-rule-11-comments',        '8edbc5aa804a46c1'],
   ['iron-rule-12-capabilities',    'aec6476860954ab2'],
   ['shared-modules-index',         '7cc0d3bfddc6e7d3'],
@@ -67,6 +67,7 @@ const CANON = [
   ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
   ['iron-rule-20-backup-policy',   '9d90ac40ff1913f3'],
   ['iron-rules-21-24',             '860365793e45f61e'],
+  ['iron-rule-25-icon-layer',      '7ae355cbcdb2bb1e'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
