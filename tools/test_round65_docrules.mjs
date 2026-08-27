@@ -25,7 +25,10 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+/*  ⛔ שורש נדרס בסביבת מוטציה (סבב 65) — המוטציות רצות על עותק בתיקייה
+ *  זמנית ולא על העץ, והדרך היחידה להריץ את השער **האמיתי** עליו היא
+ *  להצביע אותו לשם. */
+const ROOT = process.env.R65_ROOT || join(dirname(fileURLToPath(import.meta.url)), '..');
 const rd = (f) => fs.readFileSync(join(ROOT, f), 'utf8');
 let n = 0, bad = 0;
 const ok = (m) => { n++; console.log(`  ok   ${m}`); };
@@ -153,6 +156,74 @@ const ACTIVE = activeLines.join('\n');
     t(pre.length > 0 && rest.includes("'" + pre + "'"),
       `15ב · חריגה מוצהרת \`${c}\` — הקידומת \`${pre}\` באמת מורכבת בקוד`);
   }
+}
+
+/* ── כלל 21 (המשך) — אין הצהרת «זהה בארבעתן» ───────────────────────────── */
+{
+  /*  ⛔ הצהרת זהות היא ערך שנקבע במקום אחר (סבב 65) — `check-docs` מודדת
+   *  את החתימה בפועל, ומשפט שמכריז «זהה מילה במילה» נשאר נכון בעיניים גם
+   *  כשהוא כבר שקרי. 23 מהם נמדדו, ואחד תיאר פרק שנבדל בשלושה ריפו. */
+  const DECL = [/זהה (מילה במילה|בית-לבית) בארבעת קבצי/,
+                /ממשיך את .{2,24} כללי הברזל שלמעלה/];
+  const hits = activeLines.filter((l) => DECL.some((re) => re.test(l)));
+  t(hits.length === 0, `21ד · אין הצהרת «זהה בארבעתן» בתיעוד הפעיל (${hits.length})`);
+}
+/* ── המוטציות — ⛔ שער בלי מוטציה הוא הצהרה (סבב 65) ────────────────────── */
+/*  ⚠️ כל מוטציה רצה על **עותק בתיקייה זמנית** ומריצה את השער האמיתי עליו;
+ *  הצלחה = השער נפל. ⛔ המוטציות אינן נכתבות לעץ (הלקח של סבב 42ג).
+ *  ⭐ ולצידן מוטציות-נגד: שינוי שאסור לו להפיל — הוא מה שמוכיח שהשער
+ *  מודד את מה שהוא טוען ולא סופר גולמית. */
+if (!process.env.R65_ROOT) {
+  const os = await import('node:os');
+  const { spawnSync } = await import('node:child_process');
+  const SELF = fileURLToPath(import.meta.url);
+  const FILES = ['CLAUDE.md', 'CONTEXT.md', 'README.md', 'index.html', 'sw.js',
+                 'tools/check-comments.mjs'];
+  const fails = (mut) => {
+    const dir = fs.mkdtempSync(join(os.tmpdir(), 'r65-'));
+    try {
+      fs.mkdirSync(join(dir, 'tools'));
+      for (const f of FILES) fs.writeFileSync(join(dir, f), mut[f] !== undefined ? mut[f] : rd(f));
+      const r = spawnSync(process.execPath, [SELF],
+        { env: { ...process.env, R65_ROOT: dir }, encoding: 'utf8' });
+      return r.status !== 0;
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  };
+  const atTop = (add) => { const l = DOC_LINES.slice(); l.splice(4, 0, add); return l.join('\n'); };
+  const inRound = (add) => {
+    const idx = DOC_LINES.map((l, i) => (/^##\s+(⭐\s*)?סבב\s/.test(l) ? i : -1))
+                         .filter((i) => i >= 0).pop();
+    const l = DOC_LINES.slice(); l.splice(idx + 1, 0, add); return l.join('\n');
+  };
+  const CSS = (add) => rd('index.html').replace('</style>', add + '\n</style>');
+
+  t(fails({ 'CLAUDE.md': atTop('`CACHE_NAME` הנוכחי: `' + APP.cachePrefix + "v99`.") }),
+    'מ1 · הצהרת גרסה בפרק פעיל מפילה את 21א');
+  t(fails({ 'CLAUDE.md': atTop('### תיאום גרסאות') }),
+    'מ2 · החזרת טבלת «תיאום גרסאות» מפילה את 21ג');
+  t(fails({ 'CLAUDE.md': atTop('פרק זה זהה מילה במילה בארבעת קבצי ה-CLAUDE.md.') }),
+    'מ3 · החזרת הצהרת «זהה בארבעתן» מפילה את 21ד');
+  t(fails({ 'CLAUDE.md': atTop('## ⭐ מודול מזהי רשומות — הפרוזה שחזרה') }),
+    'מ4 · פרק פרוזה למודול משותף מפיל את 22א');
+  t(fails({ 'CLAUDE.md': atTop('| ידית | yoman | hanhala | schar | gius |') }),
+    'מ5 · טבלת ידיות פר-אפליקציה מפילה את 22ג');
+  t(fails({ 'CLAUDE.md': atTop('### הבעיה שנמדדה\nא\nב\nג\nד') }),
+    'מ6 · «הבעיה שנמדדה» בת ארבע שורות מפילה את 22ד');
+  t(fails({ 'CLAUDE.md': atTop('`apksigner sign --ks signing/key.keystore`') }),
+    'מ7 · פקודת חתימה ב-CLAUDE.md מפילה את 23א');
+  t(fails({ 'CONTEXT.md': rd('CONTEXT.md') + '\n## פרק תפעולי שחזר\n' }),
+    'מ8 · כותרת נוספת ב-CONTEXT.md מפילה את 23ב');
+  t(fails({ 'tools/check-comments.mjs': rd('tools/check-comments.mjs').replace("add('sw.js')", "add('x.js')") }),
+    'מ9 · צמצום תחולת תקן ההערות מפיל את 24ב');
+  t(fails({ 'index.html': CSS('.r65-dead-class{color:red}') }),
+    'מ10 · מחלקת CSS שאינה מוחלת מפילה את טענה 15');
+
+  /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
+  t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
+    'נ1 · ⭐ אותה הצהרה **בתוך פרק סבב** אינה מפילה — הפרק הוא היסטוריה');
+  t(!fails({ 'index.html': CSS('.r65-live-class{color:red}')
+                             .replace('</body>', '<i class="r65-live-class"></i></body>') }),
+    'נ2 · ⭐ מחלקה שכן מוחלת אינה מפילה — המדידה היא שימוש ולא ספירה');
 }
 
 /* ── מה אינו נאכף — ⛔ ונרשם כאן במפורש (סבב 65) ─────────────────────────────

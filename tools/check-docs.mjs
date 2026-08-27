@@ -66,7 +66,7 @@ const CANON = [
   ['iron-rule-18-doc-budget',      '57b2adfa9779c018'],
   ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
   ['iron-rule-20-backup-policy',   '9d90ac40ff1913f3'],
-  ['iron-rules-21-24',             '99a47e0f67d68c00'],
+  ['iron-rules-21-24',             '860365793e45f61e'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
