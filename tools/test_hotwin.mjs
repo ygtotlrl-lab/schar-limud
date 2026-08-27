@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*  test_round35_hotwin.mjs — סבב 35: מודול החלון החם ויכולות הסבב.
+/*  test_hotwin.mjs — סבב 35: מודול החלון החם ויכולות הסבב.
  *
  *  שלושה חלקים:
  *    1. חילוץ מודול «חלון חם ושחזור מקומי» מ-index.html והרצתו ברתמת vm —
@@ -198,4 +198,4 @@ for (const [needle, replacement, re, msg] of APP.mutations || []) {
 }
 
 if (failed) { console.error('\n' + failed + ' assertion(s) failed.'); process.exit(1); }
-console.log('\ntest_round35_hotwin: הכול עבר.');
+console.log('\ntest_hotwin: הכול עבר.');

@@ -4,7 +4,7 @@
  *  ⭐ הקובץ הזה **זהה בית-לבית בארבעת הריפו** פרט לבלוק `APP` שבראשו.
  *
  *  ⚠️ מה שהוא אוכף, ומה שהוא **אינו** אוכף:
- *  ה-**התנהגות** של ה-service worker נאכפת ב-`tools/test_round42_sw.mjs`
+ *  ה-**התנהגות** של ה-service worker נאכפת ב-`tools/test_sw.mjs`
  *  — רתמת קו-הבסיס, שמריצה את ה-`sw.js` האמיתי ומשווה ארבעה-עשר
  *  תרחישים. ⛔ הקובץ הזה אינו מכפיל אותה: הוא אוכף את **הליבה** (חתימה
  *  ומבנה), את **הפרמטרים** (`SW_CFG` — ידיות המדיניות שנמדדו בסבב 40),
@@ -48,7 +48,7 @@ const END = '/* ═══════════════ סוף מודול 
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SW_PATH = join(ROOT, 'sw.js');
-const HARNESS = join(ROOT, 'tools', 'test_round42_sw.mjs');
+const HARNESS = join(ROOT, 'tools', 'test_sw.mjs');
 const SRC = fs.readFileSync(SW_PATH, 'utf8');
 
 let n = 0, bad = 0;
@@ -115,8 +115,8 @@ function harnessFails(label, from, to) {
   try {
     fs.mkdirSync(join(dir, 'tools'));
     fs.writeFileSync(join(dir, 'sw.js'), SRC.replace(from, to));
-    fs.copyFileSync(HARNESS, join(dir, 'tools', 'test_round42_sw.mjs'));
-    const r = spawnSync(process.execPath, [join(dir, 'tools', 'test_round42_sw.mjs')],
+    fs.copyFileSync(HARNESS, join(dir, 'tools', 'test_sw.mjs'));
+    const r = spawnSync(process.execPath, [join(dir, 'tools', 'test_sw.mjs')],
                         { encoding: 'utf8' });
     is(r.status !== 0, label);
   } finally {

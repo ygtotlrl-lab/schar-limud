@@ -29,7 +29,7 @@ const APP = { app: 'schar-limud' };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 if (process.env.R33_INNER) {
-  console.log('test_round33_structure: ריצה פנימית — מדלג (מניעת רקורסיה)');
+  console.log('test_structure: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
 
@@ -101,6 +101,21 @@ function runGate(dir, tool) {
      runGate(dir, 'check-structure.mjs') !== 0);
   fs.rmSync(badMig);
 
+  /*  ⛔ שם המבחן נגזר מהנושא (סבב 67) — `test_round52_pendflush` לא אמר
+   *  למי שחיפש «מה בודק את מודול הנעילה» דבר. ⚠️ ומוטציית-הנגד היא מה
+   *  שמבחין בין «אוכף תבנית» ל«פוסל כל קובץ חדש ב-tools/». */
+  const badTest = path.join(dir, 'tools', 'test_round99_legacy.mjs');
+  fs.writeFileSync(badTest, '// זר\n');
+  ok('מוטציה: שם מבחן בתבנית הישנה (test_round<N>_) מפיל את check-structure',
+     runGate(dir, 'check-structure.mjs') !== 0);
+  fs.rmSync(badTest);
+
+  const goodTest = path.join(dir, 'tools', 'test_topicname.mjs');
+  fs.writeFileSync(goodTest, '// תקין\n');
+  ok('⭐ מוטציית-נגד: `test_<נושא>.mjs` ⛔ אינו מפיל — נאכפת התבנית, לא הכמות',
+     runGate(dir, 'check-structure.mjs') === 0);
+  fs.rmSync(goodTest);
+
   const wf = path.join(dir, '.github', 'workflows', 'zzz.yml');
   fs.writeFileSync(wf, 'name: zzz\n');
   ok('מוטציה: workflow שאינו קנוני מפיל את check-structure',
@@ -108,7 +123,7 @@ function runGate(dir, tool) {
   fs.rmSync(wf);
 
   /*  ⭐ מוטציית-נגד — סעיף ה מודד **סט קבצים** ולא תוכן: חתימות הקבצים
-   *  יושבות ב-`test_round45_android`, ⛔ וכפילות שם הייתה שני מקורות אמת. */
+   *  יושבות ב-`test_android`, ⛔ וכפילות שם הייתה שני מקורות אמת. */
   const man = path.join(dir, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
   fs.appendFileSync(man, '\n<!-- הערה -->\n');
   ok('⭐ מוטציית-נגד: שינוי תוכן ב-android/ אינו מפיל — הסט נאכף, לא התוכן',

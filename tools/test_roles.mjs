@@ -135,7 +135,7 @@ function makeCtx(opts = {}) {
     lsSet(k, v) { store[k] = String(v); return true; },
     lsSetArray(k, arr) { store[k] = JSON.stringify(arr); return true; },
     // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות המראה — כאן שקוף
-    //    בכוונה; בדיקות החלון עצמו יושבות ב-test_round35_hotwin.
+    //    בכוונה; בדיקות החלון עצמו יושבות ב-test_hotwin.
     hwDiskFilter(k, rows) { return rows; },
     hwNoteCloud() {},
     lsGet(k, d) { return k in store ? store[k] : d; },

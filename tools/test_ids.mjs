@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*  test_round37_ids.mjs — סבב 37א: מודול מזהי הרשומות.
+/*  test_ids.mjs — סבב 37א: מודול מזהי הרשומות.
  *
  *  ⭐ עד הסבב הזה חיה אותה יכולת בדיוק ב**חמישה שמות** — `newClientId`
  *  בשכר לימוד · `newId` ב-gius · `ysNewId` בהנהלה · ודפוס בלי פונקציה
@@ -28,7 +28,7 @@ const APP = { app: 'schar-limud', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
-  console.log('test_round37_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
+  console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
 
