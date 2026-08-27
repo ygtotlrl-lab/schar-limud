@@ -67,7 +67,7 @@ const APP = {
     'cdn-cached-online':     'body:NET-OK|status:200',
     'version-probe':         'body:NET-OK|status:200',
     'non-get':               'passthrough',
-    'sweep-scope':           'schar-limud-v47,sister-app-v9',
+    'sweep-scope':           'schar-limud-v48,sister-app-v9',
   },
   defectCount: 0,
 };

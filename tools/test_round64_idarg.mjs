@@ -32,6 +32,10 @@ const APP = {
    *  יש אפליקציות שאינן מעבירות מזהה לתוך ביטוי JS במארקאפ כלל, והן
    *  מסומנות «לא רלוונטי» בשורה 45 שבמטריצה. מה שכן כישלון הוא אתר
    *  שקיים ואינו עטוף. */
+  /*  ⛔ `idNames` — מזהי רשומות ששמם אינו מסתיים ב-`id` (סבב 64 השלמה).
+   *  ⚠️ ההצהרה יושבת כאן מפני שזה המקום שהשער קורא (כלל ברזל 14), ⛔ ולא
+   *  ב-CLAUDE.md. נמדד: ריקה בארבעת הריפו. */
+  idNames: [],
   sites: 0,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -106,6 +110,35 @@ function wrapped(text) {
   return (code.match(re) || []).length;
 }
 
+
+/*  ⭐ **הצד השני של הכלל (סבב 64 השלמה):** `idArg` מיועד ל**מזהי רשומות**
+ *  בלבד, ולכן אופרנד שאינו נראה כמזהה — מספר, אינדקס, ליטרל — אסור
+ *  בעטיפה: `idArg` מצטט ללא תנאי, המספר הופך למחרוזת, ⛔ ו-`arr[i]` או
+ *  `=== 3` בצד הקולט נכשלים בשקט. זה בדיוק הבאג של סבב 64 בכיוון ההפוך.
+ *  ⚠️⚠️ **ומגבלת השער נרשמת כאן במפורש: הוא אוכף מוסכמת שמות ולא סוג
+ *  בזמן ריצה** — אותו `looksLikeId` שטענה 1 כבר נשענת עליו. ⛔ הבחנה
+ *  מכנית בין מזהה למספר אינה אפשרית מהטקסט לבדו, ולכן מזהה רשומה ששמו
+ *  אינו מסתיים ב-`id` **מוצהר ב-`APP.idNames`** — ⛔ ולא נשאר חריגה
+ *  שקטה. ⚠️ ומה שהשער **אינו** מודד: ערך שנקרא כמו מזהה ואינו כזה.
+ */
+function wrappedArgs(text) {
+  const code = stripComments(text);
+  const re = /(function\s+)?\bidArg\s*\(\s*([^()]*?)\s*\)/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(code)) !== null) {
+    if (m[1]) continue;                       /* ההגדרה עצמה, לא אתר שימוש */
+    out.push({ line: code.slice(0, m.index).split('\n').length, arg: m[2] });
+  }
+  return out;
+}
+const RE_FULL_OPERAND = new RegExp('^' + OPERAND.source + '$');
+const badWraps = (text) => wrappedArgs(text).filter((a) => {
+  if (APP.idNames.indexOf(a.arg) !== -1) return false;
+  if (!RE_FULL_OPERAND.test(a.arg)) return true;   /* ליטרל, ביטוי, קריאה */
+  return !looksLikeId(a.arg);
+});
+
 console.log(`\n— סבב 64 · העברת מזהה ל-DOM (${APP.app}) —`);
 const src = fs.readFileSync(path.join(root, APP.file), 'utf8');
 
@@ -114,6 +147,15 @@ const bare = scan(src);
 if (bare.length === 0) ok('1 · ⛔ אין מזהה שנכנס למארקאפ או לבורר בלי `idArg`');
 else bad('1 · ⛔ ' + bare.length + ' מזהים חשופים: ' +
          bare.slice(0, 6).map(h => `שורה ${h.line} (${h.expr})`).join(' · '));
+
+/* ── 1ב. ⛔ ואין `idArg` על ערך שאינו מזהה רשומה ───────────────────────── */
+const wrongly = badWraps(src);
+if (wrongly.length === 0)
+  ok(`1ב · ⛔ אין \`idArg\` על מספר או אינדקס — ${wrappedArgs(src).length} אתרים נמדדו`);
+else
+  bad('1ב · ⛔ ' + wrongly.length + ' עטיפות על ערך שאינו מזהה: ' +
+      wrongly.slice(0, 6).map(h => `שורה ${h.line} (${h.arg})`).join(' · ') +
+      ' — או שהערך אינו מזהה, או שהוא מזהה ואז מקומו ב-`APP.idNames`.');
 
 /* ── ב. וכמות האתרים העטופים תואמת למדידה שב-APP ───────────────────────── */
 const w = wrapped(src);
@@ -169,6 +211,21 @@ else bad('6 · ⛔ קוד תקין נתפס כהפרה — השער מדווח �
 const noise = src.replace('</script>', "var _n = f('a(' + idx + ')');\n</script>");
 if (scan(noise).length === bare.length) ok('7 · ⭐ מוטציית-נגד: אופרנד שאינו מזהה (`idx`) אינו נספר');
 else bad('7 · ⛔ `idx` נספר כמזהה — הבדיקה רחבה מדי');
+
+/*  מוטציה 3 — עטיפת אינדקס. ⛔ חייבת להפיל את טענה 1ב.                  */
+const wrapIdx = src.replace('</script>', "var _w = f('(' + idArg(ci) + ')');\n</script>");
+if (badWraps(wrapIdx).length === wrongly.length + 1) ok('8 · מוטציה: `idArg` על אינדקס (`ci`) — נתפס');
+else bad('8 · ⛔ עטיפת אינדקס לא נתפסה — הצד השני של הכלל אינו נאכף');
+
+/*  מוטציה 4 — עטיפת ליטרל מספרי. ⛔ חייבת להפיל.                        */
+const wrapNum = src.replace('</script>', "var _q = f('(' + idArg(3) + ')');\n</script>");
+if (badWraps(wrapNum).length === wrongly.length + 1) ok('9 · מוטציה: `idArg` על ליטרל מספרי — נתפס');
+else bad('9 · ⛔ עטיפת ליטרל מספרי לא נתפסה');
+
+/*  מוטציית-נגד — עטיפת מזהה תקין אינה מפילה.                            */
+const wrapId = src.replace('</script>', "var _z = f('(' + idArg(rowId) + ')');\n</script>");
+if (badWraps(wrapId).length === wrongly.length) ok('10 · ⭐ מוטציית-נגד: `idArg` על מזהה (`rowId`) אינו מפיל');
+else bad('10 · ⛔ עטיפת מזהה תקין נתפסה כהפרה — השער מדווח שקר');
 
 console.log(`${fail ? '✗' : '✓'} סבב 64 (העברת מזהה ל-DOM) — ${pass} טענות עברו, ${fail} נכשלו\n`);
 process.exit(fail ? 1 : 0);
