@@ -129,9 +129,15 @@ const ACTIVE = activeLines.join('\n');
   /*  ⛔ הפניה מנקודת הכניסה של כל מודול משותף (סבב 65) — בלעדיה הקורא
    *  שיושב בקוד אינו יודע שיש שער שאוכף את הבלוק הזה. */
   const SRC = rd('index.html') + '\n' + rd('sw.js');
-  const marks = (SRC.match(/— מודול משותף \(סבב \d+/g) || []).length;
-  const refs  = (SRC.match(/shared-modules-index/g) || []).length;
-  t(refs >= marks && marks > 0,
+  const MARK = /— מודול משותף \(סבב \d+/g;
+  let marks = 0, refs = 0, m;
+  while ((m = MARK.exec(SRC))) {
+    marks++;
+    /*  ⚠️ ההפניה נמדדת **בתוך אותה כותרת** ולא בקובץ כולו (סבב 65) —
+     *  ספירה גלובלית הייתה עוברת גם כשנקודת כניסה אחת איבדה אותה. */
+    if (SRC.slice(m.index, m.index + 700).includes('shared-modules-index')) refs++;
+  }
+  t(marks > 0 && refs === marks,
     `24א · הפניה ל-\`shared-modules-index\` בכל נקודת כניסה (${refs}/${marks})`);
   /*  ⛔ תחולת תקן ההערות (סבב 65) — `sw.js` ו-`tools/` אינם מוחרגים. */
   const cc = rd('tools/check-comments.mjs');
@@ -217,6 +223,9 @@ if (!process.env.R65_ROOT) {
     'מ9 · צמצום תחולת תקן ההערות מפיל את 24ב');
   t(fails({ 'index.html': CSS('.r65-dead-class{color:red}') }),
     'מ10 · מחלקת CSS שאינה מוחלת מפילה את טענה 15');
+
+  t(fails({ 'index.html': rd('index.html').replace('shared-modules-index', 'x') }),
+    'מ11 · הסרת ההפניה לאינדקס מנקודת כניסה מפילה את 24א');
 
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
   t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
