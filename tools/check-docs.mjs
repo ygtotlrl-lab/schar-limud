@@ -48,7 +48,7 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           'a0f1f7bd6b379c1c'],
+  ['iron-rules-storage',           'e674b1680c9f5f58'],
   ['iron-rule-6-sync',             '22bfada1c63388b7'],
   ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
   ['iron-rule-8-docs',             '2afc208280a1ac2d'],
@@ -66,6 +66,7 @@ const CANON = [
   ['iron-rule-18-doc-budget',      '57b2adfa9779c018'],
   ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
   ['iron-rule-20-backup-policy',   '9d90ac40ff1913f3'],
+  ['iron-rules-21-24',             '99a47e0f67d68c00'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
