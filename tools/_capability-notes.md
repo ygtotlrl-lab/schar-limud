@@ -73,7 +73,7 @@ TWA ולא PWABuilder** — TWA מריץ את האתר בתוך כרום, וסי
 
 **11 · מקור אמת יחיד לסכימה** — קובץ אחד בריפו שהוא ההגדרה המלאה של
 המסד. schar-limud: `migrations/000_initial_schema.sql`. gius:
-`migrations/0001_init.sql` (+0002/0003 קדימה). yoman-avoda:
+`migrations/001_init.sql` (+002/003 קדימה). yoman-avoda:
 `migrations/000_initial_schema.sql`, שנוצר בסבב 28.
 ✅ **ב-hanhala — הפער נסגר בסבב 32.** קובץ ההתקנה נוצר שם בסבב 28, אבל
 `index.html` המשיך להחזיק **עותק חלקי** של הסכימה בשני מקומות
@@ -225,7 +225,7 @@ CDN נעוצת-גרסה שנטענת מראש ב-`install` עם `mode:'cors'`, �
 המיגרציות הורצו ע"י המנהל ב-2026-08-18:
 `hanhala-ruchanit/migrations/004_backup_retention_cron.sql` לפרויקט
 המשותף (חלה גם על yoman-avoda ועל schar-limud, שחולקות אותו)
-ו-`gius/migrations/0005_backup_retention_cron.sql` לפרויקט הנפרד של gius.
+ו-`gius/migrations/005_backup_retention_cron.sql` לפרויקט הנפרד של gius.
 **מה שנמדד** (`SELECT` בלבד, בשני הפרויקטים): המשימה `bk_retention_daily`
 רשומה ב-`cron.job`, `active=true`, ומריצה `bk_retention_sweep(30)`;
 הריצה הראשונה בפרויקט המשותף פינתה **37 שורות** על פני 32 מפתחות
