@@ -250,10 +250,11 @@ async function main() {
     // ⭐ זו הטענה שמצדיקה רשימת-היתר ולא רשימת-איסור: עמודה חדשה בטבלה
     //    נופלת מעצמה, בלי שאיש צריך לזכור להוסיף אותה לאיסור.
     ok('⭐ slUserPub מפיל עמודה זרה שנוספה לטבלה', !('secret_note' in pub));
-    eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'active,id,pass_fp,pass_salt,role,username');
-    // ⛔ שורה בלי `active` היא שורה מלפני migrations/013 — **פעילה**, ולא
-    //    מושבתת. ברירת מחדל הפוכה הייתה נועלת בחוץ את כל המשתמשים.
-    eq('⛔ עמודה חסרה ⇒ פעיל, ולא מושבת', pub.active, true);
+    eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,role,username');
+    /* ⛔ שורה בלי `active` אינה מושלמת עוד (סבב 63) — העמודה קיימת בטבלה
+       (`not null default true`, נמדד 27.8), ולכן «חסר» הוא חוסר-ידיעה
+       ולא «ישן», וההכרעה נכשלת-סגור. */
+    eq('⛔ עמודה חסרה אינה מושלמת — נכשל-סגור', pub.active, undefined);
     eq('   וערך מפורש false נשמר כמו שהוא',
       h.ctx.slUserPub({ id: 1, username: 'a', active: false }).active, false);
     eq('slUserPub על קלט שאינו אובייקט מחזירה {}', JSON.stringify(h.ctx.slUserPub(null)), '{}');
