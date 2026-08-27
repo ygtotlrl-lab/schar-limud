@@ -67,28 +67,28 @@ const APP = {
 const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
-    block: { sha: 'b65b91300715b8f3', lines: 690,
+    block: { sha: '1a20beb1fca86df0', lines: 681,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
   },
   pending: {
     name: 'מודול "ממתין לסנכרון"',
-    block: { sha: '9eefbb4da3ebc37c', lines: 328,
+    block: { sha: '6c5f2eaf27d630d6', lines: 305,
              start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
              end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"' },
     hooks: [{ fn: 'pendBoot', at: 'boot' }],
   },
   status: {
     name: 'אזור המצב',
-    block: { sha: '65ff4f75bc4f6756', lines: 60,
+    block: { sha: '7335b50aa7f93523', lines: 47,
              start: '/* ═══ אזור מצב — בלוק "☁️ סנכרון"',
              end:   '/* ═══ סוף בלוק "☁️ סנכרון"' },
     hooks: [{ fn: 'statusAreaMount', at: 'settings' }],
   },
   backup: {
     name: 'גיבוי יומי אוטומטי',
-    block: { sha: 'd2eb3ba9be765339', lines: 330,
+    block: { sha: 'b177ce0764339794', lines: 263,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],
@@ -96,7 +96,7 @@ const CAPS = {
   },
   hotwin: {
     name: 'מודול החלון החם והשחזור המקומי',
-    block: { sha: '0a8ea3499a688691', lines: 221,
+    block: { sha: 'cd2a68a3eb11d27c', lines: 196,
              start: '/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35)',
              end:   '/* ═══════════════ סוף מודול החלון החם' },
     hooks: [{ fn: 'hwBoot', at: 'boot' }, { fn: 'hwRestoreMount', at: 'settings' }],
@@ -113,7 +113,7 @@ const CAPS = {
    *  בית-לבית**; מה שנאכף במטריצה (שורה 27) הוא שהמעטפת באמת קוראת לה. */
   mergecore: {
     name: 'מודול מיזוג הרשומות',
-    block: { sha: 'cc0329965238994c', lines: 91,
+    block: { sha: '4e09df769c9cc20f', lines: 73,
              start: '/* ═══ מיזוג רשומות — מודול משותף (סבב 38)',
              end:   '/* ═══════════════ סוף מודול המיזוג' },
   },
@@ -123,13 +123,13 @@ const CAPS = {
    *  הפונקציות באמת קיימות בקוד.                                       */
   devid: {
     name: 'מודול מזהה המכשיר',
-    block: { sha: '96caaf595b7a1692', lines: 39,
+    block: { sha: 'de3c5a4d847ca24b', lines: 22,
              start: '/* ═══ מזהה מכשיר — מודול משותף (סבב 40)',
              end:   '/* ═══════════════ סוף מודול מזהה המכשיר' },
   },
   ids: {
     name: 'מודול מזהי רשומות',
-    block: { sha: 'dea78e9be6cb86a1', lines: 80,
+    block: { sha: '4db85ed5674abaf9', lines: 39,
              start: '/* ═══ מזהי רשומות — מודול משותף (סבב 37א)',
              end:   '/* ═══════════════ סוף מודול מזהי הרשומות' },
   },
@@ -146,7 +146,7 @@ const CAPS = {
    *  נאכפת ב-`test_round44_retry.mjs`, שיודע גם מהו המשפך בכל אפליקציה. */
   retry: {
     name: 'מודול הניסיון החוזר בסנכרון',
-    block: { sha: 'b26046c13cb36986', lines: 100,
+    block: { sha: 'a3c80c97f6388e81', lines: 68,
              start: '/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44)',
              end:   '/* ═══════════════ סוף מודול הניסיון החוזר' },
     hooks: [{ fn: 'rtyBoot', at: 'boot' }],
@@ -157,7 +157,7 @@ const CAPS = {
    *  שיודע גם מהם המשפכים בכל אפליקציה.                                */
   pull: {
     name: 'מנגנון המשיכה',
-    block: { sha: 'a5733e59b1f5e02b', lines: 108,
+    block: { sha: '71ac3d2bc3e60a58', lines: 81,
              start: '/* ═══ מנגנון המשיכה — מודול משותף (סבב 51)',
              end:   '/* ═══════════════ סוף מנגנון המשיכה' },
     hooks: [{ fn: 'plBoot', at: 'boot' }],
@@ -170,7 +170,7 @@ const CAPS = {
    *  (כלל ברזל 14), ⛔ וגם «נעדר באחת, בשקט» אינו.                    */
   lock: {
     name: 'נעילת חוסר-פעילות',
-    block: { sha: 'faf3168aa73eeb97', lines: 133,
+    block: { sha: '6b14ac8157e9532e', lines: 111,
              start: '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)',
              end:   '/* ═══════════════ סוף מודול נעילת חוסר-הפעילות' },
     hooks: [{ fn: 'lkBoot', at: 'boot' }],
@@ -182,14 +182,14 @@ const CAPS = {
    *  במטריצה (שורה 35) כ«לא רלוונטי», בדיוק כמו `lock`.               */
   sess: {
     name: 'מודל הסשן',
-    block: { sha: '1977a56060bd1796', lines: 76,
+    block: { sha: '151be4060831c22e', lines: 53,
              start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
              end:   '/* ═══════════════ סוף מודול הסשן' },
     hooks: [{ fn: 'sessBoot', at: 'boot' }],
   },
   swcore: {
     name: 'מודול ה-service worker',
-    block: { file: 'sw.js', sha: '568ecbd986b69a14', lines: 294,
+    block: { file: 'sw.js', sha: '7bdea85555a99662', lines: 255,
              start: '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)',
              end:   '/* ═══════════════ סוף מודול ה-service worker' },
   },

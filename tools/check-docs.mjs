@@ -50,7 +50,7 @@ const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
   ['iron-rules-storage',           'a0f1f7bd6b379c1c'],
   ['iron-rule-6-sync',             '22bfada1c63388b7'],
-  ['iron-rule-7-status-area',      '70ccd4678f612cf5'],
+  ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
   ['iron-rule-8-docs',             '2afc208280a1ac2d'],
   ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
   ['iron-rule-10-users',           'ff7d10749b689428'],

@@ -41,8 +41,8 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⭐ החתימה, מספר השורות והסמנים — זהים בארבעת הריפו. */
-const CORE_SHA = '568ecbd986b69a14';
-const CORE_LINES = 294;
+const CORE_SHA = '7bdea85555a99662';
+const CORE_LINES = 255;
 const START = '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)';
 const END = '/* ═══════════════ סוף מודול ה-service worker';
 
