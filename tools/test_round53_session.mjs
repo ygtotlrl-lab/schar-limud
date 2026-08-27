@@ -34,8 +34,8 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const BLOCK = {
-  sha: '1977a56060bd1796',
-  lines: 76,
+  sha: '151be4060831c22e',
+  lines: 53,
   start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
   end:   '/* ═══════════════ סוף מודול הסשן',
 };
@@ -81,7 +81,8 @@ if (!APP.present) {
   else pass('1. הבלוק המשותף אינו כאן, כמוצהר');
   if (/\bSESS_CFG\b/.test(code)) fail('2. `SESS_CFG` קיים כאן, בניגוד להצהרה');
   else pass('2. `SESS_CFG` אינו כאן, כמוצהר');
-  /*  ⛔ והטענה החשובה: אין כאן שמירת סשן **מאולתרת** במקום המודול. */
+  /*  ⛔ והטענה החשובה — אין כאן שמירת סשן **מאולתרת** במקום המודול:
+   *  מנגנון מקומי לצד המשותף הוא בדיוק ההפרש שהמודול סגר. */
   if (/SESSION_KEY|['"]sl_session['"]|['"]gius\.session['"]/.test(code))
     fail('3. ⛔ נמצאה שמירת סשן במכשיר — במקום שאין בו משתמש מחובר כלל');
   else pass('3. ⛔ אין כאן שמירת סשן במכשיר');
@@ -107,7 +108,7 @@ const blkAt = src.indexOf(BLOCK.start);
 if (cfgAt >= 0 && cfgAt < blkAt) pass('3. `SESS_CFG` מוגדר מעל הליבה — ליבה בלי פרמטרים אינה מודול');
 else fail('3. `SESS_CFG` אינו מוגדר מעל הליבה');
 
-/* ── 4. `SESS_CFG.legacy` — הערך המוצהר, ולא רק קיומו ─────────────────── */
+/* ── 4. `SESS_CFG.legacy` — הערך המוצהר, ולא רק קיומו ──────────────────── */
 const cfgSrc = src.slice(cfgAt, blkAt);
 const legM = /legacy\s*:\s*\[([^\]]*)\]/.exec(cfgSrc);
 const legGot = legM ? legM[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : null;
@@ -126,13 +127,13 @@ if (/SESSION_KEY\b/.test(code))
   fail('5. ⛔ נמצא קבוע `SESSION_KEY` — מסלול שמירת הסשן הישן חזר');
 else pass('5. ⛔ אין בקוד קבוע `SESSION_KEY`');
 
-/* ── 6. ⛔ אין כתיבה של המשתמש המחובר ל-localStorage ───────────────────── */
+/* ── 6. ⛔ אין כתיבה של המשתמש המחובר ל-localStorage ────────────────────── */
 const WRITE = /(?:lsSet|lsSetRaw|localStorage\s*\.\s*setItem)\s*\([^;]*(?:SESSION|sessGet\s*\(\s*\)|\.user\b)/;
 if (WRITE.test(codeOutside))
   fail('6. ⛔ נמצאה כתיבה של המשתמש המחובר ל-localStorage מחוץ למודול');
 else pass('6. ⛔ אין כתיבה של המשתמש המחובר ל-localStorage');
 
-/* ── 7. החיווט — `sessBoot()` מפונקציית העלייה, ורק ממנה ──────────────── */
+/* ── 7. החיווט — `sessBoot()` מפונקציית העלייה, ורק ממנה ───────────────── */
 const bootBody = fnBody(codeOutside, APP.bootFn);
 const callsAll = (codeOutside.match(/\bsessBoot\s*\(/g) || []).length;
 if (/\bsessBoot\s*\(/.test(bootBody) && callsAll === 1)

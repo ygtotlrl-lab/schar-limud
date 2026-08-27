@@ -66,6 +66,7 @@ function runGate(dir, tool) {
 /* ── check-structure ───────────────────────────────────────────────────── */
 {
   const dir = copyRepo();
+  const CHECK_DOCS = fs.readFileSync(path.join(dir, 'tools', 'check-docs.mjs'));
   ok('בקרה חיובית: check-structure עובר על העץ כמות שהוא',
      runGate(dir, 'check-structure.mjs') === 0);
 
@@ -82,6 +83,36 @@ function runGate(dir, tool) {
   fs.rmSync(path.join(dir, 'tools', 'check-docs.mjs'));
   ok('מוטציה: בודק משותף חסר ב-tools/ מפיל את check-structure',
      runGate(dir, 'check-structure.mjs') !== 0);
+  fs.writeFileSync(path.join(dir, 'tools', 'check-docs.mjs'), CHECK_DOCS);
+
+  /*  ⛔ סעיף ה — תוכן ארבע התיקיות (סבב 65) — עד אז `android/`, `migrations/`,
+   *  `signing/` ו-`.github/` היו **תיקיות מוכרזות שאיש לא הסתכל לתוכן**,
+   *  ושם שרדו `copy-assets.sh` ו-`assets/.gitkeep` בלי קורא. */
+  const stray = path.join(dir, 'android', 'app', 'src', 'main', 'zzz-stray.txt');
+  fs.mkdirSync(path.dirname(stray), { recursive: true });
+  fs.writeFileSync(stray, 'זר\n');
+  ok('מוטציה: קובץ זר ב-android/ מפיל את check-structure (סעיף ה)',
+     runGate(dir, 'check-structure.mjs') !== 0);
+  fs.rmSync(stray);
+
+  const badMig = path.join(dir, 'migrations', '99_bad_name.sql');
+  fs.writeFileSync(badMig, '-- זר\n');
+  ok('מוטציה: מיגרציה בלי מספור תלת-ספרתי מפילה את check-structure',
+     runGate(dir, 'check-structure.mjs') !== 0);
+  fs.rmSync(badMig);
+
+  const wf = path.join(dir, '.github', 'workflows', 'zzz.yml');
+  fs.writeFileSync(wf, 'name: zzz\n');
+  ok('מוטציה: workflow שאינו קנוני מפיל את check-structure',
+     runGate(dir, 'check-structure.mjs') !== 0);
+  fs.rmSync(wf);
+
+  /*  ⭐ מוטציית-נגד — סעיף ה מודד **סט קבצים** ולא תוכן: חתימות הקבצים
+   *  יושבות ב-`test_round45_android`, ⛔ וכפילות שם הייתה שני מקורות אמת. */
+  const man = path.join(dir, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  fs.appendFileSync(man, '\n<!-- הערה -->\n');
+  ok('⭐ מוטציית-נגד: שינוי תוכן ב-android/ אינו מפיל — הסט נאכף, לא התוכן',
+     runGate(dir, 'check-structure.mjs') === 0);
 
   fs.rmSync(dir, { recursive: true, force: true });
 }

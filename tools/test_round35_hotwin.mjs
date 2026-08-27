@@ -49,7 +49,7 @@ const ok = (m) => console.log('  ok   ' + m);
 const bad = (m) => { failed++; console.error('  FAIL ' + m); };
 const assert = (cond, m) => (cond ? ok(m) : bad(m));
 
-/* ── 1. חילוץ המודול ──────────────────────────────────────────────────── */
+/* ── 1. חילוץ המודול ───────────────────────────────────────────────────── */
 const START = '/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35)';
 const END = '/* ═══════════════ סוף מודול החלון החם';
 const lines = SRC.split('\n');
@@ -58,7 +58,7 @@ const ei = lines.findIndex(l => l.includes(END));
 assert(si >= 0 && ei > si, 'מודול החלון החם קיים ב-index.html');
 const MOD = lines.slice(si, ei + 1).join('\n');
 const sha = crypto.createHash('sha256').update(MOD).digest('hex').slice(0, 16);
-assert(sha === '0a8ea3499a688691', 'חתימת המודול תואמת (' + sha + ')');
+assert(sha === 'cd2a68a3eb11d27c', 'חתימת המודול תואמת (' + sha + ')');
 
 /* רתמה: מריצה את המודול בהקשר נקי עם ספק-פיקסטורה. */
 function harness(modSrc, opts) {
@@ -101,38 +101,38 @@ function harness(modSrc, opts) {
 
 const ids = (rows) => (rows || []).map((r) => r.id).join(',');
 
-/* ── תרחיש הבסיס: פינוי רק לרשומה מסונכרנת ומאומתת שמחוץ לחלון ────────── */
+/* ── תרחיש הבסיס: פינוי רק לרשומה מסונכרנת ומאומתת שמחוץ לחלון ─────────── */
 {
   const { state, ctx } = harness(MOD);
   await ctx.hwSweep();
   assert(ids(state.applied) === 'b,c',
     'פינוי בסיס: רק a (מחוץ לחלון, לא-ממתינה, מאומתת) פונתה; b הממתינה נשארה');
 }
-/* ── נכשל סגור: משיכה שאינה ok אינה מפנה דבר ─────────────────────────── */
+/* ── נכשל סגור: משיכה שאינה ok אינה מפנה דבר ───────────────────────────── */
 {
   const { state, ctx } = harness(MOD, { cloud: { ok: false, rows: [{ id: 'a', ts: 100 }] } });
   const r = await ctx.hwSweep();
   assert(r.swept === 0 && state.applied === undefined, 'נכשל סגור: ok:false ⇒ אפס פינוי');
 }
-/* ── תור יוצא לא ריק ⇒ הפינוי מדולג כולו, בלי לגעת ברשת ──────────────── */
+/* ── תור יוצא לא ריק ⇒ הפינוי מדולג כולו, בלי לגעת ברשת ────────────────── */
 {
   const { state, ctx } = harness(MOD, { pending: true });
   const r = await ctx.hwSweep();
   assert(r.swept === 0 && state.fetchCalls === 0, 'LS_CFG.pending() ⇒ דילוג מלא, אפס משיכות');
 }
-/* ── ראיה עננית ישנה מהמקומית אינה מפנה ──────────────────────────────── */
+/* ── ראיה עננית ישנה מהמקומית אינה מפנה ────────────────────────────────── */
 {
   const { state, ctx } = harness(MOD, { cloud: { ok: true, rows: [{ id: 'a', ts: 50 }] } });
   const r = await ctx.hwSweep();
   assert(r.swept === 0 && state.applied === undefined, 'חותמת ענן ישנה מהמקומית ⇒ הרשומה נשארת');
 }
-/* ── שער הדיסק בלי ראיה עננית אינו מסנן דבר ──────────────────────────── */
+/* ── שער הדיסק בלי ראיה עננית אינו מסנן דבר ────────────────────────────── */
 {
   const { state, ctx } = harness(MOD);
   const kept = ctx.hwDiskFilter('k', state.local);
   assert(kept.length === 3, 'hwDiskFilter בלי ראיה עננית מחזיר הכול');
 }
-/* ── מסך העבר: חיות שמחוץ לחלון בלבד, מהחדשה לישנה, קריאה בלבד ───────── */
+/* ── מסך העבר: חיות שמחוץ לחלון בלבד, מהחדשה לישנה, קריאה בלבד ─────────── */
 {
   const { state, ctx } = harness(MOD, {
     cloud: { ok: true, rows: [
@@ -146,7 +146,7 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
   assert(r.ok === true && ids(r.rows) === 'e,a' && state.applied === undefined,
     'hwPastLoad: חיות מחוץ לחלון בלבד, ממוינות, בלי כתיבה לדיסק');
 }
-/* ── כפתור השחזור: דו-שלבי, ושער מנהל ────────────────────────────────── */
+/* ── כפתור השחזור: דו-שלבי, ושער מנהל ──────────────────────────────────── */
 {
   const { state, ctx } = harness(MOD);
   ctx.hwRestoreClick(null);
@@ -160,7 +160,7 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
   assert(state.domCalls === 0, 'hwRestoreMount נעצר לפני ה-DOM כשאין הרשאת מנהל');
 }
 
-/* ── 2. מוטציות על המודול ─────────────────────────────────────────────── */
+/* ── 2. מוטציות על המודול ──────────────────────────────────────────────── */
 /* מוטציה א: ביטול בדיקת ה-⏳ — רשומה ממתינה חייבת להתפנות במוטנט,
    כלומר טענת הבסיס הייתה תופסת את המוטציה. */
 {
@@ -183,7 +183,7 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
     'מוטציה שמבטלת את הנכשל-סגור נתפסת: במוטנט ok:false כן פינה — טענת הבסיס הייתה נכשלת');
 }
 
-/* ── 3. בלוק APP — טענות ומוטציות פר-אפליקציה ─────────────────────────── */
+/* ── 3. בלוק APP — טענות ומוטציות פר-אפליקציה ──────────────────────────── */
 for (const [re, msg] of APP.checks) {
   assert(re.test(SRC), msg);
 }

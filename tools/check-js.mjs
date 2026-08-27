@@ -48,7 +48,9 @@ const APP = {
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
-  gates: ['test_round64_idarg.mjs',
+  gates: ['test_round65_docrules.mjs',
+          'test_round65_signscript.mjs',
+          'test_round64_idarg.mjs',
           'test_round62_sources.mjs',
           'test_round61_backup_policy.mjs',
           'test_round57_bump.mjs',
@@ -89,7 +91,7 @@ function check(label, file) {
   }
 }
 
-/* ── 1. חילוץ הסקריפטים המוטבעים מ-index.html ─────────────────────────── */
+/* ── 1. חילוץ הסקריפטים המוטבעים מ-index.html ──────────────────────────── */
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
 let m, n = 0;
@@ -108,7 +110,7 @@ if (n === 0) {
 /* ── 2. קבצים עצמאיים ──────────────────────────────────────────────────── */
 check('sw.js', join(ROOT, 'sw.js'));
 
-/* ── 3. כללי-אמת שפרסר אינו תופס (APP.rules) ──────────────────────────── */
+/* ── 3. כללי-אמת שפרסר אינו תופס (APP.rules) ───────────────────────────── */
 const SRC = { sw: readFileSync(join(ROOT, 'sw.js'), 'utf8'), html };
 for (const [file, reSrc, expect, msg] of APP.rules) {
   const hit = new RegExp(reSrc).test(SRC[file]);
@@ -117,7 +119,7 @@ for (const [file, reSrc, expect, msg] of APP.rules) {
   console.error('  FAIL ' + msg);
 }
 
-/* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ───────────────────────── */
+/* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ────────────────────────── */
 for (const gate of APP.gates) {
   try {
     execFileSync(process.execPath, [join(ROOT, 'tools', gate)],

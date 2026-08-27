@@ -81,6 +81,8 @@ const HDR_END  = new RegExp('^ {3}═{' + RULE_W + '} \\*/$');
 /* כותרת «כמעט תקנית» — נתפסת ומדווחת במקום להיספר כטקסט רגיל. */
 const HDR_NEAR = /^\/\* ═{20,}\s*$/;
 const MAX_AREA_LINES = 400;
+/* רוחב באנר ה-`───────────────────────────────` בקובצי השערים — ר' סעיף ה. */
+const BANNER_W = 78;
 
 const MARKERS = ['⛔', '⚠️', '⭐'];
 const PICTO = /^\p{Extended_Pictographic}/u;
@@ -103,7 +105,7 @@ const pass = (m) => console.log('✅ ' + m);
 
 const src = fs.readFileSync(APP.file, 'utf8');
 
-/* ── בניית «הקוד הפרטי» — אותו קובץ, כשכל מה שאינו JS פרטי מולבן ────────── */
+/* ── בניית «הקוד הפרטי» — אותו קובץ, כשכל מה שאינו JS פרטי מולבן ───────── */
 /* ⚠️ מלבינים ולא חותכים: מספרי השורות בהודעות השגיאה חייבים להתאים לקובץ
    האמיתי, אחרת ההודעה שולחת את הקורא לשורה הלא נכונה. */
 function blank(text, from, to) {
@@ -139,8 +141,8 @@ let priv = src;
   }
 }
 
-/* ── טוקניזציה: איסוף ההערות בלבד ───────────────────────────────────────── */
-/* ⛔ אין להחליף את זה בביטוי רגולרי על `//` ו-`/*` — מחרוזת שמכילה `//`
+/* ── טוקניזציה: איסוף ההערות בלבד ──────────────────────────────────────── */
+/* ⛔ אין להחליף את זה בביטוי רגולרי על `//` ו-`/*` (סבב 28) — מחרוזת שמכילה `//`
    (כל URL) הייתה נקראת כהערה, ו-regex שמכיל `*` היה פותח בלוק שלא נסגר. */
 function collectComments(text) {
   const out = [];
@@ -207,22 +209,45 @@ function collectComments(text) {
   return out;
 }
 
-const comments = collectComments(priv);
-
 /* איחוד רצף שורות `//` עצמאיות לבלוק אחד — הערה בת חמש שורות היא רעיון
    אחד, והדרישה למספר סבב חלה עליו ולא על כל שורה בנפרד. */
-const blocks = [];
-for (const c of comments) {
-  const last = blocks[blocks.length - 1];
-  if (c.kind === 'line' && c.own && last && last.kind === 'line' && last.own && last.endLine === c.line - 1) {
-    last.endLine = c.endLine;
-    last.text += '\n' + c.text;
-    continue;
+function blocksOf(text) {
+  const out = [];
+  for (const c of collectComments(text)) {
+    const last = out[out.length - 1];
+    if (c.kind === 'line' && c.own && last && last.kind === 'line' && last.own && last.endLine === c.line - 1) {
+      last.endLine = c.endLine;
+      last.text += '\n' + c.text;
+      continue;
+    }
+    out.push({ ...c });
   }
-  blocks.push({ ...c });
+  return out;
 }
 
-/* ── א. כותרות בלוק — צורה וכיסוי ────────────────────────────────────────── */
+const blocks = blocksOf(priv);
+
+/*  ⭐ סבב 65 — תחולת התקן הורחבה ל-`sw.js` ול-`tools/` (ממצא 13). ⚠️ עד
+ *  כאן היא נעצרה ב-`index.html`, ולכן 185 בלוקי ההערה שבשערים עצמם לא
+ *  נבדקו כלל — ⛔ כלומר התקן שנאכף על הקוד לא נאכף על מי שאוכף אותו.
+ *  ⛔ **וסעיף א (כותרת בלוק וכיסוי) נשאר ב-`index.html` בלבד, וזו הגבלה
+ *  מוצהרת ולא השמטה (סבב 65)** — מדד הכיסוי הוא «רצף קוד פרטי בלי כותרת»,
+ *  והוא מדבר על אפליקציה בת אלפי שורות; קובץ שער בן 150 שורות עם כותרת
+ *  אחת היה נכשל על כלום, וכפייה של מסגרת 74 על באנרי ה-`───────` הייתה מחליפה
+ *  תקן קיים ומדוד בתקן שהומצא כאן. סעיפים ב–ד חלים במלואם, וסעיף ה נכתב
+ *  במיוחד לצורת הבאנר שבשערים.                                            */
+const EXTRA = [];
+{
+  const add = (p) => { try { const t = fs.readFileSync(p, 'utf8');
+    EXTRA.push({ name: p, blocks: blocksOf(t), lines: t.split('\n') }); } catch (e) {} };
+  add('sw.js');
+  try {
+    for (const f of fs.readdirSync('tools').sort()) if (f.endsWith('.mjs')) add('tools/' + f);
+  } catch (e) {}
+}
+const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
+
+/* ── א. כותרות בלוק — צורה וכיסוי ──────────────────────────────────────── */
 {
   const lines = priv.split('\n');
   const hdrs = [];
@@ -272,29 +297,39 @@ for (const c of comments) {
   if (!bad && hdrs.length) pass(`כותרות בלוק: ${hdrs.length} אזורים, כולם בפורמט התקני והכיסוי מלא`);
 }
 
-/* ── ב. ⛔ עם מספר סבב ועם סיבה ──────────────────────────────────────────── */
+/* ── ב. ⛔ עם מספר סבב ועם סיבה (סבב 28) ────────────────────────────────── */
 {
   let bad = 0, seen = 0;
-  for (const b of blocks) {
+  for (const { name, blocks: bs } of SCOPE) for (const b of bs) {
     if (b.text.indexOf('⛔') < 0) continue;
     seen++;
-    const hasRound = /סבב\s+\d+/.test(b.text);
+    /*  ⭐ סבב 65 — בקובץ `tools/test_round<N>_*.mjs` מספר הסבב יושב **בשם
+     *  הקובץ**, וזו אותה אינפורמציה בדיוק: מי שקורא את ההערה כבר יודע
+     *  מאיזה סבב היא. ⛔ דרישת ה**סיבה** נשארת במלואה — היא מה שמונע
+     *  מהסשן הבא לבטל את האיסור בתום לב, ואותה שם הקובץ אינו נותן.
+     *  ⚠️ ההקלה מוגבלת לקובצי הסבבים: ב-`check-*.mjs` אין מספר בשם. */
+    const inRound = /^tools\/test_round(\d+)/.test(name);
+    const hasRound = inRound || /סבב\s+\d+/.test(b.text);
     /* ⚠️ מפריד « — » בסוף שורה תקף בדיוק כמו באמצעה: הערה בת כמה שורות
        שמות הנימוק בשורה הבאה היא ניסוח לגיטימי, לא היעדר נימוק. */
-    const hasWhy   = / —\s/.test(b.text);
+    /*  ⭐ סבב 65 — ⛔ ששבוי בשורת **כותרת** (באנר `─`/`═`) אינו איסור אלא
+     *  **שם** של הטענה שמתחתיה, והנימוק יושב בגוף. ⚠️ ההקלה מוגבלת לבלוק
+     *  שכל ה-⛔ שבו יושבים בשורות כותרת: ⛔ אחד בגוף מחזיר את הדרישה. */
+    const bodyStop = b.text.split('\n').filter(x => x.indexOf('⛔') >= 0 && !/[─═]{2,}/.test(x));
+    const hasWhy   = / —\s/.test(b.text) || bodyStop.length === 0;
     if (!hasRound || !hasWhy) {
       const miss = [!hasRound ? 'מספר סבב' : null, !hasWhy ? 'סיבה אחרי « — »' : null].filter(Boolean).join(' ו');
-      fail(`שורה ${b.line}: הערת ⛔ בלי ${miss}`);
+      fail(`${name}:${b.line}: הערת ⛔ בלי ${miss}`);
       bad++;
     }
   }
   if (!bad) pass(`הערות ⛔: ${seen} בלוקים, כולם עם מספר סבב ועם סיבה`);
 }
 
-/* ── ג. סימנים — שלושה בלבד ──────────────────────────────────────────────── */
+/* ── ג. סימנים — שלושה בלבד ────────────────────────────────────────────── */
 {
   let bad = 0;
-  for (const b of blocks) {
+  for (const { name, blocks: bs } of SCOPE) for (const b of bs) {
     const ls = b.text.split('\n');
     for (let k = 0; k < ls.length; k++) {
       let t = ls[k];
@@ -303,7 +338,7 @@ for (const c of comments) {
       if (!PICTO.test(t)) continue;
       const ok = MARKERS.some(m => t.startsWith(m));
       if (!ok) {
-        fail(`שורה ${b.line + k}: שורת הערה נפתחת בסמל שאינו ⛔/⚠️/⭐ — «${t.slice(0, 24)}»`);
+        fail(`${name}:${b.line + k}: שורת הערה נפתחת בסמל שאינו ⛔/⚠️/⭐ — «${t.slice(0, 24)}»`);
         bad++;
       }
     }
@@ -311,19 +346,45 @@ for (const c of comments) {
   if (!bad) pass('סימנים: כל שורת הערה שנפתחת בסמל משתמשת ב-⛔ / ⚠️ / ⭐ בלבד');
 }
 
-/* ── ד. טרמינולוגיה ─────────────────────────────────────────────────────── */
+/* ── ד. טרמינולוגיה ────────────────────────────────────────────────────── */
 {
   let bad = 0;
-  for (const b of blocks) {
+  for (const { name, blocks: bs } of SCOPE) for (const b of bs) {
     for (const t of TERMS) {
       t.bad.lastIndex = 0;
       if (t.bad.test(b.text)) {
-        fail(`שורה ${b.line}: מונח לא תקני «${String(t.bad).replace(/[/g]/g, '')}» — הכתיב התקני הוא «${t.good}»`);
+        fail(`${name}:${b.line}: מונח לא תקני «${String(t.bad).replace(/[/g]/g, '')}» — הכתיב התקני הוא «${t.good}»`);
         bad++;
       }
     }
   }
   if (!bad) pass(`טרמינולוגיה: ${TERMS.length} מונחים נבדקו, כולם בכתיב התקני`);
+}
+
+/* ── ה. רוחב באנר ה-`──` בשערים ────────────────────────────────────────── */
+/*  ⭐ סבב 65 — הבאנר היה תקן שני לא-מוצהר: 242 שורות ב-44 מתוך 45 קובצי
+ *  `tools/`, ברוחב כולל 62–80. ⛔ תקן שלא נמדד נסחף, ולכן הרוחב נעול
+ *  ל-`BANNER_W` — הערך שהיה כבר ברוב המכריע של השורות (165 מתוך 249).   */
+{
+  let bad = 0, seen = 0;
+  for (const { name, blocks: bs, lines: srcLines } of SCOPE) {
+    if (name === APP.file) continue;          /* ⚠️ שם התקן הוא מסגרת ה-`═` של סעיף א */
+    for (const b of bs) {
+      const ls = b.text.split('\n');
+      for (let k = 0; k < ls.length; k++) {
+        if (!/─{2,}/.test(ls[k])) continue;
+        seen++;
+        /*  ⚠️ נמדדת **שורת המקור** ולא פרוסת ההערה (סבב 65) — טקסט הבלוק
+         *  מתחיל ב-`/*` ומשמיט את ההזחה שלפניו, ולכן מדידה עליו הייתה
+         *  מדווחת 76 על שורה שרוחבה 78. */
+        const full = srcLines[b.line - 1 + k];
+        if (full === undefined || full.length === BANNER_W) continue;
+        fail(`${name}:${b.line + k}: באנר «─» ברוחב ${full.length} במקום ${BANNER_W}`);
+        bad++;
+      }
+    }
+  }
+  if (!bad) pass(`באנרי «─»: ${seen} שורות, כולן ברוחב ${BANNER_W}`);
 }
 
 if (failures) {

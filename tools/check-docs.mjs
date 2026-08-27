@@ -48,30 +48,26 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           'a0f1f7bd6b379c1c'],
-  ['pending-module',               'dc0f2a513dcc7969'],
-  ['iron-rule-6-sync',             '58f809376bdf981d'],
-  ['iron-rule-7-status-area',      '4b4c9272b35b9c40'],
-  ['iron-rule-8-docs',             'be8e241ccd5b1ad4'],
-  ['iron-rule-9-security-spread',  '5412c7382b4daf61'],
-  ['iron-rule-10-users',           '54d578f69f5b3690'],
-  ['capability-matrix',            'b922d60e9cf3c9b0'],
-  ['iron-rule-11-comments',        'd03e5416ced01f6c'],
-  ['iron-rule-12-capabilities',    '8223e5ba345c4ab3'],
-  ['backup-module',                '66fe6980b7c81606'],
-  ['iron-rule-13-shared-scope',    'e00e9d7ece5c0d35'],
-  ['iron-rule-14-org-wide',        'e60f2cf05885ac4d'],
-  ['iron-rule-15-gaps-verified',   '0c5e079f0137ce9f'],
-  ['sw-strategies',                'ba3680abbd0b0667'],
-  ['pull-module',                  'f3abef4730689d84'],
-  ['lock-module',                  '484f0452a7263417'],
-  ['sess-module',                  '3b55367200c70b4d'],
-  ['iron-rule-16-remnant',         '84f2658bb8580565'],
-  ['iron-rule-17-touch-scan',      '7171fb74b830c3ff'],
-  ['iron-rule-18-doc-budget',      'b07161a4df0a78db'],
-  ['iron-rule-19-read-discipline', '1d0d7cd6f10de3b0'],
-  ['iron-rule-20-backup-policy',   'fa68eae3173ca510'],
-  ['share-bridge-rule',            '12c79fad9258909e'],
+  ['iron-rules-storage',           'e674b1680c9f5f58'],
+  ['iron-rule-6-sync',             '22bfada1c63388b7'],
+  ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
+  ['iron-rule-8-docs',             '2afc208280a1ac2d'],
+  ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
+  ['iron-rule-10-users',           'ff7d10749b689428'],
+  ['capability-matrix',            'cbbb28c311bdae3f'],
+  ['iron-rule-11-comments',        '8edbc5aa804a46c1'],
+  ['iron-rule-12-capabilities',    'aec6476860954ab2'],
+  ['shared-modules-index',         '7cc0d3bfddc6e7d3'],
+  ['iron-rule-13-shared-scope',    '21d638f92c1ab245'],
+  ['iron-rule-14-org-wide',        '52cbbfee7c8e4bf3'],
+  ['iron-rule-15-gaps-verified',   'db71b8ce8a083ea9'],
+  ['iron-rule-16-remnant',         '29eee855dc43bb0c'],
+  ['iron-rule-17-touch-scan',      '91743204069771d0'],
+  ['iron-rule-18-doc-budget',      '57b2adfa9779c018'],
+  ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
+  ['iron-rule-20-backup-policy',   '9d90ac40ff1913f3'],
+  ['iron-rules-21-24',             '860365793e45f61e'],
+  ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -264,7 +260,7 @@ for (const [id, sha] of CANON) {
   }
 }
 
-/* ── ו. שלד קבוע לשלושת קובצי ה-md הנלווים (סבב 39 — השלמה שנייה) ────────
+/* ── ו. שלד קבוע לשלושת קובצי ה-md הנלווים (סבב 39 — השלמה שנייה) ───────────
  *  `CLAUDE.md` נשמר ע"י בלוקי ה-SHARED, אבל שלושת הקבצים שלצידו —
  *  `README.md`, `CONTEXT.md` ו-`android/README.md` — לא נבדקו כלל, והם
  *  נסחפו בדיוק כפי שכלל ברזל 8 מתאר: ל-CONTEXT של יומן חסרה הייתה אזהרת
@@ -283,14 +279,15 @@ const MD_SKELETONS = [
       [/^##\s+פיתוח\s*$/,          '## פיתוח'],
       [/^##\s+APK\s*$/,            '## APK'],
     ] },
+  /* ⭐ סבב 65 — `CONTEXT.md` מחזיק **לקוח וצורך** בלבד (כלל ברזל 23), ולכן
+   *  השלד שלו קצר: זהות הריפו, ה-GRANT, ומצב המוצר. ⛔ «כללים קריטיים»,
+   *  «טבלאות» ו«פרטי מערכת» ירדו — הם היו עותק שני של `CLAUDE.md` ושל
+   *  `README.md`, ⛔ ועותק שני נסחף בשקט. פרק ה-smali עבר ל-`android/README.md`,
+   *  שם יושב תיעוד ה-APK.                                                  */
   { file: 'CONTEXT.md', need: [
       [/^##\s+פרטי ריפו\s*$/,                        '## פרטי ריפו'],
       [/^##\s+.*Supabase — GRANT חובה לטבלאות חדשות/, '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות'],
-      [/^##\s+כללים קריטיים לפיתוח\s*$/,             '## כללים קריטיים לפיתוח'],
-      [/^##\s+טבלאות\s*$/,                            '## טבלאות'],
       [/^##\s+מצב נוכחי\s*$/,                        '## מצב נוכחי'],
-      [/^##\s+פרטי מערכת\s*$/,                       '## פרטי מערכת'],
-      [/^##\s+תיקון URL ב-APK/,                       '## תיקון URL ב-APK … — smali בלבד'],
     ] },
   { file: 'android/README.md', need: [
       [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
@@ -301,6 +298,7 @@ const MD_SKELETONS = [
       [/^##\s+אייקונים\s*$/,                           '## אייקונים'],
       [/^##\s+Build\s*$/,                              '## Build'],
       [/^##\s+Sign with the PERMANENT key/,            '## Sign with the PERMANENT key …'],
+      [/^##\s+תיקון URL ב-APK/,                        '## תיקון URL ב-APK … — smali בלבד'],
     ] },
 ];
 
@@ -324,7 +322,7 @@ for (const spec of MD_SKELETONS) {
   if (ok) pass(`${spec.file} — ${spec.need.length} פרקי השלד קיימים ובסדר`);
 }
 
-/* ── ז. פסקאות משותפות בשלושת הקבצים הנלווים (סבב 41 — השלמה) ───────────
+/* ── ז. פסקאות משותפות בשלושת הקבצים הנלווים (סבב 41 — השלמה) ───────────────
  *  ⚠️ **סעיף ו אוכף שלד, ולא תוכן** — כותרות `##` בסדר יחסי, וזה כל מה
  *  שהוא רואה. סבב 41 מדד את המחיר: ל-`android/README.md` של gius חסרה
  *  הייתה פסקת הסיכום שבסוף פרק החתימה, והשלד עבר — הכותרת הייתה שם.
@@ -345,8 +343,8 @@ const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
   ['README.md',         'readme-apk',            '81445890f0e496dc'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['CONTEXT.md',        'context-smali-scope',   '15ad22e158b45086'],
-  ['CONTEXT.md',        'context-cache-apk',     '898e51f7bb6048db'],
+  ['android/README.md', 'context-smali-scope',   '15ad22e158b45086'],
+  ['android/README.md', 'context-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
   ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
@@ -416,7 +414,7 @@ function scanShared(file) {
   }
 }
 
-/* ── ח. manifest.json — **ערכי** המפתחות המשותפים (סבב 44) ───────────────
+/* ── ח. manifest.json — **ערכי** המפתחות המשותפים (סבב 44) ──────────────────
    ⚠️ עד הסבב הזה שום בודק לא נגע בתוכן של `manifest.json` — רק בקיומו
    (`check-structure.mjs`). ⛔ **וזו בדיוק צורת הכשל שאיפשרה לשני הבדלים
    לשרוד**: `display` היה `fullscreen` בהנהלה ו-`standalone` בשלוש,
@@ -460,7 +458,7 @@ const CANON_MANIFEST = [
   }
 }
 
-/* ── ט. תקציב התיעוד — חלון של שני סבבים ותקרה של 3,000 שורות (סבב 49) ──
+/* ────── ט. תקציב התיעוד — חלון של שני סבבים ותקרה של 3,000 שורות (סבב 49) ──
    ⚠️ **תשעה סשנים נחנקו בשבוע אחד**, ונמדד ש-`CLAUDE.md` תפח מ-1,782
    שורות (אחרי הגיזום של סבב 34) ל-4,447 — ⛔ מפני שכל סבב מוסיף פרק ואף
    סבב אינו מוחק אחד. כלל ברזל 18 קובע שני תנאים: **חלון של שני פרקי
@@ -497,7 +495,7 @@ const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
   }
 }
 
-/* ── ⭐ תקרת התוכן הפרטי-הקבוע — 900 שורות (סבב 50) ────────────────────
+/* ── ⭐ תקרת התוכן הפרטי-הקבוע — 900 שורות (סבב 50) ──────────────────────────
    ⚠️ החלון של שני הסבבים ותקרת ה-3,000 אינם מספיקים לבדם: שניהם מודדים
    את הקובץ **כולו**, ולכן תפיחה של החלק הפרטי — מה שאינו בלוק `SHARED`
    ואינו פרק סבב — נבלעת בהם ואינה נראית עד שהיא חוצה את התקרה הגלובלית.

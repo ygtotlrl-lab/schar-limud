@@ -25,7 +25,7 @@ const ok  = (n, m) => { pass++; console.log(`  ok   ${n} · ${m}`); };
 const bad = (n, m) => { fail++; console.log(`  FAIL ${n} · ${m}`); };
 const t = (n, cond, m) => cond ? ok(n, m) : bad(n, m);
 
-/* ── הערכים הקנוניים, כפי שהם רשומים ב-check-docs ────────────────────── */
+/* ── הערכים הקנוניים, כפי שהם רשומים ב-check-docs ──────────────────────── */
 const SHARED = { display: 'standalone', orientation: 'portrait', lang: 'he', dir: 'rtl' };
 /* ⛔ אלה נשארים פרטיים ואין לאכוף את ערכם (סבב 44) — זהות חזותית
    פר-אפליקציה, ו-start_url גוזר את ה-id המשתמע (סבב 39). */
@@ -45,7 +45,7 @@ for (const [k, v] of Object.entries(SHARED)) {
 }
 t(n++, PRIVATE.every(k => k in mf), 'כל שמונת המפתחות הפרטיים קיימים');
 
-/* ── check-docs אוכף את הערכים האלה, ולא רק את קיום הקובץ ───────────── */
+/* ── check-docs אוכף את הערכים האלה, ולא רק את קיום הקובץ ──────────────── */
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
 t(n++, /CANON_MANIFEST/.test(docs), 'check-docs מחזיק את הרשימה CANON_MANIFEST');
 for (const [k, v] of Object.entries(SHARED)) {
@@ -55,7 +55,7 @@ for (const [k, v] of Object.entries(SHARED)) {
 t(n++, !PRIVATE.some(k => new RegExp(`\\['${k}',`).test(docs)),
   '⛔ ואף מפתח פרטי אינו ברשימה — יישור שלו היה שובר זהות חזותית');
 
-/* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ────────────────────── */
+/* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
 function runDocsOn(mutManifest) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r44mf-'));
   try {

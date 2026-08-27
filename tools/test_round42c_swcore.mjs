@@ -41,8 +41,8 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⭐ החתימה, מספר השורות והסמנים — זהים בארבעת הריפו. */
-const CORE_SHA = '568ecbd986b69a14';
-const CORE_LINES = 294;
+const CORE_SHA = '7bdea85555a99662';
+const CORE_LINES = 255;
 const START = '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)';
 const END = '/* ═══════════════ סוף מודול ה-service worker';
 
@@ -108,7 +108,7 @@ is(/text\/html; charset=utf-8/.test(SRC),
 /* ── ד. שלוש המוטציות ההתנהגותיות ──────────────────────────────────────── */
 /*  ⚠️ כל מוטציה רצה על עותק בתיקייה זמנית, ומריצה את **רתמת קו-הבסיס
  *  האמיתית**. הצלחה = הרתמה נכשלה. ⛔ מוטציה שהרתמה עוברת עליה היא תיקון
- *  שאינו נאכף, וזו בדיוק הנקודה. */
+ *  שאינו נאכף — וזו בדיוק הנקודה. */
 function harnessFails(label, from, to) {
   if (!SRC.includes(from)) { is(false, `${label} — עוגן המוטציה לא נמצא ב-sw.js`); return; }
   const dir = fs.mkdtempSync(join(os.tmpdir(), 'sw42c-'));

@@ -156,5 +156,65 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk schar-limud.apk
 ```
 
-או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/schar.keystore`,
-alias `schar`). אחרי חתימה מאמתים שה-SHA256 תואם לטבלה שם.
+### המפתח הקבוע — ⛔ לעולם לא להחליף
+
+| | |
+|---|---|
+| **קובץ** | `signing/schar.keystore` (PKCS12, RSA 2048) |
+| **alias** | `schar` |
+| **storepass / keypass** | `schar123` (זהה לשניהם) |
+| **תוקף** | 10,000 יום — 07.08.2026 עד 23.12.2053 |
+| **SHA256** | `29:32:D9:B5:94:69:D4:E4:53:EF:C7:EE:3B:10:55:C9:CE:4B:EE:D6:9B:BB:78:EC:EE:18:BD:C6:BE:2D:0F:87` |
+| **SHA1** | `F5:BD:6A:6E:BE:EF:B5:85:78:9F:70:B1:19:60:8F:1B:DE:90:1B:D4` |
+| **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |
+
+⭐ **מסלול חתימה אחד ויחיד** (סבב 53) — `signing/sign-apk.sh`. ⛔ החלופות
+הידניות אינן מתועדות כאן: מסלול חתימה שני בתיעוד הוא בדיוק הדרך שבה APK
+נחתם במפתח הלא-נכון. אימות:
+`keytool -list -v -keystore signing/schar.keystore -storepass schar123`.
+
+⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית היא
+ה-workflow שלמעלה (`Build Signed APK`, temurin 17, artifact `schar-limud-apk`).
+⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
+
+### פרטי המעטפת
+package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
+`usesCleartextTraffic=false`. ⚠️ המעטפת הראשונה כאן טוענת מהרשת מהיום
+הראשון — ⛔ לא היה כאן שלב `file://`.
+
+<!-- SHARED:start id="context-smali-scope" -->
+## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
+
+⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
+היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
+ולכן אין בה URL שצריך לתקן.
+⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
+ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
+«חתימת APK» ב-CLAUDE.md.
+<!-- SHARED:end -->
+
+```bash
+apktool d <app>.apk -o /tmp/schar_work -f
+# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
+rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
+apktool b /tmp/schar_work -o built.apk
+zipalign -f 4 built.apk aligned.apk
+apksigner sign --ks signing/schar.keystore --ks-key-alias schar \
+  --ks-pass pass:schar123 --key-pass pass:schar123 --out output.apk aligned.apk
+```
+
+⚠️ **כאן אין APK ותיק בלי מקור** — המעטפת הראשונה בריפו הזה נבנתה מ-`android/`
+מהיום הראשון. הפרק נשמר כדפוס ארגוני אחיד, ⛔ ולא מפני שיש כאן APK שצריך
+לתקן.
+
+<!-- SHARED:start id="context-cache-apk" -->
+### ⚠️ Cache APK — כלל זהב
+
+שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
+מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
+חותמת זמן:
+<!-- SHARED:end -->
+
+```bash
+TS=$(date +%s) && apksigner sign ... --out schar-limud-${TS}.apk
+```

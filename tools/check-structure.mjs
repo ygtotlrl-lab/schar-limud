@@ -37,6 +37,8 @@ const APP = {
        מפני שהפרקים שממנו נשלף נמחקו, וג'יט לבדו אינו מקום שקוראים בו. */
     '_prune-lessons.md': 'לקחי פרקי הסבבים שנגזמו בסבב 48ב (הפרקים עצמם נמחקו)',
   },
+  keystore: 'schar.keystore',
+  androidExtra: {},
   toolsDirs: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -109,7 +111,7 @@ for (const [d, why] of Object.entries(APP.toolsDirs)) {
   else pass(`תת-תיקיית tools מנומקת: ${d} — ${why}`);
 }
 
-/* ── ד. `icons/` ו-`design/` — היפוך ברירת המחדל (סבב 50) ──────────────
+/* ── ד. `icons/` ו-`design/` — היפוך ברירת המחדל (סבב 50) ───────────────────
    ⚠️ עד היום שתי התיקיות היו **בסט הקנוני של השורש** ותו לא: השער דרש
    שהן יתקיימו, ⛔ ולא נגע במה שבתוכן. וזו בדיוק צורת הכשל שנמדדה —
    `icons/favicon-64.png` חי ב-gius לבדו עם שלושה קוראים, ואף שער לא
@@ -152,6 +154,98 @@ for (const f of ['index.html', 'sw.js']) {
 if (servedRefs.length) fail('הפניה ל-design/ מתוך ' + servedRefs.join(' ו-') +
                             ' — ⛔ קובץ המאסטר הוא נכס עיצוב ואינו נטען בדף (סבב 50)');
 else pass('⛔ אף קובץ מוגש אינו מפנה ל-design/');
+
+/* ── ה. תוכן ארבע התיקיות שלא נבדקו (סבב 65) ────────────────────────────────
+   ⚠️ **הפער שנמדד:** השער בדק **קיום** של שבע התיקיות, ⛔ ותוכן של ארבע
+   בלבד (שורש · `tools` · `icons` · `design`). כלומר קובץ שהתווסף
+   ל-`android/`, ל-`migrations/`, ל-`signing/` או ל-`.github/` בריפו אחד
+   בשקט לא נראה לאף שער — ⛔ וזו בדיוק צורת הכשל שכלל ברזל 14 אוסר.
+   ⛔ **הסט נאכף, לא התוכן** — מה שיושב בתוך כל קובץ נאכף בשערים הייעודיים
+   (`test_round45_android` · `test_round46b_workflows` · `test_round65_signscript`).
+   ══════════════════════════════════════════════════════════════════════ */
+const WORKFLOWS = ['build-apk.yml', 'cleanup-merged-branches.yml'];
+/*  ⚠️ `<pkg>` — נתיב חבילת ה-Java נבדל לפי מזהה החבילה, וזה הדבר היחיד
+ *  שמותר לו להיבדל בעץ הזה. */
+const ANDROID = [
+  'README.md', 'build.gradle', 'gradle.properties', 'settings.gradle',
+  'app/build.gradle',
+  'app/src/main/AndroidManifest.xml',
+  'app/src/main/java/<pkg>/MainActivity.java',
+  'app/src/main/java/<pkg>/ShellActivity.java',
+  'app/src/main/res/drawable/ic_launcher_background.xml',
+  'app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
+  ...['hdpi', 'mdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'].flatMap((d) => [
+    `app/src/main/res/mipmap-${d}/ic_launcher.png`,
+    `app/src/main/res/mipmap-${d}/ic_launcher_foreground.png`]),
+];
+const MIG_RE = /^\d{3}_[a-z0-9_]+\.sql$/;
+
+function walk(dir, base) {
+  const out = [];
+  for (const e of fs.readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    const rel = base ? base + '/' + e.name : e.name;
+    if (e.isDirectory()) out.push(...walk(join(dir, e.name), rel));
+    else out.push(rel);
+  }
+  return out.sort();
+}
+
+/* ה1 — `.github/workflows` */
+{
+  const got = walk('.github', '');
+  const want = WORKFLOWS.map((w) => 'workflows/' + w);
+  const miss = want.filter((w) => !got.includes(w));
+  const extra = got.filter((w) => !want.includes(w));
+  if (miss.length)  fail('workflows חסרים: ' + miss.join(', '));
+  if (extra.length) fail('קבצים לא-רשומים תחת .github/: ' + extra.join(', ') +
+                         ' — workflow חדש הוא יכולת משותפת (כלל ברזל 14)');
+  if (!miss.length && !extra.length) pass('.github/ — שני ה-workflows הקנוניים בלבד');
+}
+
+/* ה2 — `signing/` */
+{
+  const got = walk('signing', '');
+  const keys = got.filter((f) => f.endsWith('.keystore'));
+  const rest = got.filter((f) => !f.endsWith('.keystore'));
+  if (keys.length !== 1) fail(`signing/ מחזיקה ${keys.length} קובצי keystore — ⛔ בדיוק אחד`);
+  else if (keys[0] !== APP.keystore) fail(`ה-keystore הוא ${keys[0]} ולא ${APP.keystore} שבבלוק APP`);
+  const bad = rest.filter((f) => f !== 'sign-apk.sh');
+  if (bad.length) fail('קבצים לא-רשומים ב-signing/: ' + bad.join(', '));
+  if (!rest.includes('sign-apk.sh')) fail('signing/sign-apk.sh חסר');
+  if (keys.length === 1 && keys[0] === APP.keystore && !bad.length && rest.includes('sign-apk.sh'))
+    pass(`signing/ — ${APP.keystore} + sign-apk.sh`);
+}
+
+/* ה3 — `migrations/` */
+{
+  const got = walk('migrations', '');
+  const bad = got.filter((f) => !MIG_RE.test(f));
+  if (bad.length) fail('שמות מיגרציה שאינם בתבנית `NNN_שם.sql`: ' + bad.join(', ') +
+                       ' — ⛔ המספור אחיד בארבעת הריפו (שלוש ספרות)');
+  const nums = got.filter((f) => MIG_RE.test(f)).map((f) => +f.slice(0, 3));
+  const dup = nums.filter((x, i) => nums.indexOf(x) !== i);
+  if (dup.length) fail('מספרי מיגרציה כפולים: ' + [...new Set(dup)].join(', '));
+  const gaps = nums.slice(1).map((x, i) => x - nums[i]).filter((d) => d !== 1);
+  if (gaps.length) fail('המספור אינו רציף — ⛔ מיגרציה חדשה מקבלת את המספר הבא בתור');
+  if (!bad.length && !dup.length && !gaps.length)
+    pass(`migrations/ — ${nums.length} קבצים, מספור רציף בשלוש ספרות`);
+}
+
+/* ה4 — `android/` */
+{
+  const got = walk('android', '').map((f) => f.replace(/java\/com\/[a-z]+\/[a-z]+\//, 'java/<pkg>/'));
+  const allow = new Set([...ANDROID, ...Object.keys(APP.androidExtra || {})]);
+  const miss = ANDROID.filter((f) => !got.includes(f));
+  const extra = got.filter((f) => !allow.has(f));
+  if (miss.length)  fail('קבצים חסרים מעץ האנדרואיד הקנוני: ' + miss.join(', '));
+  if (extra.length) fail('קבצים לא-רשומים תחת android/: ' + extra.join(', ') +
+                         ' — קובץ חדש מחייב שורה מנומקת ב-APP.androidExtra, בארבעת עותקי הבדיקה');
+  for (const [f, why] of Object.entries(APP.androidExtra || {})) {
+    if (!got.includes(f)) fail(`חריגת android רשומה שאינה קיימת בפועל: ${f}`);
+    else pass(`חריגת android מנומקת: ${f} — ${why}`);
+  }
+  if (!miss.length && !extra.length) pass(`android/ — ${ANDROID.length} קבצים קנוניים`);
+}
 
 console.log(failures ? `\n❌ בדיקת המבנה נכשלה (${failures})`
                      : '\n✅ בדיקת המבנה עברה');

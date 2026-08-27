@@ -39,8 +39,8 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const BLOCK = {
-  sha: 'faf3168aa73eeb97',
-  lines: 133,
+  sha: '6b14ac8157e9532e',
+  lines: 111,
   start: '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)',
   end:   '/* ═══════════════ סוף מודול נעילת חוסר-הפעילות',
 };
@@ -113,7 +113,7 @@ const nLines = block.split('\n').length;
 if (nLines !== BLOCK.lines) fail(`2. ${nLines} שורות במקום ${BLOCK.lines}`);
 else pass('2. ' + BLOCK.lines + ' שורות, כמצופה');
 
-/* ── 3. הערכים עצמם — ⛔ קריאים בהודעת הכשל ולא רק בחתימה ──────────────── */
+/* ── 3. הערכים עצמם — ⛔ קריאים בהודעת הכשל ולא רק בחתימה ───────────────── */
 /*  חתימה שזזה אומרת «משהו השתנה»; זו אומרת **מה** השתנה. */
 for (const [name, want] of [['LK_LOCK_MS', LOCK_MS], ['LK_WARN_MS', WARN_MS]]) {
   const m = new RegExp('var\\s+' + name + '\\s*=\\s*([^;]+);').exec(block);
@@ -155,7 +155,7 @@ if (/\blkStop\s*\(/.test(fnBody(codeOutside, APP.stopFn)))
   pass('7. `lkStop()` נקראת ממסלול היציאה `' + APP.stopFn + '()`');
 else fail('7. `' + APP.stopFn + '()` אינו עוצר את הנעילה — טיימר דרוך היה נועל את מסך הכניסה');
 
-/* ── 8. ⛔ אין מנגנון נעילה פרטי ששרד לצד המשותף ───────────────────────── */
+/* ── 8. ⛔ אין מנגנון נעילה פרטי ששרד לצד המשותף ────────────────────────── */
 if (/\b(SL_LOCK_MS|slResetLock|resetLockTimer|AUTH\.lockTimer)\b/.test(codeOutside))
   fail('8. ⛔ שריד של מנגנון הנעילה הפרטי נשאר בקוד — שני מנגנונים לאותה יכולת');
 else pass('8. ⛔ אין שריד של מנגנון נעילה פרטי');
@@ -321,7 +321,8 @@ for (const mu of MUTATIONS) {
   else fail('12. שינוי `LK_LOCK_MS` לא נתפס');
 }
 
-/*  ⭐ ומוטציית-נגד: שינוי רווחים בלבד ⛔ אינו מפיל את ההתנהגות. */
+/*  ⭐ ומוטציית-נגד: שינוי רווחים בלבד ⛔ אינו מפיל את ההתנהגות — שער
+ *  שנופל על רווח מודד ניסוח ולא קוד. */
 {
   const spaced = block.replace('function lkStop() {', 'function  lkStop( ) {');
   const res = spaced === block ? null : scenarios(spaced);
