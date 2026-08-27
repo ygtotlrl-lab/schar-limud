@@ -2139,10 +2139,10 @@ IS NOT NULL`, בשם `_uidx`. הכוונה סבירה (לא לאנדקס 88 רש
 
 ⭐ **שתי משימות ה-cron הורצו ואומתו ב-2026-08-18** —
 `hanhala-ruchanit/migrations/004_backup_retention_cron.sql` (הפרויקט
-המשותף — חלה גם על yoman ועל schar) ו-`gius/migrations/0005_backup_retention_cron.sql`;
+המשותף — חלה גם על yoman ועל schar) ו-`gius/migrations/005_backup_retention_cron.sql`;
 `bk_retention_daily` פעילה בשני הפרויקטים בתזמון `'0 3 * * *'`.
-⛔ **ורשימת-ההיתר עצמה נקראת מהמיגרציה האחרונה שמגדירה אותה מחדש** — היום
-`hanhala-ruchanit/migrations/014_backup_allowlist_drop_wa_phone.sql`; ⛔ מיגרציה
+⛔ **ורשימת-ההיתר עצמה נקראת מהמיגרציה האחרונה שמגדירה אותה מחדש** — בפרויקט
+המשותף `hanhala-ruchanit/migrations/014_backup_allowlist_drop_wa_phone.sql`; ⛔ מיגרציה
 שכבר רצה אינה נערכת, ולכן שינוי ברשימה הוא תמיד קובץ חדש.
 ⚠️ **עובדה ולא הנחה: 57 השורות שהיו בפרויקט המשותף תחת `PRE_*`/`ORPHAN_*`
 נמחקו ב-2026-08-18 ואינן ניתנות לשחזור** — מסלול Free אינו כולל גיבויי
