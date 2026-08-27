@@ -48,13 +48,13 @@ const APP = {
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           '47bca4a8ece5ec9f'],
+  ['iron-rules-storage',           'f2e98d98f0a680fe'],
   ['iron-rule-6-sync',             '22bfada1c63388b7'],
   ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
   ['iron-rule-8-docs',             '2afc208280a1ac2d'],
   ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
   ['iron-rule-10-users',           'ff7d10749b689428'],
-  ['capability-matrix',            '5829a2a7800b5d25'],
+  ['capability-matrix',            '4f3d9921084b1dca'],
   ['iron-rule-11-comments',        '8edbc5aa804a46c1'],
   ['iron-rule-12-capabilities',    'aec6476860954ab2'],
   ['shared-modules-index',         '7cc0d3bfddc6e7d3'],
@@ -67,7 +67,7 @@ const CANON = [
   ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
   ['iron-rule-20-backup-policy',   '9d90ac40ff1913f3'],
   ['iron-rules-21-24',             '860365793e45f61e'],
-  ['iron-rule-25-icon-layer',      '7ae355cbcdb2bb1e'],
+  ['iron-rule-25-icon-layer',      'fe6457930ef5a457'],
   ['iron-rule-26-input-layer',    'd6d8ba1ebf0ca2cc'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
@@ -456,6 +456,42 @@ const CANON_MANIFEST = [
         }
       }
       if (ok) pass(`manifest.json — ${CANON_MANIFEST.length} ערכי המפתחות המשותפים תואמים`);
+      /*  ⭐ שכבת האייקונים במניפסט (כלל ברזל 25, סבב 67) — ⛔ שלושה
+       *  אייקונים מוצהרים, ⛔ ואייקון מלא אינו נושא `maskable`.
+       *  ⚠️ **נמדד ולא הוצהר:** ביומן שני האייקונים המלאים הוכרזו
+       *  `"any maskable"`, כלומר הלאנצ'ר חתך אותם בעיגול, ⛔ והקובץ
+       *  `icon-maskable-512.png` — שקיים בארבעתן מסבב 46 — לא הופיע
+       *  שם כלל. ⛔ ו-`src` שאינו מצביע על קובץ קיים הוא 404 שקט:
+       *  ההתקנה מצליחה, והאייקון פשוט אינו מופיע. */
+      const icons = Array.isArray(mf.icons) ? mf.icons : [];
+      const CANON_ICONS = [
+        ['icons/icon-192.png',          '192x192', 'any'],
+        ['icons/icon-512.png',          '512x512', 'any'],
+        ['icons/icon-maskable-512.png', '512x512', 'maskable'],
+      ];
+      let iok = true;
+      for (const [src, sizes, purpose] of CANON_ICONS) {
+        const e = icons.find((i) => i && i.src === src);
+        if (!e) { iok = false; fail(`manifest.json: האייקון "${src}" אינו מוצהר`); continue; }
+        if (e.sizes !== sizes) {
+          iok = false;
+          fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes}`);
+        }
+        if ((e.purpose || 'any') !== purpose) {
+          iok = false;
+          fail(`manifest.json: "${src}" מוצהר purpose="${e.purpose}" במקום "${purpose}" — ` +
+               'אייקון מלא אינו maskable (כלל ברזל 25); "any maskable" הוא מה שגרם ' +
+               'לקרניים להיחתך בעיגול הלאנצ\'ר.');
+        }
+      }
+      for (const i of icons) {
+        if (!i || !i.src) continue;
+        if (!fs.existsSync(i.src)) {
+          iok = false;
+          fail(`manifest.json: "${i.src}" מוצהר אך אינו קיים בריפו — 404 שקט`);
+        }
+      }
+      if (iok) pass(`manifest.json — שלושת האייקונים הקנוניים מוצהרים, וכל src מצביע על קובץ קיים`);
     }
   }
 }
