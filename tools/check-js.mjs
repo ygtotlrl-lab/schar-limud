@@ -89,7 +89,7 @@ function check(label, file) {
   }
 }
 
-/* ── 1. חילוץ הסקריפטים המוטבעים מ-index.html ─────────────────────────── */
+/* ── 1. חילוץ הסקריפטים המוטבעים מ-index.html ──────────────────────────── */
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
 let m, n = 0;
@@ -108,7 +108,7 @@ if (n === 0) {
 /* ── 2. קבצים עצמאיים ──────────────────────────────────────────────────── */
 check('sw.js', join(ROOT, 'sw.js'));
 
-/* ── 3. כללי-אמת שפרסר אינו תופס (APP.rules) ──────────────────────────── */
+/* ── 3. כללי-אמת שפרסר אינו תופס (APP.rules) ───────────────────────────── */
 const SRC = { sw: readFileSync(join(ROOT, 'sw.js'), 'utf8'), html };
 for (const [file, reSrc, expect, msg] of APP.rules) {
   const hit = new RegExp(reSrc).test(SRC[file]);
@@ -117,7 +117,7 @@ for (const [file, reSrc, expect, msg] of APP.rules) {
   console.error('  FAIL ' + msg);
 }
 
-/* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ───────────────────────── */
+/* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ────────────────────────── */
 for (const gate of APP.gates) {
   try {
     execFileSync(process.execPath, [join(ROOT, 'tools', gate)],

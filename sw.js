@@ -16,7 +16,8 @@ var CORE = [
   './icons/icon-512.png'
 ];
 
-// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף (כלל קריטי 2).
+// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף (כלל קריטי 2, סבב 6) —
+// שחרור מצד הספק היה שובר את האפליקציה בלי שום שינוי קוד כאן.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1'

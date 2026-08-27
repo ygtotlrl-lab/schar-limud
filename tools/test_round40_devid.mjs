@@ -57,7 +57,7 @@ function run(block, cfgKey, store) {
   return ctx;
 }
 
-console.log(`\n── ${APP.app}: מודול מזהה המכשיר (סבב 40) ──`);
+console.log(`\n────────────────── ${APP.app}: מודול מזהה המכשיר (סבב 40) ──`);
 
 const block = grab(src);
 is(!!block, 'בלוק המודול המשותף נמצא בין שני הסמנים');

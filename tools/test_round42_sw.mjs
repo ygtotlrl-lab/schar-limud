@@ -56,12 +56,14 @@ const APP = {
     'sub-cached-online':     'body:NET-OK|status:200',
     'sub-cached-offline':    'body:CORE-ASSET|status:200',
     /* ⭐ תוקן בסבב 42ג: תת-משאב חסר החזיר undefined; מעכשיו שגיאת רשת
-       אמיתית, ⛔ לעולם לא HTML בגוף תשובה של סקריפט. */
+       אמיתית, ⛔ לעולם לא HTML בגוף תשובה של סקריפט — זו שגיאת תחביר
+       בדף, לא הודעה למשתמש. */
     'sub-missing-offline':   'network-error',
     'sub-404':               'body:NET-404|status:404',
     /* ⭐ תוקן בסבב 42ג: לא הייתה כאן בדיקת `r.ok` ולא בדיקת opaque, ולכן
        תשובת 404 של GitHub Pages נכנסה למטמון תחת מפתח הבקשה והוגשה ממנו
-       אופליין. `swStore` שבליבה שומרת ⛔ אך ורק תשובה שאומתה. */
+       אופליין. `swStore` שבליבה שומרת ⛔ אך ורק תשובה שאומתה — `ok`
+       ו-200 ולא-opaque. */
     'sub-404-stored':        'not-stored',
     'supabase':              'passthrough',
     'cdn-cached-online':     'body:NET-OK|status:200',
@@ -334,7 +336,7 @@ const SCENARIOS = [
 /* ══════════════════════════════════════════════════════════════════════════
    הרצה
    ══════════════════════════════════════════════════════════════════════════ */
-console.log(`\n── ${APP.app}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
+console.log(`\n──────── ${APP.app}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
 
 is(!!CACHE_NAME, `CACHE_NAME נקרא מהמקור — '${CACHE_NAME}'`);
 is(listeners.fetch.length === 1, 'מאזין fetch יחיד נרשם');

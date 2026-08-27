@@ -78,7 +78,7 @@ t(n++, /const ROUND_H2\s*=/.test(docs), 'check-docs מזהה פרק סבב לפ�
 t(n++, /!inFence\[i\]\s*&&\s*ROUND_H2\.test/.test(docs),
   '⛔ והזיהוי מדלג על כותרת שבתוך גדר קוד — אחרת דוגמה בתיעוד נספרת כפרק');
 
-/* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ────────────────────── */
+/* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
 function runDocsOn(mutate) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r49bg-'));
   try {

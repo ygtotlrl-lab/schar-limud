@@ -37,7 +37,8 @@ t(n++, iFiles.length === 6 && ICONS.every(f => iFiles.includes(f)),
 t(n++, dFiles.length === 1 && MASTER_RE.test(dFiles[0]),
   `design/ — קובץ מאסטר אחד: ${dFiles.join(', ')}`);
 
-/* ⛔ הפניה ל-design/ מקובץ מוגש היא הורדה שהמשתמש משלם עליה לשום צורך. */
+/* ⛔ אין הפניה ל-design/ מקובץ מוגש (סבב 50) — זו הורדה במגה-בייט שהמשתמש
+   משלם עליה לשום צורך. */
 for (const f of ['index.html', 'sw.js']) {
   t(n++, !fs.readFileSync(path.join(ROOT, f), 'utf8').includes('design/'),
     `⛔ ${f} אינו מפנה ל-design/`);

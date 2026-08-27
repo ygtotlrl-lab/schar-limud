@@ -69,7 +69,7 @@ for (const p of [BUILD, CLEANUP]) {
 const buildSrc   = fs.readFileSync(join(ROOT, BUILD),   'utf8');
 const cleanupSrc = fs.readFileSync(join(ROOT, CLEANUP), 'utf8');
 
-/* ── א+ב. שתי החתימות ───────────────────────────────────────────────────── */
+/* ── א+ב. שתי החתימות ──────────────────────────────────────────────────── */
 const checkSha = (label, text, want) => {
   const got = sha(norm(text));
   if (got === want) pass(`${label}: תואם לחתימה הקנונית (${got})`);
@@ -80,7 +80,7 @@ const checkSha = (label, text, want) => {
 checkSha(`חתימת ${BUILD}`,   buildSrc,   BUILD_SHA);
 checkSha(`חתימת ${CLEANUP}`, cleanupSrc, CLEANUP_SHA);
 
-/* ── ג. זליגת שם ריפו ──────────────────────────────────────────────────────
+/* ── ג. זליגת שם ריפו ───────────────────────────────────────────────────────
  *  ⚠️ החתימה כבר הייתה נופלת על זה, ⛔ אבל בהודעה שאינה אומרת דבר. שם של
  *  ריפו אחר ב-workflow הוא העתקה שלא הושלמה — ה-APK היה נבנה תחת השם
  *  הלא נכון, וזה שווה הודעה מפורשת.                                      */
@@ -90,8 +90,9 @@ for (const [label, src] of [[BUILD, buildSrc], [CLEANUP, cleanupSrc]]) {
   else pass(`${label}: אין זליגת שם ריפו`);
 }
 
-/* ── ד. מוטציות ─────────────────────────────────────────────────────────
- *  ⛔ רצות על עותק **בזיכרון** ולא על העץ (הלקח של סבב 42ג).            */
+/* ── ד. מוטציות ─────────────────────────────────────────────────────────────
+ *  ⛔ רצות על עותק **בזיכרון** ולא על העץ — הלקח של סבב 42ג: מוטציה שנכתבת
+ *  לעץ שורדת כשלון באמצע הריצה.                                        */
 const mut = (label, before, after, shouldDiffer) => {
   if ((before !== after) === shouldDiffer) pass(`מוטציה: ${label}`);
   else fail(`מוטציה: ${label} — ` +

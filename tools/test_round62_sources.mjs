@@ -30,7 +30,7 @@ import { dirname, join } from 'node:path';
 const APP = {
   name: 'schar-limud',
   /* ⛔ ארבע טבלאות הליבה. ⚠️ נמדדו מול `information_schema.tables`
-     ב-26.8.2026, ⛔ ולא הועתקו מהקוד. */
+     ב-26.8.2026, ⛔ ולא הועתקו מהקוד — רשימה שנגזרת מהקוד מאשרת את עצמה. */
   tables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
   /* דגלים שמותר להם לשער מקור — ⛔ מקור מאחורי דגל אינו נדרש להיות
      ב-`tables`, מפני שהוא אינו נשלף עד שהדגל יידלק. ⚠️ ריק כאן: אין
@@ -44,7 +44,7 @@ const SRC = readFileSync(join(here, '..', 'index.html'), 'utf8');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok   ' + m); } else { fail++; console.log('  FAIL ' + m); } };
 
-/* ── חילוץ גוף `sources()` ומיפוי כל מקור למצב השִעוּר שלו ──────────────── */
+/* ── חילוץ גוף `sources()` ומיפוי כל מקור למצב השִעוּר שלו ─────────────── */
 const stripComments = (t) =>
   t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
 
@@ -126,7 +126,8 @@ ok((found || []).every((s) => !!s.name),
 const live = found.filter((s) => !s.gate);
 const gated = found.filter((s) => s.gate);
 
-/* ⛔ א. כל מקור-טבלה שאינו מגודר חייב להיות ברשימת הטבלאות המוכרזות. */
+/* ⛔ א. כל מקור-טבלה שאינו מגודר חייב להיות ברשימת הטבלאות המוכרזות —
+   טבלה שהוכרזה כמקור ומעולם לא נוצרה משתקת את הגיבוי כולו. */
 const missing = live.map((s) => s.name).filter((n) => APP.tables.indexOf(n) === -1);
 ok(missing.length === 0,
    '2 · כל מקור `kind:\'table\'` פעיל מוכרז ב-APP.tables' +
