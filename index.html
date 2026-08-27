@@ -102,17 +102,17 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .frm-row textarea{resize:vertical;min-height:70px}
 .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700}
 .badge.green{background:#e8f5e9;color:#2e7d32}
-.badge.red{background:#ffebee;color:#c62828}
+
 .badge.gray{background:#f5f5f5;color:#757575;border:1px solid var(--border)}
-.month-nav{display:flex;align-items:center;gap:10px}
-.month-nav button{background:#fff;border:1.5px solid var(--border);border-radius:999px;width:32px;height:32px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.month-nav button:hover{background:#f5f5f5}
-.month-nav .m-label{font-weight:700;font-size:.95rem;color:#1a1a1a;min-width:110px;text-align:center}
+
+
+
+
 .st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .12s}
 .st-row:last-child{border-bottom:none}
 .st-row:hover{background:#fafafa}
-.st-row.handled .st-name{font-weight:700}
-.st-row.unhandled{opacity:.6}
+
+
 .st-name{font-size:.9rem;color:#1a1a1a}
 .st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
@@ -142,12 +142,12 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .sc-hdr{background:#1a1a1a;color:#fff;padding:22px 16px}
 .sc-name{font-size:1.25rem;font-weight:900}
 .sc-meta{font-size:.8rem;opacity:.65;margin-top:4px}
-.sc-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
 .sc-tog{border:none;border-radius:999px;padding:6px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s}
 .tog-act-on{background:#9fe870;color:#1a1a1a}
 .tog-act-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
-.tog-hnd-on{background:#fef3c7;color:#b45309}
-.tog-hnd-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
+
+
 .amt-green{color:#2e7d32;font-weight:700}
 .amt-yellow{color:#b45309;font-weight:700}
 .amt-red{color:#c62828;font-weight:700}
@@ -2925,7 +2925,7 @@ function slDropLegacyPassHash() {
    מארבע שנשארה כך (hanhala פתרה בסבב 22, gius בסבב 23).
 
    **הפתרון — אותו מנגנון בדיוק.** לכל משתמש `pass_salt` + `pass_fp`:
-   PBKDF2-SHA256, 100,000 סיבובים, **מלח אקראי פר-משתמש**. הטביעה יורדת
+   PBKDF2-SHA256, `SL_PASS_ITER_USER` סיבובים, **מלח אקראי פר-משתמש**. הטביעה יורדת
    למכשיר; הסיסמה — לעולם לא. מכשיר שאבד חושף טביעות ולא סיסמאות,
    וההשהיה של 100k היא מה שהופך ניחוש-בכוח על העותק שבדיסק ליקר גם מול
    סיסמה בת שש ספרות (סבב 19).
