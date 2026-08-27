@@ -28,7 +28,7 @@ const APP = {
   legacyKeys: [],
   sisterKeys: [],
   migration: null,
-  migrationDoc: 'hanhala-ruchanit/migrations/004_backup_retention_cron.sql',
+  migrationDoc: 'hanhala-ruchanit/migrations/014_backup_allowlist_drop_wa_phone.sql',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -287,7 +287,20 @@ function t5() {
 console.log('· ' + APP.name + ' — סבב 35ג: פינוי גיבויים אוטומטי במסד');
 t1();
 if (APP.migration) {
-  const sql = readFileSync(join(ROOT, APP.migration), 'utf8');
+  /* ⭐ סבב 65 — «המצב האפקטיבי» ולא «הקובץ הראשון»: מיגרציה שכבר רצה אינה
+   *  נערכת, ולכן שינוי ברשימת-ההיתר הוא קובץ חדש שמגדיר אותה מחדש. השער
+   *  מרכיב כאן את מה שבאמת רץ במסד — המבנה מ-`APP.migration`, והרשימה
+   *  מ-`APP.allowlistMigration` כשקיימת. ⛔ בלי זה השער היה אוכף רשימה
+   *  שכבר הוחלפה, כלומר מקור אמת שני. */
+  let sql = readFileSync(join(ROOT, APP.migration), 'utf8');
+  if (APP.allowlistMigration) {
+    const RE = /create or replace function public\.bk_retention_keys\(\)[\s\S]*?\$\$[\s\S]*?\$\$;/;
+    const later = RE.exec(readFileSync(join(ROOT, APP.allowlistMigration), 'utf8'));
+    assert(!!later, '0 · ' + APP.allowlistMigration + ' מגדירה מחדש את רשימת-ההיתר');
+    /* ⚠️ החלפה בפונקציה ולא במחרוזת — `$$` במחרוזת תחליף נקרא ע"י
+     *  `String.replace` כ-`$` בודד, וגוף ה-SQL היה נשבר בשקט. */
+    sql = sql.replace(RE, () => later[0]);
+  }
   t2(sql); t3(sql); t4(sql);
 } else {
   /* ⚠️ אין כאן קובץ מיגרציה (הפרויקט משותף), ולכן נבדקת התרומה עצמה —
