@@ -47,7 +47,7 @@ const APP = {
   // ⚠️ שורה 7 «לא רלוונטי» — אין כאן פינוי כלל (שורה 6), ולכן אין מה לאמת.
   /*  ⭐ שם משפך ה-`kv` (סבב 56) — `null` כשאין כאן `kv` כלל. */
   kvFallbackFn: null,
-  naRows: [7],
+  naRows: [7, 45],
   matrixProbe: {
     // ❌ מתועד: `doLogin` מריצה משיכה מלאה כפויה במקום נתיב חלקי.
     4:  () => false,
@@ -679,7 +679,27 @@ const MATRIX = [
    *  הזו היא מה שיתפוס אותו כשאפליקציה חמישית תעתיק את התבנית.       */
   { row: 44, name: 'גשר שיתוף',
     probe: () => javaSrc().indexOf('Intent.createChooser') >= 0 },
+  /*  ⭐ סבב 64 — העברת מזהה ל-DOM. ⛔ ה-probe אינו בודק ש-`idArg` **קיים**
+   *  אלא שכל אתר העברה **עטוף בו**: הבאג של סבב 64 היה בדיוק קיום בלי
+   *  עטיפה — הפונקציה הייתה שם, והאתר שמחפש את האלמנט לא קרא לה.
+   *  ⚠️ אפליקציה בלי אתרי העברה כלל מוצהרת «לא רלוונטי» ב-`naRows`. */
+  { row: 45, name: 'העברת מזהה ל-DOM',
+    probe: () => idSites().wrapped > 0 && idSites().bare === 0 },
 ];
+
+/*  ⭐ אתרי העברת-מזהה (סבב 64) — אופרנד שמשורשר מיד אחרי `('` או `,'`,
+ *  כלומר נוחת בקוד ה-`onclick` כטוקן **בלי מרכאות**. ⚠️ הסגמנט האחרון
+ *  הוא שנבדק (`rec.id` הוא מזהה, `idx` אינו).                          */
+function idSites() {
+  const re = /[(,]'\s*\+\s*([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)/g;
+  let m, bare = 0, wrapped = 0;
+  while ((m = re.exec(src)) !== null) {
+    const expr = m[1];
+    if (expr === 'idArg' && src[m.index + m[0].length] === '(') { wrapped++; continue; }
+    if (/id$/i.test(expr.split('.').pop().trim())) bare++;
+  }
+  return { bare, wrapped };
+}
 
 const NA = 'לא רלוונטי';
 for (const m of MATRIX) {
