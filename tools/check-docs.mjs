@@ -59,7 +59,7 @@ const CANON = [
   ['iron-rule-12-capabilities',    'aec6476860954ab2'],
   ['shared-modules-index',         '8d7062b7677beafc'],
   ['iron-rule-13-shared-scope',    '21d638f92c1ab245'],
-  ['iron-rule-14-org-wide',        '74432aa5e6caad7b'],
+  ['iron-rule-14-org-wide',        '7cec6505ea3357c0'],
   ['iron-rule-15-gaps-verified',   'db71b8ce8a083ea9'],
   ['iron-rule-16-remnant',         '29eee855dc43bb0c'],
   ['iron-rule-17-touch-scan',      '91743204069771d0'],

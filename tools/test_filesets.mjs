@@ -14,6 +14,13 @@
 const APP = {
   app: 'schar-limud',
   /*  ⛔ קובץ שקיים כאן בלבד — כל שורה נושאת את הסיבה (כלל ברזל 24). */
+  /*  ⛔ מבחן שקיים כאן ואינו בסט המשותף (סבב 68, כלל ברזל 14) —
+   *  ⚠️ כל שורה נושאת את הסיבה, ⛔ ו-⏳ מסמן **מבחן מעבר** שנושא
+   *  טריגר להסרה. ⛔ מבחן תשתית שקיים באחת בלבד בלי שורה כאן מפיל. */
+  testsOnly: {
+      'offline_login': 'כניסה אופליין — ⛔ ביומן אין כניסה כלל (מטריצה, שורה 1)',
+      'roles': 'הרשאות לפי `role` **וניקוי שער הסיסמה שהוסר** — ⛔ טענה שלילית קבועה נגד רגרסיה, ולא שריד מעבר',
+  },
   only: {
     'design/icon-master.png': 'קובץ המאסטר הגרפי — הפורמט נבדל פר-אפליקציה (png כאן, svg ביומן ובגיוס)',
   },
@@ -79,6 +86,7 @@ const SHARED = [
   'tools/test_cron.mjs',
   'tools/test_devid.mjs',
   'tools/test_docrules.mjs',
+  'tools/test_filesets.mjs',
   'tools/test_gaps.mjs',
   'tools/test_gradle.mjs',
   'tools/test_hotwin.mjs',
@@ -118,8 +126,6 @@ const EXEMPT = [
    'נתיב החבילה נגזר מ-applicationId, ⛔ ששינויו יוצר אפליקציה נפרדת'],
   [/^signing\/[a-z]+\.keystore$/,
    'המפתח הקבוע — ⛔ ייחודי לכל אפליקציה, ולעולם לא מוחלף'],
-  [/^tools\/test_/,
-   'מבחן — יכולת שקיימת כאן מקבלת שער כאן; האחידות נאכפת במטריצה ולא בסט הקבצים'],
 ];
 
 let pass = 0, failed = 0;
@@ -155,6 +161,10 @@ export function audit(root) {
     if (shared.has(f)) continue;
     if (EXEMPT.some(([re]) => re.test(f))) continue;
     if (f in APP.only) continue;
+    /*  ⛔ מבחן שאינו בסט המשותף חייב שורה מוצהרת (סבב 68) — ⚠️ הפטור
+     *  הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט. */
+    if (/^tools\/test_(.+)\.mjs$/.test(f) &&
+        (f.match(/^tools\/test_(.+)\.mjs$/)[1] in APP.testsOnly)) continue;
     v.push('[extra] ' + f + ' — קיים כאן ואינו בסט המשותף, בקטגוריה פטורה או ברשימת-ההיתר');
   }
   const have = new Set(files);
@@ -211,6 +221,31 @@ const clone = (name) => {
   audit(d).length === 0
     ? ok('נ1 · ⭐ מוטציית-נגד: שינוי **תוכן** של קובץ משותף ⛔ אינו מפיל')
     : bad('נ1 · שינוי תוכן נספר בטעות כשינוי בסט');
+}
+
+/*  ⛔ מ3 — מבחן שקיים כאן בלבד ואינו מוצהר ב-`testsOnly` (סבב 68).
+ *  ⚠️ הפטור הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט,
+ *  ⛔ וזה בדיוק מה שכלל ברזל 14 אוסר. */
+{
+  /*  ⚠️ המוטציה היא **לוגית** ולא על העץ (סבב 68) — `git ls-files` בעותק
+   *  קורא את ה-`.git` שהועתק איתו, ⛔ ולכן קובץ חדש אינו נספר שם כלל.
+   *  ⭐ הסרת ההכרזה שקולה בדיוק להוספת מבחן לא-מוצהר. */
+  const key = Object.keys(APP.testsOnly)[0];
+  const keep = APP.testsOnly[key];
+  delete APP.testsOnly[key];
+  const hit = audit(ROOT).some((x) => x.startsWith('[extra]') && x.includes('test_' + key));
+  APP.testsOnly[key] = keep;
+  hit ? ok('מ3 · מבחן שאינו מוצהר ב-testsOnly מפיל את טענה 1')
+      : bad('מ3 · מבחן לא-מוצהר לא נתפס');
+}
+
+/*  ⭐ מוטציית-נגד — ⛔ מבחן ש**כן** מוצהר ⛔ אינו מפיל, ⚠️ אחרת הטענה
+ *  אינה מבחינה בין «מודדת הכרזה» ל«אוסרת כל מבחן פרטי». */
+{
+  const name = Object.keys(APP.testsOnly)[0];
+  audit(ROOT).some((x) => x.includes('test_' + name))
+    ? bad('נ2 · מבחן מוצהר נתפס בטעות')
+    : ok('נ2 · ⭐ מוטציית-נגד: מבחן שמוצהר ב-testsOnly ⛔ אינו מפיל');
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 
