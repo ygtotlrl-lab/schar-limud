@@ -47,30 +47,10 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['branch-rules',                 '46a0bd36bbc06499'],
-  ['iron-rules-storage',           '0d88af8c79577db5'],
-  ['iron-rule-6-sync',             '22bfada1c63388b7'],
-  ['iron-rule-7-status-area',      '4c2759ef35d6de0e'],
-  ['iron-rule-8-docs',             '2afc208280a1ac2d'],
-  ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
-  ['iron-rule-10-users',           'ff7d10749b689428'],
-  ['capability-matrix',            '10a7c4475b656762'],
-  ['iron-rule-11-comments',        '6448dd25a659c0f0'],
-  ['iron-rule-12-capabilities',    'aec6476860954ab2'],
-  ['shared-modules-index',         '8d7062b7677beafc'],
-  ['iron-rule-13-shared-scope',    '21d638f92c1ab245'],
-  ['iron-rule-14-org-wide',        '7cec6505ea3357c0'],
-  ['iron-rule-15-gaps-verified',   'db71b8ce8a083ea9'],
-  ['iron-rule-16-remnant',         '29eee855dc43bb0c'],
-  ['iron-rule-17-touch-scan',      '91743204069771d0'],
-  ['iron-rule-18-doc-budget',      '946cf365fa95855b'],
-  ['iron-rule-19-read-discipline', '6b749177a2d985f2'],
-  ['iron-rule-20-backup-policy',   'eafa74708a4a73ca'],
-  ['iron-rules-21-24',             'ba48a156e7207334'],
-  ['iron-rule-25-icon-layer',      'd61d79d7f85969bb'],
-  ['iron-rule-26-input-layer',    'd0bc4f332e057909'],
-  ['iron-rule-27-data-id',        'd4427ac557d399b1'],
-  ['share-bridge-rule',            '7f853e59348664b4'],
+  ['rules-table',   '23b0f668fc2bcaf5'],
+  ['rules-enforce', '02c3d4bb33ed868d'],
+  ['rules-writing', '47696f4b466c879a'],
+  ['rules-session', '8d3a8e7772944bd3'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -344,9 +324,9 @@ for (const spec of MD_SKELETONS) {
  *  בציר אחר.                                                             */
 const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',            '81445890f0e496dc'],
+  ['README.md',         'readme-apk',            '54a69bee96c333bf'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'context-smali-scope',   '15ad22e158b45086'],
+  ['android/README.md', 'context-smali-scope',   '809e7e9d32b16ee6'],
   ['android/README.md', 'context-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
@@ -510,8 +490,17 @@ const CANON_MANIFEST = [
    בתיעוד הייתה נקראת כפרק אמיתי, בדיוק כמו בסעיף א.
    ⛔ **והמדידה היא על הקובץ ולא על הצהרה** (סבב 49) — פרק «פערים
    פתוחים» לימד שתיעוד שאיש אינו מודד ממשיך לתאר עולם שהשתנה. */
-const DOC_MAX_LINES  = 3000;
+const DOC_MAX_LINES  = 600;
 const DOC_MAX_ROUNDS = 2;
+/*  ⛔ תקרת החלק המשותף (סבב 69) — ⚠️ בלעדיה ארבעת בלוקי הכללים גדלים
+ *  בלי גבול, והתקרה הכוללת נבלעת בהם. */
+const DOC_MAX_SHARED = 300;
+/*  ⛔ תקרות שלושת הקבצים הנלווים (סבב 69) — ⚠️ `android/README` נעול על
+ *  240 כרַתְקָה ולא על היעד 150: הרצפה שלו מדודה — ארבעת בלוקי ה-SHARED
+ *  שבו הם 85 שורות, ולצידם טבלת ה-`versionCode` וטבלת המפתח הקבוע.
+ *  ⛔ הצמצום ליעד הוא סבב שנוגע במעטפת, והשורה בטבלה מסומנת ❌. */
+const MD_MAX = { 'README.md': 50, 'CONTEXT.md': 100, 'android/README.md': 240 };
+
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 {
   const rounds = [];
@@ -543,7 +532,7 @@ const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
    ⚠️ **המדידה מודעת לגדרות קוד** (`inFence`), בדיוק כמו ספירת פרקי
    הסבבים — ⛔ סמן `SHARED` או כותרת `## סבב` שבתוך דוגמה בתיעוד אינם
    אזור אמיתי, וספירה גולמית הייתה מדווחת מספר שגוי **בשקט**. */
-const DOC_MAX_PRIVATE = 900;
+const DOC_MAX_PRIVATE = 300;
 {
   const total = src.endsWith('\n') ? lines.length - 1 : lines.length;
   const kind  = new Array(total).fill(0);          // 0 = פרטי · 1 = משותף · 2 = פרק סבב
@@ -556,7 +545,23 @@ const DOC_MAX_PRIVATE = 900;
     if (ROUND_H2.test(lines[i])) head = i;
   }
   if (head >= 0) for (let j = head; j < total; j++) if (!kind[j]) kind[j] = 2;
-  const priv = kind.filter(k => k === 0).length;
+  /*  ⛔ הפרטי הוא כל מה שאינו בבלוק משותף (סבב 69) — ⚠️ פרקי הסבבים
+   *  נספרים בו: הם מס הקשר על כל סשן בדיוק כמו כל שורה אחרת. */
+  const priv = kind.filter(k => k !== 1).length;
+  const shared = kind.filter(k => k === 1).length;
+  if (shared > DOC_MAX_SHARED) {
+    fail(`${APP.file}: החלק המשותף הוא ${shared} שורות — ${shared - DOC_MAX_SHARED} ` +
+         `מעל התקרה של ${DOC_MAX_SHARED}.`);
+  } else {
+    pass(`תקציב התיעוד — ${shared}/${DOC_MAX_SHARED} שורות בחלק המשותף`);
+  }
+  for (const [f, cap] of Object.entries(MD_MAX)) {
+    if (!fs.existsSync(f)) { fail(`${f} חסר`); continue; }
+    const t = fs.readFileSync(f, 'utf8').split('\n');
+    const n = t[t.length - 1] === '' ? t.length - 1 : t.length;
+    if (n > cap) fail(`${f}: ${n} שורות — ${n - cap} מעל התקרה של ${cap}.`);
+    else pass(`תקציב התיעוד — ${f}: ${n}/${cap} שורות`);
+  }
   if (priv > DOC_MAX_PRIVATE) {
     fail(`${APP.file}: החלק הפרטי-הקבוע הוא ${priv} שורות — ${priv - DOC_MAX_PRIVATE} ` +
          `מעל התקרה של ${DOC_MAX_PRIVATE} (כלל ברזל 18). גוזמים באותו קומיט, ` +

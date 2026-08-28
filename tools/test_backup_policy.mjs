@@ -48,20 +48,21 @@ const ok = (m) => console.log('  ok   ' + m);
 const bad = (m) => { failed++; console.error('  FAIL ' + m); };
 const assert = (c, m) => (c ? ok(m) : bad(m));
 
-/* ── חילוץ שלושת הערכים מכלל ברזל 20 ───────────────────────────────────── */
+/* ── חילוץ שלושת הערכים משורת «גיבוי במסד» שבטבלת התשתית ───────────────── */
 function ruleBlock(doc) {
   const m = doc.match(
-    /<!--\s*SHARED:start\s+id="iron-rule-20-backup-policy"\s*-->([\s\S]*?)<!--\s*SHARED:end\s*-->/);
+    /<!--\s*SHARED:start\s+id="rules-table"\s*-->([\s\S]*?)<!--\s*SHARED:end\s*-->/);
   return m ? m[1] : null;
 }
-/* ⚠️ הערכים נקראים מ**טבלה** ולא מפרוזה (סבב 61) — ⛔ פרוזה אינה ניתנת
+/* ⚠️ הערכים נקראים משורת **טבלה** ולא מפרוזה (סבב 61) — ⛔ פרוזה אינה ניתנת
    לגזירה אמינה, וזה בדיוק הלקח של כלל ברזל 15 בציר אחר. */
 function ruleValues(block) {
   if (!block) return null;
-  const auto = block.match(/\|\s*אוטומטי[^|\n]*\|\s*\*\*(\d+)\*\*[^|\n]*\|\s*\*\*(\d+)\*\*[^|\n]*\|/);
-  const man  = block.match(/\|\s*ידני[^|\n]*\|[^|\n]*\|\s*\*\*(\d+)\*\*[^|\n]*\|/);
-  if (!auto || !man) return null;
-  return { keep: +auto[1], days: +auto[2], manual: +man[1] };
+  const row = block.split('\n').find((l) => /^\|\s*\d+\s*\|\s*גיבוי במסד\s*\|/.test(l));
+  if (!row) return null;
+  const nums = [...row.split('|')[3].matchAll(/\*\*(\d+)\*\*/g)].map((m) => +m[1]);
+  if (nums.length !== 3) return null;
+  return { keep: nums[0], days: nums[1], manual: nums[2] };
 }
 
 /* ── חילוץ שלושת הערכים מהמיגרציה ──────────────────────────────────────── */
@@ -99,27 +100,18 @@ function mismatches(doc, sql) {
 
 /* ── 1. צד התיעוד — נאכף בארבעתן ───────────────────────────────────────── */
 function t1() {
-  console.log('\n[1] כלל ברזל 20 — צד התיעוד');
+  console.log('\n[1] מדיניות הגיבויים — צד התיעוד');
   const b = ruleBlock(DOC);
-  assert(b !== null, '1א · בלוק `iron-rule-20-backup-policy` קיים');
+  assert(b !== null, '1א · טבלת התשתית קיימת');
   const rv = ruleValues(b);
-  assert(rv !== null, '1ב · טבלת שלושת הערכים נקראת מהפרק');
+  assert(rv !== null, '1ב · שורת «גיבוי במסד» נושאת את שלושת הערכים');
   if (!rv) return null;
-  assert(rv.keep === 7,    '1ג · תקרת העותקים בכלל היא 7 (נמצא ' + rv.keep + ')');
+  assert(rv.keep === 7,    '1ג · תקרת העותקים היא 7 (נמצא ' + rv.keep + ')');
   assert(rv.days === 30,   '1ד · תפוגת הגיבוי האוטומטי היא 30 יום (נמצא ' + rv.days + ')');
   assert(rv.manual === 14, '1ה · תפוגת הגיבוי הידני היא 14 יום (נמצא ' + rv.manual + ')');
-  assert(/המוקדם\s*\n?\s*>?\s*מביניהם|המוקדם מביניהם/.test(b),
-    '1ו · ⛔ הכלל אומר במפורש «המוקדם מביניהם» — תקרה ותפוגה מצטברות');
-  assert(/`pre-`/.test(b),
-    '1ז · ⛔ קידומת הגיבוי הידני נכתבת במפורש');
-  assert(/`PRE_\*`/.test(b) && /`ORPHAN_\*`/.test(b),
-    '1ח · ⛔ ומה שאינו מתפנה לעולם רשום בשמו — `PRE_*` ו-`ORPHAN_*`');
-  assert(/bk_retention_sweep/.test(b) && /pg_cron/.test(b),
-    '1ט · מנגנון הפינוי ומקום ריצתו רשומים בפרק');
-  assert(/אינם רואים את המסד החי|ולא שהיא\s*\n?\s*\*\*פעילה/.test(b),
-    '1י · ⚠️ ומגבלת השער — קבצים ולא מסד חי — כתובה בפרק עצמו');
-  assert(DOC.indexOf(APP.migrationDoc) !== -1,
-    '1יא · קובץ המיגרציה נזכר בשמו (' + APP.migrationDoc + ')');
+  /*  ⛔ מה שהיה כאן קודם — «המוקדם מביניהם», `pre-`, `PRE_*`, `bk_retention_sweep`
+   *  ומגבלת השער — היו טענות על **פרוזה שמתארת את ה-SQL**, ⛔ בזמן שסעיפים
+   *  2–4 אוכפים את ה-SQL עצמו. ⚠️ טענה על תיאור אינה טענה על המנגנון. */
   return rv;
 }
 
@@ -127,7 +119,7 @@ function t1() {
 function t2(sql) {
   console.log('\n[2] המיגרציה — שלושת הערכים והמבנה');
   assert(mismatches(DOC, sql).length === 0,
-    '2א · ⭐ שלושת הערכים במיגרציה תואמים לטבלה שבכלל ברזל 20');
+    '2א · ⭐ שלושת הערכים במיגרציה תואמים לשורה שבטבלת התשתית');
   assert(cronValues(sql) !== null,
     '2ב · ⛔ פקודת ה-cron נושאת את שלושת הערכים ואינה נשענת על ברירות מחדל');
   assert(/rn\s*>\s*p_keep/.test(sql),

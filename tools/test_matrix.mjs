@@ -39,7 +39,17 @@ const ok = (msg, cond) => {
  *  בכך שהמשימה רשומה. הצד שכן ניתן לבדיקה נאכף ב-test_cron.mjs.
  *  ⚠️ הרשימה חייבת להישאר קצרה — כל שורה נוספת כאן היא שורה שאיש אינו
  *  שומר עליה.                                                            */
-const EXEMPT = [21, 22];
+/*  ⛔ אין להאריך את הרשימה מעבר ל-`GATES` (סבב 69) — כל שורה כאן נאכפת בשער אחר או
+ *  נושאת נימוק כתוב שם (`GATES`), ⛔ ולכן היפוך התא שלהן אינו אמור
+ *  להפיל אותו. ⚠️ ולצידן 28 ו-72, ששתיהן מצהירות על **עובדת מסד**
+ *  שאין דרך לראות מהריפו: שהטבלאות נוצרו, ושמשימת ה-`pg_cron` רשומה.
+ *  ⛔ הרשימה חייבת להישאר נגזרת מ-`GATES` ולא להתארך מעבר לו. */
+const EXEMPT = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21,
+  22, 23, 24, 25, 26, 28, 37, 40, 41, 42, 43, 46, 47, 48, 49, 50, 51, 52,
+  54, 56, 57, 59, 61, 63, 66, 69, 70, 71, 72, 74, 77, 78, 81, 82, 83, 84,
+  86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 100, 102,
+];
 
 function copyRepo() {
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37-'));
@@ -66,12 +76,10 @@ function runChecker(dir) {
  *  להיתפס.                                                               */
 function flipCell(line, col) {
   const parts = line.split('|');
-  const i = 2 + col;
+  const i = 3 + col;
   if (i >= parts.length) return null;
   const cur = parts[i];
-  parts[i] = cur.indexOf('✅') >= 0 ? ' ❌ '
-           : cur.indexOf('❌') >= 0 ? ' ✅ '
-           : ' ✅ ';
+  parts[i] = cur.indexOf('✅') >= 0 ? ' ❌ ' : ' ✅ ';
   return parts.join('|');
 }
 
@@ -85,7 +93,7 @@ fs.rmSync(base, { recursive: true, force: true });
  *  הראשונה שאינה שורת טבלה.                                             */
 const DOC = path.join(ROOT, 'CLAUDE.md');
 const docLines = fs.readFileSync(DOC, 'utf8').split('\n');
-const head = docLines.findIndex((l) => /^\|\s*#\s*\|\s*יכולת\s*\|/.test(l));
+const head = docLines.findIndex((l) => /^\|\s*#\s*\|\s*שם\s*\|/.test(l));
 const rows = [];
 if (head >= 0) {
   for (let k = head + 1; k < docLines.length; k++) {
@@ -94,9 +102,9 @@ if (head >= 0) {
     if (m) rows.push({ row: Number(m[1]), line: docLines[k], at: k });
   }
 }
-ok('שורת הכותרת של מטריצת היכולות נמצאה ב-CLAUDE.md', head >= 0);
+ok('שורת הכותרת של טבלת התשתית נמצאה ב-CLAUDE.md', head >= 0);
 
-ok(`המטריצה נקראה מ-CLAUDE.md — ${rows.length} שורות`, rows.length >= 24);
+ok(`טבלת התשתית נקראה מ-CLAUDE.md — ${rows.length} שורות`, rows.length >= 90);
 
 let covered = 0;
 for (const r of rows) {
@@ -130,7 +138,7 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   const p = path.join(dir, 'CLAUDE.md');
   const lines = fs.readFileSync(p, 'utf8').split('\n');
   const parts = lines[target.at].split('|');
-  parts[2 + APP.col] = '  ' + parts[2 + APP.col].trim() + '   ';
+  parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
   lines[target.at] = parts.join('|');
   fs.writeFileSync(p, lines.join('\n'));
   ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`,
