@@ -46,6 +46,10 @@ const baseDir = mkdtempSync(join(tmpdir(), 'md-skel-'));
 //    הבודק אוכף גם את **ערכי** המפתחות המשותפים שבו, ורתמה שלא העתיקה
 //    אותו הייתה מפילה את check-docs על קובץ חסר במקום על סחיפה במד.
 for (const f of ['CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json']) cpSync(join(ROOT, f), join(baseDir, f));
+/*  ⚠️ ו-`icons/` נוספה בסבב 67 — מאותו נימוק בדיוק: check-docs אוכף
+ *  מעכשיו שכל `src` במניפסט מצביע על קובץ **שקיים**, ורתמה בלי
+ *  התיקייה הייתה מפילה אותו על 404 מדומה במקום על סחיפה במד. */
+cpSync(join(ROOT, 'icons'), join(baseDir, 'icons'), { recursive: true });
 cpSync(join(ROOT, 'android'), join(baseDir, 'android'), { recursive: true });
 cpSync(join(ROOT, 'tools'), join(baseDir, 'tools'), { recursive: true });
 t(run(baseDir).status === 0, 'check-docs עובר על עותק נקי של העץ');
@@ -155,6 +159,35 @@ for (const [f, id] of NEW_SHARED) {
     t(run(d).status === 0, `⛔ שינוי בנימוק הפרטי שמתחת ל-«${id}» אינו מפיל`);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   סבב 67 — שכבת האייקונים במניפסט
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ מה נאכף: שלושה אייקונים מוצהרים, ⛔ אייקון מלא אינו `maskable`,
+   ⛔ וכל `src` מצביע על קובץ שקיים. ⛔ ולמה זה יכול להישבר: הצהרה על
+   קובץ חסר היא 404 שקט — ההתקנה מצליחה והאייקון פשוט אינו מופיע.
+   ══════════════════════════════════════════════════════════════════════════ */
+console.log('· סבב 67 — שכבת האייקונים במניפסט');
+const mfPath = (d) => join(d, 'manifest.json');
+const mfEdit = (fn) => {
+  const d = mutDir(), p = mfPath(d);
+  const mf = JSON.parse(fs.readFileSync(p, 'utf8'));
+  fn(mf);
+  fs.writeFileSync(p, JSON.stringify(mf, null, 2), 'utf8');
+  return run(d);
+};
+/*  ⚠️ לפי `src` ולא לפי אינדקס — ב-schar המניפסט מצהיר גם על
+ *  favicons, ו-`icons[0]` שם אינו אחד משלושת הקנוניים. */
+t(mfEdit((mf) => { mf.icons.find((i) => i.src === 'icons/icon-192.png').purpose = 'any maskable'; }).status !== 0,
+  '⛔ `"any maskable"` על האייקון המלא מפיל את check-docs');
+t(mfEdit((mf) => { mf.icons = mf.icons.filter((i) => i.src.indexOf('maskable') < 0); }).status !== 0,
+  '⛔ הסרת האייקון ה-maskable מפילה את check-docs');
+t(mfEdit((mf) => { mf.icons.push({ src: 'icons/does-not-exist.png', sizes: '64x64', type: 'image/png' }); }).status !== 0,
+  '⛔ `src` שאינו קיים בריפו מפיל את check-docs — 404 שקט');
+/*  ⭐ מוטציית-נגד — ⛔ בלעדיה הטענות שלמעלה אינן מבחינות בין «מודד את
+ *  ההצהרה» ל«נופל על כל שינוי במניפסט». */
+t(mfEdit((mf) => { mf.name = mf.name + ' '; }).status === 0,
+  '⭐ מוטציית-נגד: שינוי שדה שאינו האייקונים ⛔ אינו מפיל');
 
 console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב+41+42ב (שלושת קובצי ה-md) — ${n} טענות עברו`);
 process.exit(bad ? 1 : 0);

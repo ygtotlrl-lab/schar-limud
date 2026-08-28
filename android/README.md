@@ -29,7 +29,7 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 |---|---|
 | **Package ID** | `com.schar.limud` |
 | **טוען** | `https://ygtotlrl-lab.github.io/schar-limud/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 7 — קודם בסבב 66 (עשרת קובצי ה-mipmap הוחלפו). 6 — קודם בתיקון שאחרי סבב 60 (קיצור ההערה המשותפת ב-`ShellActivity`, שנעשה בסבב 60 בלי קידום). 5 — קודם בסבב 58 (הסרת `FLAG_ACTIVITY_NEW_TASK` ממסירת יעד חיצוני ל-`ACTION_VIEW`). 4 = סבב 46ב (היפוך ברירת המחדל בקובצי התצורה). 3 = סבב 45, 2 = סבב 41 (חילוץ המעטפת), 1 = המעטפת הראשונה של שכר לימוד, טוענת מהרשת מהיום הראשון (לא היה כאן שלב `file://`) |
+| **versionCode** | 8 — קודם בסבב 66 (עשרת קובצי ה-mipmap הוחלפו). 6 — קודם בתיקון שאחרי סבב 60 (קיצור ההערה המשותפת ב-`ShellActivity`, שנעשה בסבב 60 בלי קידום). 5 — קודם בסבב 58 (הסרת `FLAG_ACTIVITY_NEW_TASK` ממסירת יעד חיצוני ל-`ACTION_VIEW`). 4 = סבב 46ב (היפוך ברירת המחדל בקובצי התצורה). 3 = סבב 45, 2 = סבב 41 (חילוץ המעטפת), 1 = המעטפת הראשונה של שכר לימוד, טוענת מהרשת מהיום הראשון (לא היה כאן שלב `file://`) |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
@@ -130,7 +130,7 @@ hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח
 
 ⚠️ **החריגה היחידה היום היא גשר השיתוף של yoman-avoda**, והיא מדודה: הליבה
 נושאת חתימה אחת בארבעתן (`d8efd10bc6d47354`), ורק המעטפת של yoman נבדלת.
-`tools/test_round40_shell.mjs` אוכף את שתי החתימות, ו⛔ **נכשל אם נמצא גשר
+`tools/test_shell.mjs` אוכף את שתי החתימות, ו⛔ **נכשל אם נמצא גשר
 בליבה** — גשר שם היה מגיע לארבע האפליקציות בבת אחת.
 <!-- SHARED:end -->
 
@@ -163,7 +163,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **קובץ** | `signing/schar.keystore` (PKCS12, RSA 2048) |
 | **alias** | `schar` |
 | **storepass / keypass** | `schar123` (זהה לשניהם) |
-| **תוקף** | 10,000 יום — 07.08.2026 עד 23.12.2053 |
+| **תוקף** | 10,000 יום — 08.08.2026 עד 23.12.2053 |
 | **SHA256** | `29:32:D9:B5:94:69:D4:E4:53:EF:C7:EE:3B:10:55:C9:CE:4B:EE:D6:9B:BB:78:EC:EE:18:BD:C6:BE:2D:0F:87` |
 | **SHA1** | `F5:BD:6A:6E:BE:EF:B5:85:78:9F:70:B1:19:60:8F:1B:DE:90:1B:D4` |
 | **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |

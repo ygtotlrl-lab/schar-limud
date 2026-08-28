@@ -10,7 +10,7 @@
  *    ב. **קובצי שורש** — קובץ שאינו ברשימה הסגורה המשותפת ואינו ברשימת
  *       ההיתר הפר-אפליקציתית (שכל שורה בה נושאת נימוק).
  *    ג. **tools/** — שבעת הבודקים המשותפים חייבים להתקיים; כל קובץ אחר
- *       חייב להיות קובץ בדיקת-סבב (test_round*) או חריגה מנומקת.
+ *       חייב להיות קובץ מבחן (test_<נושא>.mjs) או חריגה מנומקת.
  *
  *  ⚠️ הרקע (סבב 33): שער check-js חי ב-gius לבדה עשרה סבבים, קבצים
  *  שרידיים ישבו בשורש של כל ריפו, ואיש לא החליט על אף אחד מהמצבים האלה.
@@ -53,7 +53,15 @@ const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs'
                   'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs',
                   // ⭐ סבב 39 — אכיפת פרק «פערים פתוחים» (כלל ברזל 15).
                   'check-gaps.mjs'];
-const TEST_RE = /^test_round\d+[\w-]*\.mjs$/;
+/*  ⛔ שם המבחן נגזר מהנושא ולא ממספר הסבב (סבב 67) — 53 מבחנים
+ *  נשאו שם כמו `test_round52_pendflush`, ⚠️ ומי שרצה לדעת מה בודק
+ *  את מודול הנעילה לא ידע לחפש. ⛔ מספר הסבב עבר לשורת הכותרת
+ *  שבגוף הקובץ, ⛔ ואינו חוזר לשם. */
+const TEST_RE = /^test_[a-z][a-z0-9_]*\.mjs$/;
+/*  ⛔ והתבנית הישנה נפסלת במפורש (סבב 67) — `test_round99_legacy.mjs`
+ *  עובר את התבנית החיובית במקרה, ⚠️ ובלי הפסילה הזו השער היה מאשר
+ *  בדיוק את השם שהסבב הזה בא להחליף. */
+const OLD_TEST_RE = /^test_round\d/;
 
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
@@ -96,7 +104,8 @@ const missingC = CHECKERS.filter((c) => !tFiles.includes(c));
 if (missingC.length) fail('בודקים משותפים חסרים ב-tools/: ' + missingC.join(', '));
 else pass('שבעת הבודקים המשותפים קיימים ב-tools/');
 
-const tAllowed = (f) => CHECKERS.includes(f) || TEST_RE.test(f) || (f in APP.toolsExtra);
+const tAllowed = (f) => CHECKERS.includes(f) ||
+  (TEST_RE.test(f) && !OLD_TEST_RE.test(f)) || (f in APP.toolsExtra);
 const badT = tFiles.filter((f) => !tAllowed(f));
 if (badT.length) fail('קבצים לא-רשומים ב-tools/: ' + badT.join(', ') +
                       ' — בודק חדש הוא יכולת משותפת (כלל ברזל 14); חריגה פרטית מחייבת נימוק');
@@ -161,7 +170,7 @@ else pass('⛔ אף קובץ מוגש אינו מפנה ל-design/');
    ל-`android/`, ל-`migrations/`, ל-`signing/` או ל-`.github/` בריפו אחד
    בשקט לא נראה לאף שער — ⛔ וזו בדיוק צורת הכשל שכלל ברזל 14 אוסר.
    ⛔ **הסט נאכף, לא התוכן** — מה שיושב בתוך כל קובץ נאכף בשערים הייעודיים
-   (`test_round45_android` · `test_round46b_workflows` · `test_round65_signscript`).
+   (`test_android` · `test_workflows` · `test_signscript`).
    ══════════════════════════════════════════════════════════════════════ */
 const WORKFLOWS = ['build-apk.yml', 'cleanup-merged-branches.yml'];
 /*  ⚠️ `<pkg>` — נתיב חבילת ה-Java נבדל לפי מזהה החבילה, וזה הדבר היחיד

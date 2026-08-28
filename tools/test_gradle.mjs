@@ -209,4 +209,50 @@ if (!fs.existsSync(rPath)) {
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`
                      : `\n✅ ${APP.app}: שער ה-versionCode עבר`);
+/*  ⛔ היציאה עברה לסוף (סבב 67) — המוטציות רצות אחרי הטענות. */
+/* ───────────────────────────────────────────────────────────────────────────
+   ⛔ מוטציה ומוטציית-נגד — סבב 67
+   ───────────────────────────────────────────────────────────────────────────
+   ⛔ מבחן נכנס עם מוטציה, או עם נימוק כתוב מדוע אינו ניתן למוטציה.
+   ⚠️ בלעדיה אין שום ראיה שהמבחן **מסוגל** ליפול: 97 טענות שעוברות על עץ
+   תקין נראות כרשת ביטחון ופועלות כאישור. ⛔ והמוטציה רצה על **עותק
+   בתיקייה זמנית** ולא על העץ (הלקח של סבב 42ג).
+   ⚠️ הרצת-המשנה מסומנת ב-`RD67_MUT` — ⛔ בלעדיו המוטציה הייתה מריצה את
+   עצמה שוב בתוך העותק, לאין סוף.
+   ──────────────────────────────────────────────────────────────────────── */
+if (!process.env.RD67_MUT) {
+  const _m = await import('node:fs');
+  const _p = await import('node:path');
+  const _o = await import('node:os');
+  const _c = await import('node:child_process');
+  const _self = new URL(import.meta.url).pathname;
+  const _name = _p.basename(_self);
+  const _root = _p.resolve(_p.dirname(_self), '..');
+  const _run = (dir) => _c.spawnSync(process.execPath, [_p.join(dir, 'tools', _name)],
+    { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
+
+  const _mut = (label, file, edit, expectFail) => {
+    const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
+    _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
+    const f = _p.join(d, file);
+    if (!_m.existsSync(f)) { console.log('  ok   ' + label + ' — ⚠️ הקובץ אינו קיים כאן, הטענה מוצהרת ריקה'); return; }
+    _m.writeFileSync(f, edit(_m.readFileSync(f, 'utf8')));
+    const st = _run(d);
+    const fell = st !== 0;
+    console.log((fell === expectFail ? '  ok   ' : '  FAIL ') + label);
+    /*  ⛔ יציאה מיידית ולא `exitCode` (סבב 67) — סיכום המבחן קורא
+     *  ל-`process.exit` בסופו, והוא היה דורס כשל מוטציה בשקט. */
+    if (fell !== expectFail) process.exit(1);
+    _m.rmSync(d, { recursive: true, force: true });
+  };
+
+  console.log('\n— מוטציות (סבב 67) —');
+  _mut('⛔ versionCode שירד מפיל את השער', 'android/app/build.gradle',
+       (s) => s.replace(/versionCode\s+(\d+)/, (m, n) => 'versionCode ' + Math.max(1, +n - 1)), true);
+  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-build.gradle ⛔ אינה מפילה', 'android/app/build.gradle',
+       (s) => s + '\n// הערה\n', false);
+}
+
 process.exit(failures ? 1 : 0);
+
+

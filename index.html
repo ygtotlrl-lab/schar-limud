@@ -188,11 +188,11 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
     <div class="auth-title">שכר לימוד</div>
     <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
     <div class="auth-field">
-      <label>שם משתמש</label>
-      <input id="au-user" type="text" placeholder="admin" autocomplete="username">
+      <label for="au-user">שם משתמש</label>
+      <input aria-label="admin" id="au-user" type="text" placeholder="admin" autocomplete="username">
     </div>
     <div class="auth-field">
-      <label>סיסמה</label>
+      <label for="au-pass">סיסמה</label>
       <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="auth-btn" id="auth-btn" onclick="doLogin()">כניסה</button>
@@ -253,29 +253,29 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
           <div class="frm-row">
             <label>תלמיד</label>
             <div class="sd-wrap" id="sd-wrap-student">
-              <input id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
+              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
               <div class="sd-list" id="sd-list-student" style="display:none"></div>
               <input type="hidden" id="sd-val-student">
             </div>
           </div>
           <div class="frm-row">
-            <label>תאריך</label>
+            <label for="txn-date">תאריך</label>
             <input id="txn-date" type="date">
           </div>
           <div class="frm-row">
-            <label>סכום (&#8362;)</label>
-            <input id="txn-amount" type="number" min="0" step="1" placeholder="0">
+            <label for="txn-amount">סכום (&#8362;)</label>
+            <input id="txn-amount" type="text" inputmode="decimal" placeholder="0">
           </div>
           <div class="frm-row">
-            <label>אמצעי תשלום</label>
+            <label for="txn-method">אמצעי תשלום</label>
             <select id="txn-method" onchange="txnMethodHint()">
               <option value="">-- בחר --</option>
             </select>
             <div id="txn-method-hint" class="credit-sub" style="display:none"></div>
           </div>
           <div class="frm-row">
-            <label>הערה</label>
-            <textarea id="txn-note" placeholder="הערה אופציונלית..."></textarea>
+            <label for="txn-note">הערה</label>
+            <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
           <button class="btn" style="width:100%" onclick="saveTxn()">שמור תשלום</button>
         </div>
@@ -284,7 +284,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
         <div class="card-hdr">
           <h3>יומן תשלומים</h3>
           <div class="sd-wrap" id="sd-wrap-txnfilter" style="width:160px">
-            <input id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
+            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
             <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
@@ -299,7 +299,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
         <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
         <div class="card-body" style="padding-bottom:12px">
           <div class="sd-wrap" id="sd-wrap-sc">
-            <input id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
+            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
             <div class="sd-list" id="sd-list-sc" style="display:none"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
@@ -321,32 +321,32 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
           </div>
           <div class="acc-body" id="acc-sc-settings">
             <div class="frm-row">
-              <label>שם</label>
+              <label for="sc-edit-name">שם</label>
               <input id="sc-edit-name" type="text">
             </div>
             <div class="frm-row">
-              <label>שכ"ל חודשי (ריק = ברירת מחדל)</label>
-              <input id="sc-edit-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל">
+              <label for="sc-edit-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label>
+              <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל">
             </div>
             <div class="frm-row">
-              <label>סעיף</label>
+              <label for="sc-edit-section">סעיף</label>
               <select id="sc-edit-section"></select>
             </div>
             <div class="frm-row">
-              <label>חודש הצטרפות</label>
-              <input id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right">
+              <label for="sc-edit-start">חודש הצטרפות</label>
+              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right">
             </div>
             <div class="frm-row" style="margin-bottom:6px">
-              <label>חודש עזיבה (ריק = עדיין פעיל)</label>
-              <input id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
+              <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
+              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
             </div>
             <div class="frm-row">
-              <label>חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
-              <input id="sc-edit-debt" type="number" min="0" step="1" placeholder="0">
+              <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
+              <input id="sc-edit-debt" type="text" inputmode="decimal" placeholder="0">
             </div>
             <div class="frm-row">
-              <label>הערה לחוב הקודם</label>
-              <input id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
+              <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
+              <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
             <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
             <button class="btn" onclick="saveStudentSettings()">שמור</button>
@@ -392,7 +392,7 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="set-def-tuition" type="number" min="0" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
+            <input aria-label="2000" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
             <button class="btn" onclick="saveDefaultTuition()">שמור</button>
           </div>
         </div>
@@ -447,11 +447,11 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 <div class="modal-overlay hidden" id="modal-add-student">
   <div class="modal">
     <h3>הוספת תלמיד</h3>
-    <div class="frm-row"><label>שם</label><input id="new-st-name" type="text" placeholder="שם התלמיד"></div>
-    <div class="frm-row"><label>שכ"ל חודשי (ריק = ברירת מחדל)</label><input id="new-st-tuition" type="number" min="0" step="1" placeholder="ברירת מחדל"></div>
-    <div class="frm-row"><label>סעיף</label><select id="new-st-section"></select></div>
-    <div class="frm-row"><label>חודש הצטרפות</label><input id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right"></div>
-    <div class="frm-row" style="margin-bottom:6px"><label>חודש עזיבה (ריק = עדיין פעיל)</label><input id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>
+    <div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>
+    <div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>
+    <div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section"></select></div>
+    <div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right"></div>
+    <div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>
     <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>
     <div class="ma">
       <button class="btn out" onclick="closeModal('modal-add-student')">ביטול</button>
@@ -490,10 +490,14 @@ var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
 var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
+/*  ⛔ מספר שיש לו משמעות מקבל שם (סבב 67, כלל ברזל 11 סעיף 5) —
+ *  ⚠️ הערך במקרה זהה ל-`LS_SUCCESS_MUTE_MS`, ⛔ אך הוא מושג אחר
+ *  לגמרי (משך תצוגה מול חלון השתקה), ⛔ ואין לאחד ביניהם. */
+var TOAST_DEFAULT_MS = 2400;
 function toast(msg,dur){
   // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
   if(typeof lsGuardToast==='function'&&!lsGuardToast(msg))return;
-  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||2400);}
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||TOAST_DEFAULT_MS);}
 /* ══════════════════════════════════════════════════════════════════════════
    הודעות ועוזרי רשת — נוסח משותף לארבע האפליקציות
    ══════════════════════════════════════════════════════════════════════════
@@ -3948,7 +3952,7 @@ function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn(\''+esc(slKey(t))+'\')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
@@ -3962,6 +3966,30 @@ function txnMethodPill(t){
 }
 // מקבלת את **מפתח המיזוג** ולא את ה-id: תשלום שנרשם אופליין עדיין אין לו id
 // (הוא SERIAL של המסד), ובלי זה אי אפשר היה למחוק אותו לפני שהסתנכרן.
+/* ══════════════════════════════════════════════════════════════════════════
+   העברת מזהה ל-DOM — `data-id` ודלגציה (סבב 67, כלל ברזל 27)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ מזהה רשומה עובר ב-`data-id` ובדלגציה — ⛔ לעולם לא מוטבע ב-`onclick`.
+   ⚠️ מזהה שנשתל בתוך מחרוזת קוד הוא ציטוט שיכול להישבר; `data-id` הוא
+   ערך שהדפדפן מוסר כמות שהוא. ⛔ **והוא תמיד מחרוזת** — ההשוואות כאן
+   כבר עוברות ב-`String(key)`, ⛔ ואין להחליפן ב-`===` על מספר.
+   ⛔ ומאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — הרשימות כאן
+   נבנות מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם.
+   ══════════════════════════════════════════════════════════════════════════ */
+var DOM_ACTIONS = {
+  'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
+  'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
+  'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
+};
+document.addEventListener('click', function (ev) {
+  var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+  if (!el) return;
+  var fn = DOM_ACTIONS[el.getAttribute('data-act')];
+  if (!fn) return;
+  ev.preventDefault();
+  fn(el);
+});
+
 function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
   var t=(MIRROR.transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
   if(!t){toast('⚠️ התשלום לא נמצא');return;}
@@ -4027,7 +4055,7 @@ function renderScAnnual(){
   if(applied>0)ch+='<div class="credit-sub" style="color:var(--credit);font-weight:600">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" onclick="deleteTxn(\''+esc(slKey(t))+'\')">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
@@ -4060,7 +4088,12 @@ function saveStudentSettings(){
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
   var cs=Object.assign({},s.card_settings||{});
-  if(tuition)cs.monthly_tuition=parseInt(tuition);else delete cs.monthly_tuition;
+  // ⛔ אימות מפורש ולא הסתמכות על הדפדפן (סבב 67) — `type=number` החזיר
+  // מחרוזת ריקה על קלט פגום ולכן התנאי דילג עליו; בשדה טקסט אותו קלט
+  // מגיע כמות שהוא, ו-`parseInt` היה כותב `NaN` לתוך `card_settings`.
+  var tuitionVal=parseInt(tuition,10);
+  if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}
+  if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
   var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
   var debtVal=parseInt(debtRaw);
@@ -4155,7 +4188,7 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(todayStr());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" onclick="deleteStudent(\''+esc(slKey(s))+'\')">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
   statusAreaMount();
   bkStatusMount();
@@ -4166,7 +4199,7 @@ function renderSettingsLists(){
 // אינו נשען על הפריט הזה — ראה ההערה ליד CREDIT_METHOD.)
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" onclick="deleteListItem(\''+esc(i.key)+'\')">&#10005;</button></div>';
+  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
 // כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — ה-`id` הוא
 // SERIAL שהמסד מקצה, ולכן פריט שנוצר אופליין חסר זהות בלעדיו, וניסיון
@@ -4198,7 +4231,7 @@ function deleteListItem(key){
     syncAll();
   });}
 function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};if(tuition)cs.monthly_tuition=parseInt(tuition);if(section)cs.section=section;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000);return;}
