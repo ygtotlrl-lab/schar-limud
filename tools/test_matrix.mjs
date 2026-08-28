@@ -121,6 +121,23 @@ for (const r of rows) {
 ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${covered}; מוחרגות: ${EXEMPT.join(', ')})`,
    covered === rows.length - EXEMPT.length && covered > 0);
 
+/*  ⭐ מוטציית-נגד — ⛔ בלעדיה ההיפוכים אינם מבחינות בין «מודד ערך»
+ *  ל«סופר תווים» (סבב 68): ריפוד התא ברווחים **אינו** משנה את הערך
+ *  שהמטריצה מצהירה, ⛔ ולכן `check-capabilities` חייב להמשיך לעבור. */
+{
+  const target = rows.find((r) => EXEMPT.indexOf(r.row) < 0);
+  const dir = copyRepo();
+  const p = path.join(dir, 'CLAUDE.md');
+  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  const parts = lines[target.at].split('|');
+  parts[2 + APP.col] = '  ' + parts[2 + APP.col].trim() + '   ';
+  lines[target.at] = parts.join('|');
+  fs.writeFileSync(p, lines.join('\n'));
+  ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`,
+     runChecker(dir));
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log(failed ? `\n✗ סבב 37 (מטריצה) — ${failed} נכשלו, ${passed} עברו`
                    : `\n✓ סבב 37 (מטריצה) — ${passed} טענות עברו`);
 process.exit(failed ? 1 : 0);

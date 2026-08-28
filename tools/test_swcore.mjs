@@ -146,5 +146,25 @@ harnessFails(
   '⛔ מוטציה: תת-משאב חסר מקבל את דף האופליין — HTML בגוף תשובה של סקריפט, והרתמה נופלת',
   M3[0], M3[1]);
 
+/*  ⭐ מוטציית-נגד — ⛔ בלעדיה שלוש המוטציות שלמעלה אינן מבחינות בין
+ *  «רתמה שמודדת התנהגות» ל«רתמה שנופלת על כל שינוי בקובץ» (סבב 68).
+ *  ⚠️ הוספת הערה אינה משנה דבר במה ש-`respondWith` מחזיר, ⛔ ולכן קו
+ *  הבסיס חייב להמשיך לעבור עליה — גם כשהחתימה שבסעיף א כן זזה. */
+{
+  const dir = fs.mkdtempSync(join(os.tmpdir(), 'sw68-'));
+  try {
+    fs.mkdirSync(join(dir, 'tools'));
+    fs.writeFileSync(join(dir, 'sw.js'),
+      SRC.replace('var SW_CFG = {', '/* הערה שנוספה במוטציית-נגד */\nvar SW_CFG = {'));
+    fs.copyFileSync(HARNESS, join(dir, 'tools', 'test_sw.mjs'));
+    const r = spawnSync(process.execPath, [join(dir, 'tools', 'test_sw.mjs')],
+                        { encoding: 'utf8' });
+    is(r.status === 0,
+       '⭐ מוטציית-נגד: הערה ב-sw.js ⛔ אינה משנה התנהגות — קו הבסיס עובר');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 console.log(`\n${bad ? '✗' : '✓'} סבב 42ג (ליבת ה-service worker) — ${n - bad} טענות עברו, ${bad} נכשלו`);
 process.exit(bad ? 1 : 0);
