@@ -54,7 +54,7 @@ const CANON = [
   ['iron-rule-8-docs',             '2afc208280a1ac2d'],
   ['iron-rule-9-security-spread',  '43e357d23e7b705a'],
   ['iron-rule-10-users',           'ff7d10749b689428'],
-  ['capability-matrix',            '30e961625a03b378'],
+  ['capability-matrix',            '10a7c4475b656762'],
   ['iron-rule-11-comments',        '6448dd25a659c0f0'],
   ['iron-rule-12-capabilities',    'aec6476860954ab2'],
   ['shared-modules-index',         '8d7062b7677beafc'],
@@ -69,7 +69,7 @@ const CANON = [
   ['iron-rules-21-24',             'ba48a156e7207334'],
   ['iron-rule-25-icon-layer',      'd61d79d7f85969bb'],
   ['iron-rule-26-input-layer',    'd0bc4f332e057909'],
-  ['iron-rule-27-data-id',        'f45d59ba5aabd9ab'],
+  ['iron-rule-27-data-id',        'd4427ac557d399b1'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
