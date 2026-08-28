@@ -118,11 +118,17 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:999px;font-size:.84rem;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-overlay.hidden{display:none}
-.modal{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
-.modal h3{font-size:.95rem;font-weight:700;color:#1a1a1a;margin-bottom:16px}
-.modal .ma{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* ══ שכבת המודאל — מיכל אחד (סבב 68, כלל ברזל 27) ══════════════════════ */
+body.locked{overflow:hidden}
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.veil.open{display:flex}
+.sheet{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
+.sheet-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sheet-hd h3{font-size:.95rem;font-weight:700;color:#1a1a1a;flex:1;margin:0}
+.sheet-hd .x{background:none;border:0;font-size:20px;line-height:1;color:#888;cursor:pointer;padding:0 4px}
+.sheet-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.sheet-ft:empty{display:none}
+/* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
 .acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:#fafafa}
 .acc-hdr:hover{background:#f0f0f0}
 .acc-hdr span{font-size:.85rem;font-weight:600;color:#1a1a1a}
@@ -443,31 +449,25 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
   </div>
 </div>
 
-<!-- Modal: Add Student -->
-<div class="modal-overlay hidden" id="modal-add-student">
-  <div class="modal">
-    <h3>הוספת תלמיד</h3>
-    <div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>
-    <div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>
-    <div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section"></select></div>
-    <div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right"></div>
-    <div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>
-    <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>
-    <div class="ma">
-      <button class="btn out" onclick="closeModal('modal-add-student')">ביטול</button>
-      <button class="btn" onclick="saveNewStudent()">הוסף</button>
+<!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68, כלל ברזל 27) — ⚠️ פתיחה, סגירה
+     ו-Escape חיים במקום אחד; ⛔ שני דפוסים במקביל הם שני מסלולי סגירה. -->
+<div class="veil" id="modal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="sheet-hd">
+      <h3 id="modal-title"></h3>
+      <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
     </div>
+    <div id="modal-body"></div>
+    <div class="sheet-ft" id="modal-foot"></div>
   </div>
 </div>
-
-<!-- Modal: Confirm -->
-<div class="modal-overlay hidden" id="modal-confirm">
-  <div class="modal">
-    <h3 id="modal-confirm-title">אישור</h3>
-    <p id="modal-confirm-msg" style="font-size:.9rem;color:var(--text2);margin-bottom:0"></p>
-    <div class="ma">
-      <button class="btn out" onclick="closeModal('modal-confirm')">ביטול</button>
-      <button class="btn danger" id="modal-confirm-ok">אישור</button>
+<div class="veil" id="ask">
+  <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
+    <div class="sheet-hd"><h3 id="ask-title">אישור</h3></div>
+    <div id="ask-body" style="font-size:.9rem;color:var(--text2)"></div>
+    <div class="sheet-ft">
+      <button class="btn out" data-act="ask-no">ביטול</button>
+      <button class="btn danger" data-act="ask-yes" id="ask-yes">אישור</button>
     </div>
   </div>
 </div>
@@ -485,7 +485,7 @@ var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 //    ⛔ אין להזין מהן את עֵד הפינוי (סבב 51) — ר' `PL_CFG` ו-`SL_SYNCED_KEY`.
 var _slSeenTs=0,_slLastSeenOk=0;
 var SL_STAMP_KEY='sl_last_changed';
-var _confirmCb=null,_dashChart=null;
+var _dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
@@ -3414,8 +3414,61 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 // לפי **מפתח המיזוג** ולא לפי `id`: פריט שנוצר במכשיר עדיין אין לו id.
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
-function openModal(id){document.getElementById(id).classList.remove('hidden');}
-function closeModal(id){document.getElementById(id).classList.add('hidden');}
+/* ══════════════════════════════════════════════════════════════════════════
+   שכבת המודאל — מיכל אחד ו-`openModal(title, body, foot)` (סבב 68)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ פתיחת מודאל עוברת דרך `openModal` בחתימה אחידה, ⛔ וסגירה במסלול אחד
+   (סבב 68, כלל ברזל 27). ⚠️ **עד הסבב הזה ישבה כאן `openModal(id)`** —
+   ⛔ אותו שם שנושאת בגיוס פונקציה אחרת לגמרי, ומי שהעתיק קריאה משם לכאן
+   קיבל קוד שמתקמפל ואינו עובד. ⭐ החתימה מעכשיו זהה בשלושתן.
+   ⚠️ הטופס נבנה כמחרוזת ⛔ ומזהי השדות לא נגעו — הקוראים שלהם
+   (`saveNewStudent`) ממשיכים לקרוא את אותם `id`.
+   ══════════════════════════════════════════════════════════════════════════ */
+function openModal(title, body, foot) {
+  var ttl = document.getElementById('modal-title');
+  if (!ttl) return;
+  ttl.textContent = title || '';
+  document.getElementById('modal-body').innerHTML = body || '';
+  document.getElementById('modal-foot').innerHTML = foot || '';
+  document.getElementById('modal').classList.add('open');
+  document.body.classList.add('locked');
+}
+function closeModal() {
+  var m = document.getElementById('modal');
+  if (!m) return;
+  m.classList.remove('open');
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal-foot').innerHTML = '';
+  if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
+}
+/*  ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית
+ *  (סבב 68), וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM. */
+var askResolve = null;
+function ask(title, text, yesLabel) {
+  document.getElementById('ask-title').textContent = title || '';
+  document.getElementById('ask-body').textContent = text || '';
+  document.getElementById('ask-yes').textContent = yesLabel || 'אישור';
+  document.getElementById('ask').classList.add('open');
+  document.body.classList.add('locked');
+  return new Promise(function (res) { askResolve = res; });
+}
+function closeAsk(v) {
+  document.getElementById('ask').classList.remove('open');
+  if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
+  if (askResolve) { askResolve(v); askResolve = null; }
+}
+/*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
+ *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  var a = document.getElementById('ask'), m = document.getElementById('modal');
+  if (a && a.classList.contains('open')) closeAsk(false);
+  else if (m && m.classList.contains('open')) closeModal();
+});
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.id === 'modal') closeModal();
+  if (e.target && e.target.id === 'ask') closeAsk(false);
+});
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
 var _sdData={},_sdSelected={};
 function sdSetOptions(k,o){_sdData[k]=o;}
@@ -3980,6 +4033,12 @@ var DOM_ACTIONS = {
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
   'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
+  /*  ⛔ כפתורי המודאל עוברים באותה דלגציה (סבב 68) — ⚠️ המיכל קבוע ב-DOM,
+   *  ולכן אין כאן חיווט מחדש בכל פתיחה. */
+  'modal-close':  function () { closeModal(); },
+  'ask-no':       function () { closeAsk(false); },
+  'ask-yes':      function () { closeAsk(true); },
+  'student-add':  function () { saveNewStudent(); },
 };
 document.addEventListener('click', function (ev) {
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
@@ -4230,14 +4289,30 @@ function deleteListItem(key){
     toast(navigator.onLine?'✅ נמחק':MSG_SAVED_LOCAL,4000);
     syncAll();
   });}
-function openAddStudent(){var ss=document.getElementById('new-st-section');ss.innerHTML='<option value="">-- ללא --</option>';(LISTS['sections']||[]).forEach(function(s){ss.innerHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});document.getElementById('new-st-name').value='';document.getElementById('new-st-tuition').value='';document.getElementById('new-st-start').value=curMonthKey();document.getElementById('new-st-end').value='';openModal('modal-add-student');}
+function openAddStudent(){
+  /*  ⚠️ הטופס נבנה כמחרוזת ונמסר ל-`openModal` (סבב 68) — ⛔ מזהי השדות
+   *  לא נגעו, ולכן `saveNewStudent` ממשיכה לקרוא בדיוק את אותם `id`;
+   *  ⛔ וכל שדה נשאר מקושר ל-`<label for=…>` (כלל ברזל 26 סעיף ב). */
+  var opts='<option value="">-- ללא --</option>';
+  (LISTS['sections']||[]).forEach(function(s){opts+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
+  var body=''
+    +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
+    +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
+    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right" value="'+esc(curMonthKey())+'"></div>'
+    +'<div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>'
+    +'<div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
+  var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
+          +'<button class="btn" data-act="student-add">הוסף</button>';
+  openModal('הוספת תלמיד', body, foot);
+}
 function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000);return;}
   pendMark(pendStuKey(row));
   releaseCid('student');
-  closeModal('modal-add-student');
+  closeModal();
   refreshUI();
   toast(navigator.onLine?'✅ תלמיד נוסף':MSG_SAVED_LOCAL,4000);
   syncAll();}
@@ -4254,7 +4329,9 @@ function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){retur
   toast(navigator.onLine?'✅ תלמיד נמחק':MSG_SAVED_LOCAL,4000);
   syncAll();
 });}
-function showConfirm(title,msg,cb){document.getElementById('modal-confirm-title').textContent=title;document.getElementById('modal-confirm-msg').textContent=msg;_confirmCb=cb;document.getElementById('modal-confirm-ok').onclick=function(){closeModal('modal-confirm');if(_confirmCb)_confirmCb();};openModal('modal-confirm');}
+/*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
+ *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
+function showConfirm(title,msg,cb){ ask(title,msg,'אישור').then(function(yes){ if(yes&&cb) cb(); }); }
 /* ══════════════════════════════════════════════════════════════════════════
    פונקציית העלייה של האפליקציה
    ══════════════════════════════════════════════════════════════════════════
