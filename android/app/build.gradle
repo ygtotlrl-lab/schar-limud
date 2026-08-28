@@ -12,17 +12,12 @@ android {
         targetSdk 34
         // ⛔ versionCode לעולם אינו יורד (סבב 46ב) — מספר נמוך ממה
         // שמותקן במכשיר חוסם את העדכון.
-        // 1 = the first shell, loading the live site (https://ygtotlrl-lab.github.io/schar-limud/)
-        // from day one — schar-limud never had a file:// build.
-        // 2 = סבב 41 — יישור שכבת הבנייה והחילוץ של המעטפת לתבנית
-        // משותפת. ⛔ כל שינוי תחת android/ מחייב קידום כאן,
-        // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
-        // 3 = סבב 45 — יישור `AndroidManifest.xml` (`configChanges` לסופרסט)
-        // ואכיפת חתימה על החלק המשותף של המניפסט ושל קובץ הבנייה.
-        // 4 = סבב 46ב — היפוך ברירת המחדל בקובצי התצורה: חתימה חסרת-גשר
-        // על המניפסט ועל קובץ הבנייה, וחתימה אחת לשני ה-workflows.
-        versionCode 8
-        versionName "8.0"
+        // ⛔ קדם בכל שינוי ב-`android/` (סבב 68) — ⚠️ ר' טבלת הגרסאות
+        // ב-`android/README.md`, ⛔ שהיא מקור האמת היחיד להיסטוריה
+        // (כלל ברזל 21); `tools/test_gradle.mjs` אוכף את הקידום מול
+        // קומיט הקידום האחרון.
+        versionCode 9
+        versionName "9.0"
     }
 
     buildTypes {
