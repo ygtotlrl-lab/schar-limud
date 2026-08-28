@@ -47,7 +47,7 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   '6d7ada6dd9a8273e'],
+  ['rules-table',   'c8d3959687464f31'],
   ['rules-enforce', '98669db68a890ae2'],
   ['rules-writing', 'adfa54fe778c7f2f'],
   ['rules-session', 'e28b6fcfd5df4fac'],
@@ -596,6 +596,64 @@ const DOC_MAX_PRIVATE = 300;
          'ולקח שראוי להישמר עולה לכלל ברזל או להערה בקוד לפני המחיקה.');
   } else {
     pass(`תקציב התיעוד — ${priv}/${DOC_MAX_PRIVATE} שורות בחלק הפרטי-הקבוע`);
+  }
+}
+
+/* ────── י. תוכן שני חלקי CLAUDE.md — כל חלק לפי הגדרתו (סבב 71) ────────────
+   ⛔ עד כאן נאכף **כמה** יש בכל חלק ⛔ ולא **מה** יש בו: החלק המשותף היה
+   יכול להחזיק פרק אפליקציה, והחלק הפרטי פרק כללים, ⚠️ והתקרות היו עוברות.
+   ⭐ ההגדרה: המשותף = כללים והטבלה · הפרטי = מסכים ולוגיקה של האפליקציה,
+   ולצידם חלון פרקי הסבבים. ⛔ הבדיקה היא על **כותרות `##`**, שהן חלוקת
+   הקובץ בפועל. */
+{
+  const SCREENS = /^##\s+מסכים ולוגיקה\s+—\s+\S/;
+  const priv = [], shrd = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (inFence[i] || !/^##\s/.test(lines[i])) continue;
+    (found.some((b) => i + 1 > b.from && i + 1 < b.to) ? shrd : priv).push(lines[i].trim());
+  }
+  /*  ⛔ בחלק המשותף אין כותרת `##` כלל (סבב 71) — ⚠️ ארבעת הבלוקים נפתחים
+   *  ב-`## ⭐` שהוא כותרת הפרק עצמו, ⛔ וכל `##` נוסף בתוכם הוא פרק שנשתל
+   *  בטעות בבלוק שהחתימה נועלת. */
+  const alien = shrd.filter((h) => SCREENS.test(h) || ROUND_H2.test(h));
+  if (alien.length) fail(`${APP.file}: פרק אפליקציה בתוך בלוק משותף — ${alien.join(' · ')}`);
+  else pass(`תוכן החלק המשותף — ${found.length} בלוקים, ואין בהם פרק אפליקציה`);
+
+  const screens = priv.filter((h) => SCREENS.test(h));
+  const rounds  = priv.filter((h) => ROUND_H2.test(h));
+  const other   = priv.filter((h) => !SCREENS.test(h) && !ROUND_H2.test(h));
+  if (screens.length !== 1)
+    fail(`${APP.file}: החלק הפרטי מחזיק ${screens.length} פרקי «מסכים ולוגיקה» ואחד נדרש.`);
+  else if (other.length)
+    fail(`${APP.file}: פרק בחלק הפרטי שאינו מסכים ולוגיקה ואינו פרק סבב — ${other.join(' · ')}`);
+  else pass(`תוכן החלק הפרטי — «${screens[0].replace(/^##\s+/, '')}» ו-${rounds.length} פרקי סבבים`);
+}
+
+/* ────── יא. פרק מתחום של קובץ אחר (סבב 71) ─────────────────────────────────
+   ⛔ הבדיקה היא **שלילית** ⛔ ולא רשימת-היתר: ⚠️ רשימה חיובית של הכותרות
+   המותרות הייתה מוכתבת מהמצב הקיים ומברכת עליו, ⛔ ובכל אפליקציה בנוסח
+   אחר. ⭐ מה שכן ניתן לומר בוודאות הוא מה **אסור** להיות כאן: פרק שהוא
+   בהגדרתו של קובץ אחר. ⚠️ פרק סבב אינו נבדק ב-`android/README` בלבד —
+   ⛔ חלון הסבבים הוא של `CLAUDE.md`, ⛔ ופרק סבב בכל קובץ אחר הוא היסטוריה
+   שאיש אינו גוזם. */
+{
+  const FOREIGN = {
+    'README.md':         [[ROUND_H2, 'פרק סבב'], [/^##\s+⭐?\s*טבלת התשתית/, 'טבלת התשתית']],
+    'CONTEXT.md':        [[ROUND_H2, 'פרק סבב'], [/^##\s+Build\b/i, 'בנייה'],
+                          [/^##\s+הפעלה ראשונה/, 'הפעלה ראשונה']],
+    'android/README.md': [[ROUND_H2, 'פרק סבב'], [/^##\s+הפעלה ראשונה/, 'הפעלה ראשונה'],
+                          [/^##\s+מסכים\b/, 'מסכים'], [/^##\s+⭐?\s*טבלת התשתית/, 'טבלת התשתית']],
+  };
+  for (const [f, rules] of Object.entries(FOREIGN)) {
+    if (!fs.existsSync(f)) continue;
+    const ls = fs.readFileSync(f, 'utf8').split('\n'), mk = fenceMask(ls);
+    const hits = [];
+    for (let i = 0; i < ls.length; i++) {
+      if (mk[i] || !/^##\s/.test(ls[i])) continue;
+      for (const [re, what] of rules) if (re.test(ls[i])) hits.push(`שורה ${i + 1}: ${what}`);
+    }
+    if (hits.length) fail(`${f}: פרק מתחום של קובץ אחר — ${hits.join(' · ')}`);
+    else pass(`תוכן ${f} — אין בו פרק מתחום של קובץ אחר`);
   }
 }
 
