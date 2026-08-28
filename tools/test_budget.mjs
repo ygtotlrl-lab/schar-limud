@@ -5,7 +5,7 @@
  * שורות (אחרי הגיזום של סבב 34) ל-4,447 — ⛔ מפני שכל סבב מוסיף פרק ואף
  * סבב אינו מוחק אחד. כלל ברזל 18 קובע **שלושה** תנאים, וכולם נאכפים
  * בסעיף ט של `check-docs.mjs`: **חלון של שני פרקי סבבים** · **תקרה של
- * 600 שורות** · ו**תקרת 300 שורות על החלק הפרטי** (סבב 69).
+ * 700 שורות** · **400 על החלק המשותף** · ו**300 על החלק הפרטי** (סבב 71).
  *
  * ⛔ הבדיקה מריצה את `check-docs` **האמיתי** על עותק מוטב בתיקייה זמנית
  * ודורשת שהוא ייפול על כל אחד משלושת התנאים, ⛔ ושלא ייפול על כותרת `##`
@@ -16,15 +16,17 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
-const MAX_LINES = 600;
+const MAX_LINES = 700;
 const MAX_ROUNDS = 2;
 const MAX_PRIVATE = 300;
+const MAX_SHARED = 400;
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 
 let pass = 0, fail = 0;
@@ -75,7 +77,8 @@ const privateLines = (() => {
 })();
 
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
-t(n++, /const DOC_MAX_LINES\s*=\s*600;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 600');
+t(n++, /const DOC_MAX_LINES\s*=\s*700;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 700');
+t(n++, /const DOC_MAX_SHARED\s*=\s*400;/.test(docs), 'check-docs מחזיק DOC_MAX_SHARED = 400');
 t(n++, /const DOC_MAX_ROUNDS\s*=\s*2;/.test(docs), 'check-docs מחזיק DOC_MAX_ROUNDS = 2');
 t(n++, /const DOC_MAX_PRIVATE\s*=\s*300;/.test(docs), 'check-docs מחזיק DOC_MAX_PRIVATE = 300');
 t(n++, /const ROUND_H2\s*=/.test(docs), 'check-docs מזהה פרק סבב לפי ביטוי ייעודי');
@@ -83,6 +86,31 @@ t(n++, /!inFence\[i\]\s*&&\s*ROUND_H2\.test/.test(docs),
   '⛔ והזיהוי מדלג על כותרת שבתוך גדר קוד — אחרת דוגמה בתיעוד נספרת כפרק');
 
 /* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
+/*  ⛔ המוטציה **חותמת מחדש** את הבלוקים המשותפים בעותק (סבב 71) —
+    ⚠️ בלעדיה כל תוספת בתוך בלוק משותף מפילה את check-docs על **החתימה**,
+    ⛔ והמוטציה שנועדה לבדוק את תקרת החלק המשותף מדווחת «נאכף» על תנאי
+    שכלל לא נבדק. ⭐ החתימה נבדקת במקום אחר, וכאן היא רעש. */
+function resign(docsSrc, mdSrc) {
+  const ls = mdSrc.split('\n');
+  const out = []; let open = null, f = false;
+  for (const l of ls) {
+    if (/^\s*```/.test(l)) { f = !f; if (open) open.body.push(l); continue; }
+    if (f) { if (open) open.body.push(l); continue; }
+    const m = /^<!--\s*SHARED:start\s+id="([^"]*)"\s*-->\s*$/.exec(l);
+    if (m) { open = { id: m[1], body: [] }; continue; }
+    if (/^<!--\s*SHARED:end\s*-->\s*$/.test(l) && open) {
+      out.push([open.id, crypto.createHash('sha256')
+        .update(open.body.join('\n').trim()).digest('hex').slice(0, 16)]);
+      open = null; continue;
+    }
+    if (open) open.body.push(l);
+  }
+  let s = docsSrc;
+  for (const [id, sha] of out)
+    s = s.replace(new RegExp(`(\\['${id}',\\s*')[0-9a-f]{16}(')`), `$1${sha}$2`);
+  return s;
+}
+
 function runDocsOn(mutate) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r49bg-'));
   try {
@@ -90,7 +118,10 @@ function runDocsOn(mutate) {
       if (f === '.git' || f === 'node_modules') continue;
       fs.cpSync(path.join(ROOT, f), path.join(tmp, f), { recursive: true });
     }
-    fs.writeFileSync(path.join(tmp, 'CLAUDE.md'), mutate(raw));
+    const md = mutate(raw);
+    fs.writeFileSync(path.join(tmp, 'CLAUDE.md'), md);
+    const dp = path.join(tmp, 'tools', 'check-docs.mjs');
+    fs.writeFileSync(dp, resign(fs.readFileSync(dp, 'utf8'), md));
     try {
       execFileSync(process.execPath, [path.join(tmp, 'tools', 'check-docs.mjs')],
                    { cwd: tmp, stdio: 'pipe' });
@@ -102,7 +133,7 @@ function runDocsOn(mutate) {
 t(n++, runDocsOn(s => s) === true, '⭐ קו הבסיס — check-docs עובר על הקובץ כפי שהוא');
 
 /* ⭐⭐ **פינוי מקום לפני כל מוטציה שמוסיפה שורות — ⛔ ולא ויתור עליה
-   (סבב 61).** ⚠️ **הבעיה שנמדדה:** ככל שהקובץ מתקרב לתקרת 3,000, כל
+   (סבב 61).** ⚠️ **הבעיה שנמדדה:** ככל שהקובץ מתקרב לתקרה הגלובלית, כל
    מוטציה שמוסיפה שורות חוצה אותה **לפני** שהיא מגיעה לתנאי שהיא באה
    לבדוק — ⛔ ואז «נאכף» מדווח על שער שלא נבדק, וזה כשל בכיוון המסוכן.
    ⭐ **הפתרון: פינוי שורות מגוף פרקי הסבבים בעותק הזמני** — הן היחידות
@@ -144,16 +175,16 @@ const extra = Array.from({ length: need }, (_, k) =>
 t(n++, runDocsOn(s => freeRoundLines(s, roomFor(extra.split('\n').length)) + extra) === false,
   `⛔ מוטציה: ${need} פרקי סבבים נוספים **מפילים** את check-docs (חלון של שניים)`);
 
-const padTo = 3001 - nlines + 1;
-t(n++, padTo > 0, `יש מה לרפד — ${padTo} שורות עד 3,001`);
+const padTo = MAX_LINES + 1 - nlines + 1;
+t(n++, padTo > 0, `יש מה לרפד — ${padTo} שורות עד ${MAX_LINES + 1}`);
 t(n++, runDocsOn(s => s + '\nריפוד.'.repeat(0) + Array(padTo + 1).join('ריפוד לצורך המוטציה.\n')) === false,
-  '⛔ מוטציה: 3,001 שורות **מפילות** את check-docs (תקרה קשיחה)');
+  `⛔ מוטציה: ${MAX_LINES + 1} שורות **מפילות** את check-docs (תקרה קשיחה)`);
 
 t(n++, privateLines <= MAX_PRIVATE,
   `CLAUDE.md — ${privateLines}/${MAX_PRIVATE} שורות בחלק הפרטי-הקבוע`);
 
 /* ⚠️ מוטציית החלק הפרטי מוסיפה **פרק שאינו פרק סבב**, ולכן שורותיו
-   נספרות כפרטיות. ⛔ והיא חייבת להישאר מתחת ל-3,000 — אחרת היא הייתה
+   נספרות כפרטיות. ⛔ והיא חייבת להישאר מתחת לתקרה הגלובלית — אחרת הייתה
    מפילה את השער על התקרה הגלובלית ומדווחת «נאכף» על תנאי שלא נבדק. */
 const needPriv = MAX_PRIVATE - privateLines + 1;
 const privChunk = `\n## פרק פרטי עודף, לצורך המוטציה\n` +
@@ -180,11 +211,22 @@ t(n++, runDocsOn(s => freeRoundLines(s, Math.max(roomFor(3), 5)) +
       '\n## פרק פרטי קטן\nגוף.\n') === true,
   '⭐ מוטציית-נגד: שלוש שורות פרטיות ⛔ **אינן** מפילות');
 
-/*  ⛔ ומוטציה על החלק המשותף (סבב 69) — ⚠️ תקרת ה-300 המשותפת היא תקרה
-    **נפרדת**, ותוספת בתוך בלוק משותף אינה נספרת בפרטי. */
+/*  ⛔ ומוטציה על החלק המשותף (סבב 69) — ⚠️ התקרה המשותפת היא תקרה
+    **נפרדת**, ותוספת בתוך בלוק משותף אינה נספרת בפרטי. ⛔ והריפוד נגזר
+    מהנמדד ואינו קבוע (סבב 71): קבוע שנכתב פעם אחת חוצה עם הזמן גם את
+    התקרה הגלובלית, ⚠️ ואז המוטציה «מפילה» מסיבה אחרת ומדווחת «נאכף» על
+    תנאי שלא נבדק. */
+const needShared = MAX_SHARED - sharedLines + 1;
+t(n++, nlines + needShared < MAX_LINES,
+  `⚠️ מוטציית החלק המשותף נשארת מתחת ל-${MAX_LINES} — היא בודקת את התקרה הנכונה`);
 t(n++, runDocsOn(s => s.replace('<!-- SHARED:end -->',
-    Array(320).join('שורה משותפת לצורך המוטציה.\n') + '<!-- SHARED:end -->')) === false,
-  '⛔ מוטציה: חריגה מתקרת החלק המשותף **מפילה** את check-docs');
+    Array(needShared + 1).join('שורה משותפת לצורך המוטציה.\n') + '<!-- SHARED:end -->')) === false,
+  `⛔ מוטציה: ${needShared} שורות משותפות נוספות **מפילות** את check-docs (התקרה המשותפת)`);
+/*  ⭐ מוטציית-נגד: שלוש שורות משותפות ⛔ אינן מפילות — ⚠️ בלעדיה
+    «חריגה מפילה» אינה מבחינה בין תקרה לרגישות לכל תוספת. */
+t(n++, runDocsOn(s => s.replace('<!-- SHARED:end -->',
+    Array(4).join('שורה משותפת קטנה.\n') + '<!-- SHARED:end -->')) === true,
+  '⭐ מוטציית-נגד: שלוש שורות משותפות ⛔ **אינן** מפילות');
 
 console.log(fail ? `\n✗ סבב 49 (תקציב תיעוד) — ${fail} נכשלו, ${pass} עברו`
                  : `\n✓ סבב 49 (תקציב תיעוד) — ${pass} טענות עברו`);
