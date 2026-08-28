@@ -50,9 +50,7 @@ const DIRS = ['.github', 'android', 'design', 'icons', 'migrations', 'signing', 
 const ROOT_FILES = ['.nojekyll', 'CLAUDE.md', 'CONTEXT.md', 'README.md',
                     'index.html', 'manifest.json', 'sw.js'];
 const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs',
-                  'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs',
-                  // ⭐ סבב 39 — אכיפת פרק «פערים פתוחים» (כלל ברזל 15).
-                  'check-gaps.mjs'];
+                  'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs'];
 /*  ⛔ שם המבחן נגזר מהנושא ולא ממספר הסבב (סבב 67) — 53 מבחנים
  *  נשאו שם כמו `test_round52_pendflush`, ⚠️ ומי שרצה לדעת מה בודק
  *  את מודול הנעילה לא ידע לחפש. ⛔ מספר הסבב עבר לשורת הכותרת

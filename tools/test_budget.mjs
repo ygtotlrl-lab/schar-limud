@@ -48,8 +48,12 @@ t(n++, nlines <= MAX_LINES, `CLAUDE.md — ${nlines}/${MAX_LINES} שורות`);
 t(n++, rounds.length <= MAX_ROUNDS, `CLAUDE.md — ${rounds.length}/${MAX_ROUNDS} פרקי סבבים`);
 t(n++, rounds.length > 0, '⚠️ ויש בו לפחות פרק סבב אחד — קובץ בלי היסטוריה כלל אינו «חלון»');
 
-/* ⭐ החלק הפרטי-הקבוע — מה שאינו בלוק `SHARED` ואינו פרק סבב (סבב 50).
-   ⚠️ אותה מסכת גדרות-קוד: ⛔ סמן `SHARED` שבתוך דוגמה אינו בלוק אמיתי. */
+/* ⭐ החלק הפרטי-הקבוע — כל מה שאינו בלוק `SHARED` (סבב 50).
+   ⚠️ אותה מסכת גדרות-קוד: ⛔ סמן `SHARED` שבתוך דוגמה אינו בלוק אמיתי.
+   ⛔ **ופרקי הסבבים נספרים בו** (סבב 70) — ⚠️ עד הסבב הזה הם הוחרגו כאן
+   ובלבד כאן, ⛔ והמספר שדווח היה נמוך מזה שהשער האמיתי אוכף: 95 מול 235
+   על אותו קובץ. ⚠️ **וזה לא היה רק דיווח:** `needPriv` נגזר ממנו, ולכן
+   המוטציה ריפדה מאה שורות מיותרות ⛔ ונחסמה על התקרה הגלובלית. */
 const privateLines = (() => {
   const kind = new Array(nlines).fill(0);
   let s = -1;
@@ -67,7 +71,7 @@ const privateLines = (() => {
     if (ROUND_H2.test(lines[i])) h = i;
   }
   if (h >= 0) for (let j = h; j < nlines; j++) if (!kind[j]) kind[j] = 2;
-  return kind.filter(k => k === 0).length;
+  return kind.filter(k => k !== 1).length;
 })();
 
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
@@ -134,7 +138,7 @@ const roomFor = k => Math.max(0, (nlines + k) - (MAX_LINES - 1));
 const need = MAX_ROUNDS - rounds.length + 1;
 const extra = Array.from({ length: need }, (_, k) =>
   `\n## סבב 9${k} (2026-12-31) — פרק סבב עודף, לצורך המוטציה\nגוף.\n`).join('');
-/* ⚠️ הפינוי נדרש כאן מאותה סיבה בדיוק שבמוטציית ה-900 שלמטה (סבב 61) —
+/* ⚠️ הפינוי נדרש כאן מאותה סיבה בדיוק שבמוטציית החלק הפרטי שלמטה (סבב 61) —
    ⛔ בקובץ שקרוב לתקרה, שלוש שורות הפרק היו מפילות את השער על התקרה
    הגלובלית, והטענה הייתה מדווחת «נאכף» על **חלון הסבבים** שלא נבדק. */
 t(n++, runDocsOn(s => freeRoundLines(s, roomFor(extra.split('\n').length)) + extra) === false,
@@ -155,17 +159,20 @@ const needPriv = MAX_PRIVATE - privateLines + 1;
 const privChunk = `\n## פרק פרטי עודף, לצורך המוטציה\n` +
                   Array(needPriv).join('שורה פרטית לצורך המוטציה.\n');
 
-const freeBy = roomFor(needPriv + 2);
-const bodyAvail = roundBodyIdx(lines).length;
-t(n++, bodyAvail >= freeBy,
-  `⚠️ יש מגוף פרקי הסבבים מה לפנות למוטציה — ${freeBy}/${bodyAvail} שורות`);
-const base = s => freeRoundLines(s, freeBy);
-t(n++, nlines - freeBy + needPriv + 2 < MAX_LINES,
+/*  ⛔ ופינוי מגוף פרקי הסבבים אינו עוזר כאן (סבב 70) — ⚠️ מרגע שהם
+    נספרים בחלק הפרטי, כל שורה שמפונה חוזרת מיד כשורת ריפוד, ⛔ והיחס
+    אינו זז. ⭐ מה שקובע הוא **גודל החלק המשותף**: המוטציה ניתנת לבנייה
+    כל עוד `shared + MAX_PRIVATE + 1 < MAX_LINES`. ⚠️ וזו תקרה סמויה על
+    החלק המשותף, נמוכה מ-`DOC_MAX_SHARED` המוצהרת. */
+const sharedLines = nlines - privateLines;
+t(n++, sharedLines + MAX_PRIVATE + 1 < MAX_LINES,
+  `⚠️ המוטציה ניתנת לבנייה — החלק המשותף ${sharedLines} מול תקרת ${MAX_LINES - MAX_PRIVATE - 2}`);
+t(n++, nlines + needPriv < MAX_LINES,
   `⚠️ מוטציית החלק הפרטי נשארת מתחת ל-${MAX_LINES} — היא בודקת את התקרה הנכונה`);
-t(n++, runDocsOn(s => base(s)) === true,
-  '⭐ ⛔ ובסיס המוטציה עצמו **עובר** — הפינוי לא שבר חתימה ולא מניין פרקים');
-t(n++, runDocsOn(s => base(s) + privChunk) === false,
-  `⛔ מוטציה: ${needPriv} שורות פרטיות נוספות **מפילות** את check-docs (תקרת 900)`);
+t(n++, runDocsOn(s => s) === true,
+  '⭐ ⛔ ובסיס המוטציה עצמו **עובר** — כלומר מה שמפיל הוא הריפוד ולא הבסיס');
+t(n++, runDocsOn(s => s + privChunk) === false,
+  `⛔ מוטציה: ${needPriv} שורות פרטיות נוספות **מפילות** את check-docs (התקרה הפרטית)`);
 /*  ⭐ מוטציית-נגד (סבב 69) — ⛔ שינוי שחייב **לעבור**: שלוש שורות פרטיות
     נוספות אינן חוצות אף תקרה, ⚠️ כלומר השער מודד סף ואינו נופל על כל
     תוספת. ⛔ בלעדיה «המוטציה מפילה» אינה מבחינה בין מדידה לרגישות-יתר. */
