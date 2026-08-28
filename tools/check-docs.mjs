@@ -47,9 +47,9 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   'c8d3959687464f31'],
-  ['rules-enforce', '98669db68a890ae2'],
-  ['rules-writing', 'adfa54fe778c7f2f'],
+  ['rules-table',   '3245e46284e5f258'],
+  ['rules-enforce', '8c0bcb58e82e1e11'],
+  ['rules-writing', '98b36dbe1da7898d'],
   ['rules-session', 'e28b6fcfd5df4fac'],
 ];
 
@@ -322,17 +322,19 @@ for (const spec of MD_SKELETONS) {
  *  (שנבדלת פר-אפליקציה ונמדדה ככזו) ופרקי ה-smali. ⛔ אין להרחיב את
  *  הסימון לפסקה שאינה זהה בארבעתן בפועל — זה בדיוק כלל ברזל 8 סעיף 4,
  *  בציר אחר.                                                             */
+/*  ⛔ הרשימה כתובה **בסדר הופעתם בקובץ** (סבב 71) — ⚠️ סעיף יב אוכף
+ *  אותו, ⛔ ולכן סדר שגוי כאן הוא כישלון שער ולא עניין של נוחות. */
 const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
   ['README.md',         'readme-apk',            '54a69bee96c333bf'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'android-smali-scope',   '809e7e9d32b16ee6'],
-  ['android/README.md', 'android-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
   ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
   ['android/README.md', 'android-icons',         '9824d699371d309a'],
   ['android/README.md', 'android-shell-split',   'a2508c6906d22ac5'],
+  ['android/README.md', 'android-smali-scope',   '809e7e9d32b16ee6'],
+  ['android/README.md', 'android-cache-apk',     '898e51f7bb6048db'],
 ];
 
 /* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */
@@ -655,6 +657,53 @@ const DOC_MAX_PRIVATE = 300;
     if (hits.length) fail(`${f}: פרק מתחום של קובץ אחר — ${hits.join(' · ')}`);
     else pass(`תוכן ${f} — אין בו פרק מתחום של קובץ אחר`);
   }
+}
+
+/* ────── יב. מבנה פרק הכלל, וסדר הבלוקים (סבב 71) ───────────────────────────
+   ⛔ **תקן פרק הכלל: כותרת · מה נאכף · הנימוק המדוד.** ⚠️ פרק בלי נימוק
+   נקרא כגחמה, ⛔ והסשן הבא מבטל אותו בתום לב — בדיוק מה שכל ⛔ בא למנוע.
+   ⭐ הצורה נאכפת ולא הניסוח: כותרת `###` · לפחות סימן ⛔ אחד (מה נאכף) ·
+   ⛔ ולפחות ⚠️ או ⭐ אחד (הנימוק).
+   ⛔ **וסדר הבלוקים נאכף מול הרשימה הקנונית** — ⚠️ הרשימה זהה בארבעת
+   עותקי השער, ⛔ ולכן סדר שנשמר מולה הוא סדר אחיד בארבעת הריפו: זו
+   הדרך היחידה לאכוף אחידות בין ריפו מתוך ריפו אחד. */
+{
+  const ids = found.map((b) => b.id).join(',');
+  const want = CANON.map((c) => c[0]).join(',');
+  if (ids !== want) fail(`${APP.file}: סדר הבלוקים [${ids}] ≠ הסדר הקנוני [${want}]`);
+  else pass(`סדר הבלוקים ב-${APP.file} — ${found.length} בלוקים בסדר הקנוני`);
+
+  for (const f of [...new Set(CANON_MD.map((c) => c[0]))]) {
+    if (!fs.existsSync(f)) continue;
+    const got = scanShared(f).blocks.map((b) => b.id).join(',');
+    const exp = CANON_MD.filter((c) => c[0] === f).map((c) => c[1]).join(',');
+    if (got !== exp) fail(`${f}: סדר הבלוקים [${got}] ≠ הסדר הקנוני [${exp}]`);
+    else pass(`סדר הבלוקים ב-${f} — ${exp.split(',').length} בלוקים בסדר הקנוני`);
+  }
+
+  let bad = 0, seen = 0, open = null, head = null, body = [];
+  const close = () => {
+    if (!head) return;
+    const txt = body.join('\n');
+    seen++;
+    if (!txt.includes('⛔')) { fail(`${APP.file}: פרק הכלל «${head}» בלי ⛔ — מה נאכף אינו כתוב`); bad++; }
+    else if (!txt.includes('⚠️') && !txt.includes('⭐')) {
+      fail(`${APP.file}: פרק הכלל «${head}» בלי ⚠️ או ⭐ — הנימוק אינו כתוב`); bad++;
+    }
+    head = null; body = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    if (inFence[i]) { if (head) body.push(lines[i]); continue; }
+    const st = START_RE.exec(lines[i]);
+    if (st) { open = st[1]; continue; }
+    if (END_RE.test(lines[i])) { close(); open = null; continue; }
+    if (open && open.startsWith('rules-') && /^###\s+\S/.test(lines[i])) {
+      close(); head = lines[i].replace(/^###\s+/, '').trim(); continue;
+    }
+    if (head) body.push(lines[i]);
+  }
+  close();
+  if (!bad) pass(`מבנה פרק הכלל — ${seen} פרקים, לכל אחד כותרת · מה נאכף · נימוק`);
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');

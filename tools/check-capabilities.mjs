@@ -840,10 +840,10 @@ function idSites() {
    ──────────────────────────────────────────────────────────────────────── */
 const GATES = {
   1: 'check-docs',
-  2: { manual: 'סדר פנימי אחיד אינו ניתן לגזירה מכנית — נמדד בעין' },
+  2: 'check-docs',
   3: 'check-docs',
   4: 'check-docs',
-  5: { manual: 'מבנה פרק הכלל טרם הוגדר כתקן — טרם נמדד' },
+  5: 'check-docs',
   6: 'check-docs',
   7: 'check-docs',
   8: 'check-docs',
