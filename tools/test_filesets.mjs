@@ -106,6 +106,7 @@ const SHARED = [
   'tools/test_pendflush.mjs',
   'tools/test_pull.mjs',
   'tools/test_retry.mjs',
+  'tools/test_rulesdocs.mjs',
   'tools/test_session.mjs',
   'tools/test_shell.mjs',
   'tools/test_signscript.mjs',

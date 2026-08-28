@@ -5,7 +5,7 @@
  * שורות (אחרי הגיזום של סבב 34) ל-4,447 — ⛔ מפני שכל סבב מוסיף פרק ואף
  * סבב אינו מוחק אחד. כלל ברזל 18 קובע **שלושה** תנאים, וכולם נאכפים
  * בסעיף ט של `check-docs.mjs`: **חלון של שני פרקי סבבים** · **תקרה של
- * 3,000 שורות** · ו**תקרת 900 שורות על החלק הפרטי-הקבוע** (סבב 50).
+ * 600 שורות** · ו**תקרת 300 שורות על החלק הפרטי** (סבב 69).
  *
  * ⛔ הבדיקה מריצה את `check-docs` **האמיתי** על עותק מוטב בתיקייה זמנית
  * ודורשת שהוא ייפול על כל אחד משלושת התנאים, ⛔ ושלא ייפול על כותרת `##`
@@ -22,9 +22,9 @@ import { execFileSync } from 'child_process';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
-const MAX_LINES = 3000;
+const MAX_LINES = 600;
 const MAX_ROUNDS = 2;
-const MAX_PRIVATE = 900;
+const MAX_PRIVATE = 300;
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 
 let pass = 0, fail = 0;
@@ -71,9 +71,9 @@ const privateLines = (() => {
 })();
 
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
-t(n++, /const DOC_MAX_LINES\s*=\s*3000;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 3000');
+t(n++, /const DOC_MAX_LINES\s*=\s*600;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 600');
 t(n++, /const DOC_MAX_ROUNDS\s*=\s*2;/.test(docs), 'check-docs מחזיק DOC_MAX_ROUNDS = 2');
-t(n++, /const DOC_MAX_PRIVATE\s*=\s*900;/.test(docs), 'check-docs מחזיק DOC_MAX_PRIVATE = 900');
+t(n++, /const DOC_MAX_PRIVATE\s*=\s*300;/.test(docs), 'check-docs מחזיק DOC_MAX_PRIVATE = 300');
 t(n++, /const ROUND_H2\s*=/.test(docs), 'check-docs מזהה פרק סבב לפי ביטוי ייעודי');
 t(n++, /!inFence\[i\]\s*&&\s*ROUND_H2\.test/.test(docs),
   '⛔ והזיהוי מדלג על כותרת שבתוך גדר קוד — אחרת דוגמה בתיעוד נספרת כפרק');
@@ -166,11 +166,18 @@ t(n++, runDocsOn(s => base(s)) === true,
   '⭐ ⛔ ובסיס המוטציה עצמו **עובר** — הפינוי לא שבר חתימה ולא מניין פרקים');
 t(n++, runDocsOn(s => base(s) + privChunk) === false,
   `⛔ מוטציה: ${needPriv} שורות פרטיות נוספות **מפילות** את check-docs (תקרת 900)`);
-t(n++, runDocsOn(s => base(s) + Array(needPriv + 1).join('שורה בתוך פרק הסבב האחרון.\n')) === true,
-  '⭐ ואותה כמות שורות **בתוך פרק סבב** ⛔ **אינה** מפילה — המדידה מבחינה ביניהם');
+/*  ⭐ מוטציית-נגד (סבב 69) — ⛔ שינוי שחייב **לעבור**: שלוש שורות פרטיות
+    נוספות אינן חוצות אף תקרה, ⚠️ כלומר השער מודד סף ואינו נופל על כל
+    תוספת. ⛔ בלעדיה «המוטציה מפילה» אינה מבחינה בין מדידה לרגישות-יתר. */
+t(n++, runDocsOn(s => freeRoundLines(s, Math.max(roomFor(3), 5)) +
+      '\n## פרק פרטי קטן\nגוף.\n') === true,
+  '⭐ מוטציית-נגד: שלוש שורות פרטיות ⛔ **אינן** מפילות');
 
-t(n++, runDocsOn(s => freeRoundLines(s, roomFor(3)) + '\n## פרק שאינו פרק סבב\nגוף.\n') === true,
-  '⭐ ומוטציה שאינה פרק סבב — כותרת `##` רגילה — ⛔ **אינה** מפילה');
+/*  ⛔ ומוטציה על החלק המשותף (סבב 69) — ⚠️ תקרת ה-300 המשותפת היא תקרה
+    **נפרדת**, ותוספת בתוך בלוק משותף אינה נספרת בפרטי. */
+t(n++, runDocsOn(s => s.replace('<!-- SHARED:end -->',
+    Array(320).join('שורה משותפת לצורך המוטציה.\n') + '<!-- SHARED:end -->')) === false,
+  '⛔ מוטציה: חריגה מתקרת החלק המשותף **מפילה** את check-docs');
 
 console.log(fail ? `\n✗ סבב 49 (תקציב תיעוד) — ${fail} נכשלו, ${pass} עברו`
                  : `\n✓ סבב 49 (תקציב תיעוד) — ${pass} טענות עברו`);
