@@ -344,9 +344,9 @@ for (const spec of MD_SKELETONS) {
  *  בציר אחר.                                                             */
 const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',            '81445890f0e496dc'],
+  ['README.md',         'readme-apk',            '54a69bee96c333bf'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'context-smali-scope',   '15ad22e158b45086'],
+  ['android/README.md', 'context-smali-scope',   '809e7e9d32b16ee6'],
   ['android/README.md', 'context-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],

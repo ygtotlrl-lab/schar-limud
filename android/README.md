@@ -44,28 +44,20 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 
 ## ⛔ אין גשר שיתוף — וזה ההבדל היחיד מהתבנית של יומן
 
-למעטפת של yoman-avoda יש `AndroidShareBridge` (מוגבל-origin, בשני מנעולים) כי הדף
-שלה קורא ל-`navigator.share` עם תמונת דו"ח. **בקוד של שכר לימוד אין `navigator.share`
-בכלל**, ולכן הגשר הושמט כליל — לא בצד Java, לא בצד הדף, לא ב-manifest
-(אין `FileProvider`, אין `<queries>`) ולא בתלויות (אין androidx).
-
-גשר מקורי על דף שנטען מהרשת הוא כוח שנמסר למי שמגיש את הדף. אם אי-פעם יידרש כאן
-גשר — מעתיקים את הדפוס הכפול-נעילה של יומן (`WebViewCompat.addWebMessageListener`
-עם `ALLOWED_ORIGINS`, ונפילה-חזרה שמחוברת רק על ה-origin שלנו). **לעולם לא
-`addJavascriptInterface` חשוף.**
+⛔ אין כאן `navigator.share`, ולכן הגשר הושמט כליל — לא בצד Java, לא בצד
+הדף, לא ב-manifest ולא בתלויות. ⚠️ גשר מקורי על דף שנטען מהרשת הוא כוח
+שנמסר למי שמגיש את הדף. ⛔ אם יידרש — בדפוס הכפול-נעילה של יומן
+(`addWebMessageListener` עם `ALLOWED_ORIGINS`), ⛔ ולעולם לא
+`addJavascriptInterface` חשוף.
 
 ## למה אין נכסים מוטבעים
 
-- ⛔ **`file://` הוא origin אחסון אחר.** ה-localStorage של `file://` ושל
-  `https://ygtotlrl-lab.github.io` הן שתי מחיצות נפרדות לחלוטין. תשלום שנרשם
-  לעותק מוטבע בעלייה ראשונה **לא נראה לאפליקציה האמיתית לעולם** — והוא גם לא
-  יסונכרן, כי הסנכרון רץ בדף השני. כאן זה לא סתם נתון — זה **כסף**
-  (`sl_transactions`). גיבוי שמייצר אובדן נתונים אינו גיבוי.
-- **זה מקור אמת שני** — בדיוק מה שכלל קריטי 4 של הריפו אוסר. הוא מתיישן בכל שחרור.
-- **מה שהוא אמור לפתור כבר פתור**: אחרי עלייה מוצלחת אחת, ה-service worker מגיש
-  הכול אופליין ושכבת ה-MIRROR (סבב 12–13) עובדת בלי רשת. המקרה היחיד שנשאר הוא
-  **התקנה + הפעלה ראשונה בלי רשת בכלל** — ולהתקנת APK ממילא צריך רשת. במקרה הזה
-  המעטפת מציגה דף שגיאה בעברית עם כפתור "נסה שוב".
+- ⛔ **`file://` הוא origin אחסון אחר** — רישום שנכתב לעותק מוטבע
+  **אינו נראה לאפליקציה האמיתית לעולם**, וגם אינו מסתנכרן.
+- ⛔ **והוא מקור אמת שני** שמתיישן בכל שחרור.
+- ⚠️ **ומה שהוא אמור לפתור כבר פתור:** אחרי עלייה מוצלחת אחת ה-service
+  worker מגיש הכול אופליין. ⛔ נשאר רק «התקנה והפעלה ראשונה בלי רשת»,
+  ⚠️ ולהתקנת APK ממילא צריך רשת — ושם המעטפת מציגה דף שגיאה בעברית.
 
 <!-- SHARED:start id="android-origin-switch" -->
 ## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK
@@ -173,9 +165,8 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 נחתם במפתח הלא-נכון. אימות:
 `keytool -list -v -keystore signing/schar.keystore -storepass schar123`.
 
-⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית היא
-ה-workflow שלמעלה (`Build Signed APK`, temurin 17, artifact `schar-limud-apk`).
-⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
+⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית
+היא ה-workflow. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
 
 ### פרטי המעטפת
 package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
@@ -190,7 +181,7 @@ package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
 ולכן אין בה URL שצריך לתקן.
 ⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
 ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
-«חתימת APK» ב-CLAUDE.md.
+«Sign with the PERMANENT key» שלמעלה.
 <!-- SHARED:end -->
 
 ```bash
