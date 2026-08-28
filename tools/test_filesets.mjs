@@ -84,6 +84,7 @@ const SHARED = [
   'tools/test_bump.mjs',
   'tools/test_cron.mjs',
   'tools/test_devid.mjs',
+  'tools/test_crossgate.mjs',
   'tools/test_docrules.mjs',
   'tools/test_filesets.mjs',
   'tools/test_gradle.mjs',

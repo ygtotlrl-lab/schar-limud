@@ -63,7 +63,7 @@ const APP = {
     // חמש טבלאות `sl_` מאז ההקמה — המראה נבנית מהן ישירות.
     73: (c) => c.hasCode(/\bSL_TABLES\b/),
     // ⚠️ מתועד ❌ במטריצה — המנהל מנהל סיסמאות מלוח הבקרה של Supabase.
-    85: () => false,
+    87: () => false,
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -810,7 +810,7 @@ const GATES = {
   30: 'check-capabilities',
   31: 'test_docrules',
   32: 'test_readonly',
-  33: { manual: 'טרם נבנה שער — הסתירה נמדדה ותוקנה, והשער נכתב בסעיף הבא' },
+  33: 'test_crossgate',
   34: 'check-capabilities',
   45: 'check-status-area',
   48: { manual: 'ספירת אתרי `onclick` מול דלגציה נמדדת ידנית — טרם נבנה שער' },
