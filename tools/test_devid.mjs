@@ -122,6 +122,17 @@ const ids3 = new Set();
 for (let i = 0; i < 50; i++) ids3.add(run(m3, APP.deviceKey, {}).__get());
 is(ids3.size === 1, 'מוטציה: מחולל לא-אקראי מייצר מזהה אחד לכל המכשירים — טענה 6 הייתה נכשלת');
 
+/*  ⭐ מוטציית-נגד — ⛔ בלעדיה שלוש המוטציות שלמעלה אינן מבחינות בין
+ *  «מודד התנהגות» ל«סופר טקסט» (סבב 68): שינוי רווחים והוספת הערה
+ *  אינם משנים דבר במה שהליבה עושה, ⛔ ולכן הרתמה חייבת להמשיך לעבור. */
+const anti = '/* הערה שנוספה במוטציית-נגד */\n' +
+             block.replace('var id = lsGet(DEV_CFG.key, null);',
+                           'var  id  =  lsGet( DEV_CFG.key , null );');
+const aKeep = { [APP.deviceKey]: 'zzzz9999' };
+is(run(anti, APP.deviceKey, aKeep).__get() === 'zzzz9999'
+   && /^[a-z0-9]{8}$/.test(run(anti, APP.deviceKey, {}).__get()),
+   '⭐ מוטציית-נגד: רווחים והערה ⛔ אינם משנים התנהגות — הרתמה עוברת');
+
 console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ סבב 40 (מזהה מכשיר) — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);

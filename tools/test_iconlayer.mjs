@@ -41,6 +41,12 @@ const APP = {
      ומוצהרת ככזו ולא מושמטת (כלל ברזל 24) — הכבד ביותר שנמדד הוא 30.6KB,
      ולכן חריגה כאן פירושה נכס שנכנס בטעות ולא צורך אמיתי. */
   heavyMipmapAllow: {},
+  /* ⛔ דיו ה-foreground — הצהרה ולא גזירה (סבב 68, כלל ברזל 25):
+     ⚠️ ממוצע שנגזר מהתמונה עצמה היה מאשר כל סטייה בדיעבד. */
+  fgInk: [47, 116, 52],
+  /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
+     האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 39 (47→31 · 116→77 · 52→34) — ⛔ סטייה קיימת, ר' «פערים פתוחים». */
+  fgDriftMax: 43,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -176,6 +182,10 @@ function predict(bg, x, y, W, H) {
 /* ⭐ המוטציות מריצות אותה על עותק בתיקייה זמנית. ⛔ אין לשכפל את
    הלוגיקה למסלול מוטציה נפרד (סבב 66) — שני מימושים נפרדים היו נסחפים
    זה מזה, ואז המוטציה מוכיחה על מה שהעץ נבדק בו כלום. */
+/*  ⛔ סף הדיו — ההצהרה חייבת לתאר את מה שיש (סבב 68). ⚠️ 4 ולא 0:
+    הקטנה תקינה עדיין מזיזה ממוצע בפיקסל-שניים. */
+const INK_TOL = 4;
+
 function audit(root) {
   const v = [];
   for (const [asset, sizes] of Object.entries(FRAME))
@@ -206,6 +216,44 @@ function audit(root) {
     if (!existsSync(dp)) { v.push({ kind: 'missing', rel: `${RES}/${dir}` }); continue; }
     for (const f of readdirSync(dp))
       if (!files.includes(f)) v.push({ kind: 'extra', rel: `${RES}/${dir}/${f}` });
+  }
+
+  /*  ⛔ הכפלה מוקדמת באלפא (סבב 68, כלל ברזל 25) — ⚠️ הקטנה **בלי**
+      premultiplied alpha ממזגת את ה-RGB של הפיקסלים השקופים (שחור) לתוך
+      השכנים, ולכן פיקסל בעל אלפא **חלקית** יוצא כהה מהדיו. ⛔ נמדד ביומן:
+      הפסים יצאו (102,102,96) במקום (246,242,233), ⚠️ ופס שלם מתוך ארבעה
+      נעלם. ⛔ המדידה היא על ה-foreground של xxxhdpi — הגדול, שממנו נגזרים
+      השאר — והיא מול הדיו **המוצהר** ב-APP ולא מול ממוצע שנגזר מהתמונה
+      עצמה, שהיה מאשר כל סטייה בדיעבד. */
+  {
+    const rel = `${RES}/mipmap-xxxhdpi/ic_launcher_foreground.png`;
+    const p = join(root, rel);
+    if (existsSync(p) && APP.fgInk) {
+      let im = null;
+      try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
+      if (im) {   /* ⚠️ `decodePNG` מחזיר תמיד RGBA — ⛔ אין כאן ערוץ לבדוק */
+        let op = 0, pa = 0; const so = [0, 0, 0], sp = [0, 0, 0];
+        for (let k = 0; k < im.w * im.h; k++) {
+          const a = im.data[k * 4 + 3];
+          if (a >= 250) { op++; for (let c = 0; c < 3; c++) so[c] += im.data[k * 4 + c]; }
+          else if (a >= ALPHA_MIN) { pa++; for (let c = 0; c < 3; c++) sp[c] += im.data[k * 4 + c]; }
+        }
+        if (!op || !pa) {
+          v.push({ kind: 'fg-alpha', rel, msg: `אין די פיקסלים למדוד (אטומים ${op}, חלקיים ${pa})` });
+        } else {
+          /*  ⚠️ שתי טענות ולא אחת: הדיו המוצהר חייב לתאר את הפיקסלים
+              האטומים (אחרת ההצהרה עצמה נסחפה), ⛔ והפיקסלים החלקיים חייבים
+              להיות קרובים אליו — זו ההכפלה המוקדמת. */
+          const mo = so.map(x => Math.round(x / op)), mp = sp.map(x => Math.round(x / pa));
+          const dInk = Math.max(...mo.map((x, c) => Math.abs(x - APP.fgInk[c])));
+          if (dInk > INK_TOL)
+            v.push({ kind: 'fg-ink', rel, msg: `הדיו המוצהר [${APP.fgInk}] מול הנמדד [${mo}] — ${dInk} > ${INK_TOL}` });
+          const dPre = Math.max(...mp.map((x, c) => Math.abs(x - APP.fgInk[c])));
+          if (dPre > APP.fgDriftMax)
+            v.push({ kind: 'fg-alpha', rel, msg: `אזור אלפא חלקית [${mp}] מול הדיו [${APP.fgInk}] — ${dPre} > ${APP.fgDriftMax}` });
+        }
+      }
+    }
   }
 
   const bg = readBackground(root);
@@ -264,6 +312,10 @@ t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
 t(n++, !base.some(x => x.kind === 'bg-pixel'), `ג(2). הרקע מול השוליים — פיקסל-פיקסל ≤ ${PIXEL_TOL} ${of('bg-pixel')}`);
+t(n++, !base.some(x => x.kind === 'fg-ink'),
+  `ה(1). הדיו המוצהר [${APP.fgInk}] מתאר את הפיקסלים האטומים ${of('fg-ink')}`);
+t(n++, !base.some(x => x.kind === 'fg-alpha'),
+  `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהדיו ${of('fg-alpha')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -336,6 +388,33 @@ const mutate = (label, fn, kinds, notKinds = []) => {
 const mip = (d, a) => join(tmp, RES, `mipmap-${d}/${a}.png`);
 
 mutate('קובץ חסר — mipmap-hdpi/ic_launcher.png', () => rmSync(mip('hdpi', 'ic_launcher')), ['missing']);
+
+/*  ⭐ מוטציית ההכפלה המוקדמת (סבב 68) — ⛔ החשכת ה-RGB של פיקסלים בעלי
+    אלפא **חלקית** בלבד היא בדיוק מה שהקטנה בלי premultiplied alpha עושה:
+    השחור של השקוף נמרח פנימה. ⚠️ האלפא עצמו אינו נוגע, ולכן טענת התוכן
+    (צלע ארוכה) ממשיכה לעבור — ⛔ וזה מה שהופך את הטענה החדשה לנחוצה. */
+mutate('הקטנה בלי הכפלה מוקדמת — RGB באזור אלפא חלקית מוחשך', () => {
+  const p = mip('xxxhdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  for (let k = 0; k < img.w * img.h; k++) {
+    const a = img.data[k * 4 + 3];
+    if (a > 0 && a < 250)
+      for (let c = 0; c < 3; c++) img.data[k * 4 + c] = Math.max(0, img.data[k * 4 + c] - 90);
+  }
+  writeFileSync(p, encodePNG(img));
+}, ['fg-alpha']);
+
+/*  ⭐ מוטציית-נגד — ⛔ פיקסל **שקוף לגמרי** אינו נראה ואינו נמדד: החשכתו
+    אינה משנה דבר במסך, ⚠️ ולכן היא חייבת **לעבור**. ⛔ בלעדיה הטענה אינה
+    מבחינה בין «מודדת אזור אלפא חלקית» ל«סופרת כל שינוי בקובץ». */
+mutate('⭐ מוטציית-נגד: החשכת פיקסלים שקופים לגמרי ⛔ אינה מפילה', () => {
+  const p = mip('xxxhdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  for (let k = 0; k < img.w * img.h; k++)
+    if (img.data[k * 4 + 3] === 0)
+      for (let c = 0; c < 3; c++) img.data[k * 4 + c] = 0;
+  writeFileSync(p, encodePNG(img));
+}, ['__none__']);
 
 mutate('ממד שגוי — foreground של xhdpi בגודל של xxhdpi',
   () => cpSync(mip('xxhdpi', 'ic_launcher_foreground'), mip('xhdpi', 'ic_launcher_foreground')),
