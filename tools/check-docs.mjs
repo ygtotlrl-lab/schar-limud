@@ -69,7 +69,7 @@ const CANON = [
   ['iron-rules-21-24',             '2d30bf7aec997b3d'],
   ['iron-rule-25-icon-layer',      'ac786fddb870ab69'],
   ['iron-rule-26-input-layer',    'd0bc4f332e057909'],
-  ['iron-rule-27-data-id',        '8cbfde133364c54d'],
+  ['iron-rule-27-data-id',        'f45d59ba5aabd9ab'],
   ['share-bridge-rule',            '7f853e59348664b4'],
 ];
 
