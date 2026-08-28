@@ -482,6 +482,45 @@ function javaSrc() {
   return out;
 }
 const hasPath = (p) => fs.existsSync(p);
+/*  ⛔ סורק את **כל** קובצי המיגרציה ולא אחד (סבב 71) — ⚠️ מיגרציה חדשה
+ *  היא קובץ חדש, וסריקה של שם קבוע הייתה מפספסת בדיוק את מה שנוסף. */
+function sqlHas(re) {
+  const d = 'migrations';
+  if (!fs.existsSync(d)) return false;
+  return fs.readdirSync(d).filter((f) => f.endsWith('.sql'))
+    .some((f) => re.test(fs.readFileSync(`${d}/${f}`, 'utf8').replace(/--[^\r\n]+/g, '')));
+}
+
+/*  ⛔ מחיקה מטבלת הגיבוי אינה מחיקת נתון (סבב 71) — ⚠️ פינוי הגיבויים
+ *  הוא מדיניות בפני עצמה, עם שורה משלה ועם שער משלה, ⛔ ושער שהיה סופר
+ *  אותה כאן היה מסמן ❌ על בדיוק המנגנון שנדרש. ⭐ ההיתר הוא **שם
+ *  הטבלה** ⛔ ולא שם הקובץ: קובץ מיגרציה שמוחק גם מטבלת ישות נתפס. */
+/*  ⛔ הביטוי מוצב בקבוע ⛔ ולא נכתב אחרי `return` (סבב 71) — ⚠️ מפענח
+ *  ההערות מכריע «ביטוי או חילוק» לפי הטוקן הקודם, ⛔ ואחרי `return` הוא
+ *  קורא חילוק: המרכאות שבתוך הביטוי נפתחות אז כמחרוזת שרצה עד סוף
+ *  השורה, ⚠️ ומונה השורות של השער קופץ באחת — ⛔ בשקט, ועל קובץ אחר. */
+const CLICK_LISTENER = /addEventListener\(\s*['"]click['"]/;
+const BACKUP_TABLE = /^(?:public\.)?\w*_?backup\b/i;
+function sqlDeletesEntity() {
+  const d = 'migrations';
+  if (!fs.existsSync(d)) return [];
+  const out = [];
+  for (const f of fs.readdirSync(d).filter((x) => x.endsWith('.sql'))) {
+    const t = fs.readFileSync(`${d}/${f}`, 'utf8').replace(/--[^\r\n]+/g, '');
+    for (const m of t.matchAll(/\bDELETE\s+FROM\s+([\w.]+)/gi))
+      if (!BACKUP_TABLE.test(m[1])) out.push(`${f}:${m[1]}`);
+  }
+  return out;
+}
+
+/*  ⛔ מחזיר את שמות דגלי המעבר ה**דלוקים** (סבב 71) — ⚠️ הערך הוא מה שנמדד,
+ *  ⛔ ולא ההצהרה שבעמודת ההערות: הצהרה שנכתבה פעם אחת ממשיכה לתאר
+ *  עולם שהשתנה. */
+function legacyFlagsOn() {
+  const re = /\b(?:const|let|var)\s+([A-Za-z_]*(?:LEGACY|BOOTSTRAP)[A-Za-z_]*)\s*=\s*true\b/g;
+  return [...src.matchAll(re)].map((m) => m[1]);
+}
+
 function fileHas(p, re) {
   try { return re.test(fs.readFileSync(p, 'utf8')); } catch (e) { return false; }
 }
@@ -522,6 +561,27 @@ const MATRIX = [
     probe: () => !!(APP.offlineLoginFn && fnRange(APP.offlineLoginFn)) },
   { row: 72, name: 'עריכת נתונים אופליין',
     probe: () => hasCode(/\bpendMark\s*\(/) },
+  /*  ⛔ «דלגציה» נמדדת כיחס ⛔ ולא כאפס `onclick` (סבב 71) — ⚠️ דרישת
+   *  אפס הייתה מסמנת ❌ גם לאפליקציה שכל מסכיה עוברים במאזין אחד ונשארו
+   *  בה שבעה אתרים היסטוריים. ⭐ מה שהשורה אומרת הוא **מי הדפוס**:
+   *  רוב אתרי הלחיצה עוברים ב-`data-act` — ⛔ ולא שאין חריג. */
+  /*  ⛔ מחיקה רכה נמדדת בשני המסלולים (סבב 71) — ⚠️ קריאת `.delete()`
+   *  מקוד הלקוח, ⛔ **וגם** `DELETE FROM` בקובצי המיגרציה. ⭐ שער שמדד
+   *  רק את הראשון היה מאשר מיגרציה שמוחקת נתונים פיזית, ⛔ וזה בדיוק
+   *  המסלול שאין ממנו חזרה. */
+  { row: 82, name: 'מחיקה רכה בלבד — אין `DELETE` פיזי',
+    probe: () => !/\.delete\s*\(/.test(code) && sqlDeletesEntity().length === 0 },
+  /*  ⛔ דגל מעבר נמדד לפי **ערכו** ⛔ ולא לפי קיומו (סבב 71) — ⚠️ הדגל
+   *  נשאר בקוד גם אחרי שכובה, וזו כל התכלית שלו: נתיב חזרה. ⭐ ולכן
+   *  השורה ✅ כשאין אף דגל **דלוק**, ⛔ ולא כשאין דגלים. */
+  { row: 96, name: 'דגלי מעבר — אין דגל דלוק',
+    probe: () => legacyFlagsOn().length === 0 },
+  { row: 48, name: 'טיפול באירועים — דלגציה ממאזין אחד',
+    probe: () => {
+      const inline = (src.match(/onclick=/g) || []).length;
+      const deleg  = (src.match(/data-act=/g) || []).length;
+      return CLICK_LISTENER.test(src) && deleg > inline;
+    } },
   { row: 88, name: 'נתיב עדכון חלקי למראת המשתמשים', app: true },
   { row: 105, name: 'פינוי אוטומטי',
     probe: () => /tier2\s*[:=]\s*\[\s*\{/.test(policyBlock()) },
@@ -813,7 +873,6 @@ const GATES = {
   33: 'test_crossgate',
   34: 'check-capabilities',
   45: 'check-status-area',
-  48: { manual: 'ספירת אתרי `onclick` מול דלגציה נמדדת ידנית — טרם נבנה שער' },
   49: 'check-capabilities',
   50: { manual: 'דפוס הודעת השגיאה טרם הוכרע, ואין מה לאכוף' },
   51: 'test_inputlayer',
@@ -834,7 +893,6 @@ const GATES = {
   77: 'test_sources',
   78: { manual: 'ההרשאות יושבות במסד ואינן נראות מהריפו — אימות הוא פעולת מנהל' },
   79: { manual: '`onConflict` טרם נמדד בארבעתן' },
-  82: { manual: 'מחיקה רכה נאכפת בהיעדר `DELETE` בקוד; ⛔ המסד עצמו אינו נראה מהריפו' },
   85: 'test_inputlayer',
   86: 'test_inputlayer',
   89: { manual: 'שני מנועי תאריך — ⛔ טרם הוכרע איזה, ואין מה לאכוף' },
@@ -843,7 +901,6 @@ const GATES = {
   92: 'test_passwords',
   94: { manual: 'מצב העמודה במסד אינו נראה מהריפו' },
   95: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
-  96: { manual: 'הדגלים נרשמים כ-❌ בטבלה; ⛔ כיבוי דגל מעבר הוא הכרעת מנהל ולא של הסשן' },
   97: 'test_filesets',
   98: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
   99: { manual: 'קיום טבלה או מפתח במסד אינו נראה מהריפו' },
@@ -873,6 +930,26 @@ const GATES = {
   if (stale.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${stale.join(', ')}`);
   const both = Object.keys(GATES).map(Number).filter((n) => enforced.has(n));
   if (both.length) fail(`שורות שמוכרזות גם ב-MATRIX וגם ב-GATES: ${both.join(', ')}`);
+
+  /*  ⛔ «נאכפת בשער אחר» היא **הצהרה** ⛔ ולא מנגנון (סבב 71) — ⚠️ הערך
+   *  ב-`GATES` הוא מחרוזת, ⛔ ואיש לא אימת שהשער הזה קיים ושהוא בכלל רץ.
+   *  ⭐ שער שאינו ב-`APP.gates` שב-`check-js` הוא שער שקיים ואינו רץ,
+   *  ⛔ ואז 44 שורות «נאכפות» ע"י קובץ שאיש אינו מפעיל. ⚠️ הבדיקה היא
+   *  על **קיום והפעלה**, ⛔ ולא על מה שהשער מודד בפנים — ⭐ את זה מודד
+   *  השער עצמו, במוטציות שלו. */
+  const named = [...new Set(Object.values(GATES).filter((g) => typeof g === 'string'))];
+  const js = fs.readFileSync('tools/check-js.mjs', 'utf8');
+  const wired = new Set([...js.matchAll(/'([a-z_-]+)\.mjs'/g)].map((m) => m[1]));
+  const absent = named.filter((g) => !fs.existsSync(`tools/${g}.mjs`));
+  const idle   = named.filter((g) => !absent.includes(g) && !wired.has(g));
+  if (absent.length) fail(`שערים שמוכרזים ב-GATES ואינם קיימים: ${absent.join(', ')}`);
+  if (idle.length)
+    fail(`שערים שמוכרזים ב-GATES ואינם ב-APP.gates שב-check-js — קיימים ואינם רצים: ${idle.join(', ')}`);
+  if (!absent.length && !idle.length) {
+    const manual = Object.values(GATES).filter((g) => typeof g !== 'string').length;
+    pass(`הפניות GATES — ${named.length} שערים נבדקו, כולם קיימים ורצים; ` +
+         `${Object.keys(GATES).length - manual} שורות מופנות אליהם ו-${manual} נושאות נימוק כתוב`);
+  }
 }
 
 const GAP = '⭕';
