@@ -47,9 +47,9 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   '581a6ad7641fbe21'],
+  ['rules-table',   '6d7ada6dd9a8273e'],
   ['rules-enforce', '98669db68a890ae2'],
-  ['rules-writing', 'ac83c09db892b182'],
+  ['rules-writing', 'adfa54fe778c7f2f'],
   ['rules-session', 'e28b6fcfd5df4fac'],
 ];
 
@@ -326,8 +326,8 @@ const CANON_MD = [
   ['README.md',         'readme-gate',           'fd4654765f8ed749'],
   ['README.md',         'readme-apk',            '54a69bee96c333bf'],
   ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'context-smali-scope',   '809e7e9d32b16ee6'],
-  ['android/README.md', 'context-cache-apk',     '898e51f7bb6048db'],
+  ['android/README.md', 'android-smali-scope',   '809e7e9d32b16ee6'],
+  ['android/README.md', 'android-cache-apk',     '898e51f7bb6048db'],
   ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
   ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
   ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
@@ -495,11 +495,24 @@ const DOC_MAX_ROUNDS = 2;
 /*  ⛔ תקרת החלק המשותף (סבב 69) — ⚠️ בלעדיה ארבעת בלוקי הכללים גדלים
  *  בלי גבול, והתקרה הכוללת נבלעת בהם. */
 const DOC_MAX_SHARED = 400;
-/*  ⛔ תקרות שלושת הקבצים הנלווים (סבב 69) — ⚠️ `android/README` נעול על
- *  240 כרַתְקָה ולא על היעד 150: הרצפה שלו מדודה — ארבעת בלוקי ה-SHARED
- *  שבו הם 85 שורות, ולצידם טבלת ה-`versionCode` וטבלת המפתח הקבוע.
- *  ⛔ הצמצום ליעד הוא סבב שנוגע במעטפת, והשורה בטבלה מסומנת ❌. */
+/*  ⛔ תקרות שלושת הקבצים הנלווים, ⛔ ותקרה נפרדת לכל חלק (סבב 71) —
+ *  ⚠️ תקרה על הקובץ בלבד נבלעת: החלק המשותף גדל, החלק הפרטי מצטמצם,
+ *  ⛔ והסכום אינו זז. ⭐ הרף לכל חלק **נמדד** ולא שוער: החלק המשותף
+ *  הוא בדיוק מה שיש (12 · 13 · 85 שורות, זהות בית-לבית בארבעתן), והחלק
+ *  הפרטי הוא הגבוה שנמדד בארבעתן ועוד מרווח קטן.
+ *  ⛔ ו-`android/README` ננעל על 240 ולא על היעד 150 — ⚠️ הרצפה מדודה:
+ *  85 שורות SHARED, ולצידן טבלת ה-`versionCode` שהיא ההיסטוריה שהשער
+ *  אוכף, וטבלת המפתח הקבוע. ⛔ הצמצום ליעד הוא סבב שנוגע במעטפת. */
 const MD_MAX = { 'README.md': 50, 'CONTEXT.md': 100, 'android/README.md': 240 };
+/*  ⚠️ `[משותף, פרטי]` — ⛔ שני הרפים נאכפים בנפרד (סבב 71), ⛔ ולא סכומם.
+ *  ⚠️ ולכל רף מרווח של ארבע שורות מעל הגבוה שנמדד, ⛔ ולא אפס: שערי
+ *  המוטציה מוסיפים שורות לעותק, ⛔ ורף צמוד היה מפיל אותם על התקרה
+ *  במקום על התנאי שהם באים לבדוק. */
+const MD_SPLIT = {
+  'README.md':        [12, 40],
+  'CONTEXT.md':       [13, 46],
+  'android/README.md': [85, 155],
+};
 
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 {
@@ -561,6 +574,21 @@ const DOC_MAX_PRIVATE = 300;
     const n = t[t.length - 1] === '' ? t.length - 1 : t.length;
     if (n > cap) fail(`${f}: ${n} שורות — ${n - cap} מעל התקרה של ${cap}.`);
     else pass(`תקציב התיעוד — ${f}: ${n}/${cap} שורות`);
+    /*  ⛔ הפיצול נמדד באותה מסכת גדרות-קוד (סבב 71) — ⚠️ סמן SHARED
+     *  שבתוך דוגמה אינו בלוק אמיתי, ⛔ וספירה גולמית הייתה מדווחת
+     *  מספר שגוי בשקט. */
+    const [capS, capP] = MD_SPLIT[f];
+    const ls = t.slice(0, n), mk = fenceMask(ls);
+    let sh = 0, open = -1;
+    for (let i = 0; i < n; i++) {
+      if (mk[i]) continue;
+      if (START_LOOSE.test(ls[i])) open = i;
+      else if (END_RE.test(ls[i]) && open >= 0) { sh += i - open + 1; open = -1; }
+    }
+    const pv = n - sh;
+    if (sh > capS) fail(`${f}: החלק המשותף ${sh} שורות — ${sh - capS} מעל התקרה של ${capS}.`);
+    else if (pv > capP) fail(`${f}: החלק הפרטי ${pv} שורות — ${pv - capP} מעל התקרה של ${capP}.`);
+    else pass(`תקציב התיעוד — ${f}: ${sh}/${capS} משותף · ${pv}/${capP} פרטי`);
   }
   if (priv > DOC_MAX_PRIVATE) {
     fail(`${APP.file}: החלק הפרטי-הקבוע הוא ${priv} שורות — ${priv - DOC_MAX_PRIVATE} ` +

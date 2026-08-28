@@ -124,8 +124,8 @@ const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); 
 console.log('· סבב 42ב — הפרקים המשותפים של תיעוד האנדרואיד');
 
 const NEW_SHARED = [
-  ['android/README.md', 'context-smali-scope'],
-  ['android/README.md', 'context-cache-apk'],
+  ['android/README.md', 'android-smali-scope'],
+  ['android/README.md', 'android-cache-apk'],
   ['android/README.md', 'android-origin-switch'],
   ['android/README.md', 'android-icons'],
 ];
