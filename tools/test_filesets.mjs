@@ -103,6 +103,7 @@ const SHARED = [
   'tools/test_passwords.mjs',
   'tools/test_pendflush.mjs',
   'tools/test_pull.mjs',
+  'tools/test_readonly.mjs',
   'tools/test_retry.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_session.mjs',
