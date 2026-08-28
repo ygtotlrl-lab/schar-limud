@@ -76,28 +76,28 @@ const APP = {
 const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
-    block: { sha: '1a20beb1fca86df0', lines: 681,
+    block: { sha: 'eb8d0aeb14cf48fa', lines: 679,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
   },
   pending: {
     name: 'מודול "ממתין לסנכרון"',
-    block: { sha: '6c5f2eaf27d630d6', lines: 305,
+    block: { sha: '8b02444de454f54d', lines: 303,
              start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
              end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"' },
     hooks: [{ fn: 'pendBoot', at: 'boot' }],
   },
   status: {
     name: 'אזור המצב',
-    block: { sha: '7335b50aa7f93523', lines: 47,
+    block: { sha: 'c3e019d63fcb4024', lines: 45,
              start: '/* ═══ אזור מצב — בלוק "☁️ סנכרון"',
              end:   '/* ═══ סוף בלוק "☁️ סנכרון"' },
     hooks: [{ fn: 'statusAreaMount', at: 'settings' }],
   },
   backup: {
     name: 'גיבוי יומי אוטומטי',
-    block: { sha: 'b177ce0764339794', lines: 263,
+    block: { sha: '1dba3e5eae1b810c', lines: 261,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],
@@ -105,7 +105,7 @@ const CAPS = {
   },
   hotwin: {
     name: 'מודול החלון החם והשחזור המקומי',
-    block: { sha: 'cd2a68a3eb11d27c', lines: 196,
+    block: { sha: 'b1caa1637737862f', lines: 194,
              start: '/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35)',
              end:   '/* ═══════════════ סוף מודול החלון החם' },
     hooks: [{ fn: 'hwBoot', at: 'boot' }, { fn: 'hwRestoreMount', at: 'settings' }],
@@ -122,7 +122,7 @@ const CAPS = {
    *  בית-לבית**; מה שנאכף במטריצה (שורה 27) הוא שהמעטפת באמת קוראת לה. */
   mergecore: {
     name: 'מודול מיזוג הרשומות',
-    block: { sha: '4e09df769c9cc20f', lines: 73,
+    block: { sha: '4ca396f18c65eb7a', lines: 71,
              start: '/* ═══ מיזוג רשומות — מודול משותף (סבב 38)',
              end:   '/* ═══════════════ סוף מודול המיזוג' },
   },
@@ -132,13 +132,13 @@ const CAPS = {
    *  הפונקציות באמת קיימות בקוד.                                       */
   devid: {
     name: 'מודול מזהה המכשיר',
-    block: { sha: 'de3c5a4d847ca24b', lines: 22,
+    block: { sha: 'a5b109b55bd458b6', lines: 20,
              start: '/* ═══ מזהה מכשיר — מודול משותף (סבב 40)',
              end:   '/* ═══════════════ סוף מודול מזהה המכשיר' },
   },
   ids: {
     name: 'מודול מזהי רשומות',
-    block: { sha: '4db85ed5674abaf9', lines: 39,
+    block: { sha: '20f8ce620c811af0', lines: 37,
              start: '/* ═══ מזהי רשומות — מודול משותף (סבב 37א)',
              end:   '/* ═══════════════ סוף מודול מזהי הרשומות' },
   },
@@ -155,7 +155,7 @@ const CAPS = {
    *  נאכפת ב-`test_retry.mjs`, שיודע גם מהו המשפך בכל אפליקציה. */
   retry: {
     name: 'מודול הניסיון החוזר בסנכרון',
-    block: { sha: 'a3c80c97f6388e81', lines: 68,
+    block: { sha: '7afbe0d58ffa8c8e', lines: 66,
              start: '/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44)',
              end:   '/* ═══════════════ סוף מודול הניסיון החוזר' },
     hooks: [{ fn: 'rtyBoot', at: 'boot' }],
@@ -166,7 +166,7 @@ const CAPS = {
    *  שיודע גם מהם המשפכים בכל אפליקציה.                                */
   pull: {
     name: 'מנגנון המשיכה',
-    block: { sha: '71ac3d2bc3e60a58', lines: 81,
+    block: { sha: 'd0aa2b4d27291da5', lines: 79,
              start: '/* ═══ מנגנון המשיכה — מודול משותף (סבב 51)',
              end:   '/* ═══════════════ סוף מנגנון המשיכה' },
     hooks: [{ fn: 'plBoot', at: 'boot' }],
@@ -179,7 +179,7 @@ const CAPS = {
    *  (כלל ברזל 14), ⛔ וגם «נעדר באחת, בשקט» אינו.                    */
   lock: {
     name: 'נעילת חוסר-פעילות',
-    block: { sha: '6b14ac8157e9532e', lines: 111,
+    block: { sha: '31a750f7604b5c54', lines: 109,
              start: '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)',
              end:   '/* ═══════════════ סוף מודול נעילת חוסר-הפעילות' },
     hooks: [{ fn: 'lkBoot', at: 'boot' }],
@@ -191,14 +191,14 @@ const CAPS = {
    *  במטריצה (שורה 35) כ«לא רלוונטי», בדיוק כמו `lock`.               */
   sess: {
     name: 'מודל הסשן',
-    block: { sha: '151be4060831c22e', lines: 53,
+    block: { sha: '3ecf220b7c519c8f', lines: 51,
              start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
              end:   '/* ═══════════════ סוף מודול הסשן' },
     hooks: [{ fn: 'sessBoot', at: 'boot' }],
   },
   swcore: {
     name: 'מודול ה-service worker',
-    block: { file: 'sw.js', sha: '7bdea85555a99662', lines: 255,
+    block: { file: 'sw.js', sha: '47d92417774b3b96', lines: 253,
              start: '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)',
              end:   '/* ═══════════════ סוף מודול ה-service worker' },
   },
@@ -411,7 +411,7 @@ function tableRowNumbers() {
 function tableRow(row) {
   if (!fs.existsSync(APP.docs)) return null;
   const ls = fs.readFileSync(APP.docs, 'utf8').split('\n');
-  /*  ⛔ החיפוש מתוחם לבלוק הכללים ואינו סורק את הקובץ כולו — ⚠️ פרק סבב
+  /*  ⛔ אין לסרוק את הקובץ כולו (סבב 69) — ⚠️ פרק סבב
    *  מחזיק טבלאות ממוספרות משלו, וחיפוש גלובלי היה מוצא «| 3 |» שלהן. */
   const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="rules-table"/.test(l));
   const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
@@ -420,7 +420,7 @@ function tableRow(row) {
   if (!line) return null;
   const cells = line.split('|');
   if (cells.length < 9) return null;
-  /*  ⚠️ `allOk` נמדד על ארבעת התאים ולא על תא האפליקציה — ⛔ ההערה
+  /*  ⛔ אין לצמצם את `allOk` לתא האפליקציה (סבב 69) — ⚠️ ההערה
    *  משותפת לארבעתן, ולכן היא לגיטימית כל עוד תא אחד אינו ✅. */
   const allOk = [4, 5, 6, 7].every((k) => cells[k].indexOf('✅') >= 0);
   return { cell: cells[3 + APP.matrixCol].trim(), note: cells[8].trim(), allOk };
@@ -676,7 +676,7 @@ const MATRIX = [
    *  גריעת ה-tombstones לפי גיל (`TOMBSTONE_TTL_MS`) ומנגנון
    *  האוטו-אפדייט מ-raw (`UPDATE_INTERVAL_MS`) נולדו שם ומנומקים שם;
    *  ⚠️ עד הסבב הזה הן פשוט לא הופיעו במטריצה, כלומר «קיים רק באחת,
-   *  בשקט». הנימוקים יושבים ב-`tools/_capability-notes.md`.        */
+   *  בשקט».                                                        */
   { row: 73, name: 'גריעת tombstones לפי גיל',
     probe: () => hasCode(/TOMBSTONE_TTL_MS/) },
   { row: 97, name: 'אוטו-אפדייט מ-raw.githubusercontent',
@@ -757,11 +757,11 @@ function idSites() {
 }
 
 
-/* ──────────────────────────────────────────────────────────────────────────────
-   ⛔ לכל שורה בטבלה — שער שאוכף אותה, ⛔ או נימוק מפורש מדוע אינה ניתנת
+/* ───────────────────────────────────────────────────────────────────────────
+   ⛔ אין שורה בלי אחד משניים (סבב 69) — שער שאוכף אותה, או נימוק מפורש מדוע אינה ניתנת
    לאכיפה מכנית. ⚠️ אין אפשרות שלישית: שורה שאינה כאן ואינה ב-MATRIX היא
    שורה שאיש אינו מודד, ⛔ והיא נקראת כעדות.
-   ────────────────────────────────────────────────────────────────────────────── */
+   ──────────────────────────────────────────────────────────────────────── */
 const GATES = {
   1: 'check-docs',
   2: { manual: 'סדר פנימי אחיד אינו ניתן לגזירה מכנית — נמדד בעין' },
@@ -832,7 +832,7 @@ const GATES = {
   102: 'test_filesets',
 };
 
-/*  ⛔ כיסוי מלא — כל שורה בטבלה נמצאת ב-MATRIX (נאכפת כאן) או ב-GATES
+/*  ⛔ אין שורה בלי כיסוי (סבב 69) — כל שורה נמצאת ב-MATRIX (נאכפת כאן) או ב-GATES
  *  (נאכפת בשער אחר, או נושאת נימוק כתוב). ⚠️ שורה חדשה שנוספה בלי אחד
  *  משניהם מפילה כאן, ⛔ ולא מתגלה סבבים אחר כך. */
 {
@@ -865,7 +865,7 @@ for (const m of MATRIX) {
     else fail(`שורה ${m.row} («${m.name}»): התא אומר «${cell}» והקוד אומר «${want}»`);
     continue;
   }
-  /*  ⛔ ⭕ אינו «❌ מנומס» — הוא חסר **מנומק**, ⛔ ולכן הוא נאכף בשני
+  /*  ⛔ אין לקרוא ⭕ כ«❌ מנומס» (סבב 69) — הוא חסר **מנומק**, ולכן נאכף בשני
    *  תנאים יחד: השורה מוכרזת ב-`APP.gapRows`, ⛔ ויש לה נימוק כתוב
    *  בעמודת ההערות. ⚠️ בלי שניהם הוא מתדרדר ל«❌ בלי שאיש החליט». */
   if (cell.indexOf(UNMEASURED) >= 0) {

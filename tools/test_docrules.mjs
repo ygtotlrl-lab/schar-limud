@@ -86,7 +86,8 @@ const ACTIVE = activeLines.join('\n');
   const heads = activeLines.filter((l) => l.startsWith('## '));
   const back = MODS.filter((m) => heads.some((h) => h.includes(m) && !h.includes('אינדקס')));
   t(back.length === 0, `22א · אין פרק פרוזה למודול משותף${back.length ? ' — ' + back.join(', ') : ''}`);
-  t(/shared-modules-index/.test(DOC), '22ב · אינדקס אחד-עשר המודולים קיים');
+  t(/\|\s*\d+\s*\|\s*`pend`/.test(DOC) && /\|\s*\d+\s*\|\s*`status`/.test(DOC),
+    '22ב · המודולים המשותפים רשומים כשורות בטבלת התשתית');
   /*  ⛔ טבלת ידיות פר-אפליקציה (סבב 65) — 49 שורות שאף שער לא קרא,
    *  בזמן שהערכים כבר נאכפים בבלוק `APP` של כל שער. */
   t(!/^\|\s*ידית\s*\|/m.test(ACTIVE), '22ג · ⛔ אין טבלת ידיות פר-אפליקציה בתיעוד');
@@ -126,19 +127,19 @@ const ACTIVE = activeLines.join('\n');
 
 /* ── כלל 24 — הבדל מכוון מנומק במקום שבו הוא נראה ──────────────────────── */
 {
-  /*  ⛔ הפניה מנקודת הכניסה של כל מודול משותף (סבב 65) — בלעדיה הקורא
-   *  שיושב בקוד אינו יודע שיש שער שאוכף את הבלוק הזה. */
+  /*  ⛔ הפניה לקובץ או לבלוק בנקודת הכניסה של מודול משותף (סבב 69) —
+   *  ⚠️ השער מגן, ⛔ לא ההפניה; והפניה נשברת בכל שינוי שם, בשקט. */
   const SRC = rd('index.html') + '\n' + rd('sw.js');
   const MARK = /— מודול משותף \(סבב \d+/g;
   let marks = 0, refs = 0, m;
   while ((m = MARK.exec(SRC))) {
     marks++;
-    /*  ⚠️ ההפניה נמדדת **בתוך אותה כותרת** ולא בקובץ כולו (סבב 65) —
-     *  ספירה גלובלית הייתה עוברת גם כשנקודת כניסה אחת איבדה אותה. */
-    if (SRC.slice(m.index, m.index + 700).includes('shared-modules-index')) refs++;
+    /*  ⚠️ ההפניה נמדדת **בתוך אותה כותרת** ולא בקובץ כולו — ספירה
+     *  גלובלית הייתה מפספסת נקודת כניסה יחידה שהחזירה אותה. */
+    if (/CLAUDE\.md|shared-modules-index/.test(SRC.slice(m.index, m.index + 700))) refs++;
   }
-  t(marks > 0 && refs === marks,
-    `24א · הפניה ל-\`shared-modules-index\` בכל נקודת כניסה (${refs}/${marks})`);
+  t(marks > 0 && refs === 0,
+    `24א · ⛔ אין הפניה לקובץ בנקודת כניסה של מודול משותף (${refs}/${marks})`);
   /*  ⛔ תחולת תקן ההערות (סבב 65) — `sw.js` ו-`tools/` אינם מוחרגים. */
   const cc = rd('tools/check-comments.mjs');
   t(cc.includes("add('sw.js')") && cc.includes("readdirSync('tools')"),
@@ -224,8 +225,9 @@ if (!process.env.R65_ROOT) {
   t(fails({ 'index.html': CSS('.r65-dead-class{color:red}') }),
     'מ10 · מחלקת CSS שאינה מוחלת מפילה את טענה 15');
 
-  t(fails({ 'index.html': rd('index.html').replace('shared-modules-index', 'x') }),
-    'מ11 · הסרת ההפניה לאינדקס מנקודת כניסה מפילה את 24א');
+  t(fails({ 'index.html': rd('index.html').replace(
+      '— מודול משותף (סבב 11)', "— מודול משותף (סבב 11). ר' CLAUDE.md") }),
+    'מ11 · החזרת הפניה לקובץ בנקודת כניסה מפילה את 24א');
 
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
   t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
