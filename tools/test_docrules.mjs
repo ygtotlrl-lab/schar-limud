@@ -132,12 +132,22 @@ const ACTIVE = activeLines.join('\n');
                ['gradle :app:assembleRelease', 'פקודת בנייה']];
   const found = OPS.filter(([s]) => ACTIVE.includes(s)).map(([, why]) => why);
   t(found.length === 0, `23א · אין תוכן תפעולי ב-CLAUDE.md${found.length ? ' — ' + found.join(', ') : ''}`);
-  /*  ⛔ `CONTEXT.md` מחזיק לקוח וצורך בלבד — כל כותרת נוספת היא עותק שני
-   *  של `CLAUDE.md` או של `README.md`, וזה מה שנסחף. */
-  const CTX_OK = ['## פרטי ריפו', '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות', '## מצב נוכחי'];
+  /*  ⛔ `CONTEXT.md` מחזיק לקוח · צורך · הסכימה וההרשאות — כל כותרת נוספת
+   *  היא עותק שני של `CLAUDE.md` או של `README.md`, וזה מה שנסחף.
+   *  ⛔ ופרק «מצב נוכחי» ירד (סבב 71) — ⚠️ הוא צילום מצב, כלומר היסטוריה,
+   *  ⛔ וכלל «ערך שקיים בקוד אינו מוצהר בתיעוד» אוסר אותו במפורש. */
+  /*  ⛔ ו-`README.md` מחזיק התקנה · הפעלה · פיתוח (סבב 71) — ⚠️ ארבע
+   *  הכותרות זהות בארבעת הריפו, ⛔ וכותרת חמישית היא פרק שנדד לכאן. */
+  const RM_OK = ['## הפעלה ראשונה', '## מסכים', '## פיתוח', '## APK'];
+  const rm = rd('README.md').split('\n').filter((l) => l.startsWith('## '));
+  const rmBad = rm.filter((h) => !RM_OK.includes(h.trim()));
+  t(rmBad.length === 0 && rm.length === RM_OK.length,
+    `23ד · README.md — ${RM_OK.length} הכותרות בלבד${rmBad.length ? ' — ' + rmBad.join(' / ') : ''}`);
+  const CTX_OK = ['## פרטי ריפו', '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות'];
   const ctx = rd('CONTEXT.md').split('\n').filter((l) => l.startsWith('## '));
   const extra = ctx.filter((h) => !CTX_OK.some((k) => h.startsWith(k.slice(0, 12))));
-  t(extra.length === 0, `23ב · CONTEXT.md — שלוש הכותרות בלבד${extra.length ? ' — ' + extra.join(' / ') : ''}`);
+  t(extra.length === 0, `23ב · CONTEXT.md — שתי הכותרות בלבד${extra.length ? ' — ' + extra.join(' / ') : ''}`);
+  t(!/^##\s+מצב נוכחי/m.test(rd('CONTEXT.md')), '23ג · ⛔ ואין בו פרק «מצב נוכחי» — צילום מצב הוא היסטוריה');
 }
 
 /* ── כלל 24 — הבדל מכוון מנומק במקום שבו הוא נראה ──────────────────────── */
