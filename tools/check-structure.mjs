@@ -51,6 +51,10 @@ const ROOT_FILES = ['.nojekyll', 'CLAUDE.md', 'CONTEXT.md', 'README.md',
                     'index.html', 'manifest.json', 'sw.js'];
 const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs',
                   'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs'];
+/*  ⛔ מחולל אינו בודק ואינו מבחן (סבב 71) — ⚠️ הוא **כותב** נכסים, בעוד
+ *  ששער קורא בלבד; ⛔ ולכן קטגוריה שלישית ומוצהרת, ⛔ ולא הרחבה של
+ *  `CHECKERS` שהטבלה מונה בה שישה. */
+const GENERATORS = ['gen-icons.mjs'];
 /*  ⛔ שם המבחן נגזר מהנושא ולא ממספר הסבב (סבב 67) — 53 מבחנים
  *  נשאו שם כמו `test_round52_pendflush`, ⚠️ ומי שרצה לדעת מה בודק
  *  את מודול הנעילה לא ידע לחפש. ⛔ מספר הסבב עבר לשורת הכותרת
@@ -102,7 +106,11 @@ const missingC = CHECKERS.filter((c) => !tFiles.includes(c));
 if (missingC.length) fail('בודקים משותפים חסרים ב-tools/: ' + missingC.join(', '));
 else pass('שבעת הבודקים המשותפים קיימים ב-tools/');
 
-const tAllowed = (f) => CHECKERS.includes(f) ||
+const missingG = GENERATORS.filter((g) => !tFiles.includes(g));
+if (missingG.length) fail('מחוללים משותפים חסרים ב-tools/: ' + missingG.join(', '));
+else pass(`${GENERATORS.length} המחוללים המשותפים קיימים ב-tools/`);
+
+const tAllowed = (f) => CHECKERS.includes(f) || GENERATORS.includes(f) ||
   (TEST_RE.test(f) && !OLD_TEST_RE.test(f)) || (f in APP.toolsExtra);
 const badT = tFiles.filter((f) => !tAllowed(f));
 if (badT.length) fail('קבצים לא-רשומים ב-tools/: ' + badT.join(', ') +

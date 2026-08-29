@@ -29,7 +29,10 @@ const t  = (c, m) => (c ? ok(m) : no(m));
 /* שלושת הקבצים והפרק שנמחק בכל מוטציה — הכותרת הראשונה שהשלד דורש. */
 const CASES = [
   ['README.md',         /^##\s+מסכים\s*$/m,                 'מסכים'],
-  ['CONTEXT.md',        /^##\s+מצב נוכחי\s*$/m,             'מצב נוכחי'],
+  /*  ⛔ «מצב נוכחי» ירד מהשלד (סבב 71) — ⚠️ הוא היה צילום מצב, כלומר
+      היסטוריה, ⛔ והכלל אוסר. ⭐ הפרק שנמחק כאן הוא ה-GRANT: הוא הפרק
+      השני שהשלד דורש, ⛔ ומחיקתו היא מה שהמוטציה באה למדוד. */
+  ['CONTEXT.md',        /^##\s+.*Supabase — GRANT חובה לטבלאות חדשות.*$/m, 'ה-GRANT'],
   ['android/README.md', /^##\s+Build\s*$/m,                 'Build'],
 ];
 
@@ -124,8 +127,8 @@ const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); 
 console.log('· סבב 42ב — הפרקים המשותפים של תיעוד האנדרואיד');
 
 const NEW_SHARED = [
-  ['android/README.md', 'context-smali-scope'],
-  ['android/README.md', 'context-cache-apk'],
+  ['android/README.md', 'android-smali-scope'],
+  ['android/README.md', 'android-cache-apk'],
   ['android/README.md', 'android-origin-switch'],
   ['android/README.md', 'android-icons'],
 ];

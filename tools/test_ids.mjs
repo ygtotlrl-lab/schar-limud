@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⚠️ ביומן הוא `false`,
  *  וזה פער מתועד עם טריגר ולא השמטה: מזהי היומן הם חותמות זמן שמשמשות
- *  כמפתח מיון מספרי ונכנסות בלי מרכאות למאפייני `onclick`. ר' שורה 25
+ *  כמפתח מיון מספרי ונכנסות בלי מרכאות למאפייני `onclick`. ר' שורה 26
  *  במטריצה.                                                              */
 const APP = { app: 'schar-limud', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -111,8 +111,8 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
 {
   const callsOutside = SRC.slice(0, SRC.indexOf(START)) + SRC.slice(SRC.indexOf(END));
   const wired = /\bnewClientId\s*\(/.test(callsOutside.replace(/function\s+newClientId\s*\(/g, ''));
-  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (שורה 25 = ✅)'
-                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (שורה 25 = ❌)'),
+  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (שורה 26 = ✅)'
+                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (שורה 26 = ❌)'),
     wired === APP.wired);
 }
 

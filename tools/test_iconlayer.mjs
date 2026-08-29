@@ -29,6 +29,7 @@
  */
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, cpSync, writeFileSync,
          rmSync, statSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -45,10 +46,8 @@ const APP = {
      ⚠️ ממוצע שנגזר מהתמונה עצמה היה מאשר כל סטייה בדיעבד. */
   fgInk: [47, 116, 52],
   /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
-     האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 39 (47→31 · 116→77 · 52→34) — ⛔ הסטייה קיימת, והסף
-     ננעל על הנמדד כדי שהשער יתפוס **החמרה**. ⛔ הטריגר (סבב 68) — הסבב הבא
-     שמחליף כאן אייקון גוזר מהמאסטר עם הכפלה מוקדמת ומוריד את הסף ל-8. */
-  fgDriftMax: 43,
+     האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 0 — ⛔ בתוך הסף המשותף, ולכן אין כאן היתר. */
+  fgDriftMax: 8,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -64,7 +63,11 @@ const FRAME = { ic_launcher: [48, 72, 96, 144, 192],
 /* ⚠️ גודל התוכן — זהה לשני הנכסים, וזו הנקודה: הלוגו נתפס באותו גודל
    בין אם הוא מוגש כאייקון מלא ובין אם כשכבת adaptive. */
 const CONTENT = [48, 72, 96, 144, 192];
-const CONTENT_TOL = 3;   /* ⚠️ הצורה העגולה נופלת אחרת בכל לוגו — נמדד 191–192 ב-432. */
+/* ⛔ סובלנות אפס בארבע הרזולוציות הראשונות, ו-1 ב-xxxhdpi (סבב 71) — ⚠️ הגזירה
+   מגיעה ל-48/72/96/144/192 בדיוק בארבעתן, ⛔ ולכן סטייה כאן היא נכס שנדחף בלי
+   גזירה מחדש. ⚠️ והיחידה ב-xxxhdpi היא מה שצורה עגולה מחזירה בסף אלפא 25
+   כשהמסגרת היא 432. */
+const CONTENT_TOL = [0, 0, 0, 0, 1];
 const ALPHA_MIN = 25;    /* ⛔ סף התוכן — ר' הבאנר. */
 const OPAQUE = 250;      /* ⚠️ פיקסל שוליים שקוף למחצה הוא פינה מעוגלת ואינו נמדד. */
 const RING = 4;          /* רוחב טבעת השוליים הנמדדת. */
@@ -205,8 +208,8 @@ function audit(root) {
       const box = contentBox(img);
       if (!box) { v.push({ kind: 'content', rel, msg: 'ריק' }); continue; }
       const long = Math.max(box.w, box.h), want = CONTENT[i];
-      if (Math.abs(long - want) > CONTENT_TOL)
-        v.push({ kind: 'content', rel, msg: `צלע ארוכה ${long} ≠ ${want}±${CONTENT_TOL}` });
+      if (Math.abs(long - want) > CONTENT_TOL[i])
+        v.push({ kind: 'content', rel, msg: `צלע ארוכה ${long} ≠ ${want}±${CONTENT_TOL[i]}` });
     }
 
   /* ⛔ קובץ **עודף** מפיל גם כששמו תמים (סבב 66) — נכס שנדחף בטעות
@@ -292,7 +295,7 @@ function audit(root) {
 }
 
 /* ⭐ `audit` מיוצא, ⛔ ואין לשכפל אותו ל-probe נפרד (סבב 66) —
-   `check-capabilities` מייבא אותה כדי לאמת את שורה 46 במטריצה, ומימוש
+   `check-capabilities` מייבא אותה כדי לאמת את שורה 49 במטריצה, ומימוש
    שני היה נסחף ומדווח ✅ על מה שהשער כאן מפיל. ⚠️ הריצה העצמית מוגנת,
    אחרת ייבוא היה מריץ את המוטציות. */
 export { audit };
@@ -309,7 +312,7 @@ const of = k => base.filter(x => x.kind === k).map(x => `${x.rel || ''} ${x.msg 
 t(n++, !base.some(x => x.kind === 'missing'), `א. עשרת קובצי ה-mipmap קיימים ${of('missing')}`);
 t(n++, !base.some(x => x.kind === 'decode'), `א. כל העשרה נקראים ${of('decode')}`);
 t(n++, !base.some(x => x.kind === 'frame'), `א. ממדי המסגרת — 48/72/96/144/192 ו-108/162/216/324/432 ${of('frame')}`);
-t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אלפא ${ALPHA_MIN} — ±${CONTENT_TOL} ${of('content')}`);
+t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אלפא ${ALPHA_MIN} — ±${CONTENT_TOL.join('/')} ${of('content')}`);
 t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
@@ -325,6 +328,32 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
    כ«לא נשאל», ושדה ריק נקרא כ«נמדד ואין». */
 t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
   `ד. רשימת-ההיתר לקבצים כבדים מוצהרת (${Object.keys(APP.heavyMipmapAllow).length} רשומות)`);
+
+/* ── שורה 24 — המחולל משחזר את מה שבעץ ─────────────────────────────────── */
+/*  ⛔ הטענה מריצה את המחולל **על עותק** ומשווה בית-בית (סבב 71) — ⚠️ מחולל
+    שאינו משחזר הוא הצהרה שאיש לא אימת, ⛔ והרצתו דורסת נכסים בגרסה שהשער
+    מפיל: נמדד 63/95/127/189/253 מול 48/72/96/144/192 שנדרשים. ⭐ והשוואה
+    בית-בית ⛔ ולא «הצלע יצאה נכון»: שני מחוללים שונים מגיעים לאותה צלע. */
+{
+  const g = mkdtempSync(join(tmpdir(), 'r71g-'));
+  try {
+    for (const d of ['tools', 'design', 'icons', RES])
+      cpSync(join(ROOT, d), join(g, d), { recursive: true });
+    const run = spawnSync(process.execPath, [join(g, 'tools', 'gen-icons.mjs')],
+                          { cwd: g, encoding: 'utf8' });
+    t(n++, run.status === 0, `ו. \`gen-icons\` רץ ומסיים בהצלחה ${(run.stderr || '').split('\n')[0] || ''}`);
+    const assets = [];
+    for (const f of readdirSync(join(ROOT, 'icons'))) assets.push(`icons/${f}`);
+    for (const d of DENS) for (const a of Object.keys(FRAME)) assets.push(`${RES}/mipmap-${d}/${a}.png`);
+    const diff = assets.filter((rel) => {
+      const A = join(ROOT, rel), B = join(g, rel);
+      if (!existsSync(B)) return true;
+      return !readFileSync(A).equals(readFileSync(B));
+    });
+    t(n++, diff.length === 0,
+      `ו. ⛔ והרצתו אינה משנה אף אחד מ-${assets.length} נכסי האייקון ${diff.join(' · ')}`);
+  } finally { rmSync(g, { recursive: true, force: true }); }
+}
 
 /* ── מקודד PNG מינימלי — לשימוש המוטציות בלבד ──────────────────────────── */
 /* ⛔ אינו דוחס (filter 0, deflate ברירת מחדל) — ⚠️ אין לו שום קורא מחוץ
@@ -415,6 +444,34 @@ mutate('⭐ מוטציית-נגד: החשכת פיקסלים שקופים לגמ
   for (let k = 0; k < img.w * img.h; k++)
     if (img.data[k * 4 + 3] === 0)
       for (let c = 0; c < 3; c++) img.data[k * 4 + c] = 0;
+  writeFileSync(p, encodePNG(img));
+}, ['__none__']);
+
+/* ⭐ המוטציה שמוכיחה שהסובלנות היא אפס (סבב 71) — ⚠️ פיקסל אחד
+   מעבר לתיבת התוכן מגדיל את הצלע ביחידה אחת, ⛔ ועל סובלנות 3 הוא עבר
+   בשקט. ⛔ זו ההבחנה בין שער שאוכף אחידות לשער שמאשר טווח. */
+mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
+  const p = mip('mdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  let x1 = -1, ym = 0;
+  for (let y = 0; y < img.h; y++)
+    for (let x = 0; x < img.w; x++)
+      if (img.data[(y * img.w + x) * 4 + 3] >= ALPHA_MIN && x > x1) { x1 = x; ym = y; }
+  img.data[(ym * img.w + x1 + 1) * 4 + 3] = 255;
+  writeFileSync(p, encodePNG(img));
+}, ['content']);
+
+/* ⭐ מוטציית-נגד: הזזת התוכן בלי לשנות את גודלו ⛔ אינה מפילה —
+   ⚠️ הטענה מודדת צלע ⛔ ולא מיקום, ובלעדיה סובלנות אפס הייתה נקראת
+   כאיסור על כל נגיעה בנכס. */
+mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה מפילה', () => {
+  const p = mip('mdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  const out = Buffer.alloc(img.data.length);
+  for (let y = 0; y < img.h; y++)
+    for (let x = img.w - 1; x >= 1; x--)
+      img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - 1) * 4, (y * img.w + x) * 4);
+  out.copy(img.data);
   writeFileSync(p, encodePNG(img));
 }, ['__none__']);
 
