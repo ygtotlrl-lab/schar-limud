@@ -29,6 +29,7 @@
  */
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, cpSync, writeFileSync,
          rmSync, statSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -294,7 +295,7 @@ function audit(root) {
 }
 
 /* ⭐ `audit` מיוצא, ⛔ ואין לשכפל אותו ל-probe נפרד (סבב 66) —
-   `check-capabilities` מייבא אותה כדי לאמת את שורה 48 במטריצה, ומימוש
+   `check-capabilities` מייבא אותה כדי לאמת את שורה 49 במטריצה, ומימוש
    שני היה נסחף ומדווח ✅ על מה שהשער כאן מפיל. ⚠️ הריצה העצמית מוגנת,
    אחרת ייבוא היה מריץ את המוטציות. */
 export { audit };
@@ -327,6 +328,32 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
    כ«לא נשאל», ושדה ריק נקרא כ«נמדד ואין». */
 t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
   `ד. רשימת-ההיתר לקבצים כבדים מוצהרת (${Object.keys(APP.heavyMipmapAllow).length} רשומות)`);
+
+/* ── שורה 24 — המחולל משחזר את מה שבעץ ─────────────────────────────────── */
+/*  ⛔ הטענה מריצה את המחולל **על עותק** ומשווה בית-בית (סבב 71) — ⚠️ מחולל
+    שאינו משחזר הוא הצהרה שאיש לא אימת, ⛔ והרצתו דורסת נכסים בגרסה שהשער
+    מפיל: נמדד 63/95/127/189/253 מול 48/72/96/144/192 שנדרשים. ⭐ והשוואה
+    בית-בית ⛔ ולא «הצלע יצאה נכון»: שני מחוללים שונים מגיעים לאותה צלע. */
+{
+  const g = mkdtempSync(join(tmpdir(), 'r71g-'));
+  try {
+    for (const d of ['tools', 'design', 'icons', RES])
+      cpSync(join(ROOT, d), join(g, d), { recursive: true });
+    const run = spawnSync(process.execPath, [join(g, 'tools', 'gen-icons.mjs')],
+                          { cwd: g, encoding: 'utf8' });
+    t(n++, run.status === 0, `ו. \`gen-icons\` רץ ומסיים בהצלחה ${(run.stderr || '').split('\n')[0] || ''}`);
+    const assets = [];
+    for (const f of readdirSync(join(ROOT, 'icons'))) assets.push(`icons/${f}`);
+    for (const d of DENS) for (const a of Object.keys(FRAME)) assets.push(`${RES}/mipmap-${d}/${a}.png`);
+    const diff = assets.filter((rel) => {
+      const A = join(ROOT, rel), B = join(g, rel);
+      if (!existsSync(B)) return true;
+      return !readFileSync(A).equals(readFileSync(B));
+    });
+    t(n++, diff.length === 0,
+      `ו. ⛔ והרצתו אינה משנה אף אחד מ-${assets.length} נכסי האייקון ${diff.join(' · ')}`);
+  } finally { rmSync(g, { recursive: true, force: true }); }
+}
 
 /* ── מקודד PNG מינימלי — לשימוש המוטציות בלבד ──────────────────────────── */
 /* ⛔ אינו דוחס (filter 0, deflate ברירת מחדל) — ⚠️ אין לו שום קורא מחוץ

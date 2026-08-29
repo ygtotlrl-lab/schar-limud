@@ -77,6 +77,7 @@ const SHARED = [
   'tools/check-js.mjs',
   'tools/check-status-area.mjs',
   'tools/check-structure.mjs',
+  'tools/gen-icons.mjs',
   'tools/test_android.mjs',
   'tools/test_backup_policy.mjs',
   'tools/test_budget.mjs',
