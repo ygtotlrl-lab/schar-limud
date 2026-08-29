@@ -197,8 +197,13 @@ mutate('⭐ מוטציית-נגד: ניסוח הערה ב-test_budget ⛔ אינ
 /*  ⭐ ומוטציית-נגד שנייה — ⛔ הוספת שורה **לשני** השערים יחד אינה סתירה:
     ⚠️ הסתירה היא הפרש בין שניים, ⛔ ולא שינוי. */
 mutate('⭐ מוטציית-נגד: אותה תקרה משתנה בשני השערים יחד ⛔ אינה מפילה',
-  [['tools/check-docs.mjs', (s) => s.replace(/const DOC_MAX_PRIVATE = \d+;/, 'const DOC_MAX_PRIVATE = 250;')],
-   ['tools/test_budget.mjs', (s) => s.replace(/const MAX_PRIVATE = \d+;/, 'const MAX_PRIVATE = 250;')]],
+  /*  ⛔ התקרה **מורמת** ולא מונמכת (סבב 71) — ⚠️ הנמכה עוברת באפליקציה
+      אחת ומפילה באחרת שהחלק הפרטי שלה גבוה יותר, ⛔ ואז מוטציית-הנגד
+      מודדת את גודל הקובץ ולא את ההפרש שהיא באה לבדוק. */
+  [['tools/check-docs.mjs', (s) => s.replace(/const DOC_MAX_PRIVATE = (\d+);/,
+      (m, v) => `const DOC_MAX_PRIVATE = ${Number(v) + 50};`)],
+   ['tools/test_budget.mjs', (s) => s.replace(/const MAX_PRIVATE = (\d+);/,
+      (m, v) => `const MAX_PRIVATE = ${Number(v) + 50};`)]],
   ['__none__']);
 
 rmSync(tmp, { recursive: true, force: true });
