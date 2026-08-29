@@ -839,70 +839,70 @@ function idSites() {
    שורה שאיש אינו מודד, ⛔ והיא נקראת כעדות.
    ──────────────────────────────────────────────────────────────────────── */
 const GATES = {
-  1: 'check-docs',
-  2: 'check-docs',
-  3: 'check-docs',
-  4: 'check-docs',
-  5: 'check-docs',
-  6: 'check-docs',
-  7: 'check-docs',
-  8: 'check-docs',
-  9: 'check-docs',
-  10: 'check-docs',
-  11: 'test_docrules',
-  12: 'check-docs',
-  13: 'check-docs',
-  14: 'check-docs',
-  15: 'test_docrules',
-  16: 'check-docs',
-  17: 'check-docs',
-  18: 'check-docs',
-  19: 'check-docs',
-  20: 'check-docs',
-  21: 'check-docs',
-  22: 'check-docs',
-  24: 'test_iconlayer',
+  1: { gate: 'check-docs', claim: 'CANON' },
+  2: { gate: 'check-docs', claim: 'הסדר הקנוני' },
+  3: { gate: 'check-docs', claim: 'canonIds' },
+  4: { gate: 'check-docs', claim: "'rules-table'" },
+  5: { gate: 'check-docs', claim: 'מבנה פרק הכלל' },
+  6: { gate: 'check-docs', claim: 'DOC_MAX_LINES' },
+  7: { gate: 'check-docs', claim: 'תוכן החלק המשותף' },
+  8: { gate: 'check-docs', claim: 'DOC_MAX_SHARED' },
+  9: { gate: 'check-docs', claim: 'תוכן החלק הפרטי' },
+  10: { gate: 'check-docs', claim: 'DOC_MAX_PRIVATE' },
+  11: { gate: 'test_docrules', claim: 'RM_OK' },
+  12: { gate: 'check-docs', claim: 'MD_MAX' },
+  13: { gate: 'check-docs', claim: 'CANON_MD' },
+  14: { gate: 'check-docs', claim: 'MD_SPLIT' },
+  15: { gate: 'test_docrules', claim: 'CTX_OK' },
+  16: { gate: 'check-docs', claim: 'MD_MAX' },
+  17: { gate: 'check-docs', claim: 'CANON_MD' },
+  18: { gate: 'check-docs', claim: 'MD_SPLIT' },
+  19: { gate: 'check-docs', claim: 'פרק מתחום של קובץ אחר' },
+  20: { gate: 'check-docs', claim: 'MD_MAX' },
+  21: { gate: 'check-docs', claim: 'CANON_MD' },
+  22: { gate: 'check-docs', claim: 'MD_SPLIT' },
+  24: { gate: 'test_iconlayer', claim: 'gen-icons' },
   25: { manual: 'תקן תוכן הבודקים טרם נכתב — טרם נמדד' },
-  26: 'test_filesets',
-  27: 'test_filesets',
+  26: { gate: 'test_filesets', claim: 'const SHARED' },
+  27: { gate: 'test_filesets', claim: 'const EXEMPT' },
   28: { manual: 'תקן תוכן המבחן טרם נכתב — טרם נמדד' },
   29: { manual: 'המונה מדווח ואינו מפיל: 85 מבחנים נכתבו לפני הדרישה, והפלה רטרואקטיבית חוסמת כל דחיפה' },
   30: { manual: 'תקן תוכן המוטציה טרם נכתב — טרם נמדד' },
-  31: 'check-capabilities',
-  32: 'test_docrules',
-  33: 'test_readonly',
-  34: 'test_crossgate',
-  35: 'check-capabilities',
-  46: 'check-status-area',
-  50: 'check-capabilities',
+  31: { gate: 'check-capabilities', claim: 'כיסוי הטבלה' },
+  32: { gate: 'test_docrules', claim: 'עמודת «מה זה» היא הוראה מחייבת' },
+  33: { gate: 'test_readonly', claim: 'drift' },
+  34: { gate: 'test_crossgate', claim: 'measure-gap' },
+  35: { gate: 'check-capabilities', claim: 'sha:' },
+  46: { gate: 'check-status-area', claim: 'CANON' },
+  50: { gate: 'check-capabilities', claim: 'storage' },
   51: { manual: 'דפוס הודעת השגיאה טרם הוכרע, ואין מה לאכוף' },
-  52: 'test_inputlayer',
-  55: 'check-comments',
-  56: 'check-comments',
-  57: 'check-comments',
-  58: 'check-comments',
-  59: 'test_docrules',
+  52: { gate: 'test_inputlayer', claim: 'ג · פעולה שדורשת רשת' },
+  55: { gate: 'check-comments', claim: 'עברית' },
+  56: { gate: 'check-comments', claim: 'RULE_W' },
+  57: { gate: 'check-comments', claim: 'BANNER_W' },
+  58: { gate: 'check-comments', claim: 'מספר סבב' },
+  59: { gate: 'test_docrules', claim: 'CSS מתות' },
   60: { manual: '«האם ההערה עדיין נכונה» הוא התאמה למציאות ולא צורה — ⛔ שער מודד צורה בלבד' },
-  61: 'check-comments',
-  63: 'test_filesets',
-  65: 'test_iconlayer',
-  66: 'test_iconlayer',
-  68: 'test_workflows',
-  70: 'test_gradle',
-  72: 'test_android',
+  61: { gate: 'test_rulesdocs', claim: 'מפנה לקובץ' },
+  63: { gate: 'test_filesets', claim: 'android/app/src/main' },
+  65: { gate: 'test_iconlayer', claim: 'fgDriftMax' },
+  66: { gate: 'check-docs', claim: 'CANON_MANIFEST' },
+  68: { gate: 'test_workflows', claim: 'BUILD_SHA' },
+  70: { gate: 'test_gradle', claim: 'versionCode' },
+  72: { gate: 'test_android', claim: 'WebView' },
   75: { manual: 'נפילה-חזרה ל-`kv` נסרקת ידנית; ⛔ קיום המפתחות במסד אינו נראה מהריפו' },
-  78: 'test_sources',
+  78: { gate: 'test_sources', claim: 'migrations' },
   79: { manual: 'ההרשאות יושבות במסד ואינן נראות מהריפו — אימות הוא פעולת מנהל' },
   80: { manual: '`onConflict` טרם נמדד בארבעתן' },
-  86: 'test_inputlayer',
-  87: 'test_inputlayer',
+  86: { gate: 'test_inputlayer', claim: 'type=password' },
+  87: { gate: 'test_inputlayer', claim: 'aria-label' },
   90: { manual: 'שני מנועי תאריך — ⛔ טרם הוכרע איזה, ואין מה לאכוף' },
   91: { manual: '«`catch` ריק סביב כתיבה» טרם נוסח כשער — נסרק ידנית בכל סבב שנוגע' },
-  92: 'test_passwords',
-  93: 'test_passwords',
+  92: { manual: 'אף שער אינו מודד את פרמטרי ה-PBKDF2 — ⛔ test_passwords נמנע מהם בכוונה' },
+  93: { gate: 'test_passwords', claim: 'pass_salt' },
   95: { manual: 'מצב העמודה במסד אינו נראה מהריפו' },
   96: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
-  98: 'test_filesets',
+  98: { gate: 'test_filesets', claim: '⏳' },
   99: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
   100: { manual: 'קיום טבלה או מפתח במסד אינו נראה מהריפו' },
   101: { manual: 'מצב ההרצה יושב ב-`schema_migrations` ואינו נראה מהריפו' },
@@ -910,8 +910,8 @@ const GATES = {
   103: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
   104: { manual: 'רשימת-היתר הגיבויים יושבת במיגרציה שכבר רצה' },
   105: { manual: 'מצב הענפים המרוחקים אינו נראה מעותק העבודה' },
-  107: 'test_workflows',
-  108: 'test_filesets',
+  107: { gate: 'test_workflows', claim: 'CLEANUP_SHA' },
+  108: { manual: 'ההשוואה היא **בין** ריפו — ⛔ בלוק ה-APP אינו נראה כחריג מריפו אחד' },
 };
 
 /*  ⛔ אין שורה בלי כיסוי (סבב 69) — כל שורה נמצאת ב-MATRIX (נאכפת כאן) או ב-GATES
@@ -938,7 +938,9 @@ const GATES = {
    *  ⛔ ואז 44 שורות «נאכפות» ע"י קובץ שאיש אינו מפעיל. ⚠️ הבדיקה היא
    *  על **קיום והפעלה**, ⛔ ולא על מה שהשער מודד בפנים — ⭐ את זה מודד
    *  השער עצמו, במוטציות שלו. */
-  const named = [...new Set(Object.values(GATES).filter((g) => typeof g === 'string'))];
+  const refs = Object.entries(GATES).filter(([, g]) => g && g.gate)
+    .map(([row, g]) => ({ row: Number(row), ...g }));
+  const named = [...new Set(refs.map((r) => r.gate))];
   const js = fs.readFileSync('tools/check-js.mjs', 'utf8');
   const wired = new Set([...js.matchAll(/'([a-z_-]+)\.mjs'/g)].map((m) => m[1]));
   const absent = named.filter((g) => !fs.existsSync(`tools/${g}.mjs`));
@@ -946,10 +948,23 @@ const GATES = {
   if (absent.length) fail(`שערים שמוכרזים ב-GATES ואינם קיימים: ${absent.join(', ')}`);
   if (idle.length)
     fail(`שערים שמוכרזים ב-GATES ואינם ב-APP.gates שב-check-js — קיימים ואינם רצים: ${idle.join(', ')}`);
-  if (!absent.length && !idle.length) {
-    const manual = Object.values(GATES).filter((g) => typeof g !== 'string').length;
-    pass(`הפניות GATES — ${named.length} שערים נבדקו, כולם קיימים ורצים; ` +
-         `${Object.keys(GATES).length - manual} שורות מופנות אליהם ו-${manual} נושאות נימוק כתוב`);
+  /*  ⛔ ⭐ **והטענה עצמה נבדקת בגוף השער (סבב 71)** — ⚠️ «נאכפת בשער אחר»
+   *  הייתה שם קובץ בלבד, ⛔ וארבע הפניות הצביעו על שער שאינו אוכף את
+   *  השורה כלל: `manifest` הופנה לשער האייקונים שאין בו אזכור אחד שלו.
+   *  ⭐ ה-`claim` הוא המנגנון שאוכף את השורה בתוך אותו שער — ⛔ ושינוי שמו
+   *  מפיל כאן, במקום להשאיר הפניה שנשברה בשקט. */
+  const blind = [];
+  for (const r of refs) {
+    if (absent.includes(r.gate)) continue;
+    if (!r.claim) { blind.push(`${r.row}: בלי שם טענה`); continue; }
+    if (!fs.readFileSync(`tools/${r.gate}.mjs`, 'utf8').includes(r.claim))
+      blind.push(`${r.row}: «${r.claim}» אינו בגוף ${r.gate}`);
+  }
+  if (blind.length) fail(`הפניות שהטענה שלהן אינה קיימת: ${blind.join(' · ')}`);
+  if (!absent.length && !idle.length && !blind.length) {
+    const manual = Object.values(GATES).filter((g) => g && g.manual).length;
+    pass(`הפניות GATES — ${refs.length} הפניות אל ${named.length} שערים, ` +
+         `כולם קיימים · רצים · ושם הטענה נמצא בגופם; ו-${manual} שורות נושאות נימוק כתוב`);
   }
 }
 

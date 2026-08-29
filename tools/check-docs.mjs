@@ -47,8 +47,8 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   '58a4107a1abbda21'],
-  ['rules-enforce', '8c0bcb58e82e1e11'],
+  ['rules-table',   'a9d15dbb6ba8919e'],
+  ['rules-enforce', '610ca38f7f798896'],
   ['rules-writing', '72e55e1b7a4d66f3'],
   ['rules-session', 'e28b6fcfd5df4fac'],
 ];
