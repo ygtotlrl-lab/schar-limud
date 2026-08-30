@@ -55,8 +55,8 @@ const ok = (msg, cond) => {
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [47, 92];
-const EXEMPT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 56, 60, 62, 65, 66, 67, 68, 69, 70, 71, 73, 75, 76, 78, 80, 82, 86, 89, 90, 92, 97, 98, 101, 102, 104, 106, 107, 109, 110, 111, 112, 113, 114, 115, 116, 118, 119];
+const DB_FACT_EXEMPT = [41, 86];
+const EXEMPT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 41, 50, 54, 56, 59, 60, 61, 62, 63, 64, 65, 67, 69, 70, 72, 74, 76, 80, 83, 84, 86, 91, 92, 95, 96, 98, 100, 101, 103, 104, 105, 106, 107, 108, 109, 110, 112, 113];
 
 function copyRepo() {
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37-'));
@@ -202,7 +202,7 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   /*  ⭐ ו-🔲 אינו קבוע — ⛔ המוטציה מציבה 🔲 בשורה שאינה נמדדת ב-MATRIX:
    *  ⚠️ כך הטענה שתיפול היא «🔲 אינו קבוע» ולא היפוך תא. */
   const lines = doc.split('\n');
-  const at = lines.findIndex((l) => /^\|\s*44\s*\|/.test(l));
+  const at = lines.findIndex((l) => /^\|\s*38\s*\|/.test(l));
   ok('שורת המוטציה ל-🔲 נמצאה', at >= 0);
   const parts = lines[at].split('|');
   parts[3 + APP.col] = ' 🔲 ';
@@ -210,7 +210,7 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
   ok('⛔ מוטציה: תא 🔲 בשורה ותיקה מפיל את «🔲 אינו קבוע»', !(await runChecker()));
 
-  fs.writeFileSync(CAP, capClean.replace('const FRESH_BOX = {};', 'const FRESH_BOX = { 44: 72 };'));
+  fs.writeFileSync(CAP, capClean.replace('const FRESH_BOX = {};', 'const FRESH_BOX = { 38: 72 };'));
   ok('⭐ מוטציית-נגד: 🔲 שהוכרז בסבב הנוכחי ⛔ אינו מפיל', await runChecker());
   fs.writeFileSync(CAP, capClean);
   fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
