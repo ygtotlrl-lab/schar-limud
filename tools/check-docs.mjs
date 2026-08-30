@@ -20,7 +20,7 @@
  *       **צורת** השורה; זה בודק שהיא באמת התקדמה.
  *    ח. (סבב 44) ערך של מפתח משותף ב-`manifest.json` נסחף או נמחק.
  *    ט. (סבב 49) `CLAUDE.md` מחזיק יותר פרקי סבבים מ-`DOC_MAX_ROUNDS`,
- *       או יותר שורות מ-`DOC_MAX_LINES` — תקציב התיעוד.
+ *       פרק ארוך מ-`DOC_MAX_ROUND_LINES`, או יותר שורות מ-`DOC_MAX_LINES`.
  *
  *  ⚠️ סעיף ה — ורק הוא — **מדלג ואינו מפיל** כשאין בסיס להשוואה: אין
  *  git בסביבה, אין `origin/main`, או שהקובץ אינו קיים שם. clone רדוד או
@@ -500,6 +500,11 @@ const CANON_MANIFEST = [
    פתוחים» לימד שתיעוד שאיש אינו מודד ממשיך לתאר עולם שהשתנה. */
 const DOC_MAX_LINES  = 700;
 const DOC_MAX_ROUNDS = 2;
+/*  ⛔ תקרה **לכל פרק סבב בנפרד** (סבב 72) — ⚠️ עד כאן נספרו הפרקים ולא
+ *  נמדד אורכם, ⛔ ולכן שני פרקים בני 75 ו-108 שורות עברו. ⭐ הכלל «אין
+ *  היסטוריה בקבצי התיעוד» אמר «עד עשר שורות לפרק» מסבב 70, ⛔ ואיש לא
+ *  אכף אותו: probe שמאמת ערך אחד מתוך שניים מאשר את השני. */
+const DOC_MAX_ROUND_LINES = 10;
 /*  ⛔ תקרת החלק המשותף (סבב 69) — ⚠️ בלעדיה ארבעת בלוקי הכללים גדלים
  *  בלי גבול, והתקרה הכוללת נבלעת בהם. */
 const DOC_MAX_SHARED = 400;
@@ -525,11 +530,38 @@ const MD_SPLIT = {
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 {
   const rounds = [];
+  /*  ⚠️ אורך הפרק נמדד מהכותרת ועד השורה שלפני ה-`##` הבא, ⛔ בלי שורות
+   *  ריקות בסופו: שורה ריקה אינה תוכן, ⛔ ולא נכון להעניש עליה. */
+  let openRound = -1;
+  const closeRound = (end) => {
+    if (openRound < 0) return;
+    let e = end;
+    while (e > openRound && !lines[e - 1].trim()) e--;
+    rounds[rounds.length - 1].lines = e - openRound;
+    openRound = -1;
+  };
   for (let i = 0; i < lines.length; i++) {
-    if (!inFence[i] && ROUND_H2.test(lines[i])) rounds.push(lines[i].replace(/^##\s+/, '').trim());
+    if (inFence[i]) continue;
+    if (!/^##\s/.test(lines[i])) continue;
+    closeRound(i);
+    if (ROUND_H2.test(lines[i])) {
+      rounds.push({ name: lines[i].replace(/^##\s+/, '').trim(), lines: 0 });
+      openRound = i;
+    }
+  }
+  closeRound(lines.length);
+  const tooLong = rounds.filter((r) => r.lines > DOC_MAX_ROUND_LINES);
+  if (tooLong.length) {
+    fail(`${APP.file}: פרק סבב ארוך מ-${DOC_MAX_ROUND_LINES} שורות — ` +
+         tooLong.map((r) => `«${r.name}» נמדד ${r.lines}`).join(' · ') +
+         '. גוזמים באותו קומיט: מה נעשה, ומה לא הגיע ליעד — ' +
+         'ומה שראוי להישמר עולה לכלל, לטבלה או להערה בקוד');
+  } else if (rounds.length) {
+    pass(`תקציב התיעוד — פרקי הסבבים ${rounds.map((r) => r.lines).join(' · ')}` +
+         `/${DOC_MAX_ROUND_LINES} שורות`);
   }
   if (rounds.length > DOC_MAX_ROUNDS) {
-    const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS);
+    const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS).map((r) => r.name);
     fail(`${APP.file}: ${rounds.length} פרקי סבבים, והחלון הוא ${DOC_MAX_ROUNDS} ` +
          `(כלל ברזל 18). יש למחוק באותו קומיט — הישנים ראשונים: ${over.join(' · ')}`);
   } else {
