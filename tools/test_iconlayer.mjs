@@ -66,7 +66,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [26, 70];
+export const ROWS = [26, 70, 71];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
@@ -237,6 +237,35 @@ function audit(root) {
         v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
 
+  /*  ⛔ רקע האריח שווה למוצהר **בדיוק** (סבב 72) — ⚠️ הסובלנות כאן היא אפס
+      ולא `PIXEL_TOL`: רעש הנייר שבמאסטר נכנס כאלפא זעירה וצבע את הרקע
+      בחמש רמות, ⛔ מתחת לסף הרקע ומעליו לא נראה כלל. ⭐ מה שנמדד הוא
+      פינת האריח — ⛔ שם אין תוכן, ולכן כל סטייה היא רעש. */
+  const declaredBg = readBackground(root);
+  if (APP.tileFlat === true && declaredBg && declaredBg.kind === 'solid') {
+    const rel = `${RES}/mipmap-xxxhdpi/ic_launcher.png`;
+    const p = join(root, rel);
+    if (existsSync(p)) {
+      let im = null;
+      try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
+      if (im) {
+        /*  ⚠️ טבעת ולא פינה (סבב 72) — ⛔ הרעש אינו אחיד: הפינה עצמה יצאה
+            מדויקת בזמן שהטבעת סטתה, ⭐ ופינה לבדה הייתה מאשרת אותו. */
+        let worst = null;
+        for (let y = 0; y < im.h; y++)
+          for (let x = 0; x < im.w; x++) {
+            if (x > 2 && x < im.w - 3 && y > 2 && y < im.h - 3) continue;
+            const got = [0, 1, 2].map((c) => im.data[(y * im.w + x) * 4 + c]);
+            const d = Math.max(...got.map((val, c) => Math.abs(val - declaredBg.color[c])));
+            if (d > 0 && (!worst || d > worst.d)) worst = { d, x, y, got };
+          }
+        if (worst)
+          v.push({ kind: 'tile-bg', rel,
+                   msg: `(${worst.x},${worst.y}) [${worst.got}] מול המוצהר [${declaredBg.color}] — ${worst.d} ≠ 0` });
+      }
+    }
+  }
+
   /*  ⛔ אותו דיו גם באריח (סבב 72) — ⚠️ שני המסלולים מציירים את אותו סמל,
       ⭐ ולכן הצבע שנמדד בהם חייב להיות אחד, ⛔ ושניהם מול ה**מוצהר**.
       ⚠️ `tileFlat` הוא מחרוזת באפליקציה שהאריח שלה אינו נייר-ודיו אלא רקע
@@ -379,6 +408,8 @@ t(n++, !base.some(x => x.kind === 'fg-ink'),
   `ה(1). הדיו המוצהר [${APP.fgInk}] מתאר את הפיקסלים האטומים ${of('fg-ink')}`);
 t(n++, !base.some(x => x.kind === 'fg-alpha'),
   `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהדיו ${of('fg-alpha')}`);
+t(n++, !base.some(x => x.kind === 'tile-bg'),
+  `ה(4). רקע האריח שווה למוצהר בדיוק — ⛔ אין רעש מסכה ${of('tile-bg')}`);
 t(n++, !base.some(x => x.kind === 'tile-ink'),
   `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
@@ -412,6 +443,26 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
     });
     t(n++, diff.length === 0,
       `ו. ⛔ והרצתו אינה משנה אף אחד מ-${assets.length} נכסי האייקון ${diff.join(' · ')}`);
+
+    /*  ⛔ המוטציה על **המחולל** ולא על הנכס (סבב 72) — ⚠️ האיפוס הוא שורה
+        אחת בו, ⭐ ומוטציה שמסירה אותה מחזירה את הרעש לאריח: זו הדרך היחידה
+        להוכיח שהטענה מודדת את המנגנון ⛔ ולא את הקובץ שבעץ. */
+    if (APP.tileFlat === true) {
+      const gp = join(g, 'tools', 'gen-icons.mjs');
+      const src = readFileSync(gp, 'utf8');
+      const KILL = 'm[k] = a < ALPHA_MIN / 255 ? 0 : a;';
+      t(n++, src.includes(KILL), 'ז. איפוס הרעש קיים במחולל');
+      const rerun = (patched, label, want) => {
+        writeFileSync(gp, patched);
+        const r = spawnSync(process.execPath, [gp], { cwd: g, encoding: 'utf8' });
+        const bad = r.status !== 0 || audit(g).some((x) => x.kind === 'tile-bg');
+        t(n++, bad === want, label);
+      };
+      rerun(src.replace(KILL, 'm[k] = a;'),
+            'ז. ⛔ מוטציה: ביטול האיפוס מפיל את «רקע האריח שווה למוצהר»', true);
+      rerun(src.replace('const ALPHA_MIN = 25;', 'const ALPHA_MIN = 26;'),
+            'ז. ⭐ מוטציית-נגד: `ALPHA_MIN` בפיקסל אחד ⛔ אינו מפיל', false);
+    }
   } finally { rmSync(g, { recursive: true, force: true }); }
 }
 
