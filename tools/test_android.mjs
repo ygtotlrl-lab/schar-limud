@@ -401,10 +401,10 @@ else {
       try { run(d); } catch (e) { fell = true; }
       if (fell === wantFail) pass(label);
       else fail(`${label} — נמדד ${fell ? 'נפל' : 'עבר'} והצפוי ` +
-                `${wantFail ? 'נפל' : 'עבר'}. בודקים את ה-probe של שורה 82`);
+                `${wantFail ? 'נפל' : 'עבר'}. בודקים את ה-probe של «אין נכסים מוטבעים»`);
     } finally { fs.rmSync(d, { recursive: true, force: true }); }
   };
-  assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורה 82', 'index.html', true);
+  assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורת «אין נכסים מוטבעים»', 'index.html', true);
   assetMut('⭐ מוטציית-נגד: קובץ אחר תחת `assets/` ⛔ אינו מפיל — נמדד מה מוטבע',
            'fonts.txt', false);
 }

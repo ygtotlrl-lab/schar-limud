@@ -112,7 +112,7 @@ function bareProbes(capSrc) {
 }
 
 /*  ⭐ הביקורת המלאה — ⛔ מוחזרת כמערך הפרות, כדי ש-`check-capabilities`
- *  יוכל למדוד את שורה 50 מכאן ולא לממש מדידה שנייה משלו.               */
+ *  יוכל למדוד את שורת שכבת הקלט מכאן ולא לממש מדידה שנייה משלו.               */
 export function audit(root) {
   const src = fs.readFileSync(path.join(root, APP.file), 'utf8');
   const v = [];
@@ -127,7 +127,7 @@ export function audit(root) {
 }
 
 /*  ⛔ הריצה העצמית מוגנת (סבב 67) — `check-capabilities` מייבא את `audit`
- *  כדי למדוד את שורה 50, ⚠️ וייבוא בלי השער הזה היה מריץ גם את המוטציות. */
+ *  כדי למדוד את שורת שכבת הקלט, ⚠️ וייבוא בלי השער הזה היה מריץ גם את המוטציות. */
 const SELF = process.argv[1] &&
   path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
 if (SELF) {
