@@ -43,7 +43,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [23, 25, 27, 30, 33, 37, 42, 63, 64, 65, 66, 117];
+export const ROWS = [23, 25, 27, 30, 33, 38, 43, 64, 65, 66, 67, 118];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -647,6 +647,10 @@ if (failures) {
   /*  ⭐ קו הבסיס מוכרז (סבב 72) — ⛔ שער אחד רשאי להריץ את הסט המלא,
    *  ⚠️ והוא זה שמודד שאף שער אינו כותב לעץ. */
   const BASELINE = 'test_readonly.mjs';
+  /*  ⭐ חריגה שנייה, מוכרזת ומנומקת (סבב 72) — ⛔ שער תקרת-הזמן מריץ את
+   *  `check-js` על עותק שרשימת השערים שלו הוחלפה בשני גדמים, ⚠️ ולכן
+   *  הוא אינו מריץ את הסט: ⭐ העלות נמדדה בשניות בודדות. */
+  const STUBBED = 'test_gatetime.mjs';
   const ABSENT = /present:\s*false|usersTable:\s*null/;
   const REASON = /מנוטרל|טענות-\*\*חסר\*\*|טענות-חסר|אין כאן/;
   let bad = 0, seen = 0, muted = 0;
@@ -657,7 +661,7 @@ if (failures) {
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
     seen++;
     const code = codeOf(t);
-    if (f !== BASELINE && /['"`]check-js\.mjs['"`]/.test(code) &&
+    if (f !== BASELINE && f !== STUBBED && /['"`]check-js\.mjs['"`]/.test(code) &&
         !/CHECKJS_STAGES_ONLY/.test(code)) {
       bad++;
       fail(`tools/${f}: מריץ את check-js המלא — נמדדה ריצה אחת בלי ` +

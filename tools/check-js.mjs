@@ -68,16 +68,28 @@ const APP = {
           'test_swcore.mjs',
           'test_build.mjs',
           'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
+          'test_md.mjs', 'test_gatetime.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_offline_login.mjs', 'test_roles.mjs',
           'test_stage_a.mjs', 'test_hotwin.mjs', 'test_cron.mjs',
           'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
- *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
-export const ROWS = [];
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
+ *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
+ *  אותה היה מריץ את כולם פעם שנייה. */
+export const ROWS = [35];
+
+/*  ⛔ תקרת שער בודד (סבב 72) — ⚠️ תקרה על הסך בלבד מסתירה שער אחד שתופס
+ *  שליש מהזמן: `test_structure` הריץ את `check-js` פעמיים במשך חודש,
+ *  ⛔ והסך נשאר «סביר». ⚠️ הערך נדרס בסביבה רק ברתמות המדידה. */
+const GATE_MAX_MS = Number(process.env.GATE_MAX_MS || 20000);
+
+/*  ⛔ חריגה מוכרזת ומנומקת (סבב 72) — ⚠️ ולא רשימה שקטה: ⭐ שער קו הבסיס
+ *  מריץ את `check-js` המלא על עותק, וזו העבודה שהוא נועד לעשות. */
+const SLOW_OK = {
+  'test_readonly.mjs': 'קו הבסיס — מריץ את check-js המלא על עותק',
+};
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), APP.app + '-check-'));
@@ -138,14 +150,24 @@ if (process.env.CHECKJS_STAGES_ONLY) {
 }
 
 /* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ────────────────────────── */
+const slow = [];
 for (const gate of APP.gates) {
+  const t0 = Date.now();
   try {
     execFileSync(process.execPath, [join(ROOT, 'tools', gate)],
                  { cwd: ROOT, stdio: 'inherit' });
   } catch (e) {
     failures++;
   }
+  const ms = Date.now() - t0;
+  if (ms > GATE_MAX_MS && !SLOW_OK[gate]) slow.push(`${gate} ${(ms / 1000).toFixed(1)}s`);
 }
+if (slow.length)
+  fail(`שערים מעל תקרת השער הבודד: ${slow.join(' · ')} — ` +
+       `נמדדו מעל ${(GATE_MAX_MS / 1000).toFixed(0)} שניות והצפוי מתחת. ` +
+       'בודקים אם השער מריץ שער אחר או חוזר על עבודה');
+else pass(`זמן שער בודד — ${APP.gates.length} שערים מתחת ל-${(GATE_MAX_MS / 1000).toFixed(0)} ` +
+          `שניות (⚠️ ${Object.keys(SLOW_OK).length} חריגה מוכרזת)`);
 
 if (failures) {
   console.error(`\n❌ ${APP.app}: ${failures} כשלים בשער ה-JS`);
