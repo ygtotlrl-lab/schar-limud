@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [9, 13, 40, 68, 70];
+export const ROWS = [9, 13, 40, 71, 73];
 
 /*  ⛔ שורש נדרס בסביבת מוטציה (סבב 65) — ⚠️ המוטציות רצות על עותק
  *  בתיקייה זמנית ולא על העץ, והדרך היחידה להריץ את השער **האמיתי**
@@ -311,10 +311,14 @@ function runOn(files) {
     fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
     fs.writeFileSync(path.join(dir, rel), body);
   }
-  const r = execFileSync('node', [path.join(dir, 'tools', 'test_rulesdocs.mjs')],
-    { cwd: dir, encoding: 'utf8', stdio: 'pipe' , env: { ...process.env, RULESDOCS_ROOT: dir } });
-  fs.rmSync(dir, { recursive: true, force: true });
-  return r;
+  /*  ⛔ המחיקה ב-`finally` (סבב 72) — ⚠️ נמדד: מוטציה שנועדה להפיל זרקה
+   *  כאן, ⛔ והעותק נשאר: מאות עותקי עץ מילאו את הדיסק. */
+  try {
+    return execFileSync('node', [path.join(dir, 'tools', 'test_rulesdocs.mjs')],
+      { cwd: dir, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, RULESDOCS_ROOT: dir } });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 function fails(files) {
   try { runOn(files); return false; } catch { return true; }

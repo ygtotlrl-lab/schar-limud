@@ -19,7 +19,7 @@
  *
  *  יציאה בקוד שונה מאפס אם כשל אחד או יותר.
  */
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -144,8 +144,10 @@ for (const [file, reSrc, expect, msg] of APP.rules) {
  *  מריץ את חבילות הבדיקה: ⭐ הריצה החיצונית מוכיחה את הבקרה החיובית ממילא,
  *  ⛔ וריצה פנימית שנייה של הסט המלא היא אותה עבודה פעמיים. */
 if (process.env.CHECKJS_STAGES_ONLY) {
-  if (failures) { console.error(`\n❌ ${APP.app}: ${failures} כשלים בשלבים 1–3`); process.exit(1); }
+  if (failures) { rmSync(work, { recursive: true, force: true });
+    console.error(`\n❌ ${APP.app}: ${failures} כשלים בשלבים 1–3`); process.exit(1); }
   console.log('\n✅ שלבים 1–3 עברו');
+  rmSync(work, { recursive: true, force: true });
   process.exit(0);
 }
 
@@ -168,6 +170,10 @@ if (slow.length)
        'בודקים אם השער מריץ שער אחר או חוזר על עבודה');
 else pass(`זמן שער בודד — ${APP.gates.length} שערים מתחת ל-${(GATE_MAX_MS / 1000).toFixed(0)} ` +
           `שניות (⚠️ ${Object.keys(SLOW_OK).length} חריגה מוכרזת)`);
+
+/*  ⛔ תיקיית העבודה נמחקת בכל מסלול יציאה (סבב 72) — ⚠️ נמדד: היא נשארה
+ *  בכל הרצה, ⛔ ואלפי עותקים מילאו את הדיסק עד ENOSPC. */
+rmSync(work, { recursive: true, force: true });
 
 if (failures) {
   console.error(`\n❌ ${APP.app}: ${failures} כשלים בשער ה-JS`);

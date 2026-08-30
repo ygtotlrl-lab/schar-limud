@@ -18,7 +18,7 @@
  *  הוא אותה עבודה תשע-עשרה פעמים. ⭐ הבודק מיובא עם מפתח מטמון חדש בכל
  *  סיבוב, והפלט נאסף מ-`console` במקום מ-`stderr`.                        */
 import fs from 'node:fs';
-import { mkdtempSync, cpSync } from 'node:fs';
+import { mkdtempSync, cpSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -73,7 +73,12 @@ const run = async (cwd) => {
   }
   return { status, stdout: out, stderr: '' };
 };
-const baseDir = mkdtempSync(join(tmpdir(), 'md-skel-'));
+/*  ⛔ כל תיקייה זמנית נרשמת ונמחקת בסוף (סבב 72) — ⚠️ נמדד: הרתמה
+ *  יצרה כ-30 תיקיות בכל הרצה ולא מחקה אחת, ⛔ ואלפי עותקי עץ מילאו את
+ *  הדיסק עד ENOSPC באמצע הרצת שער. */
+const TEMPS = [];
+const temp = (tag) => { const d = mkdtempSync(join(tmpdir(), tag)); TEMPS.push(d); return d; };
+const baseDir = temp('md-skel-');
 // ⚠️ manifest.json נוסף לרשימה בסבב 44 — מסעיף ח של check-docs ואילך
 //    הבודק אוכף גם את **ערכי** המפתחות המשותפים שבו, ורתמה שלא העתיקה
 //    אותו הייתה מפילה את check-docs על קובץ חסר במקום על סחיפה במד.
@@ -88,7 +93,7 @@ t((await run(baseDir)).status === 0, 'check-docs עובר על עותק נקי �
 
 /* 3 — מוטציה: מחיקת פרק נדרש מכל אחד משלושת הקבצים מפילה את השער */
 for (const [f, re, name] of CASES) {
-  const dir = mkdtempSync(join(tmpdir(), 'md-skel-mut-'));
+  const dir = temp('md-skel-mut-');
   cpSync(baseDir, dir, { recursive: true });
   const p = join(dir, f);
   const src = fs.readFileSync(p, 'utf8');
@@ -108,7 +113,7 @@ for (const [f, re, name] of CASES) {
  *  ברזל 8 סעיף 4 בהיפוך.                                                 */
 console.log('· סבב 41 — תוכן הפסקאות המשותפות');
 
-const mutDir = () => { const d = mkdtempSync(join(tmpdir(), 'md-shared-mut-')); cpSync(baseDir, d, { recursive: true }); return d; };
+const mutDir = () => { const d = temp('md-shared-mut-'); cpSync(baseDir, d, { recursive: true }); return d; };
 
 /* 4א — מחיקת פסקה משותפת שלמה (עם הסימונים) מפילה */
 {
@@ -220,6 +225,8 @@ t((await mfEdit((mf) => { mf.icons.push({ src: 'icons/does-not-exist.png', sizes
  *  ההצהרה» ל«נופל על כל שינוי במניפסט». */
 t((await mfEdit((mf) => { mf.name = mf.name + ' '; })).status === 0,
   '⭐ מוטציית-נגד: שינוי שדה שאינו האייקונים ⛔ אינו מפיל');
+
+for (const d of TEMPS) rmSync(d, { recursive: true, force: true });
 
 console.log(bad ? `\n❌ סבב 39ב — ${bad} מתוך ${n} נכשלו` : `\n✓ סבב 39ב+41+42ב (שלושת קובצי ה-md) — ${n} טענות עברו`);
 process.exit(bad ? 1 : 0);

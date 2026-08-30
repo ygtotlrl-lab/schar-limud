@@ -55,12 +55,13 @@ const ok = (msg, cond) => {
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [46, 91];
+const DB_FACT_EXEMPT = [49, 94];
 const EXEMPT = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22,
   23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
-  44, 46, 55, 59, 60, 61, 64, 65, 66, 67, 68, 69, 70, 72, 74, 75, 77, 79, 81, 85, 88,
-  89, 90, 91, 96, 97, 100, 101, 103, 105, 106, 108, 109, 110, 111, 112, 113, 114, 115, 117, 118,
+  44, 45, 46, 47, 49, 58, 62, 63, 64, 67, 68, 69, 70, 71, 72, 73, 75, 77, 78, 80, 82,
+  84, 88, 91, 92, 94, 99, 100, 103, 104, 106, 108, 109, 111, 112, 113, 114, 115, 116, 117, 118, 120,
+  121,
 ];
 
 function copyRepo() {
@@ -182,6 +183,43 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   const held = await runChecker();
   fs.writeFileSync(CAP, clean);
   ok('⭐ מוטציית-נגד: החלפת שם המשתנה בעקביות ⛔ אינה מפילה', held);
+}
+
+/*  ⭐ הכיוון ההפוך — כלל ⟵ שורה (סבב 72): ⛔ המוטציה מוסיפה סעיף כלל
+ *  שאין לו שורה, ⚠️ והטענה שאמורה ליפול היא «כל כלל מיוצג בטבלה». */
+{
+  const CAP = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const capClean = fs.readFileSync(CAP, 'utf8');
+  const doc = CLEAN_DOC.toString('utf8');
+  const HEAD = '### ⛔ תקן עמודת ההערות';
+  const added = doc.replace(HEAD, '### ⛔ כלל חדש שאין לו שורה\n\n' + HEAD);
+  ok('המוטציה הוסיפה סעיף כלל לעותק', added !== doc);
+  fs.writeFileSync(DOC_IN_WORK, added);
+  ok('⛔ מוטציה: סעיף כלל בלי שורה מפיל את «כל כלל מיוצג בטבלה»', !(await runChecker()));
+
+  /*  ⭐ מוטציית-נגד — שינוי חי ועקבי: ⛔ שם הסעיף מוחלף בקובץ ובמפה יחד,
+   *  ⚠️ ואסור לו להפיל: ⭐ המפה מודדת ייצוג ולא מחרוזת. */
+  const ren = '### ⛔ תקן עמודת ההערות שבטבלה';
+  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, ren));
+  fs.writeFileSync(CAP, capClean.replace("'⛔ תקן עמודת ההערות':", "'⛔ תקן עמודת ההערות שבטבלה':"));
+  ok('⭐ מוטציית-נגד: שינוי שם סעיף בקובץ ובמפה יחד ⛔ אינו מפיל', await runChecker());
+  fs.writeFileSync(CAP, capClean);
+
+  /*  ⭐ ו-🔲 אינו קבוע — ⛔ המוטציה מציבה 🔲 בשורה שאינה נמדדת ב-MATRIX:
+   *  ⚠️ כך הטענה שתיפול היא «🔲 אינו קבוע» ולא היפוך תא. */
+  const lines = doc.split('\n');
+  const at = lines.findIndex((l) => /^\|\s*46\s*\|/.test(l));
+  ok('שורת המוטציה ל-🔲 נמצאה', at >= 0);
+  const parts = lines[at].split('|');
+  parts[3 + APP.col] = ' 🔲 ';
+  lines[at] = parts.join('|');
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  ok('⛔ מוטציה: תא 🔲 בשורה ותיקה מפיל את «🔲 אינו קבוע»', !(await runChecker()));
+
+  fs.writeFileSync(CAP, capClean.replace('const FRESH_BOX = {};', 'const FRESH_BOX = { 46: 72 };'));
+  ok('⭐ מוטציית-נגד: 🔲 שהוכרז בסבב הנוכחי ⛔ אינו מפיל', await runChecker());
+  fs.writeFileSync(CAP, capClean);
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
 }
 
 process.chdir(ROOT);
