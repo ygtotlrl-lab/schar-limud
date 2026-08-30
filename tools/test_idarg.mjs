@@ -40,6 +40,10 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
+
 const root = path.resolve(process.argv[2] || path.join(import.meta.dirname, '..'));
 let pass = 0, fail = 0;
 const ok  = (m) => { pass++; console.log('  ok   ' + m); };

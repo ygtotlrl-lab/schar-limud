@@ -30,6 +30,10 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, APP.file), 'utf8');
 const START = '/* ═══ גיבוי יומי ויומן פעולות';

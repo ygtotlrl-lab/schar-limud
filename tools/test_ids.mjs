@@ -27,6 +27,10 @@ import { fileURLToPath } from 'node:url';
 const APP = { app: 'schar-limud', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
+
 if (process.env.R33_INNER || process.env.R37_INNER) {
   console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
