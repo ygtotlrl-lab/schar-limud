@@ -1,15 +1,27 @@
 #!/usr/bin/env node
-/*  test_merge_pending.mjs — סבב 37: הגנת ה-⏳ במנוע המיזוג.
+/*  test_merge_pending.mjs — מנוע המיזוג: הליבה המשותפת והגנת ה-⏳
+ *  (סבב 72: מוזג).
  *
- *  כלל ברזל 6 קובע ש**רשומה מקומית מסומנת ⏳ מנצחת במיזוג ללא תלות
- *  בחותמת**, ושהיא נחשבת תמיד «לדחיפה». עד סבב 37 הכלל היה מיושם בשני
- *  מקומות בלבד מארבעה: `slMerge` ב-schar-limud ו-`mergeRows` ב-gius.
- *  ב-yoman וב-hanhala המיזוג הכריע לפי חותמת בלבד — כלומר עריכה מקומית
- *  שטרם עלתה לענן נדרסה בשקט ע"י גרסה שמכשיר אחר דחף אחריה.
+ *  **מה נאכף:** (א) הגנת ה-⏳ — רשומה מקומית מסומנת מנצחת במיזוג ללא
+ *  תלות בחותמת, והיא נחשבת תמיד «לדחיפה»; (ב) הליבה המשותפת קיימת
+ *  ב-`index.html`, וכלל ההכרעה מופיע בה **פעם אחת בלבד**; (ג) שובר
+ *  השוויון (ענן מנצח), שרידת רשומה מקומית-בלבד, וידיות המדיניות
+ *  שהמעטפת מעבירה לליבה.
  *
- *  הקובץ זהה בית-לבית בארבעת הריפו פרט לבלוק `APP` שבראשו. הוא מריץ את
- *  **מנוע המיזוג האמיתי** (נחתך מ-`index.html` בהתאמת סוגריים) ברתמת `vm`,
- *  ומסיים במוטציה: הסרת סעיף ה-⏳ חייבת להפיל טענה.
+ *  **הנימוק המדוד:** ארבעה עותקים של כלל הכרעה הם ארבע הזדמנויות
+ *  שאחד מהם ייסחף — ⚠️ ההגנה על ⏳ אכן הייתה קיימת בשתיים מארבע במשך
+ *  שמונה-עשר סבבים. ⛔ ומאותה סיבה בדיוק אין טעם בשני שערים על אותו
+ *  מנוע: שניהם חותכים את אותן פונקציות ומריצים אותן באותה רתמה.
+ *
+ *  **מה יישבר בלעדיו:** עריכה מקומית שטרם עלתה לענן נדרסת בשקט ע"י
+ *  גרסה שמכשיר אחר דחף אחריה — ⛔ אובדן נתונים בלי שום סימן.
+ *
+ *  **מה אינו נאכף כאן:** ⛔ שהאיחוד לא שינה התנהגות — זו נמדדה פעם אחת
+ *  בדיפרנציאל של 125,000 מקרים מול המימוש שהוחלף, ⚠️ והמימוש הישן אינו
+ *  קיים עוד בעץ ואי אפשר להריץ אותה מחדש.
+ *
+ *  הקובץ מריץ את **מנוע המיזוג האמיתי** (נחתך מ-`index.html` בהתאמת
+ *  סוגריים) ברתמת `vm`. זהה בית-לבית בארבעת הריפו פרט לבלוק `APP`.
  */
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -34,6 +46,24 @@ const APP = {
   tag: (r) => r && r.name,
   pendKey: (id) => 'c:' + id,
   merge: (sb, local, remote) => sb.slMerge(local, remote, (k) => sb.pendIs(k), sb.slKey),
+  /*  ⭐ שכבת ליבת המיזוג (סבב 72) — ⚠️ השמות, המעטפת והרשומה נבדלים
+   *  מאלה שמעליהם, ⛔ ולכן הם יושבים בקבוצה משלהם ואינם מתמזגים בהם. */
+  core: {
+    app: 'schar-limud',
+    names: ['slTs', 'slKey', '_mergePick', 'mergeCore', 'slMerge'],
+    globals: {},
+    wrapFn: 'slMerge',
+    // ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף** (סבב 38):
+    //    איחוד היה מכווץ שתי שורות כספיות לאחת, בשקט.
+    knobs: ['dedupe: false', "keyless: 'keep-remote'", "localPick: 'last'"],
+    knobFlip: 'dedupe: true',
+    rec: (id, ts, tag) => ({ client_id: id, updated_at: new Date(ts * 1000).toISOString(), name: tag }),
+    tag: (r) => r && r.name,
+    merge: (sb, local, remote, pend) =>
+      sb.slMerge(local, remote, (k) => pend.indexOf(String(k).replace('c:', '')) !== -1, sb.slKey),
+    dupCase: { l: [], r: [{ client_id: 'a', updated_at: new Date(5000).toISOString(), name: 'ראשון' },
+                          { client_id: 'a', updated_at: new Date(9000).toISOString(), name: 'שני' }] },
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -196,5 +226,108 @@ if (!APP.offlineFn) {
     '7ד · ⛔ מוטציה שמסירה את בדיקת ה-active מפילה את טענה 7א — משתמש מושבת היה נכנס');
 }
 
-console.log(failed ? `\n✗ סבב 37 — ${failed} טענות נכשלו` : '\n✓ סבב 37 — כל הטענות עברו');
+
+/* ══ ליבת המיזוג המשותפת (סבב 72: מוזג לכאן) ═════════════════════════════ */
+/*  ⛔ סביבה נפרדת משל הגנת ה-⏳ (סבב 72) — ⚠️ רשימת השמות והמעטפת
+ *  נבדלות, ⛔ ורתמה אחת לשתיהן הייתה מריצה כאן קוד שאינו נחתך שם. */
+const C = APP.core;
+function coreBuild(src) {
+  const ctx = Object.assign({ console, Number, String, Array, Object, isFinite, Date, JSON, Math },
+                            C.globals || {});
+  vm.createContext(ctx);
+  vm.runInContext(C.names.map((x) => cut(x, src)).join('\n'), ctx);
+  return ctx;
+}
+const sb = coreBuild(SRC);
+const T = (r) => JSON.stringify((r || []).map(C.tag));
+
+console.log('· ליבת המיזוג המשותפת (' + APP.app + ')');
+
+/* ── 4 · הבלוק המשותף ──────────────────────────────────────────────────── */
+assert(SRC.indexOf('/* ═══ מיזוג רשומות — מודול משותף (סבב 38)') !== -1,
+  '1 · הבלוק המשותף קיים ב-index.html');
+assert(SRC.indexOf('/* ═══════════════ סוף מודול המיזוג') !== -1,
+  '2 · וסמן הסגירה שלו קיים');
+assert(/function\s+_mergePick\s*\(/.test(SRC) && /function\s+mergeCore\s*\(/.test(SRC),
+  '3 · שתי הפונקציות מוגדרות');
+{
+  // ⛔ כלל ההכרעה יושב **פעם אחת** — שכפול שלו הוא בדיוק הכשל שהאיחוד בא
+  //    למנוע, ולכן הוא נספר ולא רק נמצא.
+  const n = (SRC.match(/isPend \|\| tsOf\(loc\) > tsOf\(rem\)/g) || []).length;
+  assert(n === 1, '4 · ⛔ כלל ההכרעה מופיע בקוד פעם אחת בלבד (נמצא ' + n + ')');
+}
+
+/* ── 5 · כלל ההכרעה ────────────────────────────────────────────────────── */
+const ts = (x) => x.t;
+const L = { t: 10, n: 'מקומי' }, R = { t: 20, n: 'ענן' };
+assert(sb._mergePick(L, R, 'k', true, ts, null) === L,
+  '5 · ⭐ מסומן ⏳ מנצח גם כשחותמתו **ישנה יותר**');
+assert(sb._mergePick(L, R, 'k', false, ts, null) === R,
+  '6 · בלי סימון — החדש מנצח');
+assert(sb._mergePick({ t: 30 }, { t: 20 }, 'k', false, ts, null).t === 30,
+  '7 · מקומי חדש יותר מנצח');
+assert(sb._mergePick({ t: 20, n: 'l' }, { t: 20, n: 'r' }, 'k', false, ts, null).n === 'r',
+  '8 · ⛔ שוויון → הענן (שובר-שוויון דטרמיניסטי)');
+{
+  let got = null;
+  const pair = (a, b, k, p) => { got = { a: a.n, b: b.n, k: k, p: p }; return a; };
+  sb._mergePick(L, R, 'kk', true, ts, pair);
+  assert(got && got.a === 'מקומי' && got.b === 'ענן' && got.k === 'kk' && got.p === true,
+    '9 · `mergePair` מקבל את ההכרעה כפרמטר ואת שני הצדדים בסדר (מקומי, ענן)');
+}
+
+/* ── 6 · שלושת כללי ברזל 6, דרך המעטפת האמיתית ─────────────────────────── */
+{
+  const out = C.merge(sb, [C.rec('a', 5, 'מקומי-ישן')], [C.rec('a', 9, 'ענן-חדש')], ['a']);
+  assert(T(out) === JSON.stringify(['מקומי-ישן']),
+    '10 · ⭐ דרך המעטפת: מסומן ⏳ מנצח ענן חדש יותר');
+}
+{
+  const out = C.merge(sb, [C.rec('a', 5, 'מקומי')], [C.rec('a', 9, 'ענן')], []);
+  assert(T(out) === JSON.stringify(['ענן']),
+    '11 · ⚠️ בלי סימון — ההגנה צרה ואינה דורסת LWW');
+}
+{
+  const out = C.merge(sb, [C.rec('b', 5, 'רק-מקומי')], [C.rec('a', 9, 'ענן')], []);
+  assert(T(out).indexOf('רק-מקומי') !== -1,
+    '12 · ⛔ רשומה מקומית-בלבד שורדת — היעדרות אינה מחיקה');
+}
+
+/* ── 7 · ידיות המדיניות — נמדדות מהמעטפת ───────────────────────────────── */
+{
+  const w = cut(C.wrapFn, SRC);
+  assert(/mergeCore\(/.test(w), '13 · המעטפת קוראת לליבה');
+  C.knobs.forEach((k, i) => assert(w.indexOf(k) !== -1,
+    '14.' + (i + 1) + ' · ידית מדיניות כמתועד: `' + k + '`'));
+}
+
+/* ── 8 · מוטציות הליבה ─────────────────────────────────────────────────── */
+console.log('  — מוטציות —');
+{
+  const mut = coreBuild(SRC.replace('isPend || tsOf(loc) > tsOf(rem)', 'tsOf(loc) > tsOf(rem)'));
+  assert(mut._mergePick(L, R, 'k', true, ts, null) === R,
+    '15 · מוטציה: הסרת סעיף ה-⏳ מפילה את טענה 5');
+  const out = C.merge(mut, [C.rec('a', 5, 'מקומי-ישן')], [C.rec('a', 9, 'ענן-חדש')], ['a']);
+  assert(T(out) === JSON.stringify(['ענן-חדש']),
+    '16 · ⛔ ובמוטנט העריכה שטרם עלתה נדרסת — טענה 10 הייתה נכשלת');
+}
+{
+  const mut = coreBuild(SRC.replace('isPend || tsOf(loc) > tsOf(rem)', 'isPend || tsOf(loc) >= tsOf(rem)'));
+  assert(mut._mergePick({ t: 20, n: 'l' }, { t: 20, n: 'r' }, 'k', false, ts, null).n === 'l',
+    '17 · מוטציה: היפוך שובר-השוויון מפיל את טענה 8');
+}
+{
+  const w = cut(C.wrapFn, SRC);
+  const flipped = w.replace(C.knobs[0], C.knobFlip);
+  assert(flipped !== w, '18 · מוטציית ידית המדיניות שינתה את המעטפת בפועל');
+  const mut = coreBuild(SRC.replace(w, flipped));
+  const before = T(C.merge(sb, C.dupCase.l, C.dupCase.r, []));
+  const after = T(C.merge(mut, C.dupCase.l, C.dupCase.r, []));
+  assert(before !== after,
+    '19 · ⛔ היפוך `' + C.knobs[0] + '` משנה את התוצאה — הידית אמיתית ולא קישוט' +
+    ' (' + before + ' → ' + after + ')');
+}
+
+console.log(failed ? `\n✗ סבב 72 (מנוע המיזוג) — ${failed} טענות נכשלו`
+                   : '\n✓ סבב 72 (מנוע המיזוג — ליבה והגנת ⏳) — כל הטענות עברו');
 process.exit(failed ? 1 : 0);

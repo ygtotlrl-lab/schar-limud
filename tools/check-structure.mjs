@@ -176,7 +176,7 @@ else pass('⛔ אף קובץ מוגש אינו מפנה ל-design/');
    ל-`android/`, ל-`migrations/`, ל-`signing/` או ל-`.github/` בריפו אחד
    בשקט לא נראה לאף שער — ⛔ וזו בדיוק צורת הכשל שכלל ברזל 14 אוסר.
    ⛔ **הסט נאכף, לא התוכן** — מה שיושב בתוך כל קובץ נאכף בשערים הייעודיים
-   (`test_android` · `test_workflows` · `test_signscript`).
+   (`test_android` · `test_build`).
    ══════════════════════════════════════════════════════════════════════ */
 const WORKFLOWS = ['build-apk.yml', 'cleanup-merged-branches.yml'];
 /*  ⚠️ `<pkg>` — נתיב חבילת ה-Java נבדל לפי מזהה החבילה, וזה הדבר היחיד

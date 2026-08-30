@@ -1,38 +1,33 @@
 #!/usr/bin/env node
-/*  שער הבנייה והחתימה של המעטפת — סבב 41, כלל ברזל 14.
+/*  test_build.mjs — מסלול הבנייה והחתימה: שני ה-workflows, סקריפט
+ *  החתימה, והשער שביניהם (סבב 72: מוזג).
  *
- *  ⚠️ **הפער שנמדד (סבב 41):** gius קיבלה בסבב 39 workflow שקורא
- *  ל-`signing/sign-apk.sh`, ובסקריפט יושב **שער טביעה** — לפני
- *  החתימה ואחריה. בשלושת הריפו האחרים ה-workflow **לא קרא לסקריפט
- *  כלל**: לוגיקת `apksigner` הייתה משוכפלת בתוך ה-YAML, בלי שום שער.
+ *  **מה נאכף:** (א) שני ה-workflows זהים בית-לבית ×4 אחרי נרמול שם
+ *  הריפו, ואין בהם זליגת שם ריפו זר; (ב) ה-YAML קורא ל-`sign-apk.sh`
+ *  ⛔ ואין בו `apksigner` משלו; (ג) ששת השדות הפרטיים של הסקריפט,
+ *  חתימת חלקו המשותף, ושלושת שערי הבטיחות שבו — טביעה לפני החתימה,
+ *  `apksigner verify --print-certs` אחריה, ו-`set -e`.
  *
- *  ⛔ **וזה מסלול חתימה שני, בלי בדיקה** (סבב 41) — חתימה במפתח שגוי
- *  מייצרת אפליקציה **זרה**, וכל משתמש מותקן נתקל ב-
- *  `INSTALL_FAILED_UPDATE_INCOMPATIBLE` בלי שום דרך חזרה. מסלול שאין בו
- *  שער הוא זה שייסחף, בדיוק כפי שסבב 39 מדד על `sign-apk.bat`.
+ *  **הנימוק המדוד:** gius קיבלה workflow שקורא לסקריפט ובו שער טביעה,
+ *  ⛔ ובשלושה האחרים לוגיקת `apksigner` הייתה משוכפלת בתוך ה-YAML בלי
+ *  שום שער. ⚠️ ו-`sign-apk.sh` היה 63 שורות בשלושה ריפו ו-67 ב-gius,
+ *  בלי ששום שער השווה ביניהם. ⭐ ומאחר שחתימת ה-YAML נופלת על כל שינוי
+ *  בו, ⛔ שער נפרד שבודק שדות בתוכו אינו יכול ליפול לבדו.
  *
- *  הבדיקה נכשלת על שבעה סוגי סטייה:
- *    א. **שם ה-workflow** אינו `Build APK` (⛔ בלי «Signed» — הקונבנציה
- *       הקנונית ×4; שם שנבדל הופך כל הוראה תפעולית לשגויה בשלושה ריפו).
- *    ב. **שם ה-artifact** אינו `<repo>-apk`.
- *    ג. **שם קובץ הפלט** אינו `<repo>.apk`, או שאינו בשורש הריפו.
- *    ד. **⭐ ה-YAML מכיל `apksigner`** — כלומר לוגיקת חתימה שנייה חזרה.
- *       זו הנקודה של הסבב הזה.
- *    ה. ה-workflow אינו קורא ל-`./signing/sign-apk.sh`, או שחסרים
- *       `set -euo pipefail` / `if-no-files-found: error`.
- *    ו. **⭐ `EXPECTED_SHA256` ריק, מציין-מקום, או בפורמט שאינו של
- *       keytool** — שער שלא מולא הוא שער שאינו נועל דבר, והוא גרוע
- *       משער שאינו קיים: הוא נראה כאילו הוא מגן.
- *    ז. הסקריפט אינו בר-הרצה (mode 100755) — ה-workflow קורא לו ישירות,
- *       וקובץ 100644 מפיל את הבנייה בשלב החתימה.
+ *  **מה יישבר בלעדיו:** חתימה במפתח שגוי מייצרת אפליקציה **זרה**, וכל
+ *  משתמש מותקן נתקל ב-`INSTALL_FAILED_UPDATE_INCOMPATIBLE` — ⛔ בלי שום
+ *  דרך חזרה. ⚠️ ומסלול חתימה שני, בלי שער, הוא זה שייסחף.
  *
- *  ⚠️ **מה השער אינו בודק, ובכוונה:** את ערך הטביעה עצמו. ⛔ הוא פרטי
- *  לכל ריפו (כלל ברזל 8 סעיף 5 — «חתימת APK» הוא פרק פרטי בהגדרה),
- *  ואיחודו יהיה שגוי ומסוכן. השער דורש **שהיא קיימת ותקינה בצורתה**.
+ *  **מה אינו נאכף כאן:** ⛔ שם הריפו — הוא מוכרז פרטי ומנורמל ל-`§`
+ *  לפני החתימה, ⚠️ ומוטציית-נגד מודדת שהוא באמת אינו בחתימה.
+ *
+ *  ⛔ המוטציות רצות על עותק **בזיכרון** ולא על העץ (סבב 42ג) — מוטציה
+ *  שנכתבת לעץ שורדת כשלון באמצע הריצה.
  *
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
  */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +39,12 @@ const APP = {
      ⛔ לא שם הקיצור של ה-keystore (סבב 41) — «schar.apk» היה שם המפתח
      ולא שם התוצר, וזה בדיוק סוג ההיסט ששני שמות לאותו דבר מייצרים. */
   repo: 'schar-limud',
+  /* שם הריפו — מוכרז פרטי בחתימת ה-workflows ומנורמל החוצה. */
+  slug: 'schar-limud',
+  keystore: 'schar.keystore',
+  alias: 'schar',
+  pass: 'schar123',
+  out: 'schar-limud.apk',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -176,6 +177,117 @@ for (const [label, mut] of MUTATIONS) {
   else fail(`מוטציה: ${label} — ⛔ לא הפילה דבר, השער אינו נועל אותה`);
 }
 
-console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער הבנייה והחתימה`
-                     : `\n✅ ${APP.app}: שער הבנייה והחתימה עבר`);
+
+/* ══ שני ה-workflows וסקריפט החתימה (סבב 72: מוזגו לכאן) ═════════════════ */
+const BUILD    = '.github/workflows/build-apk.yml';
+const CLEANUP  = '.github/workflows/cleanup-merged-branches.yml';
+const ALL_SLUGS = ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius'];
+const BUILD_SHA   = 'bf38b751de2f1c33';
+const CLEANUP_SHA = 'a48da4dd75a3245c';
+const PRIV = /^(# Sign an APK with the PERMANENT |KS=|ALIAS=|PASS=|EXPECTED_SHA256=|OUT=|echo "✅ Signed with the permanent )/;
+const SHARED_SHA = 'eb0af5fdba30e4e6';
+
+const FILE = 'signing/sign-apk.sh';
+const t = (c, m) => (c ? pass(m) : fail(m));
+const shScript = fs.readFileSync(join(ROOT, FILE), 'utf8');
+const sharedOf = (txt) => txt.split('\n').map((l) => (PRIV.test(l) ? '' : l)).join('\n');
+const sig = (txt) => crypto.createHash('sha256').update(sharedOf(txt)).digest('hex').slice(0, 16);
+
+/* ── ה. ששת השדות הפרטיים ──────────────────────────────────────────────── */
+t(shScript.includes(`KS="$HERE/${APP.keystore}"`), `א1 · ה-keystore הוא ${APP.keystore}`);
+t(shScript.includes(`ALIAS='${APP.alias}'`),       `א2 · ה-alias הוא ${APP.alias}`);
+t(shScript.includes(`PASS='${APP.pass}'`),         'א3 · הסיסמה תואמת לבלוק APP');
+t(shScript.includes(`OUT="\${2:-${APP.out}}"`),    `א4 · שם הפלט הוא ${APP.out}`);
+{
+  const m = /EXPECTED_SHA256='([0-9A-F:]{95})'/.exec(shScript);
+  t(!!m, 'א5 · ⛔ טביעה מלאה (32 בתים) ולא מציין-מקום');
+}
+
+/* ── ו. החתימה על החלק המשותף ──────────────────────────────────────────── */
+t(sig(shScript) === SHARED_SHA,
+  `ב · החלק המשותף זהה לחתימה הקנונית (${sig(shScript)})`);
+
+/* ── ז. שלושת שערי הבטיחות שבסקריפט ────────────────────────────────────── */
+t(/set -e/.test(shScript),                       'ג1 · `set -e` — שגיאה עוצרת');
+t(/apksigner verify --print-certs/.test(shScript),'ג2 · אימות התעודה אחרי החתימה');
+t(shScript.indexOf('EXPECTED_SHA256') < shScript.indexOf('apksigner sign'),
+  'ג3 · ⛔ הטביעה מושווית **לפני** החתימה ולא אחריה');
+
+/* ── ח. מוטציות סקריפט החתימה ──────────────────────────────────────────── */
+/*  ⛔ המוטציות אינן נכתבות לעץ (הלקח של סבב 42ג) — מוטציה שנכתבת לעץ
+ *  שורדת כשלון באמצע הריצה. */
+t(sig(shScript.replace('set -e', 'set -eu')) !== SHARED_SHA,
+  'ד1 · מוטציה בחלק המשותף מזיזה את החתימה');
+t(sig(shScript.replace(`ALIAS='${APP.alias}'`, "ALIAS='zzz'")) === SHARED_SHA,
+  'ד2 · ⭐ מוטציית-נגד: שינוי שדה פרטי ⛔ אינו מזיז את החתימה');
+t(sig(shScript.replace('apksigner verify --print-certs', 'true')) !== SHARED_SHA,
+  'ד3 · הסרת אימות התעודה מזיזה את החתימה');
+
+/*  ⚠️ **הרווחים אינם מקופלים כאן, בניגוד לשער שכבת האנדרואיד** (סבב 46ב) —
+ *  ב-YAML ההזחה **היא** המבנה, וקיפולה היה הופך שלב שהוזז לתוך `with:`
+ *  לשינוי בלתי-נראה. מה שכן מנורמל: סופי שורה, רווחי סוף שורה, ושם
+ *  הריפו.                                                               */
+const norm = (t, slug = APP.slug) =>
+  t.replace(/\r\n/g, '\n')
+   .split(slug).join('§')
+   .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n')
+   .trim() + '\n';
+const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
+
+for (const p of [BUILD, CLEANUP]) {
+  if (!fs.existsSync(join(ROOT, p))) { fail(`${p} אינו קיים`); process.exit(1); }
+}
+const buildSrc   = fs.readFileSync(join(ROOT, BUILD),   'utf8');
+const cleanupSrc = fs.readFileSync(join(ROOT, CLEANUP), 'utf8');
+
+/* ── ט. שתי חתימות ה-workflows ─────────────────────────────────────────── */
+const checkSha = (label, text, want) => {
+  const got = sha(norm(text));
+  if (got === want) pass(`${label}: תואם לחתימה הקנונית (${got})`);
+  else fail(`${label}: ${got} במקום ${want} — ⛔ הקובץ נבדל מהשלושה האחרים ` +
+            'במשהו שאינו שם הריפו. שינוי מכוון = עדכון בארבעת הריפו ובארבעת ' +
+            'עותקי הבדיקה, באותו סבב (כלל ברזל 8 סעיף 3)');
+};
+checkSha(`חתימת ${BUILD}`,   buildSrc,   BUILD_SHA);
+checkSha(`חתימת ${CLEANUP}`, cleanupSrc, CLEANUP_SHA);
+
+/* ── י. זליגת שם ריפו ───────────────────────────────────────────────────────
+ *  ⚠️ החתימה כבר הייתה נופלת על זה, ⛔ אבל בהודעה שאינה אומרת דבר. שם של
+ *  ריפו אחר ב-workflow הוא העתקה שלא הושלמה — ה-APK היה נבנה תחת השם
+ *  הלא נכון, וזה שווה הודעה מפורשת.                                      */
+for (const [label, src] of [[BUILD, buildSrc], [CLEANUP, cleanupSrc]]) {
+  const leaked = ALL_SLUGS.filter((s) => s !== APP.slug && src.includes(s));
+  if (leaked.length) fail(`${label}: שם ריפו זר — ${leaked.join(', ')}`);
+  else pass(`${label}: אין זליגת שם ריפו`);
+}
+
+/* ── יא. מוטציות ה-workflows ────────────────────────────────────────────────
+ *  ⛔ רצות על עותק **בזיכרון** ולא על העץ — הלקח של סבב 42ג: מוטציה שנכתבת
+ *  לעץ שורדת כשלון באמצע הריצה.                                        */
+const mut = (label, before, after, shouldDiffer) => {
+  if ((before !== after) === shouldDiffer) pass(`מוטציה: ${label}`);
+  else fail(`מוטציה: ${label} — ` +
+            (shouldDiffer ? 'החתימה לא השתנתה, כלומר החלק הזה אינו נאכף'
+                          : 'החתימה השתנתה, כלומר החלק הזה אינו מנורמל החוצה'));
+};
+const nb = norm(buildSrc), nc = norm(cleanupSrc);
+mut('שלב שנוסף ל-build-apk מפיל את החתימה',
+    nb, norm(buildSrc.replace('    steps:', "    steps:\n      - run: echo x")), true);
+mut('גרסת action שנסחפה מפילה את החתימה',
+    nb, norm(buildSrc.replace('actions/upload-artifact@v4', 'actions/upload-artifact@v3')), true);
+mut('הזחה שהשתנתה מפילה את החתימה — ⛔ הרווחים אינם מקופלים',
+    nb, norm(buildSrc.replace('      - name: Upload signed APK', '        - name: Upload signed APK')), true);
+mut('בדיקת ה-prefix ב-cleanup מפילה את החתימה כשהיא נפרצת',
+    nc, norm(cleanupSrc.replace('claude/*)', '*)')), true);
+/* ⭐ ומה שמוכרז פרטי — ⛔ אינו רשאי להזיז אותה. */
+/*  ⚠️ המוטציה הזו מדמה **ריפו אחר**, ולכן היא מנרמלת עם הסלאג שלו: זו
+ *  בדיוק הטענה שההיפוך נשען עליה — ארבעה קבצים ששמם שונה נושאים חתימה
+ *  אחת.                                                                 */
+mut('שם הריפו אינו בחתימה',
+    nb, norm(buildSrc.split(APP.slug).join('some-other-repo'), 'some-other-repo'), false);
+mut('רווח בסוף שורה אינו בחתימה',
+    nc, norm(cleanupSrc.replace('\njobs:', '   \njobs:')), false);
+
+console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער הבנייה, החתימה וה-workflows`
+                     : `\n✅ ${APP.app}: שער הבנייה, החתימה וה-workflows עבר`);
 process.exit(failures ? 1 : 0);

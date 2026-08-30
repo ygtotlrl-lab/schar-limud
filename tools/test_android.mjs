@@ -4,7 +4,7 @@
  *  ⚠️ **הפער שנמדד בסבב 44:** `MainActivity.java` ו-`ShellActivity.java`
  *  חתומים מסבבים 40–41, אבל **שני הקבצים שקובעים איך ה-APK נבנה ומה
  *  אנדרואיד מרשה לו** — `AndroidManifest.xml` ו-`android/app/build.gradle` —
- *  לא נשאו שום חתימה. `test_gradle.mjs` בודק את ה-`versionCode`
+ *  לא נשאו שום חתימה. `test_bump.mjs` בודק את ה-`versionCode`
  *  ואת מזהה החבילה, ⛔ ואינו נוגע בשאר הקובץ: הרשאה שנוספה, `<queries>`
  *  שנעלם או `configChanges` שנסחף עברו בשקט בארבעת הריפו.
  *
@@ -24,7 +24,7 @@
  *  האפליקציה (`android:label`) וכל ההערות. ⛔ אלה מצייני-זהות והיסטוריה
  *  ולא לוגיקת בנייה — בלי נרמולם כל ריפו היה נושא חתימה משלו, ואי אפשר
  *  היה לאכוף שהם זהים. ⚠️ ה-`versionCode` **כן** נאכף — במקום שבו הוא
- *  באמת שער, `test_gradle.mjs`.
+ *  באמת שער, `test_bump.mjs`.
  *
  *  ⭐ **וזו מדידה ולא הצהרה** (סבב 45): אחרי הנרמול שלושת הריפו
  *  חסרי-הגשר נושאים **חתימה זהה בדיוק** בשני הקבצים, ולריפו אחד —
@@ -295,7 +295,7 @@ mut('בלוק dependencies שנוסף ⛔ אינו מזיז את החתימה ח
       "\ndependencies {\n    implementation 'a:b:1'\n}\n")), false);
 
 /* ── ה. מוטציות על שער ה-versionCode (סבב 45ב) ──────────────────────────────
- *  ⚠️ **למה כאן ולא ב-`test_gradle.mjs` עצמו:** השער ההוא נשען על
+ *  ⚠️ **למה כאן ולא בשער ה-`versionCode` עצמו:** הוא נשען על
  *  `origin/main` דרך git, ולכן מוטציה עליו אינה יכולה לרוץ «בזיכרון»
  *  כמו מוטציות החתימה שלמעלה — היא חייבת עץ עם git. ⛔ ולא על העץ
  *  האמיתי (הלקח של סבב 42ג): הרתמה בונה **ריפו git זמני** משלה, מריצה
@@ -318,16 +318,17 @@ else {
   /* עץ מינימלי: השער, קובץ הבנייה, המניפסט, וטבלת ה-README. */
   const readmeSrc = fs.readFileSync(join(ROOT, 'android/README.md'), 'utf8');
   const seed = () => {
-    put('tools/test_gradle.mjs',
-        fs.readFileSync(join(ROOT, 'tools/test_gradle.mjs'), 'utf8'));
+    put('tools/test_bump.mjs',
+        fs.readFileSync(join(ROOT, 'tools/test_bump.mjs'), 'utf8'));
     put(GRADLE, gradleSrc);
     put(MANIFEST, manifestSrc);
     put('android/README.md', readmeSrc);
   };
   const runGate = () => {
     try {
-      execFileSync(process.execPath, [join(tmp, 'tools/test_gradle.mjs')],
-                   { encoding: 'utf8', stdio: 'pipe' });
+      execFileSync(process.execPath, [join(tmp, 'tools/test_bump.mjs')],
+                   { encoding: 'utf8', stdio: 'pipe',
+                     env: { ...process.env, BUMP_GATE_ONLY: '1' } });
       return 0;
     } catch (e) { return e.status === undefined ? -1 : e.status; }
   };
