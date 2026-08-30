@@ -57,7 +57,7 @@ export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 74];
 const CANON = [
   ['rules-session',  'f866224ecabe61d6'],
   ['rules-writing',  '37d4ffc698272c28'],
-  ['rules-table',    '7ec719765e1f579f'],
+  ['rules-table',    '47fe6bd222fdd846'],
   ['rules-enforce',  '87c2325c9ce958bb'],
 ];
 
@@ -456,10 +456,17 @@ const CANON_MANIFEST = [
        *  שם כלל. ⛔ ו-`src` שאינו מצביע על קובץ קיים הוא 404 שקט:
        *  ההתקנה מצליחה, והאייקון פשוט אינו מופיע. */
       const icons = Array.isArray(mf.icons) ? mf.icons : [];
+      /*  ⛔ שישה ולא שלושה (סבב 72) — ⚠️ נמדד: שלושת החסרים הוצהרו
+       *  באפליקציה אחת בלבד, ⭐ והם מה שהדפדפן מציג בלשונית ומה שאייפון
+       *  משתמש בו במסך הבית. ⛔ והרשימה **שמית** ולא מנייה: ⚠️ «שישה
+       *  אייקונים» היה מאושר גם על שישה עותקים של אותו נכס. */
       const CANON_ICONS = [
+        ['icons/favicon-16.png',        '16x16',   null],
+        ['icons/favicon-32.png',        '32x32',   null],
         ['icons/icon-192.png',          '192x192', 'any'],
         ['icons/icon-512.png',          '512x512', 'any'],
         ['icons/icon-maskable-512.png', '512x512', 'maskable'],
+        ['icons/apple-touch-icon.png',  '180x180', null],
       ];
       let iok = true;
       for (const [src, sizes, purpose] of CANON_ICONS) {
@@ -469,7 +476,10 @@ const CANON_MANIFEST = [
           iok = false;
           fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes}`);
         }
-        if ((e.purpose || 'any') !== purpose) {
+        /*  ⚠️ `null` בטבלה = «אין `purpose`» (סבב 72) — ⛔ ולא «any»:
+            favicon ואייקון אייפון אינם נכסי PWA, ⭐ והצהרת `purpose`
+            עליהם הייתה מכריזה אותם כמועמדים למסך הבית. */
+        if (purpose === null ? 'purpose' in e : (e.purpose || 'any') !== purpose) {
           iok = false;
           fail(`manifest.json: "${src}" מוצהר purpose="${e.purpose}" במקום "${purpose}" — ` +
                'אייקון מלא אינו maskable (כלל ברזל 25); "any maskable" הוא מה שגרם ' +
