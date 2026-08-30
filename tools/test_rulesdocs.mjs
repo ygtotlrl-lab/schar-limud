@@ -329,6 +329,31 @@ function fails(files) {
   try { runOn(files); return false; } catch { return true; }
 }
 
+/*  ⛔ הרצת `check-capabilities` על עותק (סבב 72) — ⚠️ הטענה על עמודת
+ *  ההערות יושבת שם, ⭐ ורק ריצה אמיתית מוכיחה שהמוטציה נתפסה. */
+function capsFails(edit) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cap-'));
+  try {
+    execFileSync('cp', ['-r', ROOT + '/.', dir]);
+    const p = path.join(dir, 'CLAUDE.md');
+    fs.writeFileSync(p, edit(fs.readFileSync(p, 'utf8')));
+    try {
+      execFileSync('node', [path.join(dir, 'tools', 'check-capabilities.mjs')],
+                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+      return false;
+    } catch { return true; }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+/*  ⛔ מוטציה: הערת נימוק על שורה ✅✅✅✅ (סבב 72) — ⚠️ היא מתארת מצב
+ *  שכבר אינו, ⛔ ומי שקורא אותה מחפש בעיה שנפתרה. */
+t(capsFails((doc) => doc.replace(/^(\| 42 \|[^\n]*\|)\s*\|$/m, '$1 נשאר להמיר את שאר האתרים |')),
+  'מ18 · הערת נימוק על שורה ✅✅✅✅ **מפילה** את check-capabilities');
+/*  ⭐ מוטציית-נגד: הערה שהיא **ספירה נגזרת** ⛔ אינה מפילה — ⚠️ «כמה
+ *  מבחנים» משתנה בכל סבב, ⛔ ומקומו בהערות ולא בעמודת התקן. */
+t(!capsFails((doc) => doc.replace(/^(\| 42 \|[^\n]*\|)\s*\|$/m, '$1 נמדדו 74 קבצים בסט המשותף |')),
+  'נ9 · ⭐ הערה שנושאת ספירה נגזרת ⛔ **אינה** מפילה');
+
 /*  ⛔ מוטציה: `every` בלי שומר גודל (סבב 72) — ⚠️ `[].every()` הוא `true`,
  *  ⛔ והטענה «עוברת» על אוסף שלא נבנה. */
 t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nconst _r72a = [1]; t(_r72a.every((x) => x > 0), "x");\n' }),
