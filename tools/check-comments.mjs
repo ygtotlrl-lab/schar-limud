@@ -483,6 +483,51 @@ if (failures) {
     }
   }
   if (dead) bad += dead;
+
+  /*  ⛔ ושדה שאינו מוגדר ב-`APP` הוא אותו כשל בדיוק (סבב 72) — ⚠️ הנימוק
+   *  נמדד: טענה חדשה השוותה מול `APP.bg` שאינו קיים בשער הזה, ⭐ התנאי היה
+   *  `undefined` והטענה «עברה» בלי לרוץ. ⛔ שדה שאינו רלוונטי לאפליקציה
+   *  מוצהר ריק ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא נשאל», וריק נקרא
+   *  «נמדד ואין». */
+  const noStr = (t) => t.replace(/`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, "''");
+  const appKeys = (code) => {
+    const m = /const APP\s*=\s*\{/.exec(code);
+    if (!m) return null;
+    let i = m.index + m[0].length - 1, depth = 0, end = -1;
+    for (let k = i; k < code.length; k++) {
+      if (code[k] === '{') depth++;
+      else if (code[k] === '}' && !--depth) { end = k; break; }
+    }
+    if (end < 0) return null;
+    const keys = new Set();
+    let d = 0;
+    for (const mm of code.slice(i + 1, end).matchAll(/[{}]|([A-Za-z_$][\w$]*)\s*:/g)) {
+      if (mm[0] === '{') d++;
+      else if (mm[0] === '}') d--;
+      else if (!d && mm[1]) keys.add(mm[1]);
+    }
+    return keys;
+  };
+  let ghost = 0, scanned = 0;
+  for (const f of fs.readdirSync('tools')) {
+    if (!/\.mjs$/.test(f)) continue;
+    let t = '';
+    try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
+    const code = noStr(codeOf(t));
+    const keys = appKeys(code);
+    if (!keys) continue;
+    scanned++;
+    const used = new Set([...code.matchAll(/\bAPP\.([A-Za-z_$][\w$]*)/g)].map((m) => m[1]));
+    for (const k of used) {
+      if (keys.has(k)) continue;
+      ghost++;
+      fail(`tools/${f}: \`APP.${k}\` אינו מוגדר בבלוק APP — נמדד שדה אחד חסר ` +
+           'והצפוי אפס. מצהירים אותו, ריק אם אינו רלוונטי לאפליקציה');
+    }
+  }
+  if (ghost) bad += ghost;
+  else pass(`שדות APP: ${scanned} שערים, ⛔ ואין טענה שמשווה מול שדה שאינו מוגדר`);
+
   if (!bad) pass(`מוטציות: ${seen} מבחנים (${excused} מנומקים), לכל אחד שינוי ותווית` +
                  ` (⚠️ ${noAnti} בלי מוטציית-נגד · ${noExpect} בלי שם הטענה שתיפול)`);
 }

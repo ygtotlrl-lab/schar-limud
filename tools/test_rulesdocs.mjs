@@ -329,6 +329,17 @@ function fails(files) {
   try { runOn(files); return false; } catch { return true; }
 }
 
+/*  ⛔ מוטציה על שדה שאינו קיים (סבב 72) — ⚠️ בדיוק הכשל שנמדד: הטענה
+ *  משווה מול `APP` שאין בו את השדה, ⛔ והתנאי הוא `undefined`. */
+t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nif (APP.noSuchField) { /* x */ }\n' }),
+  'מ15 · השוואה מול שדה שאינו מוגדר ב-APP **מפילה** את check-comments');
+/*  ⭐ מוטציית-נגד: שדה שמוצהר ריק ⛔ אינו מפיל — ⚠️ זו כל ההבחנה בין
+ *  «לא נשאל» ל«נמדד ואין», ⛔ ובלעדיה הטענה הייתה אוסרת הצהרה ריקה. */
+t(!commentsFails({ 'tools/test_bump.mjs':
+    rd('tools/test_bump.mjs').replace('const APP = {', 'const APP = {\n  emptyOnPurpose: null,')
+    + '\nif (APP.emptyOnPurpose) { /* x */ }\n' }),
+  'נ6 · ⭐ שדה שמוצהר ריק ⛔ **אינו** מפיל');
+
 /*  ⛔ מוטציה על ה-probe עצמו (סבב 72) — ⚠️ `\b` צמוד לאות עברית הוא
  *  ביטוי שלעולם אינו תואם, ⛔ ולכן השער שנשען עליו «עובר» תמיד:
  *  ⭐ הטענה שנופלת כאן היא «תווית מוטציה מודפסת», ⛔ ולא בדיקת צורה. */
