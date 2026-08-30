@@ -93,12 +93,12 @@ function analyze(doc) {
 }
 
 /* ── א. ארבעה בלוקי כללים בדיוק ────────────────────────────────────────── */
-const WANT = ['rules-table', 'rules-enforce', 'rules-writing', 'rules-session'];
+const WANT = ['rules-session', 'rules-writing', 'rules-table', 'rules-enforce'];
 {
   const { ids } = analyze(DOC);
   t(ids.length === 4, `א1 · ארבעה בלוקי SHARED בדיוק (נמצאו ${ids.length})`);
   t(WANT.every((w, i) => ids[i] === w),
-    'א2 · והם `rules-table` · `rules-enforce` · `rules-writing` · `rules-session`, בסדר הזה');
+    'א2 · והם `rules-session` · `rules-writing` · `rules-table` · `rules-enforce`, בסדר הזה');
 }
 
 /* ── ב. תוכן הקבצים לפי תפקידם ─────────────────────────────────────────── */
