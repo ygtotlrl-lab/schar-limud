@@ -3,7 +3,14 @@
  *
  * ⛔ **מה שנאכף כאן, וזה כל מה שנאכף:** עשרת קובצי ה-mipmap קיימים
  * ובממדים הנכונים · התוכן שבתוכם באותו גודל נתפס בכל האפליקציות ·
+ * **ובמרכז המסגרת**, בסטיית `CENTER_TOL` פיקסלים ·
  * ו-`ic_launcher_background` **משחזר את שוליי `ic_launcher`**.
+ *
+ * ⛔ **המרכוז נמדד בתיבת התוכן ⛔ ולא במרכז המסה (סבב 72)** — ⚠️ נמדד:
+ * מרכז המסה של הסמל סוטה 27 פיקסלים אנכית בשתיים מהאפליקציות ו-17
+ * אופקית בשלישית, מפני שהציור עצמו כבד למטה או לצד. ⛔ תקן שהיה מודד
+ * מסה היה דורש **לצייר מחדש** שלושה לוגואים, ⚠️ והוא נופל על העץ הקיים
+ * ברגע שהוא נכתב.
  *
  * ⛔ **שער שבודק קיום בלבד אינו מספיק (סבב 66) — הוא היה נותן ✅ גם
  * לאייקון שתופס 32% מהמסגרת בזמן שהאחיות תופסות 44%**, כלומר בדיוק
@@ -150,7 +157,7 @@ function contentBox(img) {
         if (x < x0) x0 = x; if (x > x1) x1 = x;
         if (y < y0) y0 = y; if (y > y1) y1 = y;
       }
-  return x1 < 0 ? null : { w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
 /* ── קריאת הרקע המוכרז מ-XML ───────────────────────────────────────────── */
@@ -195,6 +202,10 @@ function predict(bg, x, y, W, H) {
 /*  ⛔ סף הדיו — ההצהרה חייבת לתאר את מה שיש (סבב 68). ⚠️ 4 ולא 0:
     הקטנה תקינה עדיין מזיזה ממוצע בפיקסל-שניים. */
 const INK_TOL = 4;
+/*  ⛔ סובלנות המרכוז היא **פיקסל אחד** (סבב 72) — ⚠️ אפס אינו בר-השגה:
+    תוכן בעל צלע זוגית במסגרת אי-זוגית (ולהפך) נופל חצי פיקסל מהמרכז
+    בהגדרה, ⛔ ושתי מהאפליקציות נושאות צלע כזו. */
+const CENTER_TOL = 1;
 
 function audit(root) {
   const v = [];
@@ -215,6 +226,10 @@ function audit(root) {
       const long = Math.max(box.w, box.h), want = CONTENT[i];
       if (Math.abs(long - want) > CONTENT_TOL[i])
         v.push({ kind: 'content', rel, msg: `צלע ארוכה ${long} ≠ ${want}±${CONTENT_TOL[i]}` });
+      const cdx = box.x + (box.w - 1) / 2 - (img.w - 1) / 2;
+      const cdy = box.y + (box.h - 1) / 2 - (img.h - 1) / 2;
+      if (Math.abs(cdx) > CENTER_TOL || Math.abs(cdy) > CENTER_TOL)
+        v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
 
   /* ⛔ קובץ **עודף** מפיל גם כששמו תמים (סבב 66) — נכס שנדחף בטעות
@@ -318,6 +333,8 @@ t(n++, !base.some(x => x.kind === 'missing'), `א. עשרת קובצי ה-mipmap
 t(n++, !base.some(x => x.kind === 'decode'), `א. כל העשרה נקראים ${of('decode')}`);
 t(n++, !base.some(x => x.kind === 'frame'), `א. ממדי המסגרת — 48/72/96/144/192 ו-108/162/216/324/432 ${of('frame')}`);
 t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אלפא ${ALPHA_MIN} — ±${CONTENT_TOL.join('/')} ${of('content')}`);
+t(n++, !base.some(x => x.kind === 'center'),
+  `ב(1). תיבת התוכן במרכז המסגרת — סטייה ≤ ${CENTER_TOL} ${of('center')}`);
 t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
@@ -468,7 +485,8 @@ mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
 
 /* ⭐ מוטציית-נגד: הזזת התוכן בלי לשנות את גודלו ⛔ אינה מפילה —
    ⚠️ הטענה מודדת צלע ⛔ ולא מיקום, ובלעדיה סובלנות אפס הייתה נקראת
-   כאיסור על כל נגיעה בנכס. */
+   כאיסור על כל נגיעה בנכס. ⭐ והיא גם מה שמוכיח שסובלנות המרכוז אינה
+   אפס (סבב 72): ⛔ פיקסל אחד עובר, שלושה נופלים. */
 mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה מפילה', () => {
   const p = mip('mdpi', 'ic_launcher_foreground');
   const img = decodePNG(readFileSync(p));
@@ -479,6 +497,20 @@ mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
 }, ['__none__']);
+
+/*  ⛔ המוטציה מזיזה ⛔ ואינה מקטינה (סבב 72) — ⚠️ תוכן שהוקטן נופל ממילא
+    על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת המרכוז:
+    היא הטענה **היחידה** שאמורה ליפול כאן. */
+mutate(`הזזת התוכן ב-${CENTER_TOL + 2} פיקסלים — xxxhdpi`, () => {
+  const p = mip('xxxhdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  const d = CENTER_TOL + 2, out = Buffer.alloc(img.data.length);
+  for (let y = 0; y < img.h; y++)
+    for (let x = img.w - 1; x >= d; x--)
+      img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - d) * 4, (y * img.w + x - d + 1) * 4);
+  out.copy(img.data);
+  writeFileSync(p, encodePNG(img));
+}, ['center']);
 
 mutate('ממד שגוי — foreground של xhdpi בגודל של xxhdpi',
   () => cpSync(mip('xxhdpi', 'ic_launcher_foreground'), mip('xhdpi', 'ic_launcher_foreground')),
