@@ -62,7 +62,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [81];
+export const ROWS = [82];
 
 const ROOT     = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = 'android/app/src/main/AndroidManifest.xml';
@@ -378,6 +378,35 @@ else {
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+}
+
+/* ── ⛔ אין נכסים מוטבעים — מוטציה על העץ (סבב 72) ───────────────────────────
+ *  ⚠️ ה-probe שבטבלה מאמת **היעדר**, ⛔ וטענת-היעדר עוברת גם כשהיא אינה
+ *  מסוגלת ליפול. ⭐ המוטציה מניחה `index.html` תחת `assets/` ודורשת
+ *  ש-`check-capabilities` ייפול, ⛔ ומוטציית-הנגד מניחה שם קובץ אחר
+ *  ודורשת שלא ייפול — כלומר נמדד **מה** מוטבע ולא **שהתיקייה ריקה**. */
+{
+  const ASSETS = 'android/app/src/main/assets';
+  const run = (dir) => execFileSync(process.execPath,
+      [join(dir, 'tools', 'check-capabilities.mjs')],
+      { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+  const assetMut = (label, rel, wantFail) => {
+    const d = fs.mkdtempSync(join(os.tmpdir(), 'r72-assets-'));
+    try {
+      fs.cpSync(ROOT, d, { recursive: true,
+                           filter: (s) => !s.split('/').includes('.git') });
+      fs.mkdirSync(join(d, ASSETS), { recursive: true });
+      fs.writeFileSync(join(d, ASSETS, rel), '<!-- מוטציה -->\n');
+      let fell = false;
+      try { run(d); } catch (e) { fell = true; }
+      if (fell === wantFail) pass(label);
+      else fail(`${label} — נמדד ${fell ? 'נפל' : 'עבר'} והצפוי ` +
+                `${wantFail ? 'נפל' : 'עבר'}. בודקים את ה-probe של שורה 82`);
+    } finally { fs.rmSync(d, { recursive: true, force: true }); }
+  };
+  assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורה 82', 'index.html', true);
+  assetMut('⭐ מוטציית-נגד: קובץ אחר תחת `assets/` ⛔ אינו מפיל — נמדד מה מוטבע',
+           'fonts.txt', false);
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`

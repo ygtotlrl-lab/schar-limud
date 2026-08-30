@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [9, 13, 30, 68, 70];
+export const ROWS = [9, 13, 31, 69, 71];
 
 /*  ⛔ שורש נדרס בסביבת מוטציה (סבב 65) — ⚠️ המוטציות רצות על עותק
  *  בתיקייה זמנית ולא על העץ, והדרך היחידה להריץ את השער **האמיתי**
@@ -320,6 +320,25 @@ function fails(files) {
   try { runOn(files); return false; } catch { return true; }
 }
 
+/*  ⛔ מוטציה שמכוונת לשער אחר (סבב 72) — ⚠️ «פרק שחופף לשורה בטבלה»
+ *  נאכף ב-`check-comments`, ⛔ ולכן המוטציה מריצה **אותו** על העותק
+ *  ולא את השער הזה: מוטציה שמריצה את השער הלא-נכון אינה אכיפה. */
+function commentsFails(files) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cc-'));
+  try {
+    execFileSync('cp', ['-r', ROOT + '/.', dir]);
+    for (const [rel, body] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      fs.writeFileSync(path.join(dir, rel), body);
+    }
+    try {
+      execFileSync('node', [path.join(dir, 'tools', 'check-comments.mjs')],
+                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+      return false;
+    } catch { return true; }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 if (!INNER) {
   /*  ⛔ מ1 — בלוק חמישי מפיל את א1. */
   t(fails({ 'CLAUDE.md': DOC + '\n<!-- SHARED:start id="rules-extra" -->\nגוף.\n<!-- SHARED:end -->\n' }),
@@ -339,6 +358,14 @@ if (!INNER) {
     'נ1 · ⭐ כותרת פרק סבב ⛔ **אינה** מפילה — היא מותרת בהגדרה');
   t(!fails({ 'sw.js': "/* ⚠️ `CLAUDE.md` הוא שם קובץ ולא הפניה. */\n" + rd('sw.js') }),
     'נ2 · ⭐ אזכור שם הקובץ בלי «ר׳ … ב-» ⛔ **אינו** מפיל');
+
+
+  /*  ⛔ ד — קובץ תיעוד אינו מסביר כלל שהטבלה אוכפת (סבב 72). */
+  const androidMd = rd('android/README.md');
+  t(commentsFails({ 'android/README.md': androidMd + '\n## סוג המעטפת\nגוף.\n' }),
+    'מ12 · פרק שכותרתו חופפת לשורה בטבלה **מפיל** את check-comments');
+  t(!commentsFails({ 'android/README.md': androidMd + '\n## בנייה מקומית מהירה\nגוף.\n' }),
+    'נ3 · ⭐ פרק שכותרתו הוראה מעשית ⛔ **אינו** מפיל');
 
   /*  ── מוטציות כללי הברזל 21–24 ───────────────────────────────────────── */
   const atTop = (add) => { const l = DOC_LINES.slice(); l.splice(4, 0, add); return l.join('\n'); };

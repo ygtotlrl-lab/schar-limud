@@ -8,20 +8,6 @@ https://ygtotlrl-lab.github.io/schar-limud/
 ```
 
 Built in the exact pattern of yoman-avoda's round-13 shell (the network-loading one),
-with one deliberate difference — see "אין גשר שיתוף" below.
-
-## Why WebView and never a TWA
-
-<!-- SHARED:start id="android-why-twa" -->
-**Do not rebuild this as a TWA, and do not use PWABuilder** (it only produces
-TWAs). A TWA is not a standalone component — it runs the site *inside Chrome*
-and merely hides the address bar. The content filtering installed on the users'
-devices blocks Chrome, so a TWA build never opens at all. A WebView renders
-in-process and never goes through Chrome, so the filter does not touch it.
-<!-- SHARED:end -->
-
-This is measured, not theoretical: gius shipped a PWABuilder TWA and did not
-open on the users' devices, while yoman and hanhala — both WebView — work.
 
 ## מה בפנים
 
@@ -41,23 +27,6 @@ open on the users' devices, while yoman and hanhala — both WebView — work.
 אותו מנגנון service worker + באנר "גרסה חדשה זמינה" שכבר עובד בדפדפן. APK חדש
 נדרש רק כששינוי נוגע במעטפת עצמה.
 <!-- SHARED:end -->
-
-## ⛔ אין גשר שיתוף — וזה ההבדל היחיד מהתבנית של יומן
-
-⛔ אין כאן `navigator.share`, ולכן הגשר הושמט כליל — לא בצד Java, לא בצד
-הדף, לא ב-manifest ולא בתלויות. ⚠️ גשר מקורי על דף שנטען מהרשת הוא כוח
-שנמסר למי שמגיש את הדף. ⛔ אם יידרש — בדפוס הכפול-נעילה של יומן
-(`addWebMessageListener` עם `ALLOWED_ORIGINS`), ⛔ ולעולם לא
-`addJavascriptInterface` חשוף.
-
-## למה אין נכסים מוטבעים
-
-- ⛔ **`file://` הוא origin אחסון אחר** — רישום שנכתב לעותק מוטבע
-  **אינו נראה לאפליקציה האמיתית לעולם**, וגם אינו מסתנכרן.
-- ⛔ **והוא מקור אמת שני** שמתיישן בכל שחרור.
-- ⚠️ **ומה שהוא אמור לפתור כבר פתור:** אחרי עלייה מוצלחת אחת ה-service
-  worker מגיש הכול אופליין. ⛔ נשאר רק «התקנה והפעלה ראשונה בלי רשת»,
-  ⚠️ ולהתקנת APK ממילא צריך רשת — ושם המעטפת מציגה דף שגיאה בעברית.
 
 <!-- SHARED:start id="android-origin-switch" -->
 ## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK
@@ -148,7 +117,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk schar-limud.apk
 ```
 
-### המפתח הקבוע — ⛔ לעולם לא להחליף
+### פרטי המפתח הקבוע
 
 | | |
 |---|---|
@@ -182,11 +151,13 @@ package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
 ⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
 ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
 «Sign with the PERMANENT key» שלמעלה.
+⭐ **שני הקבצים שנושאים את ה-URL הם `MainActivity.smali` ו-`MainActivity$2.smali`**
+— ⛔ וההוראה זהה בארבעת הריפו; הכתובת עצמה, שם תיקיית העבודה והמפתח הם
+פר-אפליקציה, ⛔ ויושבים בבלוק שמתחת.
 <!-- SHARED:end -->
 
 ```bash
 apktool d <app>.apk -o /tmp/schar_work -f
-# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
 rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
 apktool b /tmp/schar_work -o built.apk
 zipalign -f 4 built.apk aligned.apk
