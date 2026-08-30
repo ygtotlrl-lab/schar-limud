@@ -30,7 +30,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [18, 19, 68, 103];
+export const ROWS = [18, 19, 70, 105];
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -107,6 +107,7 @@ const SHARED = [
   'tools/test_passwords.mjs',
   'tools/test_pendflush.mjs',
   'tools/test_pull.mjs',
+  'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_session.mjs',
