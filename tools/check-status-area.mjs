@@ -35,7 +35,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [58];
+export const ROWS = [56];
 
 const CANON = {
   css:  { name: 'CSS אזור המצב',        sha: 'aa10b52e9ce1157e', lines: 16,

@@ -61,7 +61,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [32, 77];
+export const ROWS = [32, 75];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
