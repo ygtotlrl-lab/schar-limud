@@ -164,6 +164,26 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
 }
 
+/*  ⭐ שורה שכמה שערים אוכפים אותה (סבב 72) — ⛔ המוטציה מסירה שער
+ *  אחד מ-`claims` בעוד הוא ממשיך להצהיר עליה ב-`ROWS`, ⚠️ והטענה
+ *  שאמורה ליפול היא «אי-התאמה בין ROWS ל-claims». */
+{
+  const CAP = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const clean = fs.readFileSync(CAP, 'utf8');
+  const cut = clean.replace(", 'check-comments': 'מכריז היעדר'", '');
+  ok('המוטציה שינתה את גוף check-capabilities בעותק', cut !== clean);
+  fs.writeFileSync(CAP, cut);
+  const stillPasses = await runChecker();
+  ok('⛔ מוטציה: שער שהוסר מ-claims וממשיך להצהיר ב-ROWS ' +
+     'מפיל את «אי-התאמה בין ROWS ל-claims»', !stillPasses);
+  const anti = clean.replace(/\bmismatch\b/g, 'pairGap');
+  ok('מוטציית-הנגד שינתה את הקוד', anti !== clean);
+  fs.writeFileSync(CAP, anti);
+  const held = await runChecker();
+  fs.writeFileSync(CAP, clean);
+  ok('⭐ מוטציית-נגד: החלפת שם המשתנה בעקביות ⛔ אינה מפילה', held);
+}
+
 process.chdir(ROOT);
 fs.rmSync(WORK, { recursive: true, force: true });
 

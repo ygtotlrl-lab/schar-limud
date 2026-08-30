@@ -888,7 +888,7 @@ const GATES = {
   32: { claim: 'gen-icons' },
   22: { manual: 'תקן תוכן הבודקים טרם נכתב — טרם נמדד' },
   24: { claim: 'const SHARED' },
-  25: { claim: 'testsOnly' },
+  25: { claims: { test_filesets: 'testsOnly', 'check-comments': 'מכריז היעדר' } },
   26: { manual: 'תקן תוכן המבחן טרם נכתב — טרם נמדד' },
   28: { manual: 'המונה מדווח ואינו מפיל: 85 מבחנים נכתבו לפני הדרישה, והפלה רטרואקטיבית חוסמת כל דחיפה' },
   29: { manual: 'תקן תוכן המוטציה טרם נכתב — טרם נמדד' },
@@ -1019,14 +1019,35 @@ const GATES = {
   }
   if (noDecl.length) fail(`שערים בלי `+ '`export const ROWS`' + `: ${noDecl.join(', ')} — ` +
                           'כל שער מצהיר אילו שורות בטבלה הוא אוכף, ולו רשימה ריקה');
-  const refs = Object.entries(GATES).filter(([, g]) => g && g.claim)
-    .map(([row, g]) => ({ row: Number(row), gate: (declared.get(Number(row)) || [])[0], ...g }));
+  /*  ⭐ שורה רשאית להצביע על **כמה שערים** (סבב 72) — ⛔ ולכל אחד שם טענה
+   *  משלו, ב-`claims: { שער: טענה }`. ⚠️ הנימוק נמדד: «מבחן חריג נושא נימוק
+   *  בבאנר» מכסה שני מצבים שיושבים בשני שערים, ⛔ והמגבלה «שער אחד לשורה»
+   *  השאירה את המצב השני בלי הצהרה — ⚠️ נאכף בפועל, ובלתי־נראה למנגנון. */
+  const refs = [];
+  for (const [row, g] of Object.entries(GATES)) {
+    if (!g || (!g.claim && !g.claims)) continue;
+    const n = Number(row);
+    const has = declared.get(n) || [];
+    if (g.claims) for (const [gate, claim] of Object.entries(g.claims)) refs.push({ row: n, gate, claim });
+    else refs.push({ row: n, gate: has[0], claim: g.claim });
+  }
   const unclaimed = refs.filter((r) => !r.gate).map((r) => r.row);
-  const doubled = refs.filter((r) => (declared.get(r.row) || []).length > 1)
-                      .map((r) => `${r.row}: ${declared.get(r.row).join(' + ')}`);
-  const strayRows = [...declared.keys()].filter((n) => !GATES[n] || !GATES[n].claim);
+  /*  ⛔ שער שמצהיר על שורה בלי שהשורה מצהירה עליו חזרה (סבב 72) — ⚠️ זו
+   *  בדיוק ההצהרה החד-כיוונית שהמיפוי הידני סבל ממנה, בכיוון השני. */
+  const mismatch = [];
+  for (const [row, g] of Object.entries(GATES)) {
+    if (!g || (!g.claim && !g.claims)) continue;
+    const n = Number(row), has = declared.get(n) || [];
+    const want = g.claims ? Object.keys(g.claims) : has.slice(0, 1);
+    const extra = has.filter((x) => !want.includes(x));
+    const miss  = want.filter((x) => !has.includes(x));
+    if (extra.length) mismatch.push(`${n}: ${extra.join(' + ')} מצהירים עליה ואינם ב-claims`);
+    if (miss.length)  mismatch.push(`${n}: ${miss.join(' + ')} ב-claims ואינם מצהירים עליה ב-ROWS`);
+  }
+  const strayRows = [...declared.keys()].filter((n) => !GATES[n] || (!GATES[n].claim && !GATES[n].claims));
   if (unclaimed.length) fail(`שורות עם שם טענה שאף שער אינו מצהיר עליהן ב-ROWS: ${unclaimed.join(', ')}`);
-  if (doubled.length) fail(`שורות ששני שערים מצהירים עליהן: ${doubled.join(' · ')}`);
+  if (mismatch.length) fail(`אי-התאמה בין ROWS ל-claims: ${mismatch.join(' · ')} — ` +
+                            'שורה שכמה שערים אוכפים אותה מונה את כולם ב-claims, ולכל אחד שם טענה');
   if (strayRows.length) fail(`שערים שמצהירים ב-ROWS שורה שאינה שלהם ב-GATES: ${strayRows.join(', ')}`);
   const named = [...new Set(refs.map((r) => r.gate).filter(Boolean))];
   const js = fs.readFileSync('tools/check-js.mjs', 'utf8');
@@ -1050,9 +1071,9 @@ const GATES = {
   }
   if (blind.length) fail(`הפניות שהטענה שלהן אינה קיימת: ${blind.join(' · ')}`);
   if (!absent.length && !idle.length && !blind.length && !noDecl.length &&
-      !unclaimed.length && !doubled.length && !strayRows.length) {
+      !unclaimed.length && !mismatch.length && !strayRows.length) {
     const manual = Object.values(GATES).filter((g) => g && g.manual).length;
-    pass(`הפניות GATES — ${refs.length} שורות נגזרו מ-ROWS של ${named.length} שערים, ` +
+    pass(`הפניות GATES — ${new Set(refs.map((r) => r.row)).size} שורות נגזרו מ-ROWS של ${named.length} שערים, ` +
          `כולם קיימים · רצים · ושם הטענה נמצא בגופם; ו-${manual} שורות נושאות נימוק כתוב`);
   }
 }
