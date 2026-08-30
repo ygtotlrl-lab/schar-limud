@@ -8,8 +8,12 @@
  *    2. קובץ זר בשורש ⇒ check-structure נופל.
  *    3. תיקייה קנונית חסרה ⇒ check-structure נופל.
  *    4. בודק משותף חסר ב-tools/ ⇒ check-structure נופל.
- *    5. check-js עובר על העץ כמות שהוא (בקרה חיובית — מריץ את כל השערים).
- *    6. שגיאת תחביר ב-JS המוטבע של index.html ⇒ check-js נופל.
+ *    5. שגיאת תחביר ב-JS המוטבע של index.html ⇒ check-js נופל.
+ *
+ *  ⛔ אין כאן בקרה חיובית ל-check-js (סבב 72) — ⭐ הריצה החיצונית מוכיחה
+ *  אותה ממילא, ⚠️ וריצה פנימית שנייה של הסט המלא עלתה 42 מ-80 שניות.
+ *  ⛔ ולכן המוטציה רצה עם `CHECKJS_STAGES_ONLY`: היא דורשת את שלבי
+ *  ה-`node --check` בלבד.
  *
  *  ⚠️ הריצות הפנימיות מקבלות R33_INNER=1, והקובץ הזה מדלג על עצמו כשהוא
  *  רץ בתוכן — אחרת check-js שבעותק היה מריץ אותו שוב, רקורסיה אינסופית.
@@ -54,10 +58,10 @@ function copyRepo() {
   return dst;
 }
 
-function runGate(dir, tool) {
+function runGate(dir, tool, extraEnv) {
   const r = spawnSync(process.execPath, [path.join(dir, 'tools', tool)], {
     cwd: dir,
-    env: { ...process.env, R33_INNER: '1' },
+    env: { ...process.env, R33_INNER: '1', ...extraEnv },
     encoding: 'utf8',
   });
   return r.status;
@@ -135,16 +139,26 @@ function runGate(dir, tool) {
 /* ── check-js ──────────────────────────────────────────────────────────── */
 {
   const dir = copyRepo();
-  ok('בקרה חיובית: check-js עובר על העץ כמות שהוא (כולל כל השערים)',
-     runGate(dir, 'check-js.mjs') === 0);
+  const STAGES = { CHECKJS_STAGES_ONLY: '1' };
 
   /* בלוק מוטבע עם שגיאת תחביר — בדיוק הסוג שמגיע למשתמש כמסך לבן.
      ⚠️ מוסף כבלוק חדש ולא בעריכת בלוק קיים: ה-</script> האחרון בקובץ
      עלול להיות סקריפט חיצוני (src=), שהשער מדלג עליו במכוון. */
   const idx = path.join(dir, 'index.html');
+  const CLEAN = fs.readFileSync(idx);
+  ok('בקרה חיובית: שלבי ה-node --check עוברים על העץ כמות שהוא',
+     runGate(dir, 'check-js.mjs', STAGES) === 0);
+
   fs.appendFileSync(idx, '\n<script>function {</script>\n');
   ok('מוטציה: שגיאת תחביר ב-JS המוטבע מפילה את check-js',
-     runGate(dir, 'check-js.mjs') !== 0);
+     runGate(dir, 'check-js.mjs', STAGES) !== 0);
+  fs.writeFileSync(idx, CLEAN);
+
+  /*  ⭐ מוטציית-נגד — ⛔ בלעדיה המוטציה שמעליה אינה מבחינה בין «מפרסר
+   *  את הבלוקים המוטבעים» ל«נופל על כל עריכה ב-index.html». */
+  fs.appendFileSync(idx, '\n<!-- הערה שנוספה במוטציית-הנגד -->\n');
+  ok('⭐ מוטציית-נגד: תוספת HTML תקינה ⛔ אינה מפילה — נאכף התחביר, לא התוכן',
+     runGate(dir, 'check-js.mjs', STAGES) === 0);
 
   fs.rmSync(dir, { recursive: true, force: true });
 }

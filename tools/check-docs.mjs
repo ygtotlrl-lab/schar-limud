@@ -47,10 +47,10 @@ const APP = {
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   '1d665ff42ce96ad4'],
-  ['rules-enforce', '610ca38f7f798896'],
-  ['rules-writing', '72e55e1b7a4d66f3'],
-  ['rules-session', 'e28b6fcfd5df4fac'],
+  ['rules-table',    'e38653e245bddd8f'],
+  ['rules-enforce',  '6b33895fdd90c6a5'],
+  ['rules-writing',  '72e55e1b7a4d66f3'],
+  ['rules-session',  'e28b6fcfd5df4fac'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -78,7 +78,8 @@ const warn = (m) => console.warn('⚠️ ' + m);   // אזהרה שאינה מפ
 
 if (!fs.existsSync(APP.file)) {
   console.error(`❌ ${APP.file} לא נמצא — יש להריץ את הבדיקה משורש הריפו`);
-  process.exit(1);
+  if (!process.env.DOCS_INPROC) process.exit(1);
+  throw new Error(`${APP.file} לא נמצא`);
 }
 const src = fs.readFileSync(APP.file, 'utf8');
 const lines = src.split('\n');
@@ -325,16 +326,16 @@ for (const spec of MD_SKELETONS) {
 /*  ⛔ הרשימה כתובה **בסדר הופעתם בקובץ** (סבב 71) — ⚠️ סעיף יב אוכף
  *  אותו, ⛔ ולכן סדר שגוי כאן הוא כישלון שער ולא עניין של נוחות. */
 const CANON_MD = [
-  ['README.md',         'readme-gate',           'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',            '54a69bee96c333bf'],
-  ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
-  ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
-  ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
-  ['android/README.md', 'android-icons',         '9824d699371d309a'],
-  ['android/README.md', 'android-shell-split',   'a2508c6906d22ac5'],
-  ['android/README.md', 'android-smali-scope',   '809e7e9d32b16ee6'],
-  ['android/README.md', 'android-cache-apk',     '898e51f7bb6048db'],
+  ['README.md',          'readme-gate',           'fd4654765f8ed749'],
+  ['README.md',          'readme-apk',            '54a69bee96c333bf'],
+  ['CONTEXT.md',         'context-grant',         'f81b753212d412f0'],
+  ['android/README.md',  'android-why-twa',       '253ef8b2c0658ef0'],
+  ['android/README.md',  'android-web-update',    'dbfd1b661d1b6b25'],
+  ['android/README.md',  'android-origin-switch', '23ef212512bb2202'],
+  ['android/README.md',  'android-icons',         '9824d699371d309a'],
+  ['android/README.md',  'android-shell-split',   'a2508c6906d22ac5'],
+  ['android/README.md',  'android-smali-scope',   '809e7e9d32b16ee6'],
+  ['android/README.md',  'android-cache-apk',     '898e51f7bb6048db'],
 ];
 
 /* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */
@@ -707,4 +708,8 @@ const DOC_MAX_PRIVATE = 300;
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');
-process.exit(failures ? 1 : 0);
+/*  ⛔ יציאה רק בתהליך משלו (סבב 72) — ⚠️ שער שמריץ את הבודק עשרות פעמים
+ *  מייבא אותו לתהליך אחד, ו-`process.exit` היה עוצר את השער עצמו באמצע.
+ *  ⭐ מונה הכשלים מיוצא, וזה מה שהמייבא בודק. */
+export const docFailures = failures;
+if (!process.env.DOCS_INPROC) process.exit(failures ? 1 : 0);

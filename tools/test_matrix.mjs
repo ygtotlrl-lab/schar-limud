@@ -9,13 +9,16 @@
  *  ⛔ אין להחליף את הרצת-הבודק-האמיתי בסימולציה (סבב 37) — בדיקה שאינה
  *  מריצה את השער עצמו אינה מוכיחה עליו דבר.
  *
+ *  ⛔ וההיפוכים רצים **בתהליך אחד** (סבב 72) — ⚠️ תהליך חדש לכל תא עלה
+ *  עשר שניות מכל הרצת שער. ⭐ ההיפוך נוגע ב-`CLAUDE.md` בלבד, ולכן עותק
+ *  אחד מספיק, והבודק מיובא מחדש עם מפתח מטמון חדש בכל סיבוב.
+ *
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = { app: 'schar-limud', col: 3 };
@@ -48,12 +51,12 @@ const ok = (msg, cond) => {
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [37, 81];
+const DB_FACT_EXEMPT = [38, 82];
 const EXEMPT = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-  22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37, 46, 50, 51, 52, 55,
-  56, 57, 58, 59, 60, 61, 63, 65, 66, 68, 70, 72, 75, 78, 79, 80, 81, 86, 87,
-  90, 91, 92, 93, 95, 96, 98, 99, 100, 101, 102, 103, 104, 105, 107, 108,
+  22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 47, 51, 52, 53, 56, 57,
+  58, 59, 60, 61, 62, 64, 66, 67, 69, 71, 73, 76, 79, 80, 81, 82, 87, 88, 91, 92, 93,
+  94, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106, 108, 109,
 ];
 
 function copyRepo() {
@@ -69,11 +72,23 @@ function copyRepo() {
   return dst;
 }
 
-function runChecker(dir) {
-  const r = spawnSync(process.execPath, [path.join(dir, 'tools', 'check-capabilities.mjs')], {
-    cwd: dir, env: { ...process.env, R37_INNER: '1' }, encoding: 'utf8',
-  });
-  return r.status === 0;
+/*  ⛔ `CAP_INPROC` מבטל את `process.exit` שבסופו של הבודק — ⚠️ בלעדיו
+ *  הייבוא הראשון היה עוצר את השער הזה עצמו. */
+process.env.CAP_INPROC = '1';
+const WORK = copyRepo();
+process.chdir(WORK);
+const CHECKER = pathToFileURL(path.join(WORK, 'tools', 'check-capabilities.mjs')).href;
+const DOC_IN_WORK = path.join(WORK, 'CLAUDE.md');
+let spin = 0;
+async function runChecker() {
+  const lg = console.log, er = console.error;
+  console.log = () => {}; console.error = () => {};
+  try {
+    const mod = await import(`${CHECKER}?flip=${spin++}`);
+    return mod.capFailures === 0;
+  } catch (e) {
+    return false;
+  } finally { console.log = lg; console.error = er; }
 }
 
 /*  היפוך תא: ✅↔❌, וכל ערך אחר (־«לא רלוונטי», «אין», «טביעה»,
@@ -88,9 +103,8 @@ function flipCell(line, col) {
   return parts.join('|');
 }
 
-const base = copyRepo();
-ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא', runChecker(base));
-fs.rmSync(base, { recursive: true, force: true });
+const CLEAN_DOC = fs.readFileSync(DOC_IN_WORK);
+ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא', await runChecker());
 
 /*  ⚠️ הטבלה מאותרת לפי **שורת הכותרת שלה** ולא לפי «כל שורה שמתחילה
  *  במספר» (סבב 37) — ב-schar-limud יושבת מעליה טבלת מצב המיגרציות, ששורותיה
@@ -114,21 +128,18 @@ ok(`טבלת התשתית נקראה מ-CLAUDE.md — ${rows.length} שורות`
 let covered = 0;
 for (const r of rows) {
   if (EXEMPT.indexOf(r.row) >= 0) continue;
-  const dir = copyRepo();
-  const p = path.join(dir, 'CLAUDE.md');
-  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  const lines = CLEAN_DOC.toString('utf8').split('\n');
   const flipped = flipCell(lines[r.at], APP.col);
   if (flipped === null || flipped === lines[r.at]) {
     ok(`שורה ${r.row}: המוטציה לא הצליחה לשנות את התא`, false);
-    fs.rmSync(dir, { recursive: true, force: true });
     continue;
   }
   lines[r.at] = flipped;
-  fs.writeFileSync(p, lines.join('\n'));
-  const stillPasses = runChecker(dir);
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  const stillPasses = await runChecker();
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
   ok(`שורה ${r.row}: היפוך התא מפיל את check-capabilities`, !stillPasses);
   covered++;
-  fs.rmSync(dir, { recursive: true, force: true });
 }
 
 ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${covered}; מוחרגות: ${EXEMPT.join(', ')})`,
@@ -139,17 +150,18 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
  *  שהמטריצה מצהירה, ⛔ ולכן `check-capabilities` חייב להמשיך לעבור. */
 {
   const target = rows.find((r) => EXEMPT.indexOf(r.row) < 0);
-  const dir = copyRepo();
-  const p = path.join(dir, 'CLAUDE.md');
-  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  const lines = CLEAN_DOC.toString('utf8').split('\n');
   const parts = lines[target.at].split('|');
   parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
   lines[target.at] = parts.join('|');
-  fs.writeFileSync(p, lines.join('\n'));
-  ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`,
-     runChecker(dir));
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  const held = await runChecker();
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+  ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
 }
+
+process.chdir(ROOT);
+fs.rmSync(WORK, { recursive: true, force: true });
 
 console.log(failed ? `\n✗ סבב 37 (מטריצה) — ${failed} נכשלו, ${passed} עברו`
                    : `\n✓ סבב 37 (מטריצה) — ${passed} טענות עברו`);
