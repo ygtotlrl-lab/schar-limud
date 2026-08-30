@@ -335,7 +335,7 @@ for (const mu of MUTATIONS) {
 {
   const spaced = block.replace('function lkStop() {', 'function  lkStop( ) {');
   const res = spaced === block ? null : scenarios(spaced);
-  if (res && res.every((r) => r.ok)) pass('13. ⛔ שינוי רווחים בלבד אינו מפיל — השער מודד התנהגות');
+  if (res && res.length && res.every((r) => r.ok)) pass('13. ⛔ שינוי רווחים בלבד אינו מפיל — השער מודד התנהגות');
   else fail('13. שינוי רווחים הפיל טענה — השער נופל על עיצוב');
 }
 

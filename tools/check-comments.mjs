@@ -438,6 +438,8 @@ if (failures) {
   let bad = 0, seen = 0, noAnti = 0, noExpect = 0, excused = 0;
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
+  if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
+     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -526,6 +528,45 @@ if (failures) {
     }
   }
   if (ghost) bad += ghost;
+
+  /*  ⛔ ושתי צורות נוספות שאינן יכולות להיכשל (סבב 72) — ⭐ אותה מחלה:
+   *  ⚠️ `catch {}` שבולע את **האיסוף** משאיר רשימה ריקה, הלולאה שמתחתיו
+   *  אינה רצה, ⛔ והשער מדפיס «עבר»; ⚠️ ו-`every` על מערך ריק מחזיר
+   *  `true` בהגדרה — ⛔ טענה על «כל האיברים» של אוסף שלא נבנה. */
+  const VAC = [
+    { name: 'catch שבולע איסוף',
+      re: /(?:const|let|var)?\s*(\w+)\s*=\s*(?:await\s*)?fs\.readdirSync[^\n]*?\}\s*catch\s*(?:\([^)]*\))?\s*\{\s*\}/g,
+      ok: (code, m, v) => new RegExp(`\\b${v}\\.length`).test(code.slice(m.index, m.index + 700)),
+      why: 'רשימה שנבלעה נשארת ריקה — ⛔ מוסיפים כשל על אורך אפס' },
+    { name: 'every על מערך שעלול להיות ריק',
+      re: /([A-Za-z_$][\w$.]*)\.every\s*\(/g,
+      /*  ⚠️ החלון הוא ה**פסוקית** ולא השורה (סבב 72) — ⛔ שומר `.length`
+       *  שנכתב בשורה שמעליה הוא אותו שומר. ⭐ ו-`fail` בפסוקית פוטר:
+       *  שם מערך ריק **מפיל**, ⛔ וזו בדיוק ההתנהגות הנדרשת. */
+      ok: (code, m, v) => {
+        if (/^[A-Z][A-Z0-9_]*$/.test(v.split('.')[0])) return true;
+        const a = Math.max(code.lastIndexOf(';', m.index), code.lastIndexOf('{', m.index)) + 1;
+        const e = code.indexOf(';', m.index);
+        const st = code.slice(a, e < 0 ? code.length : e);
+        return /\.length/.test(st) || /\bfail\s*\(/.test(st);
+      },
+      why: '`[].every()` הוא `true` — ⛔ מוסיפים שומר `.length` באותה טענה' },
+  ];
+  let vac = 0;
+  for (const f of fs.readdirSync('tools')) {
+    if (!/\.mjs$/.test(f) || f === 'check-comments.mjs') continue;
+    let t = '';
+    try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
+    const code = noStr(codeOf(t));
+    for (const p of VAC)
+      for (const m of code.matchAll(p.re)) {
+        if (p.ok(code, m, m[1])) continue;
+        vac++;
+        fail(`tools/${f}: ${p.name} — נמדדה טענה שאינה יכולה להיכשל והצפוי אפס. ${p.why}`);
+      }
+  }
+  if (vac) bad += vac;
+
   else pass(`שדות APP: ${scanned} שערים, ⛔ ואין טענה שמשווה מול שדה שאינו מוגדר`);
 
   if (!bad) pass(`מוטציות: ${seen} מבחנים (${excused} מנומקים), לכל אחד שינוי ותווית` +
@@ -549,6 +590,8 @@ if (failures) {
   let seen = 0, full = 0, partial = 0;
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
+  if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
+     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -632,6 +675,8 @@ if (failures) {
   let bad = 0, seen = 0;
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => f.endsWith('.mjs')); } catch (e) {}
+  if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
+     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -669,6 +714,8 @@ if (failures) {
   let bad = 0, withApp = 0, named = 0;
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => f.endsWith('.mjs')); } catch (e) {}
+  if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
+     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -713,6 +760,8 @@ if (failures) {
   let bad = 0, seen = 0, muted = 0;
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
+  if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
+     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }

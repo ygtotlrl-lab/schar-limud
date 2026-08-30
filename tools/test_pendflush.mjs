@@ -357,7 +357,7 @@ for (const mu of MUTATIONS) {
 {
   const spaced = block.replace('function pendClear(key) {', 'function  pendClear( key ) {');
   const res = spaced === block ? null : scenarios(spaced);
-  if (res && res.every((r) => r.ok)) pass('6. ⛔ שינוי רווחים בלבד אינו מפיל — השער מודד התנהגות');
+  if (res && res.length && res.every((r) => r.ok)) pass('6. ⛔ שינוי רווחים בלבד אינו מפיל — השער מודד התנהגות');
   else fail('6. שינוי רווחים הפיל טענה — השער נופל על עיצוב');
 }
 

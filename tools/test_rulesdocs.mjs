@@ -329,6 +329,23 @@ function fails(files) {
   try { runOn(files); return false; } catch { return true; }
 }
 
+/*  ⛔ מוטציה: `every` בלי שומר גודל (סבב 72) — ⚠️ `[].every()` הוא `true`,
+ *  ⛔ והטענה «עוברת» על אוסף שלא נבנה. */
+t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nconst _r72a = [1]; t(_r72a.every((x) => x > 0), "x");\n' }),
+  'מ16 · `every` בלי שומר `.length` **מפיל** את check-comments');
+/*  ⭐ מוטציית-נגד: אותה טענה עם שומר ⛔ אינה מפילה — ⚠️ הטענה מודדת
+ *  את היעדר השומר, ⛔ ולא כל שימוש ב-`every`. */
+t(!commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nconst _r72a = [1]; t(_r72a.length > 0 && _r72a.every((x) => x > 0), "x");\n' }),
+  'נ7 · ⭐ `every` עם שומר `.length` ⛔ **אינו** מפיל');
+/*  ⛔ מוטציה: `catch {}` שבולע את איסוף השערים — ⚠️ הרשימה נשארת ריקה,
+ *  ⛔ הלולאה אינה רצה, והשער מדפיס «עבר». */
+t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nlet _r72b = []; try { _r72b = fs.readdirSync("tools"); } catch (e) {}\nfor (const _x of _r72b) { void _x; }\n' }),
+  'מ17 · `catch {}` שבולע איסוף **מפיל** את check-comments');
+/*  ⭐ מוטציית-נגד: אותו איסוף עם כשל על אורך אפס ⛔ אינו מפיל — ⚠️ מה
+ *  שנמדד הוא הבליעה השקטה, ⛔ ולא ה-`catch` עצמו. */
+t(!commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nlet _r72b = []; try { _r72b = fs.readdirSync("tools"); } catch (e) {}\nif (!_r72b.length) throw new Error("ריק");\nfor (const _x of _r72b) { void _x; }\n' }),
+  'נ8 · ⭐ איסוף שנבדק על אורך אפס ⛔ **אינו** מפיל');
+
 /*  ⛔ מוטציה על שדה שאינו קיים (סבב 72) — ⚠️ בדיוק הכשל שנמדד: הטענה
  *  משווה מול `APP` שאין בו את השדה, ⛔ והתנאי הוא `undefined`. */
 t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nif (APP.noSuchField) { /* x */ }\n' }),
