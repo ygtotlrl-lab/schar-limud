@@ -9,7 +9,7 @@
  *       חסרה או תיקייה עודפת מפילות את השער.
  *    ב. **קובצי שורש** — קובץ שאינו ברשימה הסגורה המשותפת ואינו ברשימת
  *       ההיתר הפר-אפליקציתית (שכל שורה בה נושאת נימוק).
- *    ג. **tools/** — שבעת הבודקים המשותפים חייבים להתקיים; כל קובץ אחר
+ *    ג. **tools/** — הבודקים המשותפים שב-`CHECKERS` חייבים להתקיים; כל קובץ אחר
  *       חייב להיות קובץ מבחן (test_<נושא>.mjs) או חריגה מנומקת.
  *
  *  ⚠️ הרקע (סבב 33): שער check-js חי ב-gius לבדה עשרה סבבים, קבצים
@@ -108,7 +108,7 @@ const tDirs  = tEntries.filter((e) => e.isDirectory()).map((e) => e.name).sort()
 
 const missingC = CHECKERS.filter((c) => !tFiles.includes(c));
 if (missingC.length) fail('בודקים משותפים חסרים ב-tools/: ' + missingC.join(', '));
-else pass('שבעת הבודקים המשותפים קיימים ב-tools/');
+else pass(`${CHECKERS.length} הבודקים המשותפים קיימים ב-tools/`);
 
 const missingG = GENERATORS.filter((g) => !tFiles.includes(g));
 if (missingG.length) fail('מחוללים משותפים חסרים ב-tools/: ' + missingG.join(', '));

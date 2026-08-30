@@ -81,15 +81,21 @@ export const ROWS = [];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), APP.app + '-check-'));
-let failed = 0;
+
+/*  ⛔ אותם עוזרים כמו בחמשת הבודקים האחרים (סבב 72) — ⚠️ עד כאן היה כאן
+ *  דפוס שני (`ok`/`FAIL`, בלי מונה ובלי `pass`), ⛔ ושני דפוסים לאותו
+ *  דבר מלמדים לקרוא כל בודק מחדש. */
+let failures = 0;
+const fail = (m) => { failures++; console.error('❌ ' + m); };
+const pass = (m) => console.log('✅ ' + m);
 
 function check(label, file) {
   try {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
-    console.log('  ok   ' + label);
+    pass(label);
   } catch (err) {
-    failed++;
-    console.error('  FAIL ' + label);
+    fail(`${label}: שגיאת תחביר — נמדד פרסור שנכשל במקום פרסור תקין. ` +
+         'מתקנים את הבלוק המוטבע; הפירוט מלמטה');
     console.error(String(err.stderr || err.stdout || err.message).trim());
   }
 }
@@ -106,8 +112,8 @@ while ((m = re.exec(html)) !== null) {
   check(`index.html inline script #${n}`, out);
 }
 if (n === 0) {
-  failed++;
-  console.error('  FAIL לא נמצא אף סקריפט מוטבע ב-index.html — המבנה השתנה?');
+  fail('index.html: נמדדו 0 סקריפטים מוטבעים והצפוי לפחות 1 — ' +
+       'המבנה השתנה, ובודקים אם הקוד עבר לקובץ חיצוני');
 }
 
 /* ── 2. קבצים עצמאיים ──────────────────────────────────────────────────── */
@@ -117,17 +123,17 @@ check('sw.js', join(ROOT, 'sw.js'));
 const SRC = { sw: readFileSync(join(ROOT, 'sw.js'), 'utf8'), html };
 for (const [file, reSrc, expect, msg] of APP.rules) {
   const hit = new RegExp(reSrc).test(SRC[file]);
-  if (hit === expect) { console.log('  ok   ' + msg); continue; }
-  failed++;
-  console.error('  FAIL ' + msg);
+  if (hit === expect) { pass(msg); continue; }
+  fail(`${msg} — נמדד ${hit ? 'נמצא' : 'לא נמצא'} והצפוי ` +
+       `${expect ? 'נמצא' : 'לא נמצא'}. מיישרים את ${file === 'sw' ? 'sw.js' : 'index.html'}`);
 }
 
 /*  ⛔ דגל השלבים (סבב 72) — ⚠️ שער שדורש רק את שלבי ה-`node --check` אינו
  *  מריץ את חבילות הבדיקה: ⭐ הריצה החיצונית מוכיחה את הבקרה החיובית ממילא,
  *  ⛔ וריצה פנימית שנייה של הסט המלא היא אותה עבודה פעמיים. */
 if (process.env.CHECKJS_STAGES_ONLY) {
-  if (failed) { console.error(`\n${failed} check(s) failed.`); process.exit(1); }
-  console.log('\nstages 1-3 passed');
+  if (failures) { console.error(`\n❌ ${APP.app}: ${failures} כשלים בשלבים 1–3`); process.exit(1); }
+  console.log('\n✅ שלבים 1–3 עברו');
   process.exit(0);
 }
 
@@ -137,12 +143,12 @@ for (const gate of APP.gates) {
     execFileSync(process.execPath, [join(ROOT, 'tools', gate)],
                  { cwd: ROOT, stdio: 'inherit' });
   } catch (e) {
-    failed++;
+    failures++;
   }
 }
 
-if (failed) {
-  console.error(`\n${failed} check(s) failed.`);
+if (failures) {
+  console.error(`\n❌ ${APP.app}: ${failures} כשלים בשער ה-JS`);
   process.exit(1);
 }
-console.log('\nall checks passed');
+console.log('\n✅ all checks passed');
