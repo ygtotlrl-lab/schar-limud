@@ -509,13 +509,14 @@ harnessFails(
   try {
     fs.mkdirSync(join(dir, 'tools'));
     fs.writeFileSync(join(dir, 'sw.js'),
-      SRC.replace('var SW_CFG = {', '/* הערה שנוספה במוטציית-נגד */\nvar SW_CFG = {'));
+      SRC.replace(/CACHE_NAME\s*=\s*'([a-z-]+)-v(\d+)'/,
+                  (_, p, v) => `CACHE_NAME = '${p}-v${Number(v) + 1}'`));
     fs.copyFileSync(SELF, join(dir, 'tools', SELF_NAME));
     const r = spawnSync(process.execPath, [join(dir, 'tools', SELF_NAME)],
                         { encoding: 'utf8',
                           env: { ...process.env, SW_HARNESS_ONLY: '1' } });
     is(r.status === 0,
-       '⭐ מוטציית-נגד: הערה ב-sw.js ⛔ אינה משנה התנהגות — קו הבסיס עובר');
+       '⭐ מוטציית-נגד: קידום `CACHE_NAME` ⛔ אינו משנה התנהגות — קו הבסיס עובר');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -35,7 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { inflateSync, deflateSync } from 'node:zlib';
 
-/* ── APP ───────────────────────────────────────────────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
   /* ⚠️ קובץ mipmap כבד מ-`MAX_KB` מפיל (טענה ד). ⛔ הרשימה ריקה בארבעתן

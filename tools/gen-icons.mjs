@@ -22,7 +22,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* ── APP ───────────────────────────────────────────────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
   /*  ⛔ המאסטר כאן הוא **ציור** ולא צורות (סבב 71) — ⚠️ כל ניסיון לתאר

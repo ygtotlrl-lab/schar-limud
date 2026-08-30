@@ -28,7 +28,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* ── APP ───────────────────────────────────────────────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
   /* ⚠️ `null` באפליקציה שהמיגרציה אינה יושבת בריפו שלה — ⛔ הפרויקט

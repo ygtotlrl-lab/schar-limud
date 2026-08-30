@@ -338,8 +338,8 @@ if (!done) fail('הרתמה נקטעה לפני סופה');
 
   mut('⛔ מוטציה: versionCode שירד מפיל את השער', GRADLE,
       (s) => s.replace(/versionCode\s+(\d+)/, (m, n) => 'versionCode ' + Math.max(1, +n - 1)), true);
-  mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-build.gradle ⛔ אינה מפילה', GRADLE,
-      (s) => s + '\n// הערה\n', false);
+  mut('⭐ מוטציית-נגד: שדה בנייה אמיתי שנוסף ל-build.gradle ⛔ אינו מפיל', GRADLE,
+      (s) => s.replace(/versionName\s+"([^"]+)"/, 'versionName "$1"\n        multiDexEnabled false'), false);
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`
