@@ -6,6 +6,10 @@
  * **ובמרכז המסגרת**, בסטיית `CENTER_TOL` פיקסלים ·
  * ו-`ic_launcher_background` **משחזר את שוליי `ic_launcher`**.
  *
+ * ⛔ **וצבע הדיו נמדד בשני המסלולים (סבב 72)** — ⚠️ האריח והחזית: נמדד
+ * שהאריח צויר ב-[40,58,118] בזמן שהחזית צוירה ב-[24,51,93] ובבלוק `APP`
+ * הוצהר השלישי, ⛔ ואיש לא ראה זאת מפני שהשער מדד מסלול אחד בלבד.
+ *
  * ⛔ **המרכוז נמדד בתיבת התוכן ⛔ ולא במרכז המסה (סבב 72)** — ⚠️ נמדד:
  * מרכז המסה של הסמל סוטה 27 פיקסלים אנכית בשתיים מהאפליקציות ו-17
  * אופקית בשלישית, מפני שהציור עצמו כבד למטה או לצד. ⛔ תקן שהיה מודד
@@ -51,7 +55,8 @@ const APP = {
   heavyMipmapAllow: {},
   /* ⛔ דיו ה-foreground — הצהרה ולא גזירה (סבב 68, כלל ברזל 25):
      ⚠️ ממוצע שנגזר מהתמונה עצמה היה מאשר כל סטייה בדיעבד. */
-  fgInk: [47, 116, 52],
+  fgInk: [60, 125, 65],
+  tileFlat: true,
   /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
      האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 0 — ⛔ בתוך הסף המשותף, ולכן אין כאן היתר. */
   fgDriftMax: 8,
@@ -232,6 +237,37 @@ function audit(root) {
         v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
 
+  /*  ⛔ אותו דיו גם באריח (סבב 72) — ⚠️ שני המסלולים מציירים את אותו סמל,
+      ⭐ ולכן הצבע שנמדד בהם חייב להיות אחד, ⛔ ושניהם מול ה**מוצהר**.
+      ⚠️ `tileFlat` הוא מחרוזת באפליקציה שהאריח שלה אינו נייר-ודיו אלא רקע
+      וסמל: ⛔ שם אין «צבע דיו» למדוד, והמדידה מנוטרלת בנימוק כתוב. */
+  if (APP.tileFlat === true && APP.fgInk) {
+    const rel = `${RES}/mipmap-xxxhdpi/ic_launcher.png`;
+    const p = join(root, rel);
+    if (existsSync(p)) {
+      let im = null;
+      try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
+      if (im) {
+        const hist = new Map();
+        const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+        for (let k = 0; k < im.w * im.h; k++) {
+          const [r, g, b] = [im.data[k*4], im.data[k*4+1], im.data[k*4+2]];
+          if ((r + g + b) / 3 >= lim) continue;
+          const key = `${r},${g},${b}`;
+          hist.set(key, (hist.get(key) || 0) + 1);
+        }
+        const top = [...hist.entries()].sort((a, b) => b[1] - a[1])[0];
+        if (!top) v.push({ kind: 'tile-ink', rel, msg: 'אין פיקסלי דיו למדוד באריח' });
+        else {
+          const got = top[0].split(',').map(Number);
+          const d = Math.max(...got.map((x, c) => Math.abs(x - APP.fgInk[c])));
+          if (d > INK_TOL)
+            v.push({ kind: 'tile-ink', rel, msg: `דיו האריח [${got}] מול המוצהר [${APP.fgInk}] — ${d} > ${INK_TOL}` });
+        }
+      }
+    }
+  }
+
   /* ⛔ קובץ **עודף** מפיל גם כששמו תמים (סבב 66) — נכס שנדחף בטעות
      לתיקיית mipmap נארז ל-APK, ואיש אינו רואה אותו עד שמסתכלים בגודל. */
   const want = new Map([['mipmap-anydpi-v26', ['ic_launcher.xml']]]);
@@ -343,6 +379,8 @@ t(n++, !base.some(x => x.kind === 'fg-ink'),
   `ה(1). הדיו המוצהר [${APP.fgInk}] מתאר את הפיקסלים האטומים ${of('fg-ink')}`);
 t(n++, !base.some(x => x.kind === 'fg-alpha'),
   `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהדיו ${of('fg-alpha')}`);
+t(n++, !base.some(x => x.kind === 'tile-ink'),
+  `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -512,6 +550,33 @@ mutate(`הזזת התוכן ב-${CENTER_TOL + 2} פיקסלים — xxxhdpi`, ()
   writeFileSync(p, encodePNG(img));
 }, ['center']);
 
+/*  ⛔ המוטציה מכהה את דיו האריח בלבד (סבב 72) — ⚠️ בדיוק הסטייה שהייתה
+    בעץ במשך סבבים: ⭐ החזית נשארת במקומה, ⛔ והטענה שנופלת היא זו של האריח. */
+if (APP.tileFlat === true) mutate('דיו האריח נבדל מדיו החזית — xxxhdpi', () => {
+  const p = mip('xxxhdpi', 'ic_launcher');
+  const img = decodePNG(readFileSync(p));
+  const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+  for (let k = 0; k < img.w * img.h; k++)
+    if ((img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3 < lim)
+      for (let c = 0; c < 3; c++) img.data[k*4+c] = Math.max(0, img.data[k*4+c] - 20);
+  writeFileSync(p, encodePNG(img));
+}, ['tile-ink']);
+
+/*  ⭐ מוטציית-נגד: הבהרת **רמפת הקצה** בשתי רמות ⛔ אינה מפילה — ⚠️ הטענה
+    מודדת את מישור הדיו, ⛔ ולא כל פיקסל שיש בו דיו: ⭐ בלעדיה «אותו צבע»
+    היה נקרא כאיסור על כל נגיעה באריח. */
+if (APP.tileFlat === true) mutate('⭐ מוטציית-נגד: הבהרת רמפת הקצה באריח ⛔ אינה מפילה', () => {
+  const p = mip('xxxhdpi', 'ic_launcher');
+  const img = decodePNG(readFileSync(p));
+  const ink = APP.fgInk.reduce((a, b) => a + b, 0) / 3, lim = (ink + 255) / 2;
+  for (let k = 0; k < img.w * img.h; k++) {
+    const m = (img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3;
+    if (m > ink + 20 && m < lim)
+      for (let c = 0; c < 3; c++) img.data[k*4+c] = Math.min(255, img.data[k*4+c] + 2);
+  }
+  writeFileSync(p, encodePNG(img));
+}, ['__none__']);
+
 mutate('ממד שגוי — foreground של xhdpi בגודל של xxhdpi',
   () => cpSync(mip('xxhdpi', 'ic_launcher_foreground'), mip('xhdpi', 'ic_launcher_foreground')),
   ['frame']);
@@ -546,11 +611,24 @@ mutate('צבע שאינו תואם — רקע שחור', () => writeBg(
 {
   const GRAD = { kind: 'gradient', angle: 315, start: [0x2B, 0x50, 0x8F], end: [0x0D, 0x1F, 0x42] };
   const gradXml = `<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <gradient android:type="linear" android:angle="315" android:startColor="#2B508F" android:endColor="#0D1F42"/>\n</shape>\n`;
+  /*  ⛔ המדרג נצבע מסביב לסמל ⛔ ולא מעליו (סבב 72) — ⚠️ אריח בלי סמל
+      מפיל את טענת **הדיו**, ⭐ וכאן נבדקת טענת הרקע: מוטציית-נגד שמפילה
+      טענה אחרת אינה מוכיחה דבר על זו שנבדקת. */
   const paint = () => {
     const W = 192, img = { w: W, h: W, data: Buffer.alloc(W * W * 4) };
+    const cur = decodePNG(readFileSync(mip('xxxhdpi', 'ic_launcher')));
+    /*  ⚠️ רק באריח של נייר-ודיו (סבב 72) — ⛔ באפליקציה שהאריח שלה הוא רקע
+        מלא וסמל בהיר, «הפיקסלים הכהים» הם הרקע עצמו: ⭐ שימורם היה מבטל
+        את המוטציה כולה. */
+    const lim = APP.tileFlat === true && APP.fgInk
+      ? (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2 : -1;
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
-        const c = predict(GRAD, x, y, W, W), d = (y * W + x) * 4;
+        const d = (y * W + x) * 4;
+        const ink = cur.w === W &&
+          (cur.data[d] + cur.data[d + 1] + cur.data[d + 2]) / 3 < lim;
+        const c = ink ? [cur.data[d], cur.data[d + 1], cur.data[d + 2]]
+                      : predict(GRAD, x, y, W, W);
         img.data[d] = c[0]; img.data[d + 1] = c[1]; img.data[d + 2] = c[2]; img.data[d + 3] = 255;
       }
     writeFileSync(mip('xxxhdpi', 'ic_launcher'), encodePNG(img));

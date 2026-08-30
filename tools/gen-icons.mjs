@@ -31,7 +31,9 @@ const APP = {
   master: 'design/icon-master.png',
   bgKey: [252, 253, 252],
   keyTol: 40,
-  ink: [47, 116, 52],
+  /*  ⛔ הדיו נמדד מהמאסטר ⛔ ואינו מוקלד (סבב 72) — ⚠️ [47,116,52] היה הצבע
+      שהחזית צוירה בו בלבד, ⭐ והאריח צויר בצבע הציור עצמו. */
+  ink: [60, 125, 65],
   bg: { kind: 'solid', color: [255, 255, 255] },
   tileRadius: 0,
   tileBox: { w: 1 },
@@ -203,6 +205,10 @@ const contentLong = (px, size) => {
 /* ── מאסטר רסטרי: מסכה מהמרחק לצבע הרקע, והקטנה בהכפלה מוקדמת ──────────── */
 /* ⛔ המסכה נגזרת מהמרחק לצבע הרקע ⛔ ולא מסף בינארי (סבב 71) — ⚠️ סף בינארי מוחק
    האנטי-אליאסינג של המאסטר, ⛔ והקצה יוצא משונן בכל הקטנה. */
+/*  ⛔ הציור הוא הצורה, ⛔ והצבע הוא `APP.ink` (סבב 72) — ⭐ מאסטר אחד לשתי
+    האפליקציות, ⚠️ והמסכה נגזרת ממנו **כמות שהוא**: ⛔ גזירה מתמונה שהוטתה
+    לגוון האפליקציה הייתה מרחיבה את רמפת הקצה לפי כהות הדיו, ⚠️ ואז אותו
+    ציור בדיוק יוצא 172 באחת ו-171 בשנייה. */
 let MASTER = null;
 function masterMask() {
   if (MASTER) return MASTER;
@@ -211,7 +217,12 @@ function masterMask() {
   const m = new Float64Array(im.w * im.h);
   for (let k = 0; k < im.w * im.h; k++) {
     const d = Math.max(Math.abs(im.data[k*4] - kr), Math.abs(im.data[k*4+1] - kg), Math.abs(im.data[k*4+2] - kb));
-    m[k] = Math.max(0, Math.min(1, d / tol));
+    /*  ⛔ מתחת לסף התוכן אין תוכן (סבב 72) — ⚠️ הנייר שבמאסטר אינו לבן
+        מוחלט, ⭐ ורעש של רמה-שתיים נכנס לאריח כאלפא זעירה וצבע את הרקע
+        בחמש רמות: ⛔ הסף כאן הוא **אותו** `ALPHA_MIN` שהתוכן נמדד בו,
+        ⚠️ ולכן תיבת התוכן אינה זזה מזה. */
+    const a = Math.max(0, Math.min(1, d / tol));
+    m[k] = a < ALPHA_MIN / 255 ? 0 : a;
   }
   let x0 = im.w, y0 = im.h, x1 = -1, y1 = -1;
   for (let y = 0; y < im.h; y++)
@@ -221,7 +232,7 @@ function masterMask() {
       }
   const w = x1 - x0 + 1, h = y1 - y0 + 1, cut = new Float64Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cut[y * w + x] = m[(y + y0) * im.w + (x + x0)];
-  MASTER = { w, h, a: cut, img: im };
+  MASTER = { w, h, a: cut, img: im, full: m };
   return MASTER;
 }
 /* ⛔ הקטנה בממוצע-שטח על **מסכת האלפא בלבד** (סבב 71) — ⚠️ הדיו אחיד, ולכן זו
@@ -266,16 +277,19 @@ function paintBg(c, shape) {
 /* ⛔ אריח = רקע מלא + הסמל, ⛔ או המאסטר הרסטרי שהוקטן (סבב 71) — ⚠️ באפליקציות
    שהמאסטר שלהן הוא ציור, כל תיאור בצורות היה ציור **אחר**. */
 function tile(size, box) {
+  /*  ⛔ אותו דיו ואותה מסכה כמו בחזית (סבב 72) — ⚠️ עד כאן הועתק ה-RGB של
+      המאסטר, ⭐ ואז האריח צויר ב-[40,58,118] בזמן שהחזית צוירה ב-[24,51,93]:
+      ⛔ שני צבעים לאותו סמל, ⚠️ ואיש לא ראה זאת מפני שאיש לא השווה. */
   if (APP.art === 'master') {
-    const im = masterMask().img;
+    const m = masterMask();
+    const d = scaleMask(m.full, m.img.w, m.img.h, size, size);
     const px = Buffer.alloc(size * size * 4);
-    for (let ch = 0; ch < 3; ch++) {
-      const src = new Float64Array(im.w * im.h);
-      for (let k = 0; k < im.w * im.h; k++) src[k] = im.data[k * 4 + ch];
-      const d = scaleMask(src, im.w, im.h, size, size);
-      for (let k = 0; k < size * size; k++) px[k * 4 + ch] = Math.round(d[k]);
+    for (let k = 0; k < size * size; k++) {
+      const a = d[k];
+      for (let ch = 0; ch < 3; ch++)
+        px[k * 4 + ch] = Math.round(APP.bg.color[ch] * (1 - a) + APP.ink[ch] * a);
+      px[k * 4 + 3] = 255;
     }
-    for (let k = 0; k < size * size; k++) px[k * 4 + 3] = 255;
     return px;
   }
   const c = canvasOf(size);
