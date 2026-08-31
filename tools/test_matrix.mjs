@@ -252,6 +252,79 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
 }
 
+/* ────── ⛔ שתי שורות שה-probe שלהן מודד ערך ולא שם (סבב 75) ─────────────────
+   ⛔ מה נאכף: היפוך התא לבדו אינו מבחין בין «מודד ערך» ל«מודד שם» — ⚠️ שתי
+   השורות האלה נמדדו עד סבב 75 בקיום המזהה בלבד, ⛔ ושינוי הערך עבר בשקט.
+   ⛔ הנימוק המדוד: אופק ה-tombstone נבדק על השם בלבד, ⛔ ושינויו מ-90 יום
+   ל-9 לא הפיל דבר; וסף הפינוי היזום חי בקוד האפליקציה ⛔ ואף שער לא הזכיר
+   אותו. ⛔ מה יישבר בלעדיו: ערך שהטבלה מצהירה ישתנה, ⚠️ והתא ימשיך להצהיר
+   את הישן. ⛔ מה אינו נאכף כאן: **קיום** היכולת — ⭐ אותו מודד היפוך התא.
+   ⚠️ המוטציה נוקבת בשם הטענה שתיפול ⛔ ונבדק שהיא זו שנפלה: ⭐ «נפל» לבדו
+   אינו אכיפה כשלעץ יש שערי חתימה — ⛔ מוטציה בתוך בלוק משותף מפילה את
+   ה-`sha` ולא את השורה, ⚠️ וזה נמדד כאן ולכן הערך אינו נגוע בעץ עצמו.
+   ⚠️ והכיוון נגזר מהתא ⛔ ואינו מדלג: תא שמצהיר ✅ נשבר בקלקול הערך
+   הקנוני, ⛔ ותא שמצהיר ❌ נשבר בהסרת הבדיקה — ⭐ שני הכיוונים מפילים את
+   **אותה** שורה.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const CAP2 = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const CLEAN_CAP = fs.readFileSync(CAP2, 'utf8');
+  const IDX = path.join(WORK, 'index.html');
+  const CLEAN_IDX = fs.readFileSync(IDX, 'utf8');
+  const cellOf = (n) => {
+    const r = rows.find((x) => x.row === n);
+    return r ? r.line.split('|')[3 + APP.col] : '';
+  };
+  /*  ⛔ המוטציה נבדקת מול **שם הטענה** ולא מול «נפל» (סבב 75) — ⚠️ שער
+   *  שנופל מסיבה אחרת נראה כאכיפה ⛔ ואינו אוכף דבר. */
+  const why = async () => {
+    const lg = console.log, er = console.error, out = [];
+    console.log = (...a) => out.push(a.join(' '));
+    console.error = (...a) => out.push(a.join(' '));
+    try {
+      const mod = await import(`${CHECKER}?flip=${spin++}`);
+      return { held: mod.capFailures === 0, out };
+    } catch (e) { return { held: false, out }; }
+    finally { console.log = lg; console.error = er; }
+  };
+  const run = async (label, files, mustFall, row) => {
+    let changed = false;
+    for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
+    ok('המוטציה «' + label + '» שינתה קוד בעותק', changed);
+    const { held, out } = await why();
+    for (const [p, clean] of files) fs.writeFileSync(p, clean);
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + row,
+       !held && out.some((l) => l.indexOf('❌ שורה ' + row + ' ') === 0));
+  };
+
+  /*  ⛔ אופק ה-tombstone — ⚠️ הערך הוא 90 יום, ⛔ והשם לבדו אינו הערך:
+   *  ⭐ תא ✅ מקבל ערך קנוני אחר, ותא ❌ מקבל את הקבוע שאין לו. */
+  await run('אופק ה-tombstone שאינו 90 יום',
+    cellOf(94).indexOf('✅') >= 0
+      ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const TOMB_TTL_MS = 90 *', 'const TOMB_TTL_MS = 9 *')]]
+      : [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
+          '<script>\nvar TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;')]],
+    true, 94);
+  /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע **חדש** בשם שכן ובאותו ערך — ⚠️ ה-probe
+   *  נעול על השם המדויק, ⛔ ואינו נגרר אחרי מי שדומה לו. */
+  await run('קבוע שכן בשם דומה ובאותו ערך',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
+      '<script>\nvar TOMBSTONE_TTL_DOC = 90 * 24 * 60 * 60 * 1000;')]], false);
+
+  /*  ⛔ סף הפינוי היזום — ⚠️ 60% מהקיבולת, ⛔ ותא ❌ נשבר מהצד השני:
+   *  ⭐ הסרת הבדיקה על השכבה השנייה הופכת את ה-probe לאמת מול תא «אין». */
+  await run('סף הפינוי היזום שאינו 60%',
+    cellOf(117).indexOf('✅') >= 0
+      ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const LS_SWEEP_PCT = 0.60;', 'const LS_SWEEP_PCT = 0.90;')]]
+      : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('/tier2\\s*[:=]\\s*\\[\\s*\\{/', '/tier2\\s*[:=]\\s*\\[/')]],
+    true, 117);
+  /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע חדש בשם שכן — ⚠️ אותה טענה בדיוק, ⛔ ובכיוון
+   *  שאסור לו להפיל. */
+  await run('סף שכן בשם דומה ובערך אחר',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>', '<script>\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false);
+}
+
 process.chdir(ROOT);
 fs.rmSync(WORK, { recursive: true, force: true });
 

@@ -611,6 +611,11 @@ function errPatternSites() {
  *  ⛔ והקובץ הזה מחזיק את מה שמותר לו להיות: ⭐ הוא זהה בארבעת הריפו,
  *  ⛔ ולכן שינוי באחת מהן נמדד כאן ואינו מתגלה בפיקסלים סבבים אחר כך. */
 const GEN_SS = 8;
+/*  ⛔ שני ערכים קנוניים שהטבלה מצהירה (סבב 75) — ⚠️ הם יושבים בקוד
+ *  האפליקציה, ⛔ והקובץ הזה מחזיק את מה שמותר להם להיות: ⭐ אופק
+ *  ה-tombstone בימים, וסף הפינוי היזום. */
+const TOMB_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+const LS_SWEEP_PCT = 0.60;
 const genSrc = () => fs.readFileSync('tools/gen-icons.mjs', 'utf8');
 
 const MATRIX = [
@@ -647,8 +652,12 @@ const MATRIX = [
       return CLICK_LISTENER.test(src) && deleg > inline;
     } },
   { row: 103, name: 'נתיב עדכון חלקי למראת המשתמשים', app: true },
+  /*  ⛔ הערך ולא הצורה (סבב 75) — ⚠️ `LS_SWEEP_PCT` חי ב-`index.html`
+   *  ⛔ ואף שער לא הזכיר אותו: ⭐ סף הפינוי הוא מספר שהטבלה מצהירה,
+   *  ⚠️ והוא נקרא כמספר ⛔ ולא כמחרוזת — 0.6 ו-0.60 הם אותו סף. */
   { row: 117, name: 'פינוי אוטומטי',
-    probe: () => /tier2\s*[:=]\s*\[\s*\{/.test(policyBlock()) },
+    probe: () => /tier2\s*[:=]\s*\[\s*\{/.test(policyBlock()) &&
+                 Number((/LS_SWEEP_PCT\s*=\s*([\d.]+)/.exec(src) || [])[1]) === LS_SWEEP_PCT },
   { row: 96, name: 'אימות פינוי מול הענן',
     probe: () => /\bverify\s*:/.test(policyBlock()) },
   { row: 80, name: 'שיתוף קבצים',
@@ -827,8 +836,17 @@ const MATRIX = [
    *  האוטו-אפדייט מ-raw (`UPDATE_INTERVAL_MS`) נולדו שם ומנומקים שם;
    *  ⚠️ עד הסבב הזה הן פשוט לא הופיעו במטריצה, כלומר «קיים רק באחת,
    *  בשקט».                                                        */
+  /*  ⛔ ערך ולא שם (סבב 75) — ⚠️ עד כאן ה-probe הסתפק ב«השם קיים»,
+   *  ⛔ ושינוי הגיל מ-90 יום ל-9 היה עובר בשקט: ⭐ הוא מכפיל את המספרים
+   *  שבביטוי ומשווה למילישניות של 90 יום, ⛔ ולכן הוא עיוור לריווח
+   *  ולצורת הכתיבה ⚠️ ורגיש לערך בלבד. */
   { row: 94, name: 'גריעת tombstones לפי גיל',
-    probe: () => hasCode(/TOMBSTONE_TTL_MS/) },
+    probe: () => {
+      const m = /TOMBSTONE_TTL_MS\s*=\s*([^;\n]+)/.exec(code);
+      if (!m) return false;
+      const ns = m[1].match(/\d+/g);
+      return !!ns && ns.reduce((a, b) => a * Number(b), 1) === TOMB_TTL_MS;
+    } },
   { row: 123, name: 'אוטו-אפדייט מ-raw.githubusercontent',
     probe: () => hasCode(/UPDATE_INTERVAL_MS/) && hasCode(/\bRAW_URL\b/) },
   /*  ⭐ סבב 56 — מקור הקריאה. ⚠️ **שורה תיאורית ולא ✅/❌**: היא מודדת
@@ -1011,6 +1029,7 @@ const GATES = {
  *  ⚠️ שורה אחת רשאית לייצג כמה כללים, ⛔ ובלבד שעמודת התקן שלה אומרת
  *  את שניהם. */
 const RULE_ROWS = {
+  '⛔ שער אינו משנה קבצים': 26,
   '⛔ תקציב זמן לשער': 28,
   '⛔ שתי רמות ריצה': 29,
   '⛔ git': 118,
