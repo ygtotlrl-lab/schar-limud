@@ -392,6 +392,19 @@ t(!capsFails((doc) => {
   return doc.replace(m[0], m[0].replace(/\|$/, ' נמדדו 74 קבצים בסט המשותף |'));
 }), 'נ9 · ⭐ הערה שנושאת ספירה נגזרת ⛔ **אינה** מפילה');
 
+/*  ⛔ מוטציה: קריאת רתמה שהוזזה מעל סוגר הריצה הפנימית (סבב 74ב) —
+ *  ⚠️ זו התפיחה שנמדדה בפועל: 77 שניות במקום 7, ⛔ מפני שהרתמה רצה גם
+ *  בכל ריצה פנימית — פעם לכל מוטציה. */
+t(commentsFails({ 'tools/test_rulesdocs.mjs': rd('tools/test_rulesdocs.mjs')
+    .replace('if (!INNER) {', 't(capsFails((d) => d), "x");\nif (!INNER) {') }),
+  'מ19 · קריאת רתמה **מעל** הסוגר מפילה את check-comments');
+/*  ⭐ מוטציית-נגד: אותה קריאה בדיוק **מתחת** לסוגר ⛔ אינה מפילה (סבב 74ב) —
+ *  ⚠️ מה שנמדד הוא המיקום, ⛔ ולא קיומה של הרתמה: טענה שהייתה אוסרת רתמה
+ *  הייתה אוסרת את המוטציות עצמן. */
+t(!commentsFails({ 'tools/test_rulesdocs.mjs': rd('tools/test_rulesdocs.mjs')
+    .replace('if (!INNER) {', 'if (!INNER) {\nt(capsFails((d) => d), "x");') }),
+  'נ10 · ⭐ אותה קריאה **מתחת** לסוגר ⛔ אינה מפילה');
+
 /*  ⛔ מוטציה: `every` בלי שומר גודל (סבב 72) — ⚠️ `[].every()` הוא `true`,
  *  ⛔ והטענה «עוברת» על אוסף שלא נבנה. */
 t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + '\nconst _r72a = [1]; t(_r72a.every((x) => x > 0), "x");\n' }),
