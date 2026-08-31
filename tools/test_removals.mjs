@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 const APP = { app: 'schar-limud' };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-export const ROWS = [39];
+export const ROWS = [41];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0, n = 0;
