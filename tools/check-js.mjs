@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /*  שער תקינות JS — חובה לפני כל דחיפה (סבב 33: אוחד לארבעת הריפו).
  *
+ *  ⭐ משימת הבודק: סורק את בלוקי ה-JS המוטבעים, `sw.js` ואת קובצי `tools/`
+ *  — ⛔ ומפיל על שגיאת תחביר, ⛔ על שער שנפל, ⛔ ועל שער שחצה את תקרת הזמן.
+ *
  *  index.html מחזיק את האפליקציה כולה כ-JS מוטבע, ולכן שגיאת תחביר אינה
  *  נתפסת בשום lint רגיל — היא מגיעה למשתמש כמסך לבן, בלי אזהרה. השער:
  *
@@ -9,6 +12,7 @@
  *    3. מאמת כללי-אמת שפרסר אינו תופס (APP.rules — פר-אפליקציה; כל כלל
  *       נמדד מהקבצים של האפליקציה עצמה ולא הועתק מריפו אחר).
  *    4. מריץ את כל שערי האחידות ואת חבילות בדיקות הסבבים (APP.gates).
+ *       CHECKJS_STAGES_ONLY=1 עוצר אחרי שלב 3, בלי חבילות הבדיקה.
  *
  *  ⭐ השער נולד ב-gius (סבב 11) וחי שם לבדו עשרה סבבים בלי שאיש החליט על
  *  כך — הפער שהוליד את כלל ברזל 14. מסבב 33 הוא זהה בית-לבית בארבעת
@@ -18,7 +22,7 @@
  *
  *  יציאה בקוד שונה מאפס אם כשל אחד או יותר.
  */
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -52,8 +56,6 @@ const APP = {
           'test_filesets.mjs',
           'test_inputlayer.mjs',
           'test_iconlayer.mjs',
-          'test_docrules.mjs',
-          'test_signscript.mjs',
           'test_idarg.mjs',
           'test_sources.mjs',
           'test_backup_policy.mjs',
@@ -64,33 +66,40 @@ const APP = {
           'check-comments.mjs', 'check-capabilities.mjs',
           'test_pull.mjs',
           'test_budget.mjs', 'test_icons.mjs',
-          'test_workflows.mjs',
           'test_android.mjs', 'test_lists.mjs',
-          'test_retry.mjs',
           'test_manifest.mjs',
-          'test_sw.mjs',
           'test_swcore.mjs',
           'test_build.mjs',
-          'test_gradle.mjs', 'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
+          'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
+          'test_md.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_offline_login.mjs', 'test_roles.mjs',
-          'test_stage_a.mjs', 'test_structure.mjs',
-          'test_hotwin.mjs', 'test_cron.mjs',
-          'test_merge_pending.mjs', 'test_merge_core.mjs', 'test_matrix.mjs', 'test_ids.mjs'],
+          'test_stage_a.mjs', 'test_hotwin.mjs', 'test_cron.mjs',
+          'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
+ *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
+ *  אותה היה מריץ את כולם פעם שנייה. */
+export const ROWS = [];
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), APP.app + '-check-'));
-let failed = 0;
+
+/*  ⛔ אותם עוזרים כמו בחמשת הבודקים האחרים (סבב 72) — ⚠️ עד כאן היה כאן
+ *  דפוס שני (`ok`/`FAIL`, בלי מונה ובלי `pass`), ⛔ ושני דפוסים לאותו
+ *  דבר מלמדים לקרוא כל בודק מחדש. */
+let failures = 0;
+const fail = (m) => { failures++; console.error('❌ ' + m); };
+const pass = (m) => console.log('✅ ' + m);
 
 function check(label, file) {
   try {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
-    console.log('  ok   ' + label);
+    pass(label);
   } catch (err) {
-    failed++;
-    console.error('  FAIL ' + label);
+    fail(`${label}: שגיאת תחביר — נמדד פרסור שנכשל במקום פרסור תקין. ` +
+         'מתקנים את הבלוק המוטבע; הפירוט מלמטה');
     console.error(String(err.stderr || err.stdout || err.message).trim());
   }
 }
@@ -107,8 +116,8 @@ while ((m = re.exec(html)) !== null) {
   check(`index.html inline script #${n}`, out);
 }
 if (n === 0) {
-  failed++;
-  console.error('  FAIL לא נמצא אף סקריפט מוטבע ב-index.html — המבנה השתנה?');
+  fail('index.html: נמדדו 0 סקריפטים מוטבעים והצפוי לפחות 1 — ' +
+       'המבנה השתנה, ובודקים אם הקוד עבר לקובץ חיצוני');
 }
 
 /* ── 2. קבצים עצמאיים ──────────────────────────────────────────────────── */
@@ -118,9 +127,20 @@ check('sw.js', join(ROOT, 'sw.js'));
 const SRC = { sw: readFileSync(join(ROOT, 'sw.js'), 'utf8'), html };
 for (const [file, reSrc, expect, msg] of APP.rules) {
   const hit = new RegExp(reSrc).test(SRC[file]);
-  if (hit === expect) { console.log('  ok   ' + msg); continue; }
-  failed++;
-  console.error('  FAIL ' + msg);
+  if (hit === expect) { pass(msg); continue; }
+  fail(`${msg} — נמדד ${hit ? 'נמצא' : 'לא נמצא'} והצפוי ` +
+       `${expect ? 'נמצא' : 'לא נמצא'}. מיישרים את ${file === 'sw' ? 'sw.js' : 'index.html'}`);
+}
+
+/*  ⛔ דגל השלבים (סבב 72) — ⚠️ שער שדורש רק את שלבי ה-`node --check` אינו
+ *  מריץ את חבילות הבדיקה: ⭐ הריצה החיצונית מוכיחה את הבקרה החיובית ממילא,
+ *  ⛔ וריצה פנימית שנייה של הסט המלא היא אותה עבודה פעמיים. */
+if (process.env.CHECKJS_STAGES_ONLY) {
+  if (failures) { rmSync(work, { recursive: true, force: true });
+    console.error(`\n❌ ${APP.app}: ${failures} כשלים בשלבים 1–3`); process.exit(1); }
+  console.log('\n✅ שלבים 1–3 עברו');
+  rmSync(work, { recursive: true, force: true });
+  process.exit(0);
 }
 
 /* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ────────────────────────── */
@@ -129,12 +149,16 @@ for (const gate of APP.gates) {
     execFileSync(process.execPath, [join(ROOT, 'tools', gate)],
                  { cwd: ROOT, stdio: 'inherit' });
   } catch (e) {
-    failed++;
+    failures++;
   }
 }
 
-if (failed) {
-  console.error(`\n${failed} check(s) failed.`);
+/*  ⛔ תיקיית העבודה נמחקת בכל מסלול יציאה (סבב 72) — ⚠️ נמדד: היא נשארה
+ *  בכל הרצה, ⛔ ואלפי עותקים מילאו את הדיסק עד ENOSPC. */
+rmSync(work, { recursive: true, force: true });
+
+if (failures) {
+  console.error(`\n❌ ${APP.app}: ${failures} כשלים בשער ה-JS`);
   process.exit(1);
 }
-console.log('\nall checks passed');
+console.log('\n✅ all checks passed');

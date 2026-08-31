@@ -3,14 +3,25 @@
  *
  * ⛔ **מה שנאכף כאן, וזה כל מה שנאכף:** עשרת קובצי ה-mipmap קיימים
  * ובממדים הנכונים · התוכן שבתוכם באותו גודל נתפס בכל האפליקציות ·
+ * **ובמרכז המסגרת**, בסטיית `CENTER_TOL` פיקסלים ·
  * ו-`ic_launcher_background` **משחזר את שוליי `ic_launcher`**.
+ *
+ * ⛔ **וצבע הדיו נמדד בשני המסלולים (סבב 72)** — ⚠️ האריח והחזית: נמדד
+ * שהאריח צויר ב-[40,58,118] בזמן שהחזית צוירה ב-[24,51,93] ובבלוק `APP`
+ * הוצהר השלישי, ⛔ ואיש לא ראה זאת מפני שהשער מדד מסלול אחד בלבד.
+ *
+ * ⛔ **המרכוז נמדד בתיבת התוכן ⛔ ולא במרכז המסה (סבב 72)** — ⚠️ נמדד:
+ * מרכז המסה של הסמל סוטה 27 פיקסלים אנכית בשתיים מהאפליקציות ו-17
+ * אופקית בשלישית, מפני שהציור עצמו כבד למטה או לצד. ⛔ תקן שהיה מודד
+ * מסה היה דורש **לצייר מחדש** שלושה לוגואים, ⚠️ והוא נופל על העץ הקיים
+ * ברגע שהוא נכתב.
  *
  * ⛔ **שער שבודק קיום בלבד אינו מספיק (סבב 66) — הוא היה נותן ✅ גם
  * לאייקון שתופס 32% מהמסגרת בזמן שהאחיות תופסות 44%**, כלומר בדיוק
  * לאי-האחידות שהסבב הזה בא לסגור. לכן כל טענה כאן מודדת **ערך**:
  * פיקסלים, לא שמות קבצים.
  *
- * ⛔ **התוכן נמדד בסף אלפא 25 ולא בתיבת השקיפות (סבב 66)** — הילה רכה
+ * ⛔ **התוכן נמדד בסף אלפא `ALPHA_MIN` ולא בתיבת השקיפות (סבב 66)** — הילה רכה
  * סביב הלוגו נספרת בתיבת השקיפות ומנפחת את המספר: נמדד כאן 45.6%–49.1%
  * בתיבת השקיפות מול 44.4% בפועל, כלומר שער שהיה מודד כך היה עובר על
  * לוגו שגדל בחמישה אחוזים.
@@ -35,7 +46,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { inflateSync, deflateSync } from 'node:zlib';
 
-/* ── APP ───────────────────────────────────────────────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
   /* ⚠️ קובץ mipmap כבד מ-`MAX_KB` מפיל (טענה ד). ⛔ הרשימה ריקה בארבעתן
@@ -44,12 +55,18 @@ const APP = {
   heavyMipmapAllow: {},
   /* ⛔ דיו ה-foreground — הצהרה ולא גזירה (סבב 68, כלל ברזל 25):
      ⚠️ ממוצע שנגזר מהתמונה עצמה היה מאשר כל סטייה בדיעבד. */
-  fgInk: [47, 116, 52],
+  fgInk: [60, 125, 65],
+  tileFlat: true,
   /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
      האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 0 — ⛔ בתוך הסף המשותף, ולכן אין כאן היתר. */
   fgDriftMax: 8,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [26, 72, 73];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
@@ -145,7 +162,7 @@ function contentBox(img) {
         if (x < x0) x0 = x; if (x > x1) x1 = x;
         if (y < y0) y0 = y; if (y > y1) y1 = y;
       }
-  return x1 < 0 ? null : { w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
 /* ── קריאת הרקע המוכרז מ-XML ───────────────────────────────────────────── */
@@ -190,6 +207,10 @@ function predict(bg, x, y, W, H) {
 /*  ⛔ סף הדיו — ההצהרה חייבת לתאר את מה שיש (סבב 68). ⚠️ 4 ולא 0:
     הקטנה תקינה עדיין מזיזה ממוצע בפיקסל-שניים. */
 const INK_TOL = 4;
+/*  ⛔ סובלנות המרכוז היא **פיקסל אחד** (סבב 72) — ⚠️ אפס אינו בר-השגה:
+    תוכן בעל צלע זוגית במסגרת אי-זוגית (ולהפך) נופל חצי פיקסל מהמרכז
+    בהגדרה, ⛔ ושתי מהאפליקציות נושאות צלע כזו. */
+const CENTER_TOL = 1;
 
 function audit(root) {
   const v = [];
@@ -210,7 +231,71 @@ function audit(root) {
       const long = Math.max(box.w, box.h), want = CONTENT[i];
       if (Math.abs(long - want) > CONTENT_TOL[i])
         v.push({ kind: 'content', rel, msg: `צלע ארוכה ${long} ≠ ${want}±${CONTENT_TOL[i]}` });
+      const cdx = box.x + (box.w - 1) / 2 - (img.w - 1) / 2;
+      const cdy = box.y + (box.h - 1) / 2 - (img.h - 1) / 2;
+      if (Math.abs(cdx) > CENTER_TOL || Math.abs(cdy) > CENTER_TOL)
+        v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
+
+  /*  ⛔ רקע האריח שווה למוצהר **בדיוק** (סבב 72) — ⚠️ הסובלנות כאן היא אפס
+      ולא `PIXEL_TOL`: רעש הנייר שבמאסטר נכנס כאלפא זעירה וצבע את הרקע
+      בחמש רמות, ⛔ מתחת לסף הרקע ומעליו לא נראה כלל. ⭐ מה שנמדד הוא
+      פינת האריח — ⛔ שם אין תוכן, ולכן כל סטייה היא רעש. */
+  const declaredBg = readBackground(root);
+  if (APP.tileFlat === true && declaredBg && declaredBg.kind === 'solid') {
+    const rel = `${RES}/mipmap-xxxhdpi/ic_launcher.png`;
+    const p = join(root, rel);
+    if (existsSync(p)) {
+      let im = null;
+      try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
+      if (im) {
+        /*  ⚠️ טבעת ולא פינה (סבב 72) — ⛔ הרעש אינו אחיד: הפינה עצמה יצאה
+            מדויקת בזמן שהטבעת סטתה, ⭐ ופינה לבדה הייתה מאשרת אותו. */
+        let worst = null;
+        for (let y = 0; y < im.h; y++)
+          for (let x = 0; x < im.w; x++) {
+            if (x > 2 && x < im.w - 3 && y > 2 && y < im.h - 3) continue;
+            const got = [0, 1, 2].map((c) => im.data[(y * im.w + x) * 4 + c]);
+            const d = Math.max(...got.map((val, c) => Math.abs(val - declaredBg.color[c])));
+            if (d > 0 && (!worst || d > worst.d)) worst = { d, x, y, got };
+          }
+        if (worst)
+          v.push({ kind: 'tile-bg', rel,
+                   msg: `(${worst.x},${worst.y}) [${worst.got}] מול המוצהר [${declaredBg.color}] — ${worst.d} ≠ 0` });
+      }
+    }
+  }
+
+  /*  ⛔ אותו דיו גם באריח (סבב 72) — ⚠️ שני המסלולים מציירים את אותו סמל,
+      ⭐ ולכן הצבע שנמדד בהם חייב להיות אחד, ⛔ ושניהם מול ה**מוצהר**.
+      ⚠️ `tileFlat` הוא מחרוזת באפליקציה שהאריח שלה אינו נייר-ודיו אלא רקע
+      וסמל: ⛔ שם אין «צבע דיו» למדוד, והמדידה מנוטרלת בנימוק כתוב. */
+  if (APP.tileFlat === true && APP.fgInk) {
+    const rel = `${RES}/mipmap-xxxhdpi/ic_launcher.png`;
+    const p = join(root, rel);
+    if (existsSync(p)) {
+      let im = null;
+      try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
+      if (im) {
+        const hist = new Map();
+        const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+        for (let k = 0; k < im.w * im.h; k++) {
+          const [r, g, b] = [im.data[k*4], im.data[k*4+1], im.data[k*4+2]];
+          if ((r + g + b) / 3 >= lim) continue;
+          const key = `${r},${g},${b}`;
+          hist.set(key, (hist.get(key) || 0) + 1);
+        }
+        const top = [...hist.entries()].sort((a, b) => b[1] - a[1])[0];
+        if (!top) v.push({ kind: 'tile-ink', rel, msg: 'אין פיקסלי דיו למדוד באריח' });
+        else {
+          const got = top[0].split(',').map(Number);
+          const d = Math.max(...got.map((x, c) => Math.abs(x - APP.fgInk[c])));
+          if (d > INK_TOL)
+            v.push({ kind: 'tile-ink', rel, msg: `דיו האריח [${got}] מול המוצהר [${APP.fgInk}] — ${d} > ${INK_TOL}` });
+        }
+      }
+    }
+  }
 
   /* ⛔ קובץ **עודף** מפיל גם כששמו תמים (סבב 66) — נכס שנדחף בטעות
      לתיקיית mipmap נארז ל-APK, ואיש אינו רואה אותו עד שמסתכלים בגודל. */
@@ -295,7 +380,7 @@ function audit(root) {
 }
 
 /* ⭐ `audit` מיוצא, ⛔ ואין לשכפל אותו ל-probe נפרד (סבב 66) —
-   `check-capabilities` מייבא אותה כדי לאמת את שורה 49 במטריצה, ומימוש
+   `check-capabilities` מייבא אותה כדי לאמת את שורת שכבת האייקונים שבמטריצה, ומימוש
    שני היה נסחף ומדווח ✅ על מה שהשער כאן מפיל. ⚠️ הריצה העצמית מוגנת,
    אחרת ייבוא היה מריץ את המוטציות. */
 export { audit };
@@ -313,6 +398,8 @@ t(n++, !base.some(x => x.kind === 'missing'), `א. עשרת קובצי ה-mipmap
 t(n++, !base.some(x => x.kind === 'decode'), `א. כל העשרה נקראים ${of('decode')}`);
 t(n++, !base.some(x => x.kind === 'frame'), `א. ממדי המסגרת — 48/72/96/144/192 ו-108/162/216/324/432 ${of('frame')}`);
 t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אלפא ${ALPHA_MIN} — ±${CONTENT_TOL.join('/')} ${of('content')}`);
+t(n++, !base.some(x => x.kind === 'center'),
+  `ב(1). תיבת התוכן במרכז המסגרת — סטייה ≤ ${CENTER_TOL} ${of('center')}`);
 t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
@@ -321,6 +408,10 @@ t(n++, !base.some(x => x.kind === 'fg-ink'),
   `ה(1). הדיו המוצהר [${APP.fgInk}] מתאר את הפיקסלים האטומים ${of('fg-ink')}`);
 t(n++, !base.some(x => x.kind === 'fg-alpha'),
   `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהדיו ${of('fg-alpha')}`);
+t(n++, !base.some(x => x.kind === 'tile-bg'),
+  `ה(4). רקע האריח שווה למוצהר בדיוק — ⛔ אין רעש מסכה ${of('tile-bg')}`);
+t(n++, !base.some(x => x.kind === 'tile-ink'),
+  `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -329,7 +420,7 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
 t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
   `ד. רשימת-ההיתר לקבצים כבדים מוצהרת (${Object.keys(APP.heavyMipmapAllow).length} רשומות)`);
 
-/* ── שורה 24 — המחולל משחזר את מה שבעץ ─────────────────────────────────── */
+/* ── מחולל האייקונים — משחזר את מה שבעץ ────────────────────────────────── */
 /*  ⛔ הטענה מריצה את המחולל **על עותק** ומשווה בית-בית (סבב 71) — ⚠️ מחולל
     שאינו משחזר הוא הצהרה שאיש לא אימת, ⛔ והרצתו דורסת נכסים בגרסה שהשער
     מפיל: נמדד 63/95/127/189/253 מול 48/72/96/144/192 שנדרשים. ⭐ והשוואה
@@ -352,6 +443,26 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
     });
     t(n++, diff.length === 0,
       `ו. ⛔ והרצתו אינה משנה אף אחד מ-${assets.length} נכסי האייקון ${diff.join(' · ')}`);
+
+    /*  ⛔ המוטציה על **המחולל** ולא על הנכס (סבב 72) — ⚠️ האיפוס הוא שורה
+        אחת בו, ⭐ ומוטציה שמסירה אותה מחזירה את הרעש לאריח: זו הדרך היחידה
+        להוכיח שהטענה מודדת את המנגנון ⛔ ולא את הקובץ שבעץ. */
+    if (APP.tileFlat === true) {
+      const gp = join(g, 'tools', 'gen-icons.mjs');
+      const src = readFileSync(gp, 'utf8');
+      const KILL = 'm[k] = a < ALPHA_MIN / 255 ? 0 : a;';
+      t(n++, src.includes(KILL), 'ז. איפוס הרעש קיים במחולל');
+      const rerun = (patched, label, want) => {
+        writeFileSync(gp, patched);
+        const r = spawnSync(process.execPath, [gp], { cwd: g, encoding: 'utf8' });
+        const bad = r.status !== 0 || audit(g).some((x) => x.kind === 'tile-bg');
+        t(n++, bad === want, label);
+      };
+      rerun(src.replace(KILL, 'm[k] = a;'),
+            'ז. ⛔ מוטציה: ביטול האיפוס מפיל את «רקע האריח שווה למוצהר»', true);
+      rerun(src.replace('const ALPHA_MIN = 25;', 'const ALPHA_MIN = 26;'),
+            'ז. ⭐ מוטציית-נגד: `ALPHA_MIN` בפיקסל אחד ⛔ אינו מפיל', false);
+    }
   } finally { rmSync(g, { recursive: true, force: true }); }
 }
 
@@ -463,7 +574,8 @@ mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
 
 /* ⭐ מוטציית-נגד: הזזת התוכן בלי לשנות את גודלו ⛔ אינה מפילה —
    ⚠️ הטענה מודדת צלע ⛔ ולא מיקום, ובלעדיה סובלנות אפס הייתה נקראת
-   כאיסור על כל נגיעה בנכס. */
+   כאיסור על כל נגיעה בנכס. ⭐ והיא גם מה שמוכיח שסובלנות המרכוז אינה
+   אפס (סבב 72): ⛔ פיקסל אחד עובר, שלושה נופלים. */
 mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה מפילה', () => {
   const p = mip('mdpi', 'ic_launcher_foreground');
   const img = decodePNG(readFileSync(p));
@@ -472,6 +584,47 @@ mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה
     for (let x = img.w - 1; x >= 1; x--)
       img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - 1) * 4, (y * img.w + x) * 4);
   out.copy(img.data);
+  writeFileSync(p, encodePNG(img));
+}, ['__none__']);
+
+/*  ⛔ המוטציה מזיזה ⛔ ואינה מקטינה (סבב 72) — ⚠️ תוכן שהוקטן נופל ממילא
+    על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת המרכוז:
+    היא הטענה **היחידה** שאמורה ליפול כאן. */
+mutate(`הזזת התוכן ב-${CENTER_TOL + 2} פיקסלים — xxxhdpi`, () => {
+  const p = mip('xxxhdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  const d = CENTER_TOL + 2, out = Buffer.alloc(img.data.length);
+  for (let y = 0; y < img.h; y++)
+    for (let x = img.w - 1; x >= d; x--)
+      img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - d) * 4, (y * img.w + x - d + 1) * 4);
+  out.copy(img.data);
+  writeFileSync(p, encodePNG(img));
+}, ['center']);
+
+/*  ⛔ המוטציה מכהה את דיו האריח בלבד (סבב 72) — ⚠️ בדיוק הסטייה שהייתה
+    בעץ במשך סבבים: ⭐ החזית נשארת במקומה, ⛔ והטענה שנופלת היא זו של האריח. */
+if (APP.tileFlat === true) mutate('דיו האריח נבדל מדיו החזית — xxxhdpi', () => {
+  const p = mip('xxxhdpi', 'ic_launcher');
+  const img = decodePNG(readFileSync(p));
+  const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+  for (let k = 0; k < img.w * img.h; k++)
+    if ((img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3 < lim)
+      for (let c = 0; c < 3; c++) img.data[k*4+c] = Math.max(0, img.data[k*4+c] - 20);
+  writeFileSync(p, encodePNG(img));
+}, ['tile-ink']);
+
+/*  ⭐ מוטציית-נגד: הבהרת **רמפת הקצה** בשתי רמות ⛔ אינה מפילה — ⚠️ הטענה
+    מודדת את מישור הדיו, ⛔ ולא כל פיקסל שיש בו דיו: ⭐ בלעדיה «אותו צבע»
+    היה נקרא כאיסור על כל נגיעה באריח. */
+if (APP.tileFlat === true) mutate('⭐ מוטציית-נגד: הבהרת רמפת הקצה באריח ⛔ אינה מפילה', () => {
+  const p = mip('xxxhdpi', 'ic_launcher');
+  const img = decodePNG(readFileSync(p));
+  const ink = APP.fgInk.reduce((a, b) => a + b, 0) / 3, lim = (ink + 255) / 2;
+  for (let k = 0; k < img.w * img.h; k++) {
+    const m = (img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3;
+    if (m > ink + 20 && m < lim)
+      for (let c = 0; c < 3; c++) img.data[k*4+c] = Math.min(255, img.data[k*4+c] + 2);
+  }
   writeFileSync(p, encodePNG(img));
 }, ['__none__']);
 
@@ -509,11 +662,24 @@ mutate('צבע שאינו תואם — רקע שחור', () => writeBg(
 {
   const GRAD = { kind: 'gradient', angle: 315, start: [0x2B, 0x50, 0x8F], end: [0x0D, 0x1F, 0x42] };
   const gradXml = `<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <gradient android:type="linear" android:angle="315" android:startColor="#2B508F" android:endColor="#0D1F42"/>\n</shape>\n`;
+  /*  ⛔ המדרג נצבע מסביב לסמל ⛔ ולא מעליו (סבב 72) — ⚠️ אריח בלי סמל
+      מפיל את טענת **הדיו**, ⭐ וכאן נבדקת טענת הרקע: מוטציית-נגד שמפילה
+      טענה אחרת אינה מוכיחה דבר על זו שנבדקת. */
   const paint = () => {
     const W = 192, img = { w: W, h: W, data: Buffer.alloc(W * W * 4) };
+    const cur = decodePNG(readFileSync(mip('xxxhdpi', 'ic_launcher')));
+    /*  ⚠️ רק באריח של נייר-ודיו (סבב 72) — ⛔ באפליקציה שהאריח שלה הוא רקע
+        מלא וסמל בהיר, «הפיקסלים הכהים» הם הרקע עצמו: ⭐ שימורם היה מבטל
+        את המוטציה כולה. */
+    const lim = APP.tileFlat === true && APP.fgInk
+      ? (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2 : -1;
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
-        const c = predict(GRAD, x, y, W, W), d = (y * W + x) * 4;
+        const d = (y * W + x) * 4;
+        const ink = cur.w === W &&
+          (cur.data[d] + cur.data[d + 1] + cur.data[d + 2]) / 3 < lim;
+        const c = ink ? [cur.data[d], cur.data[d + 1], cur.data[d + 2]]
+                      : predict(GRAD, x, y, W, W);
         img.data[d] = c[0]; img.data[d + 1] = c[1]; img.data[d + 2] = c[2]; img.data[d + 3] = 255;
       }
     writeFileSync(mip('xxxhdpi', 'ic_launcher'), encodePNG(img));

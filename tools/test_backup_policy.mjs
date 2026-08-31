@@ -28,7 +28,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* ── APP ───────────────────────────────────────────────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
   /* ⚠️ `null` באפליקציה שהמיגרציה אינה יושבת בריפו שלה — ⛔ הפרויקט
@@ -39,6 +39,10 @@ const APP = {
   migrationDoc: 'hanhala-ruchanit/migrations/012_backup_retention_cap.sql',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DOC = readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');

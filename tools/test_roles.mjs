@@ -25,6 +25,10 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { webcrypto } from 'node:crypto';
 
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const SQL000 = fs.readFileSync(path.join(ROOT, 'migrations', '000_initial_schema.sql'), 'utf8');
@@ -517,6 +521,6 @@ if (!process.env.RD67_MUT) {
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי ערכי ה-role מפיל את שער ההרשאות', 'index.html',
        (s) => s.replace(/'admin'/g, "'administrator'"), true);
-  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-index.html ⛔ אינה מפילה', 'index.html',
-       (s) => s.replace('</body>', '<!-- הערה -->\n</body>'), false);
+  _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
+       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }</script>\n</body>'), false);
 }

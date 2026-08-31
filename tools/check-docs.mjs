@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /*  בדיקת אחידות התיעוד — סבב 18, הורחבה בסבב 20.
  *
+ *  ⭐ משימת הבודק: סורק את ארבעת קובצי התיעוד ואת בלוקי ה-SHARED שבהם
+ *  — ⛔ ומפיל על סחיפה בתוכן המשותף, על שלד חסר ועל חציית תקציב שורות.
+ *
  *  כלל ברזל 8 של הארגון: **פרוטוקול תיעוד קבוע.** סבב 17 הוכיח שרכיב
  *  שמוכרז «משותף» נסחף בלי אכיפה — וסבב 18 מדד שאותו דבר בדיוק קרה
  *  לתיעוד עצמו: פרק «בדיקה» של סבב 14 הועתק כלשונו לארבעת הריפו, כולל
@@ -19,8 +22,8 @@
  *       זהה לזו שב-`origin/main` — כלומר לא קודמה. סעיף ג בודק את
  *       **צורת** השורה; זה בודק שהיא באמת התקדמה.
  *    ח. (סבב 44) ערך של מפתח משותף ב-`manifest.json` נסחף או נמחק.
- *    ט. (סבב 49) `CLAUDE.md` מחזיק יותר משישה פרקי סבבים, או יותר
- *       מהתקרה הגלובלית — תקציב התיעוד של כלל ברזל 18.
+ *    ט. (סבב 49) `CLAUDE.md` מחזיק יותר פרקי סבבים מ-`DOC_MAX_ROUNDS`,
+ *       פרק ארוך מ-`DOC_MAX_ROUND_LINES`, או יותר שורות מ-`DOC_MAX_LINES`.
  *
  *  ⚠️ סעיף ה — ורק הוא — **מדלג ואינו מפיל** כשאין בסיס להשוואה: אין
  *  git בסביבה, אין `origin/main`, או שהקובץ אינו קיים שם. clone רדוד או
@@ -45,12 +48,17 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 74];
+
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-table',   '1d665ff42ce96ad4'],
-  ['rules-enforce', '610ca38f7f798896'],
-  ['rules-writing', '72e55e1b7a4d66f3'],
-  ['rules-session', 'e28b6fcfd5df4fac'],
+  ['rules-session',  'f866224ecabe61d6'],
+  ['rules-writing',  '37d4ffc698272c28'],
+  ['rules-table',    '47fe6bd222fdd846'],
+  ['rules-enforce',  '87c2325c9ce958bb'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -78,7 +86,8 @@ const warn = (m) => console.warn('⚠️ ' + m);   // אזהרה שאינה מפ
 
 if (!fs.existsSync(APP.file)) {
   console.error(`❌ ${APP.file} לא נמצא — יש להריץ את הבדיקה משורש הריפו`);
-  process.exit(1);
+  if (!process.env.DOCS_INPROC) process.exit(1);
+  throw new Error(`${APP.file} לא נמצא`);
 }
 const src = fs.readFileSync(APP.file, 'utf8');
 const lines = src.split('\n');
@@ -272,11 +281,12 @@ const MD_SKELETONS = [
       [/^##\s+פרטי ריפו\s*$/,                        '## פרטי ריפו'],
       [/^##\s+.*Supabase — GRANT חובה לטבלאות חדשות/, '## ⚠️ Supabase — GRANT חובה לטבלאות חדשות'],
     ] },
+  /*  ⛔ ארבעה פרקים ירדו מהשלד (סבב 72) — «Why WebView», «גשר», «למה אין
+   *  נכסים מוטבעים» ו«המפתח הקבוע»: ⚠️ ארבעתם הסבירו כלל שהטבלה אוכפת,
+   *  ⛔ ו-56 שורות ×4 חזרו על מה שכתוב שם. ⭐ מה שנשאר כאן הוא ההוראה
+   *  המעשית — איך בונים, מה מריצים, ולאן מסתכלים. */
   { file: 'android/README.md', need: [
-      [/^##\s+Why WebView and never a TWA\s*$/,       '## Why WebView and never a TWA'],
       [/^##\s+מה בפנים\s*$/,                          '## מה בפנים'],
-      [/^##\s+.*גשר/,                                  '## …גשר… (הגשר המקורי / אין גשר שיתוף)'],
-      [/^##\s+למה אין נכסים מוטבעים\s*$/,             '## למה אין נכסים מוטבעים'],
       [/^##\s+.*מעבר-origin חד-פעמי/,                  '## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK'],
       [/^##\s+אייקונים\s*$/,                           '## אייקונים'],
       [/^##\s+Build\s*$/,                              '## Build'],
@@ -325,16 +335,15 @@ for (const spec of MD_SKELETONS) {
 /*  ⛔ הרשימה כתובה **בסדר הופעתם בקובץ** (סבב 71) — ⚠️ סעיף יב אוכף
  *  אותו, ⛔ ולכן סדר שגוי כאן הוא כישלון שער ולא עניין של נוחות. */
 const CANON_MD = [
-  ['README.md',         'readme-gate',           'fd4654765f8ed749'],
-  ['README.md',         'readme-apk',            '54a69bee96c333bf'],
-  ['CONTEXT.md',        'context-grant',         'f81b753212d412f0'],
-  ['android/README.md', 'android-why-twa',       '253ef8b2c0658ef0'],
-  ['android/README.md', 'android-web-update',    'dbfd1b661d1b6b25'],
-  ['android/README.md', 'android-origin-switch', '23ef212512bb2202'],
-  ['android/README.md', 'android-icons',         '9824d699371d309a'],
-  ['android/README.md', 'android-shell-split',   'a2508c6906d22ac5'],
-  ['android/README.md', 'android-smali-scope',   '809e7e9d32b16ee6'],
-  ['android/README.md', 'android-cache-apk',     '898e51f7bb6048db'],
+  ['README.md',          'readme-gate',           'fd4654765f8ed749'],
+  ['README.md',          'readme-apk',            '54a69bee96c333bf'],
+  ['CONTEXT.md',         'context-grant',         'f81b753212d412f0'],
+  ['android/README.md',  'android-web-update',    'dbfd1b661d1b6b25'],
+  ['android/README.md',  'android-origin-switch', '23ef212512bb2202'],
+  ['android/README.md',  'android-icons',         '9824d699371d309a'],
+  ['android/README.md',  'android-shell-split',   'a2508c6906d22ac5'],
+  ['android/README.md',  'android-smali-scope',   'f09ccb513dc4b6df'],
+  ['android/README.md',  'android-cache-apk',     '898e51f7bb6048db'],
 ];
 
 /* סורק סימונים לקובץ md כלשהו — אותם כללים בדיוק של סעיף א. */
@@ -447,10 +456,17 @@ const CANON_MANIFEST = [
        *  שם כלל. ⛔ ו-`src` שאינו מצביע על קובץ קיים הוא 404 שקט:
        *  ההתקנה מצליחה, והאייקון פשוט אינו מופיע. */
       const icons = Array.isArray(mf.icons) ? mf.icons : [];
+      /*  ⛔ שישה ולא שלושה (סבב 72) — ⚠️ נמדד: שלושת החסרים הוצהרו
+       *  באפליקציה אחת בלבד, ⭐ והם מה שהדפדפן מציג בלשונית ומה שאייפון
+       *  משתמש בו במסך הבית. ⛔ והרשימה **שמית** ולא מנייה: ⚠️ «שישה
+       *  אייקונים» היה מאושר גם על שישה עותקים של אותו נכס. */
       const CANON_ICONS = [
+        ['icons/favicon-16.png',        '16x16',   null],
+        ['icons/favicon-32.png',        '32x32',   null],
         ['icons/icon-192.png',          '192x192', 'any'],
         ['icons/icon-512.png',          '512x512', 'any'],
         ['icons/icon-maskable-512.png', '512x512', 'maskable'],
+        ['icons/apple-touch-icon.png',  '180x180', null],
       ];
       let iok = true;
       for (const [src, sizes, purpose] of CANON_ICONS) {
@@ -460,7 +476,10 @@ const CANON_MANIFEST = [
           iok = false;
           fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes}`);
         }
-        if ((e.purpose || 'any') !== purpose) {
+        /*  ⚠️ `null` בטבלה = «אין `purpose`» (סבב 72) — ⛔ ולא «any»:
+            favicon ואייקון אייפון אינם נכסי PWA, ⭐ והצהרת `purpose`
+            עליהם הייתה מכריזה אותם כמועמדים למסך הבית. */
+        if (purpose === null ? 'purpose' in e : (e.purpose || 'any') !== purpose) {
           iok = false;
           fail(`manifest.json: "${src}" מוצהר purpose="${e.purpose}" במקום "${purpose}" — ` +
                'אייקון מלא אינו maskable (כלל ברזל 25); "any maskable" הוא מה שגרם ' +
@@ -494,6 +513,11 @@ const CANON_MANIFEST = [
    פתוחים» לימד שתיעוד שאיש אינו מודד ממשיך לתאר עולם שהשתנה. */
 const DOC_MAX_LINES  = 700;
 const DOC_MAX_ROUNDS = 2;
+/*  ⛔ תקרה **לכל פרק סבב בנפרד** (סבב 72) — ⚠️ עד כאן נספרו הפרקים ולא
+ *  נמדד אורכם, ⛔ ולכן שני פרקים בני 75 ו-108 שורות עברו. ⭐ הכלל «אין
+ *  היסטוריה בקבצי התיעוד» אמר «עד עשר שורות לפרק» מסבב 70, ⛔ ואיש לא
+ *  אכף אותו: probe שמאמת ערך אחד מתוך שניים מאשר את השני. */
+const DOC_MAX_ROUND_LINES = 10;
 /*  ⛔ תקרת החלק המשותף (סבב 69) — ⚠️ בלעדיה ארבעת בלוקי הכללים גדלים
  *  בלי גבול, והתקרה הכוללת נבלעת בהם. */
 const DOC_MAX_SHARED = 400;
@@ -502,28 +526,64 @@ const DOC_MAX_SHARED = 400;
  *  ⛔ והסכום אינו זז. ⭐ הרף לכל חלק **נמדד** ולא שוער: החלק המשותף
  *  הוא בדיוק מה שיש (12 · 13 · 85 שורות, זהות בית-לבית בארבעתן), והחלק
  *  הפרטי הוא הגבוה שנמדד בארבעתן ועוד מרווח קטן.
- *  ⛔ ו-`android/README` ננעל על 240 ולא על היעד 150 — ⚠️ הרצפה מדודה:
- *  85 שורות SHARED, ולצידן טבלת ה-`versionCode` שהיא ההיסטוריה שהשער
- *  אוכף, וטבלת המפתח הקבוע. ⛔ הצמצום ליעד הוא סבב שנוגע במעטפת. */
-const MD_MAX = { 'README.md': 50, 'CONTEXT.md': 100, 'android/README.md': 240 };
+ *  ⛔ ומסבב 72 התקרות הן **מספרים עגולים שנקבעו בהכרעה** — ⚠️ ולא המצב
+ *  הנמדד ועוד מרווח: תקרה צמודה חוסמת עבודה לגיטימית, ⛔ ורופפת אינה
+ *  כופה גיזום. ⭐ וסכום שני החלקים שווה לתקרת הקובץ. */
+const MD_MAX = { 'README.md': 70, 'CONTEXT.md': 70, 'android/README.md': 300 };
 /*  ⚠️ `[משותף, פרטי]` — ⛔ שני הרפים נאכפים בנפרד (סבב 71), ⛔ ולא סכומם.
  *  ⚠️ ולכל רף מרווח של ארבע שורות מעל הגבוה שנמדד, ⛔ ולא אפס: שערי
  *  המוטציה מוסיפים שורות לעותק, ⛔ ורף צמוד היה מפיל אותם על התקרה
  *  במקום על התנאי שהם באים לבדוק. */
 const MD_SPLIT = {
-  'README.md':        [12, 40],
-  'CONTEXT.md':       [13, 46],
-  'android/README.md': [85, 155],
+  'README.md':        [20, 50],
+  'CONTEXT.md':       [20, 50],
+  'android/README.md': [150, 150],
 };
+/*  ⛔ סכום שני החלקים = תקרת הקובץ (סבב 72) — ⚠️ שתי תקרות שסכומן נמוך
+ *  מהתקרה הכוללת יוצרות תקרה סמויה שלישית, ⛔ ואז «מתחת לתקרה» נמדד מול
+ *  מספר שאיש לא הכריע עליו. */
+for (const [f, cap] of Object.entries(MD_MAX)) {
+  const [s0, p0] = MD_SPLIT[f];
+  if (s0 + p0 !== cap)
+    fail(`${f}: תקרות החלקים ${s0}+${p0}=${s0 + p0} ואינן שוות לתקרת הקובץ ${cap} — ` +
+         'מיישרים את שלושת המספרים באותה הכרעה');
+}
 
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 {
   const rounds = [];
+  /*  ⚠️ אורך הפרק נמדד מהכותרת ועד השורה שלפני ה-`##` הבא, ⛔ בלי שורות
+   *  ריקות בסופו (סבב 72) — שורה ריקה אינה תוכן, ואין להעניש עליה. */
+  let openRound = -1;
+  const closeRound = (end) => {
+    if (openRound < 0) return;
+    let e = end;
+    while (e > openRound && !lines[e - 1].trim()) e--;
+    rounds[rounds.length - 1].lines = e - openRound;
+    openRound = -1;
+  };
   for (let i = 0; i < lines.length; i++) {
-    if (!inFence[i] && ROUND_H2.test(lines[i])) rounds.push(lines[i].replace(/^##\s+/, '').trim());
+    if (inFence[i]) continue;
+    if (!/^##\s/.test(lines[i])) continue;
+    closeRound(i);
+    if (ROUND_H2.test(lines[i])) {
+      rounds.push({ name: lines[i].replace(/^##\s+/, '').trim(), lines: 0 });
+      openRound = i;
+    }
+  }
+  closeRound(lines.length);
+  const tooLong = rounds.filter((r) => r.lines > DOC_MAX_ROUND_LINES);
+  if (tooLong.length) {
+    fail(`${APP.file}: פרק סבב ארוך מ-${DOC_MAX_ROUND_LINES} שורות — ` +
+         tooLong.map((r) => `«${r.name}» נמדד ${r.lines}`).join(' · ') +
+         '. גוזמים באותו קומיט: מה נעשה, ומה לא הגיע ליעד — ' +
+         'ומה שראוי להישמר עולה לכלל, לטבלה או להערה בקוד');
+  } else if (rounds.length) {
+    pass(`תקציב התיעוד — פרקי הסבבים ${rounds.map((r) => r.lines).join(' · ')}` +
+         `/${DOC_MAX_ROUND_LINES} שורות`);
   }
   if (rounds.length > DOC_MAX_ROUNDS) {
-    const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS);
+    const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS).map((r) => r.name);
     fail(`${APP.file}: ${rounds.length} פרקי סבבים, והחלון הוא ${DOC_MAX_ROUNDS} ` +
          `(כלל ברזל 18). יש למחוק באותו קומיט — הישנים ראשונים: ${over.join(' · ')}`);
   } else {
@@ -644,7 +704,7 @@ const DOC_MAX_PRIVATE = 300;
     'CONTEXT.md':        [[ROUND_H2, 'פרק סבב'], [/^##\s+Build\b/i, 'בנייה'],
                           [/^##\s+הפעלה ראשונה/, 'הפעלה ראשונה']],
     'android/README.md': [[ROUND_H2, 'פרק סבב'], [/^##\s+הפעלה ראשונה/, 'הפעלה ראשונה'],
-                          [/^##\s+מסכים\b/, 'מסכים'], [/^##\s+⭐?\s*טבלת התשתית/, 'טבלת התשתית']],
+                          [/^##\s+מסכים/, 'מסכים'], [/^##\s+⭐?\s*טבלת התשתית/, 'טבלת התשתית']],
   };
   for (const [f, rules] of Object.entries(FOREIGN)) {
     if (!fs.existsSync(f)) continue;
@@ -707,4 +767,8 @@ const DOC_MAX_PRIVATE = 300;
 }
 
 console.log(failures ? `\n❌ בדיקת התיעוד נכשלה (${failures})` : '\n✅ בדיקת התיעוד עברה');
-process.exit(failures ? 1 : 0);
+/*  ⛔ יציאה רק בתהליך משלו (סבב 72) — ⚠️ שער שמריץ את הבודק עשרות פעמים
+ *  מייבא אותו לתהליך אחד, ו-`process.exit` היה עוצר את השער עצמו באמצע.
+ *  ⭐ מונה הכשלים מיוצא, וזה מה שהמייבא בודק. */
+export const docFailures = failures;
+if (!process.env.DOCS_INPROC) process.exit(failures ? 1 : 0);

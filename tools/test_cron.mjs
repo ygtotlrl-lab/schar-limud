@@ -32,8 +32,16 @@ const APP = {
   sisterKeys: [],
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/014_backup_allowlist_drop_wa_phone.sql',
+  /*  ⛔ המסלול שדורש את השדות האלה אינו רץ באפליקציה הזו (סבב 72) —
+      ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
+      וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
+  allowlistMigration: null,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');

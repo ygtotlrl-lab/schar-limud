@@ -9,17 +9,24 @@
  *  ⛔ אין להחליף את הרצת-הבודק-האמיתי בסימולציה (סבב 37) — בדיקה שאינה
  *  מריצה את השער עצמו אינה מוכיחה עליו דבר.
  *
+ *  ⛔ וההיפוכים רצים **בתהליך אחד** (סבב 72) — ⚠️ תהליך חדש לכל תא עלה
+ *  עשר שניות מכל הרצת שער. ⭐ ההיפוך נוגע ב-`CLAUDE.md` בלבד, ולכן עותק
+ *  אחד מספיק, והבודק מיובא מחדש עם מפתח מטמון חדש בכל סיבוב.
+ *
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = { app: 'schar-limud', col: 3 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
   console.log('test_matrix: ריצה פנימית — מדלג (מניעת רקורסיה)');
@@ -48,12 +55,12 @@ const ok = (msg, cond) => {
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [37, 81];
+const DB_FACT_EXEMPT = [43, 88];
 const EXEMPT = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-  22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37, 46, 50, 51, 52, 55,
-  56, 57, 58, 59, 60, 61, 63, 65, 66, 68, 70, 72, 75, 78, 79, 80, 81, 86, 87,
-  90, 91, 92, 93, 95, 96, 98, 99, 100, 101, 102, 103, 104, 105, 107, 108,
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22,
+  23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 43,
+  52, 56, 58, 61, 62, 63, 64, 65, 66, 68, 70, 72, 73, 74, 76, 78, 82, 85, 86, 88,
+  93, 94, 95, 96, 100, 102, 103, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115,
 ];
 
 function copyRepo() {
@@ -69,11 +76,23 @@ function copyRepo() {
   return dst;
 }
 
-function runChecker(dir) {
-  const r = spawnSync(process.execPath, [path.join(dir, 'tools', 'check-capabilities.mjs')], {
-    cwd: dir, env: { ...process.env, R37_INNER: '1' }, encoding: 'utf8',
-  });
-  return r.status === 0;
+/*  ⛔ `CAP_INPROC` מבטל את `process.exit` שבסופו של הבודק — ⚠️ בלעדיו
+ *  הייבוא הראשון היה עוצר את השער הזה עצמו. */
+process.env.CAP_INPROC = '1';
+const WORK = copyRepo();
+process.chdir(WORK);
+const CHECKER = pathToFileURL(path.join(WORK, 'tools', 'check-capabilities.mjs')).href;
+const DOC_IN_WORK = path.join(WORK, 'CLAUDE.md');
+let spin = 0;
+async function runChecker() {
+  const lg = console.log, er = console.error;
+  console.log = () => {}; console.error = () => {};
+  try {
+    const mod = await import(`${CHECKER}?flip=${spin++}`);
+    return mod.capFailures === 0;
+  } catch (e) {
+    return false;
+  } finally { console.log = lg; console.error = er; }
 }
 
 /*  היפוך תא: ✅↔❌, וכל ערך אחר (־«לא רלוונטי», «אין», «טביעה»,
@@ -88,9 +107,8 @@ function flipCell(line, col) {
   return parts.join('|');
 }
 
-const base = copyRepo();
-ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא', runChecker(base));
-fs.rmSync(base, { recursive: true, force: true });
+const CLEAN_DOC = fs.readFileSync(DOC_IN_WORK);
+ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא', await runChecker());
 
 /*  ⚠️ הטבלה מאותרת לפי **שורת הכותרת שלה** ולא לפי «כל שורה שמתחילה
  *  במספר» (סבב 37) — ב-schar-limud יושבת מעליה טבלת מצב המיגרציות, ששורותיה
@@ -114,21 +132,18 @@ ok(`טבלת התשתית נקראה מ-CLAUDE.md — ${rows.length} שורות`
 let covered = 0;
 for (const r of rows) {
   if (EXEMPT.indexOf(r.row) >= 0) continue;
-  const dir = copyRepo();
-  const p = path.join(dir, 'CLAUDE.md');
-  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  const lines = CLEAN_DOC.toString('utf8').split('\n');
   const flipped = flipCell(lines[r.at], APP.col);
   if (flipped === null || flipped === lines[r.at]) {
     ok(`שורה ${r.row}: המוטציה לא הצליחה לשנות את התא`, false);
-    fs.rmSync(dir, { recursive: true, force: true });
     continue;
   }
   lines[r.at] = flipped;
-  fs.writeFileSync(p, lines.join('\n'));
-  const stillPasses = runChecker(dir);
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  const stillPasses = await runChecker();
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
   ok(`שורה ${r.row}: היפוך התא מפיל את check-capabilities`, !stillPasses);
   covered++;
-  fs.rmSync(dir, { recursive: true, force: true });
 }
 
 ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${covered}; מוחרגות: ${EXEMPT.join(', ')})`,
@@ -139,17 +154,75 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
  *  שהמטריצה מצהירה, ⛔ ולכן `check-capabilities` חייב להמשיך לעבור. */
 {
   const target = rows.find((r) => EXEMPT.indexOf(r.row) < 0);
-  const dir = copyRepo();
-  const p = path.join(dir, 'CLAUDE.md');
-  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  const lines = CLEAN_DOC.toString('utf8').split('\n');
   const parts = lines[target.at].split('|');
   parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
   lines[target.at] = parts.join('|');
-  fs.writeFileSync(p, lines.join('\n'));
-  ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`,
-     runChecker(dir));
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  const held = await runChecker();
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+  ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
 }
+
+/*  ⭐ שורה שכמה שערים אוכפים אותה (סבב 72) — ⛔ המוטציה מסירה שער
+ *  אחד מ-`claims` בעוד הוא ממשיך להצהיר עליה ב-`ROWS`, ⚠️ והטענה
+ *  שאמורה ליפול היא «אי-התאמה בין ROWS ל-claims». */
+{
+  const CAP = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const clean = fs.readFileSync(CAP, 'utf8');
+  const cut = clean.replace(", 'check-comments': 'מכריז היעדר'", '');
+  ok('המוטציה שינתה את גוף check-capabilities בעותק', cut !== clean);
+  fs.writeFileSync(CAP, cut);
+  const stillPasses = await runChecker();
+  ok('⛔ מוטציה: שער שהוסר מ-claims וממשיך להצהיר ב-ROWS ' +
+     'מפיל את «אי-התאמה בין ROWS ל-claims»', !stillPasses);
+  const anti = clean.replace(/\bmismatch\b/g, 'pairGap');
+  ok('מוטציית-הנגד שינתה את הקוד', anti !== clean);
+  fs.writeFileSync(CAP, anti);
+  const held = await runChecker();
+  fs.writeFileSync(CAP, clean);
+  ok('⭐ מוטציית-נגד: החלפת שם המשתנה בעקביות ⛔ אינה מפילה', held);
+}
+
+/*  ⭐ הכיוון ההפוך — כלל ⟵ שורה (סבב 72): ⛔ המוטציה מוסיפה סעיף כלל
+ *  שאין לו שורה, ⚠️ והטענה שאמורה ליפול היא «כל כלל מיוצג בטבלה». */
+{
+  const CAP = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const capClean = fs.readFileSync(CAP, 'utf8');
+  const doc = CLEAN_DOC.toString('utf8');
+  const HEAD = '### ⛔ תקן עמודת ההערות';
+  const added = doc.replace(HEAD, '### ⛔ כלל חדש שאין לו שורה\n\n' + HEAD);
+  ok('המוטציה הוסיפה סעיף כלל לעותק', added !== doc);
+  fs.writeFileSync(DOC_IN_WORK, added);
+  ok('⛔ מוטציה: סעיף כלל בלי שורה מפיל את «כל כלל מיוצג בטבלה»', !(await runChecker()));
+
+  /*  ⭐ מוטציית-נגד — שינוי חי ועקבי: ⛔ שם הסעיף מוחלף בקובץ ובמפה יחד,
+   *  ⚠️ ואסור לו להפיל: ⭐ המפה מודדת ייצוג ולא מחרוזת. */
+  const ren = '### ⛔ תקן עמודת ההערות שבטבלה';
+  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, ren));
+  fs.writeFileSync(CAP, capClean.replace("'⛔ תקן עמודת ההערות':", "'⛔ תקן עמודת ההערות שבטבלה':"));
+  ok('⭐ מוטציית-נגד: שינוי שם סעיף בקובץ ובמפה יחד ⛔ אינו מפיל', await runChecker());
+  fs.writeFileSync(CAP, capClean);
+
+  /*  ⭐ ו-🔲 אינו קבוע — ⛔ המוטציה מציבה 🔲 בשורה שאינה נמדדת ב-MATRIX:
+   *  ⚠️ כך הטענה שתיפול היא «🔲 אינו קבוע» ולא היפוך תא. */
+  const lines = doc.split('\n');
+  const at = lines.findIndex((l) => /^\|\s*38\s*\|/.test(l));
+  ok('שורת המוטציה ל-🔲 נמצאה', at >= 0);
+  const parts = lines[at].split('|');
+  parts[3 + APP.col] = ' 🔲 ';
+  lines[at] = parts.join('|');
+  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
+  ok('⛔ מוטציה: תא 🔲 בשורה ותיקה מפיל את «🔲 אינו קבוע»', !(await runChecker()));
+
+  fs.writeFileSync(CAP, capClean.replace('const FRESH_BOX = {};', 'const FRESH_BOX = { 38: 72 };'));
+  ok('⭐ מוטציית-נגד: 🔲 שהוכרז בסבב הנוכחי ⛔ אינו מפיל', await runChecker());
+  fs.writeFileSync(CAP, capClean);
+  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+}
+
+process.chdir(ROOT);
+fs.rmSync(WORK, { recursive: true, force: true });
 
 console.log(failed ? `\n✗ סבב 37 (מטריצה) — ${failed} נכשלו, ${passed} עברו`
                    : `\n✓ סבב 37 (מטריצה) — ${passed} טענות עברו`);

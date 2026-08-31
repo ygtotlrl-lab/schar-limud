@@ -18,7 +18,7 @@ const APP = {
    *  ⚠️ כל שורה נושאת את הסיבה, ⛔ ו-⏳ מסמן **מבחן מעבר** שנושא
    *  טריגר להסרה. ⛔ מבחן תשתית שקיים באחת בלבד בלי שורה כאן מפיל. */
   testsOnly: {
-      'offline_login': 'כניסה אופליין — ⛔ ביומן אין כניסה כלל (מטריצה, שורה 1)',
+      'offline_login': 'כניסה אופליין — ⛔ ביומן אין כניסה כלל (מטריצה — שורת הכניסה האופליין)',
       'roles': 'הרשאות לפי `role` **וניקוי שער הסיסמה שהוסר** — ⛔ טענה שלילית קבועה נגד רגרסיה, ולא שריד מעבר',
   },
   only: {
@@ -26,6 +26,11 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [18, 19, 70, 105];
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -86,9 +91,7 @@ const SHARED = [
   'tools/test_cron.mjs',
   'tools/test_devid.mjs',
   'tools/test_crossgate.mjs',
-  'tools/test_docrules.mjs',
   'tools/test_filesets.mjs',
-  'tools/test_gradle.mjs',
   'tools/test_hotwin.mjs',
   'tools/test_iconlayer.mjs',
   'tools/test_icons.mjs',
@@ -100,23 +103,18 @@ const SHARED = [
   'tools/test_manifest.mjs',
   'tools/test_matrix.mjs',
   'tools/test_md.mjs',
-  'tools/test_merge_core.mjs',
   'tools/test_merge_pending.mjs',
   'tools/test_passwords.mjs',
   'tools/test_pendflush.mjs',
   'tools/test_pull.mjs',
+  'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
-  'tools/test_retry.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_session.mjs',
   'tools/test_shell.mjs',
-  'tools/test_signscript.mjs',
   'tools/test_sources.mjs',
   'tools/test_stage_a.mjs',
-  'tools/test_structure.mjs',
-  'tools/test_sw.mjs',
   'tools/test_swcore.mjs',
-  'tools/test_workflows.mjs',
 ];
 
 /*  ⛔ קטגוריות פטורות — ⚠️ כל אחת עם הנימוק שלה, ⛔ ולא דפוס שקט.

@@ -4,7 +4,7 @@
  *  ⚠️ **הפער שנמדד בסבב 44:** `MainActivity.java` ו-`ShellActivity.java`
  *  חתומים מסבבים 40–41, אבל **שני הקבצים שקובעים איך ה-APK נבנה ומה
  *  אנדרואיד מרשה לו** — `AndroidManifest.xml` ו-`android/app/build.gradle` —
- *  לא נשאו שום חתימה. `test_gradle.mjs` בודק את ה-`versionCode`
+ *  לא נשאו שום חתימה. `test_bump.mjs` בודק את ה-`versionCode`
  *  ואת מזהה החבילה, ⛔ ואינו נוגע בשאר הקובץ: הרשאה שנוספה, `<queries>`
  *  שנעלם או `configChanges` שנסחף עברו בשקט בארבעת הריפו.
  *
@@ -24,7 +24,7 @@
  *  האפליקציה (`android:label`) וכל ההערות. ⛔ אלה מצייני-זהות והיסטוריה
  *  ולא לוגיקת בנייה — בלי נרמולם כל ריפו היה נושא חתימה משלו, ואי אפשר
  *  היה לאכוף שהם זהים. ⚠️ ה-`versionCode` **כן** נאכף — במקום שבו הוא
- *  באמת שער, `test_gradle.mjs`.
+ *  באמת שער, `test_bump.mjs`.
  *
  *  ⭐ **וזו מדידה ולא הצהרה** (סבב 45): אחרי הנרמול שלושת הריפו
  *  חסרי-הגשר נושאים **חתימה זהה בדיוק** בשני הקבצים, ולריפו אחד —
@@ -58,6 +58,11 @@ const APP = {
   gradleSha:   '9cbf35bb88e9b753',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [68];
 
 const ROOT     = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = 'android/app/src/main/AndroidManifest.xml';
@@ -295,7 +300,7 @@ mut('בלוק dependencies שנוסף ⛔ אינו מזיז את החתימה ח
       "\ndependencies {\n    implementation 'a:b:1'\n}\n")), false);
 
 /* ── ה. מוטציות על שער ה-versionCode (סבב 45ב) ──────────────────────────────
- *  ⚠️ **למה כאן ולא ב-`test_gradle.mjs` עצמו:** השער ההוא נשען על
+ *  ⚠️ **למה כאן ולא בשער ה-`versionCode` עצמו:** הוא נשען על
  *  `origin/main` דרך git, ולכן מוטציה עליו אינה יכולה לרוץ «בזיכרון»
  *  כמו מוטציות החתימה שלמעלה — היא חייבת עץ עם git. ⛔ ולא על העץ
  *  האמיתי (הלקח של סבב 42ג): הרתמה בונה **ריפו git זמני** משלה, מריצה
@@ -318,16 +323,17 @@ else {
   /* עץ מינימלי: השער, קובץ הבנייה, המניפסט, וטבלת ה-README. */
   const readmeSrc = fs.readFileSync(join(ROOT, 'android/README.md'), 'utf8');
   const seed = () => {
-    put('tools/test_gradle.mjs',
-        fs.readFileSync(join(ROOT, 'tools/test_gradle.mjs'), 'utf8'));
+    put('tools/test_bump.mjs',
+        fs.readFileSync(join(ROOT, 'tools/test_bump.mjs'), 'utf8'));
     put(GRADLE, gradleSrc);
     put(MANIFEST, manifestSrc);
     put('android/README.md', readmeSrc);
   };
   const runGate = () => {
     try {
-      execFileSync(process.execPath, [join(tmp, 'tools/test_gradle.mjs')],
-                   { encoding: 'utf8', stdio: 'pipe' });
+      execFileSync(process.execPath, [join(tmp, 'tools/test_bump.mjs')],
+                   { encoding: 'utf8', stdio: 'pipe',
+                     env: { ...process.env, BUMP_GATE_ONLY: '1' } });
       return 0;
     } catch (e) { return e.status === undefined ? -1 : e.status; }
   };
@@ -372,6 +378,35 @@ else {
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+}
+
+/* ── ⛔ אין נכסים מוטבעים — מוטציה על העץ (סבב 72) ───────────────────────────
+ *  ⚠️ ה-probe שבטבלה מאמת **היעדר**, ⛔ וטענת-היעדר עוברת גם כשהיא אינה
+ *  מסוגלת ליפול. ⭐ המוטציה מניחה `index.html` תחת `assets/` ודורשת
+ *  ש-`check-capabilities` ייפול, ⛔ ומוטציית-הנגד מניחה שם קובץ אחר
+ *  ודורשת שלא ייפול — כלומר נמדד **מה** מוטבע ולא **שהתיקייה ריקה**. */
+{
+  const ASSETS = 'android/app/src/main/assets';
+  const run = (dir) => execFileSync(process.execPath,
+      [join(dir, 'tools', 'check-capabilities.mjs')],
+      { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+  const assetMut = (label, rel, wantFail) => {
+    const d = fs.mkdtempSync(join(os.tmpdir(), 'r72-assets-'));
+    try {
+      fs.cpSync(ROOT, d, { recursive: true,
+                           filter: (s) => !s.split('/').includes('.git') });
+      fs.mkdirSync(join(d, ASSETS), { recursive: true });
+      fs.writeFileSync(join(d, ASSETS, rel), '<!-- מוטציה -->\n');
+      let fell = false;
+      try { run(d); } catch (e) { fell = true; }
+      if (fell === wantFail) pass(label);
+      else fail(`${label} — נמדד ${fell ? 'נפל' : 'עבר'} והצפוי ` +
+                `${wantFail ? 'נפל' : 'עבר'}. בודקים את ה-probe של «אין נכסים מוטבעים»`);
+    } finally { fs.rmSync(d, { recursive: true, force: true }); }
+  };
+  assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורת «אין נכסים מוטבעים»', 'index.html', true);
+  assetMut('⭐ מוטציית-נגד: קובץ אחר תחת `assets/` ⛔ אינו מפיל — נמדד מה מוטבע',
+           'fonts.txt', false);
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`

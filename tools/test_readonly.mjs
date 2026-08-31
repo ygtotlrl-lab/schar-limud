@@ -1,14 +1,23 @@
 #!/usr/bin/env node
-/*  test_readonly.mjs — ⛔ שער קורא בלבד (סבב 70).
+/*  test_readonly.mjs — ⛔ שער קורא בלבד, והנעילה המבנית (סבב 72: מוזג).
  *
- *  **מה נאכף:** הרצת כל השערים על עותק של העץ אינה משנה בו אף בית — לא
- *  קובץ שנכתב, לא קובץ שנוסף ולא קובץ שנמחק. המדידה היא סנפשוט sha256 של
- *  כל קובץ לפני ואחרי, ⛔ ולא `git status`: היא תופסת גם עץ בלי `.git`,
- *  וגם קובץ ששוחזר לתוכן שגוי.
+ *  **מה נאכף:** (א) הרצת כל השערים על עותק של העץ אינה משנה בו אף בית —
+ *  לא קובץ שנכתב, לא קובץ שנוסף ולא קובץ שנמחק; (ב) `check-structure`
+ *  נופל על קובץ זר, תיקייה חסרה, בודק חסר ושם מבחן בתבנית ישנה;
+ *  (ג) שגיאת תחביר ב-JS המוטבע מפילה את `check-js`.
  *
- *  **ולמה זה יכול להישבר:** לשער נוח למדוד «במקום» — לשנות נכס, למדוד,
+ *  **הנימוק המדוד:** שני שערים נפרדים הריצו את `check-js` המלא על עותק —
+ *  16.2 שניות של אותה עבודה פעמיים. ⛔ ריצת הבסיס כאן היא גם הבקרה
+ *  החיובית של המבנה, ⭐ ולכן אין טעם בשנייה.
+ *
+ *  **מה יישבר בלעדיו:** לשער נוח למדוד «במקום» — לשנות נכס, למדוד,
  *  ולשחזר. ⚠️ החלון שבין השניים הוא עץ שגוי, ⛔ ומדידה שנפלה באמצע
  *  משאירה אותו שגוי לתמיד. ⚠️ ומי שהריץ אינו רואה זאת: השער דיווח «עבר».
+ *  ⚠️ ובלי המוטציות המבניות, `check-structure` הוא הצהרה ולא שער.
+ *
+ *  **מה אינו נאכף כאן:** תוכן הקבצים תחת `android/` — ⛔ הסט נאכף כאן
+ *  והחתימות בשער האנדרואיד, ⚠️ וכפילות הייתה שני מקורות אמת. וכן שער
+ *  שמשנה ומשחזר **בדיוק** — ⛔ מגבלת הסנפשוט, מוצהרת בטענה עצמה.
  *
  *  ⚠️ זהה בית-לבית בארבעת הריפו — ⛔ ואין בו בלוק `APP`.
  */
@@ -20,6 +29,11 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [25];
 
 /*  ⛔ הריצה הפנימית מדלגת — ⚠️ בלעדיה הוא מריץ `check-js` שמריץ אותו,
  *  והרקורסיה אינה נעצרת. */
@@ -60,23 +74,33 @@ function snapshot(dir) {
   return out;
 }
 
-/*  מריץ כלי אחד בעותק, ומחזיר את מה שהשתנה בעץ.
+/*  מריץ כלי אחד בעותק, ומחזיר את קוד היציאה.
  *  ⛔ `R33_INNER` נדרש כאן — ⚠️ בלעדיו הריצה הפנימית פותחת עותק משלה. */
+function runGate(dir, tool, extraEnv) {
+  const r = spawnSync(process.execPath, [path.join(dir, 'tools', tool)],
+                      { cwd: dir, env: { ...process.env, R33_INNER: '1', ...extraEnv },
+                        encoding: 'utf8' });
+  return r.status;
+}
+
+/*  אותה הרצה, ולצידה מה שהשתנה בעץ. */
 function drift(dir, tool) {
   const before = snapshot(dir);
-  const r = spawnSync(process.execPath, [path.join(dir, 'tools', tool)],
-                      { cwd: dir, env: { ...process.env, R33_INNER: '1' }, encoding: 'utf8' });
+  const status = runGate(dir, tool);
   const after = snapshot(dir);
   const changed = [];
   for (const [f, h] of after) if (!before.has(f)) changed.push('נוסף ' + f);
                               else if (before.get(f) !== h) changed.push('שונה ' + f);
   for (const f of before.keys()) if (!after.has(f)) changed.push('נמחק ' + f);
-  return { changed, status: r.status };
+  return { changed, status };
 }
 
 let n = 1;
 
 /* ── א. קו הבסיס — כל השערים על עותק נקי ───────────────────────────────── */
+/*  ⭐ זו גם הבקרה החיובית של `check-structure` ושל `check-js` (סבב 72):
+ *  שניהם רצים כאן, בתוך הסט. ⛔ אין ריצה נוספת שלהם לבדם (סבב 72) —
+ *  היא אותה עבודה פעמיים, ⚠️ והיא שהחזיקה 16.2 שניות מזמן ההרצה. */
 {
   const dir = copyRepo();
   const { changed, status } = drift(dir, 'check-js.mjs');
@@ -131,6 +155,97 @@ console.log('  ok   מוטנט');
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
-console.log(fail ? `\n✗ סבב 70 (שער קורא בלבד) — ${fail} נכשלו, ${pass} עברו`
-                 : `\n✓ סבב 70 (שער קורא בלבד) — ${pass} טענות עברו`);
+/* ── ה. הנעילה המבנית — `check-structure` על עץ מומט ───────────────────── */
+{
+  const dir = copyRepo();
+  const CHECK_DOCS = fs.readFileSync(path.join(dir, 'tools', 'check-docs.mjs'));
+
+  fs.writeFileSync(path.join(dir, 'stray-file.txt'), 'זר\n');
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: קובץ זר בשורש מפיל את `check-structure`');
+  fs.rmSync(path.join(dir, 'stray-file.txt'));
+
+  fs.renameSync(path.join(dir, 'signing'), path.join(dir, 'signing-x'));
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: תיקייה קנונית חסרה (וגם עודפת) מפילה אותו');
+  fs.renameSync(path.join(dir, 'signing-x'), path.join(dir, 'signing'));
+
+  fs.rmSync(path.join(dir, 'tools', 'check-docs.mjs'));
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: בודק משותף חסר ב-tools/ מפיל אותו');
+  fs.writeFileSync(path.join(dir, 'tools', 'check-docs.mjs'), CHECK_DOCS);
+
+  /*  ⛔ תוכן ארבע התיקיות (סבב 65) — עד אז `android/`, `migrations/`,
+   *  `signing/` ו-`.github/` היו **תיקיות מוכרזות שאיש לא הסתכל לתוכן**,
+   *  ושם שרדו `copy-assets.sh` ו-`assets/.gitkeep` בלי קורא. */
+  const stray = path.join(dir, 'android', 'app', 'src', 'main', 'zzz-stray.txt');
+  fs.mkdirSync(path.dirname(stray), { recursive: true });
+  fs.writeFileSync(stray, 'זר\n');
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: קובץ זר ב-android/ מפיל אותו');
+  fs.rmSync(stray);
+
+  const badMig = path.join(dir, 'migrations', '99_bad_name.sql');
+  fs.writeFileSync(badMig, '-- זר\n');
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: מיגרציה בלי מספור תלת-ספרתי מפילה אותו');
+  fs.rmSync(badMig);
+
+  /*  ⛔ שם המבחן נגזר מהנושא (סבב 67) — `test_round52_pendflush` לא אמר
+   *  למי שחיפש «מה בודק את מודול הנעילה» דבר. ⚠️ ומוטציית-הנגד היא מה
+   *  שמבחין בין «אוכף תבנית» ל«פוסל כל קובץ חדש ב-tools/». */
+  const badTest = path.join(dir, 'tools', 'test_round99_legacy.mjs');
+  fs.writeFileSync(badTest, '// זר\n');
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: שם מבחן בתבנית הישנה (test_round<N>_) מפיל אותו');
+  fs.rmSync(badTest);
+
+  const goodTest = path.join(dir, 'tools', 'test_topicname.mjs');
+  fs.writeFileSync(goodTest, '// תקין\n');
+  t(n++, runGate(dir, 'check-structure.mjs') === 0,
+    '⭐ מוטציית-נגד: `test_<נושא>.mjs` ⛔ אינו מפיל — נאכפת התבנית, לא הכמות');
+  fs.rmSync(goodTest);
+
+  const wf = path.join(dir, '.github', 'workflows', 'zzz.yml');
+  fs.writeFileSync(wf, 'name: zzz\n');
+  t(n++, runGate(dir, 'check-structure.mjs') !== 0,
+    '⛔ מוטציה: workflow שאינו קנוני מפיל אותו');
+  fs.rmSync(wf);
+
+  /*  ⭐ מוטציית-נגד — הסט נאכף, ⛔ לא התוכן: חתימות הקבצים יושבות בשער
+   *  האנדרואיד, ⛔ וכפילות שם הייתה שני מקורות אמת. */
+  const man = path.join(dir, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  fs.appendFileSync(man, '\n<!-- הערה -->\n');
+  t(n++, runGate(dir, 'check-structure.mjs') === 0,
+    '⭐ מוטציית-נגד: שינוי תוכן ב-android/ ⛔ אינו מפיל — הסט נאכף, לא התוכן');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/* ── ו. שגיאת תחביר ב-JS המוטבע ────────────────────────────────────────── */
+/*  ⛔ בשלבי ה-`node --check` בלבד (סבב 72) — ⚠️ ריצה מלאה כאן הייתה
+ *  מריצה את הסט כולו בשלישית. */
+{
+  const dir = copyRepo();
+  const STAGES = { CHECKJS_STAGES_ONLY: '1' };
+  const idx = path.join(dir, 'index.html');
+  const CLEAN = fs.readFileSync(idx);
+
+  /* בלוק מוטבע עם שגיאת תחביר — בדיוק הסוג שמגיע למשתמש כמסך לבן.
+     ⚠️ מוסף כבלוק חדש ולא בעריכת בלוק קיים: ה-</script> האחרון בקובץ
+     עלול להיות סקריפט חיצוני (src=), שהשער מדלג עליו במכוון. */
+  fs.appendFileSync(idx, '\n<script>function {</script>\n');
+  t(n++, runGate(dir, 'check-js.mjs', STAGES) !== 0,
+    '⛔ מוטציה: שגיאת תחביר ב-JS המוטבע מפילה את `check-js`');
+  fs.writeFileSync(idx, CLEAN);
+
+  fs.appendFileSync(idx, '\n<!-- הערה שנוספה במוטציית-הנגד -->\n');
+  t(n++, runGate(dir, 'check-js.mjs', STAGES) === 0,
+    '⭐ מוטציית-נגד: תוספת HTML תקינה ⛔ אינה מפילה — נאכף התחביר, לא התוכן');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+console.log(fail ? `\n✗ סבב 72 (קורא בלבד + נעילה מבנית) — ${fail} נכשלו, ${pass} עברו`
+                 : `\n✓ סבב 72 (קורא בלבד + נעילה מבנית) — ${pass} טענות עברו`);
 process.exit(fail ? 1 : 0);

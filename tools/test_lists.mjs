@@ -32,6 +32,10 @@ import fs from 'node:fs';
 const APP = { app: 'schar-limud' };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
+
 const CAPS_FILE = 'tools/check-capabilities.mjs';
 const CMT_FILE  = 'tools/check-comments.mjs';
 
