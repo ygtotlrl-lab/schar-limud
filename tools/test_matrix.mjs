@@ -56,13 +56,13 @@ const ok = (msg, cond) => {
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
 const DB_FACT_EXEMPT = [
-  46, 93,
+  50, 99,
 ];
 const EXEMPT = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 55, 59, 61, 64, 65, 66, 67, 68, 69,
-  71, 73, 74, 76, 78, 79, 81, 83, 87, 90, 91, 93, 98, 99, 100, 101, 105, 107, 108, 110, 111, 112,
-  113, 114, 115, 116, 118, 119, 120, 121, 122, 126,
+  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 59, 63, 66, 69, 70, 71, 72, 73, 74,
+  76, 78, 79, 81, 82, 84, 85, 87, 89, 93, 96, 97, 99, 104, 105, 106, 107, 111, 113, 114, 116, 117, 118, 119, 120, 121, 122, 123,
+  124, 128,
 ];
 
 function copyRepo() {
@@ -250,6 +250,79 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   ok('⭐ מוטציית-נגד: ריווח נוסף לפני הסימן ⛔ אינו מפיל', await runChecker());
 
   fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+}
+
+/* ────── ⛔ שתי שורות שה-probe שלהן מודד ערך ולא שם (סבב 75) ─────────────────
+   ⛔ מה נאכף: היפוך התא לבדו אינו מבחין בין «מודד ערך» ל«מודד שם» — ⚠️ שתי
+   השורות האלה נמדדו עד סבב 75 בקיום המזהה בלבד, ⛔ ושינוי הערך עבר בשקט.
+   ⛔ הנימוק המדוד: אופק ה-tombstone נבדק על השם בלבד, ⛔ ושינויו מ-90 יום
+   ל-9 לא הפיל דבר; וסף הפינוי היזום חי בקוד האפליקציה ⛔ ואף שער לא הזכיר
+   אותו. ⛔ מה יישבר בלעדיו: ערך שהטבלה מצהירה ישתנה, ⚠️ והתא ימשיך להצהיר
+   את הישן. ⛔ מה אינו נאכף כאן: **קיום** היכולת — ⭐ אותו מודד היפוך התא.
+   ⚠️ המוטציה נוקבת בשם הטענה שתיפול ⛔ ונבדק שהיא זו שנפלה: ⭐ «נפל» לבדו
+   אינו אכיפה כשלעץ יש שערי חתימה — ⛔ מוטציה בתוך בלוק משותף מפילה את
+   ה-`sha` ולא את השורה, ⚠️ וזה נמדד כאן ולכן הערך אינו נגוע בעץ עצמו.
+   ⚠️ והכיוון נגזר מהתא ⛔ ואינו מדלג: תא שמצהיר ✅ נשבר בקלקול הערך
+   הקנוני, ⛔ ותא שמצהיר ❌ נשבר בהסרת הבדיקה — ⭐ שני הכיוונים מפילים את
+   **אותה** שורה.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const CAP2 = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const CLEAN_CAP = fs.readFileSync(CAP2, 'utf8');
+  const IDX = path.join(WORK, 'index.html');
+  const CLEAN_IDX = fs.readFileSync(IDX, 'utf8');
+  const cellOf = (n) => {
+    const r = rows.find((x) => x.row === n);
+    return r ? r.line.split('|')[3 + APP.col] : '';
+  };
+  /*  ⛔ המוטציה נבדקת מול **שם הטענה** ולא מול «נפל» (סבב 75) — ⚠️ שער
+   *  שנופל מסיבה אחרת נראה כאכיפה ⛔ ואינו אוכף דבר. */
+  const why = async () => {
+    const lg = console.log, er = console.error, out = [];
+    console.log = (...a) => out.push(a.join(' '));
+    console.error = (...a) => out.push(a.join(' '));
+    try {
+      const mod = await import(`${CHECKER}?flip=${spin++}`);
+      return { held: mod.capFailures === 0, out };
+    } catch (e) { return { held: false, out }; }
+    finally { console.log = lg; console.error = er; }
+  };
+  const run = async (label, files, mustFall, row) => {
+    let changed = false;
+    for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
+    ok('המוטציה «' + label + '» שינתה קוד בעותק', changed);
+    const { held, out } = await why();
+    for (const [p, clean] of files) fs.writeFileSync(p, clean);
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + row,
+       !held && out.some((l) => l.indexOf('❌ שורה ' + row + ' ') === 0));
+  };
+
+  /*  ⛔ אופק ה-tombstone — ⚠️ הערך הוא 90 יום, ⛔ והשם לבדו אינו הערך:
+   *  ⭐ תא ✅ מקבל ערך קנוני אחר, ותא ❌ מקבל את הקבוע שאין לו. */
+  await run('אופק ה-tombstone שאינו 90 יום',
+    cellOf(100).indexOf('✅') >= 0
+      ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const TOMB_TTL_MS = 90 *', 'const TOMB_TTL_MS = 9 *')]]
+      : [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
+          '<script>\nvar TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;')]],
+    true, 100);
+  /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע **חדש** בשם שכן ובאותו ערך — ⚠️ ה-probe
+   *  נעול על השם המדויק, ⛔ ואינו נגרר אחרי מי שדומה לו. */
+  await run('קבוע שכן בשם דומה ובאותו ערך',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
+      '<script>\nvar TOMBSTONE_TTL_DOC = 90 * 24 * 60 * 60 * 1000;')]], false);
+
+  /*  ⛔ סף הפינוי היזום — ⚠️ 60% מהקיבולת, ⛔ ותא ❌ נשבר מהצד השני:
+   *  ⭐ הסרת הבדיקה על השכבה השנייה הופכת את ה-probe לאמת מול תא «אין». */
+  await run('סף הפינוי היזום שאינו 60%',
+    cellOf(64).indexOf('✅') >= 0
+      ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const LS_SWEEP_PCT = 0.60;', 'const LS_SWEEP_PCT = 0.90;')]]
+      : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('/tier2\\s*[:=]\\s*\\[\\s*\\{/', '/tier2\\s*[:=]\\s*\\[/')]],
+    true, 64);
+  /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע חדש בשם שכן — ⚠️ אותה טענה בדיוק, ⛔ ובכיוון
+   *  שאסור לו להפיל. */
+  await run('סף שכן בשם דומה ובערך אחר',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>', '<script>\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false);
 }
 
 process.chdir(ROOT);

@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [6, 9, 32, 113, 68];
+export const ROWS = [6, 9, 33, 119, 73];
 
 /*  ⛔ שורש נדרס בסביבת מוטציה (סבב 65) — ⚠️ המוטציות רצות על עותק
  *  בתיקייה זמנית ולא על העץ, והדרך היחידה להריץ את השער **האמיתי**
@@ -311,67 +311,60 @@ const ACTIVE = activeLines.join('\n');
   t(hits.length === 0, `21ד · אין הצהרת «זהה בארבעתן» בתיעוד הפעיל (${hits.length})`);
 }
 
-/* ── המוטציות — על עותק בתיקייה זמנית ──────────────────────────────────── */
-function runOn(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-'));
-  execFileSync('cp', ['-r', ROOT + '/.', dir]);
+/* ── המוטציות — ⛔ עותק אחד לשער, ולא עותק לכל מוטציה (סבב 75) ──────────── */
+/*  ⛔ עד סבב 75 כל אחת מ-40 המוטציות עשתה `cp -r` של העץ כולו ⛔ ותהליך
+ *  `node` חדש — ⚠️ והזמן גדל עם **מספר המוטציות** ולא עם גודל הקוד.
+ *  ⭐ העותק נוצר פעם אחת ונשמר, ⛔ והקבצים שהמוטציה נגעה בהם מוחזרים
+ *  אחריה: ⚠️ שחזור סלקטיבי הוא מה שמתיר לשתף את העותק בלי שמוטציה אחת
+ *  תזלוג לשנייה. */
+let WORK = null;
+function work() {
+  if (WORK) return WORK;
+  WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-'));
+  execFileSync('cp', ['-r', ROOT + '/.', WORK]);
+  /*  ⛔ המחיקה על יציאה (סבב 72) — ⚠️ נמדד: העותק נשאר בכל הרצה,
+   *  ⛔ ומאות עותקי עץ מילאו את הדיסק. */
+  process.on('exit', () => { try { fs.rmSync(WORK, { recursive: true, force: true }); } catch (e) {} });
+  return WORK;
+}
+/*  ⛔ מחזירה `true` כשהשער **נפל** — ⚠️ זה מה שהמוטציה מודדת. */
+function runGateOn(files, gate, env) {
+  const dir = work();
+  const saved = [];
   for (const [rel, body] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-    fs.writeFileSync(path.join(dir, rel), body);
+    const p = path.join(dir, rel);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    saved.push([p, fs.existsSync(p) ? fs.readFileSync(p) : null]);
+    fs.writeFileSync(p, body);
   }
-  /*  ⛔ המחיקה ב-`finally` (סבב 72) — ⚠️ נמדד: מוטציה שנועדה להפיל זרקה
-   *  כאן, ⛔ והעותק נשאר: מאות עותקי עץ מילאו את הדיסק. */
   try {
-    return execFileSync('node', [path.join(dir, 'tools', 'test_rulesdocs.mjs')],
-      { cwd: dir, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, RULESDOCS_ROOT: dir } });
+    execFileSync('node', [path.join(dir, 'tools', gate)],
+      { cwd: dir, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, ...env(dir) } });
+    return false;
+  } catch (e) {
+    return true;
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    /*  ⛔ השחזור ב-`finally` — ⚠️ מוטציה שזרקה הייתה משאירה את העותק
+     *  מזוהם, ⛔ והמוטציה הבאה הייתה מודדת שתי מוטציות יחד. */
+    for (const [p, b] of saved) {
+      if (b === null) fs.rmSync(p, { force: true }); else fs.writeFileSync(p, b);
+    }
   }
 }
-function fails(files) {
-  try { runOn(files); return false; } catch { return true; }
-}
-
-/*  ⛔ הרצת `check-capabilities` על עותק (סבב 72) — ⚠️ הטענה על עמודת
+const fails = (files) => runGateOn(files, 'test_rulesdocs.mjs', (d) => ({ RULESDOCS_ROOT: d }));
+/*  ⛔ הרצת `check-capabilities` על העותק (סבב 72) — ⚠️ הטענה על עמודת
  *  ההערות יושבת שם, ⭐ ורק ריצה אמיתית מוכיחה שהמוטציה נתפסה. */
-function capsFails(edit) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cap-'));
-  try {
-    execFileSync('cp', ['-r', ROOT + '/.', dir]);
-    const p = path.join(dir, 'CLAUDE.md');
-    fs.writeFileSync(p, edit(fs.readFileSync(p, 'utf8')));
-    try {
-      execFileSync('node', [path.join(dir, 'tools', 'check-capabilities.mjs')],
-                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
-      return false;
-    } catch { return true; }
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-}
+const capsFails = (edit) => runGateOn({ 'CLAUDE.md': edit(DOC) }, 'check-capabilities.mjs', () => ({}));
+/*  ⛔ מוטציה שמכוונת לשער אחר (סבב 72) — ⚠️ «פרק שחופף לשורה בטבלה»
+ *  נאכף ב-`check-comments`, ⛔ ולכן המוטציה מריצה **אותו** על העותק
+ *  ולא את השער הזה: מוטציה שמריצה את השער הלא-נכון אינה אכיפה. */
+const commentsFails = (files) => runGateOn(files, 'check-comments.mjs', () => ({}));
 
 /*  ⛔ השורה נבחרת מהטבלה ⛔ ולא נכתבת כמספר — ⚠️ מספר קשיח נסחף בכל
  *  מספור מחדש, ⭐ והמוטציה מפסיקה לפגוע במה שהיא באה למדוד: היא הייתה
  *  עוברת בשקט על שורה שכבר נושאת הערה. */
 const okRow = (doc) => /^\| (\d+) \|(?:[^\n|]*\|){2}(?: ✅ \|){4}\s*\|$/m.exec(doc);
 t(!!okRow(DOC), 'מ18 · נמצאה שורה ✅✅✅✅ עם הערה ריקה למוטציה');
-
-/*  ⛔ מוטציה שמכוונת לשער אחר (סבב 72) — ⚠️ «פרק שחופף לשורה בטבלה»
- *  נאכף ב-`check-comments`, ⛔ ולכן המוטציה מריצה **אותו** על העותק
- *  ולא את השער הזה: מוטציה שמריצה את השער הלא-נכון אינה אכיפה. */
-function commentsFails(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cc-'));
-  try {
-    execFileSync('cp', ['-r', ROOT + '/.', dir]);
-    for (const [rel, body] of Object.entries(files)) {
-      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-      fs.writeFileSync(path.join(dir, rel), body);
-    }
-    try {
-      execFileSync('node', [path.join(dir, 'tools', 'check-comments.mjs')],
-                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
-      return false;
-    } catch { return true; }
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-}
 
 if (!INNER) {
 

@@ -46,7 +46,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 21, 24, 27, 25, 38, 64, 65, 66, 120];
+export const ROWS = [17, 19, 21, 24, 28, 25, 40, 69, 70, 71, 47];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -849,7 +849,7 @@ if (failures) {
     /*  ⛔ «רתמה» היא פונקציה שפותחת תיקיית עבודה משלה — ⚠️ זו העלות, ⛔ ולא
      *  השם: `copyRepo` · `capsFails` · `runOn` נקראים אחרת בכל שער. */
     const DEF = /^(?:export\s+)?(?:async\s+)?(?:function\s+|const\s+)([A-Za-z_$][\w$]*)\s*(?:=\s*(?:async\s*)?)?\(/;
-    const harness = [];
+    const bodies = new Map();
     for (let i = 0; i < ls.length; i++) {
       const m = DEF.exec(ls[i]);
       /*  ⛔ גוף ההגדרה נלקח עד ההגדרה הבאה בעמודה 0 — ⚠️ מונה סוגריים
@@ -858,16 +858,29 @@ if (failures) {
       if (!m) continue;
       let j = i + 1;
       while (j < ls.length && !/^\S/.test(ls[j])) j++;
-      if (ls.slice(i, j).join('\n').indexOf('mkdtempSync') >= 0)
-        harness.push({ name: m[1] });
+      bodies.set(m[1], ls.slice(i, j).join('\n'));
+    }
+    /*  ⛔ הרתמה נמדדת בסגור מעבר (סבב 75) — ⚠️ «עותק אחד לשער» מוציא את
+     *  `mkdtempSync` לפונקציה אחת, ⛔ ומדידה ישירה בלבד הפסיקה לזהות את
+     *  הקוראות שלה: ⭐ פונקציה שקוראת לרתמה **היא** רתמה, ⛔ שאם לא כן
+     *  שכבת מעטפת אחת מספיקה כדי להסתיר את העלות. */
+    const harness = new Set();
+    for (const [n, b] of bodies) if (b.indexOf('mkdtempSync') >= 0) harness.add(n);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [n, b] of bodies) {
+        if (harness.has(n)) continue;
+        for (const h of harness)
+          if (new RegExp('\\b' + h + '\\s*\\(').test(b)) { harness.add(n); grew = true; break; }
+      }
     }
     for (let i = 0; i < guard; i++) {
       /*  ⛔ עמודה 0 בלבד — ⚠️ קריאה מוזחת יושבת בגוף פונקציה והיא הגדרה
        *  ולא הפעלה, ⛔ ופסילתה הייתה מפילה שער תקין. */
       if (!/^\S/.test(ls[i]) || DEF.test(ls[i])) continue;
       for (const h of harness)
-        if (new RegExp('\\b' + h.name + '\\s*\\(').test(ls[i]))
-          harnessAbove.push(`tools/${f}:${i + 1} — ${h.name}()`);
+        if (new RegExp('\\b' + h + '\\s*\\(').test(ls[i]))
+          harnessAbove.push(`tools/${f}:${i + 1} — ${h}()`);
     }
   }
   if (harnessAbove.length)

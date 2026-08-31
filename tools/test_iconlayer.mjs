@@ -66,7 +66,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [74, 76, 78];
+export const ROWS = [79, 81, 82, 84];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
@@ -212,6 +212,20 @@ const INK_TOL = 4;
     בהגדרה, ⛔ ושתי מהאפליקציות נושאות צלע כזו. */
 const CENTER_TOL = 1;
 
+/*  ⛔ ששה-עשר הנכסים — ⚠️ הרשימה נגזרת מהדיסק ומ-`FRAME`, ⛔ ואינה מוקלדת:
+    ⭐ נכס שנוסף לתיקייה נמדד גם הוא.
+    ⚠️ `icons/` נסרקת **רק אם היא קיימת** — ⛔ רתמות המוטציה שלמטה מעתיקות
+    את `RES` בלבד, ⭐ וקיום התיקייה עצמה נאכף ברשימת התיקיות הקנוניות
+    שב-`check-structure`: ⛔ ולכן היעדרה כאן אינו «אין הפרות» אלא «אין מה
+    למדוד בעותק שאינו עץ מלא». */
+function allAssets(root) {
+  const out = [];
+  if (existsSync(join(root, 'icons')))
+    for (const f of readdirSync(join(root, 'icons'))) if (f.endsWith('.png')) out.push(`icons/${f}`);
+  for (const d of DENS) for (const a of Object.keys(FRAME)) out.push(`${RES}/mipmap-${d}/${a}.png`);
+  return out;
+}
+
 function audit(root) {
   const v = [];
   for (const [asset, sizes] of Object.entries(FRAME))
@@ -236,6 +250,25 @@ function audit(root) {
       if (Math.abs(cdx) > CENTER_TOL || Math.abs(cdy) > CENTER_TOL)
         v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
+
+  /*  ⛔ שוליים אופקיים שווים **בדיוק** (סבב 75) — ⚠️ סובלנות המרכוז היא
+      פיקסל, ⛔ והיא נדרשת בציר האנכי בלבד: ⭐ הצלע הארוכה מכוילת למספר
+      זוגי במסגרת זוגית, ⛔ ולכן שמאל וימין מתחלקים שווה בכל אחד מ-16
+      הנכסים. ⚠️ והמדידה היא על **תיבת התוכן שנמדדה** ⛔ ולא על התיבה
+      הנומינלית: אנטי-אליאסינג מוריד עמודה מתחת לסף, ⭐ וזה בדיוק מה
+      שהטענה באה לתפוס. */
+  for (const rel of allAssets(root)) {
+    const p = join(root, rel);
+    if (!existsSync(p)) { v.push({ kind: 'missing', rel }); continue; }
+    let img;
+    try { img = decodePNG(readFileSync(p)); }
+    catch (e) { v.push({ kind: 'decode', rel, msg: e.message }); continue; }
+    const box = contentBox(img);
+    if (!box) { v.push({ kind: 'h-margin', rel, msg: 'ריק' }); continue; }
+    const left = box.x, right = img.w - (box.x + box.w);
+    if (left !== right)
+      v.push({ kind: 'h-margin', rel, msg: `שוליים ${left}/${right} — הפרש ${left - right}` });
+  }
 
   /*  ⛔ רקע האריח שווה למוצהר **בדיוק** (סבב 72) — ⚠️ הסובלנות כאן היא אפס
       ולא `PIXEL_TOL`: רעש הנייר שבמאסטר נכנס כאלפא זעירה וצבע את הרקע
@@ -412,6 +445,10 @@ t(n++, !base.some(x => x.kind === 'tile-bg'),
   `ה(4). רקע האריח שווה למוצהר בדיוק — ⛔ אין רעש מסכה ${of('tile-bg')}`);
 t(n++, !base.some(x => x.kind === 'tile-ink'),
   `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
+/*  ⛔ הטענה מודדת את **כל** 16 הנכסים (סבב 75) — ⚠️ עשרת ה-mipmap ושישה
+    שב-`icons/`, ⛔ ולא רק אלה שיש להם מסגרת מוצהרת. */
+t(n++, !base.some(x => x.kind === 'h-margin'),
+  `ב(2). שוליים אופקיים שווים בכל אחד מ-${allAssets(ROOT).length} הנכסים ${of('h-margin')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -463,6 +500,7 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
       rerun(src.replace('const ALPHA_MIN = 25;', 'const ALPHA_MIN = 26;'),
             'ז. ⭐ מוטציית-נגד: `ALPHA_MIN` בפיקסל אחד ⛔ אינו מפיל', false);
     }
+
   } finally { rmSync(g, { recursive: true, force: true }); }
 }
 
@@ -577,7 +615,7 @@ t(n++, audit(tmp).length === 0, 'נגד: עותק נקי עובר את הביק�
 /* ⚠️ `kinds` מכיל `__none__` כשהציפייה היא **אפס** הפרות — ⛔ מוטציית-נגד
    שאין לה ציפייה מפורשת הייתה עוברת על כל תוצאה. */
 const ALL_KINDS = ['missing', 'decode', 'frame', 'content', 'extra', 'heavy',
-                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel'];
+                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'h-margin'];
 const mutate = (label, fn, kinds, notKinds = []) => {
   const bak = join(tmp, 'bak');
   rmSync(bak, { recursive: true, force: true });
@@ -643,8 +681,27 @@ mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
 /* ⭐ מוטציית-נגד: הזזת התוכן בלי לשנות את גודלו ⛔ אינה מפילה —
    ⚠️ הטענה מודדת צלע ⛔ ולא מיקום, ובלעדיה סובלנות אפס הייתה נקראת
    כאיסור על כל נגיעה בנכס. ⭐ והיא גם מה שמוכיח שסובלנות המרכוז אינה
-   אפס (סבב 72): ⛔ פיקסל אחד עובר, שלושה נופלים. */
+   אפס (סבב 72): ⛔ פיקסל אחד עובר, שלושה נופלים.
+   ⛔ **וההזזה אנכית ולא אופקית (סבב 75)** — ⚠️ הציר האופקי נושא מאז
+   טענה בסובלנות **אפס**, ⛔ והזזה אופקית בפיקסל הייתה מפילה אותה:
+   ⭐ שתי הטענות אינן סותרות — המרכוז סובל פיקסל, והשוליים האופקיים לא. */
 mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה מפילה', () => {
+  const p = mip('mdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  const out = Buffer.alloc(img.data.length);
+  for (let y = img.h - 1; y >= 1; y--)
+    img.data.copy(out, y * img.w * 4, (y - 1) * img.w * 4, y * img.w * 4);
+  out.copy(img.data);
+  writeFileSync(p, encodePNG(img));
+}, ['__none__']);
+
+/*  ⛔ שוליים אופקיים — המוטציה מזיזה את התוכן פיקסל אחד ימינה (סבב 75):
+    ⚠️ הגודל אינו משתנה ולכן טענת הצלע אינה נוגעת, ⛔ והמרכוז סובל פיקסל —
+    ⭐ הטענה היחידה שאמורה ליפול כאן היא «שוליים אופקיים שווים».
+    ⚠️ והמוטציה על **הנכס** ולא על המחולל: ⛔ הרצת המחולל בתוך השער עלתה
+    8–12 שניות לכל מוטציה שם שהסמל מצויר בצורות, ⭐ והמנגנון שהטענה
+    מודדת הוא הביקורת ⛔ ולא דרך היצירה. */
+mutate('הזזת התוכן בפיקסל אופקית — mdpi', () => {
   const p = mip('mdpi', 'ic_launcher_foreground');
   const img = decodePNG(readFileSync(p));
   const out = Buffer.alloc(img.data.length);
@@ -653,7 +710,7 @@ mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה
       img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - 1) * 4, (y * img.w + x) * 4);
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
-}, ['__none__']);
+}, ['h-margin']);
 
 /*  ⛔ המוטציה מזיזה ⛔ ואינה מקטינה (סבב 72) — ⚠️ תוכן שהוקטן נופל ממילא
     על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת המרכוז:
