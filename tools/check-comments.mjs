@@ -46,7 +46,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 21, 24, 27, 25, 36, 62, 63, 64, 118];
+export const ROWS = [17, 19, 21, 24, 27, 25, 38, 64, 65, 66, 120];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -113,6 +113,34 @@ const pass = (m) => console.log('✅ ' + m);
 /*  ⛔ אזהרה שאינה מפילה (סבב 72) — ⚠️ תקן שרוב הקבצים נכתבו לפניו
  *  חוסם כל דחיפה אם הוא מפיל, ⛔ והמספר הוא מה שיאמר מתי לסגור. */
 const warn = (m) => console.warn('⚠️ ' + m);
+
+/*  ⛔ הלבנת הערות ששומרת על מספרי השורות (סבב 74ב) — ⚠️ `codeOf` מקומי
+ *  מוחק את שורות ההערה ומזיז כל מספר שורה שאחריהן, ⛔ והודעת כשל ששולחת
+ *  את הקורא לשורה הלא-נכונה גרועה מהיעדר הודעה. */
+function blankComments(t) {
+  let out = '', i = 0, s = null;
+  while (i < t.length) {
+    const c = t[i], d = t[i + 1];
+    if (s === null) {
+      if (c === '/' && d === '*') {
+        const j = t.indexOf('*/', i + 2);
+        const seg = t.slice(i, j < 0 ? t.length : j + 2);
+        out += seg.replace(/[^\n]/g, ' '); i += seg.length; continue;
+      }
+      if (c === '/' && d === '/') {
+        const j = t.indexOf('\n', i);
+        const seg = t.slice(i, j < 0 ? t.length : j);
+        out += seg.replace(/[^\n]/g, ' '); i += seg.length; continue;
+      }
+      if (c === "'" || c === '"' || c === '`') s = c;
+      out += c; i++; continue;
+    }
+    if (c === '\\') { out += c + (d || ''); i += 2; continue; }
+    if (c === s) s = null;
+    out += c; i++;
+  }
+  return out;
+}
 
 const src = fs.readFileSync(APP.file, 'utf8');
 
@@ -787,6 +815,67 @@ if (failures) {
   }
   if (!bad) pass(`ריצת check-js: ${seen} מבחנים, אחד מריץ את הסט המלא ` +
                  `(⚠️ ${muted} מכריזים היעדר, וכולם עם נימוק בבאנר)`);
+
+  /*  ⛔ רתמת מוטציה יושבת **מתחת** לסוגר הריצה הפנימית (סבב 74ב) —
+   *  ⚠️ קריאה שיושבת מעליו רצה גם בריצה הפנימית, ⛔ כלומר פעם לכל
+   *  מוטציה: ⭐ נמדד `test_rulesdocs` ב-77 שניות במקום 7, ⛔ והוא חי כך
+   *  חודשים מפני שאיש לא מדד. ⚠️ הסריקה היא על **כל** קובצי `tools/`,
+   *  ⛔ ולא על השער שבו הכשל התגלה. */
+  const harnessAbove = [];
+  let guarded = 0;
+  let allGates = [];
+  try { allGates = fs.readdirSync('tools').filter((x) => x.endsWith('.mjs')); } catch (e) {}
+  if (!allGates.length) fail('סריקת רתמות: רשימת הקבצים ריקה — נמדדו 0 קבצים ' +
+     'ב-tools/ והצפוי לפחות אחד. הטענה שמתחת רצה על רשימה ריקה');
+  for (const f of allGates) {
+    let code = '';
+    try { code = blankComments(fs.readFileSync('tools/' + f, 'utf8')); } catch (e) { continue; }
+    const ls = code.split('\n');
+    /*  ⭐ דגל הריצה הפנימית — `const` שקורא מ-`process.env`, ⛔ ולא שם
+     *  קבוע: ⚠️ שער אחד קורא `RULESDOCS_ROOT` ואחר `R37_INNER`, ⛔ ושמירה
+     *  על שם אחד הייתה מדלגת על השער שבו הכשל נמדד. */
+    const flags = [];
+    for (const l of ls) {
+      const m = /^const\s+([A-Za-z_$][\w$]*)\s*=[^;]*process\.env\./.exec(l);
+      if (m) flags.push(m[1]);
+    }
+    let guard = -1;
+    for (let i = 0; i < ls.length && guard < 0; i++) {
+      if (/^if \(\s*process\.env\.[A-Za-z_$][\w$]*/.test(ls[i])) guard = i;
+      for (const fl of flags) if (new RegExp('^if \\(\\s*!' + fl + '\\b').test(ls[i])) guard = i;
+    }
+    if (guard < 0) continue;                 // ⚠️ אין ריצה פנימית — אין סוגר
+    guarded++;
+    /*  ⛔ «רתמה» היא פונקציה שפותחת תיקיית עבודה משלה — ⚠️ זו העלות, ⛔ ולא
+     *  השם: `copyRepo` · `capsFails` · `runOn` נקראים אחרת בכל שער. */
+    const DEF = /^(?:export\s+)?(?:async\s+)?(?:function\s+|const\s+)([A-Za-z_$][\w$]*)\s*(?:=\s*(?:async\s*)?)?\(/;
+    const harness = [];
+    for (let i = 0; i < ls.length; i++) {
+      const m = DEF.exec(ls[i]);
+      /*  ⛔ גוף ההגדרה נלקח עד ההגדרה הבאה בעמודה 0 — ⚠️ מונה סוגריים
+       *  נסחף על `}` שבתוך regex ונמדד עומק ‎-2 בקובץ תקין, ⛔ ואז כל
+       *  קריאה נראתה כאילו היא בתוך פונקציה והטענה לא יכלה להיכשל. */
+      if (!m) continue;
+      let j = i + 1;
+      while (j < ls.length && !/^\S/.test(ls[j])) j++;
+      if (ls.slice(i, j).join('\n').indexOf('mkdtempSync') >= 0)
+        harness.push({ name: m[1] });
+    }
+    for (let i = 0; i < guard; i++) {
+      /*  ⛔ עמודה 0 בלבד — ⚠️ קריאה מוזחת יושבת בגוף פונקציה והיא הגדרה
+       *  ולא הפעלה, ⛔ ופסילתה הייתה מפילה שער תקין. */
+      if (!/^\S/.test(ls[i]) || DEF.test(ls[i])) continue;
+      for (const h of harness)
+        if (new RegExp('\\b' + h.name + '\\s*\\(').test(ls[i]))
+          harnessAbove.push(`tools/${f}:${i + 1} — ${h.name}()`);
+    }
+  }
+  if (harnessAbove.length)
+    fail(`רתמת מוטציה מעל סוגר הריצה הפנימית: ${harnessAbove.join(' · ')} — ` +
+         `נמדדו ${harnessAbove.length} קריאות והצפוי אפס. מעבירים אותן אל ` +
+         'מתחת לסוגר; מעליו הן רצות פעם לכל מוטציה');
+  else pass(`רתמת מוטציה מתחת לסוגר — ${allGates.length} שערים נסרקו, ` +
+            `${guarded} מהם עם ריצה פנימית, ובאף אחד אין קריאת רתמה מעל הסוגר`);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
