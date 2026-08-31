@@ -66,7 +66,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [26, 72, 73];
+export const ROWS = [26, 72, 73, 122];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
@@ -464,6 +464,74 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
             'ז. ⭐ מוטציית-נגד: `ALPHA_MIN` בפיקסל אחד ⛔ אינו מפיל', false);
     }
   } finally { rmSync(g, { recursive: true, force: true }); }
+}
+
+/* ────── ⛔ ט. `APP` של המחולל — מפתחות זהים בארבעתן (סבב 73) ────────────────
+   ⛔ **מה נאכף:** בלוק ה-`APP` שב-`gen-icons` מצהיר **בדיוק** את עשרת
+   המפתחות הקנוניים, ⛔ ושדה שערכו ריק נושא הערת נימוק בתוך הבלוק.
+   ⚠️ **הנימוק המדוד:** טענה שמשווה מול שדה שאינו קיים עוברת תמיד —
+   `undefined === undefined` הוא `true`, ⛔ והשער נראה ירוק בלי לרוץ.
+   ⛔ **מה יישבר בלעדיו:** מי שמעתיק `APP` מאפליקציה אחרת משמיט את השדות
+   שאינם רלוונטיים לו, ⚠️ וכל טענה שנשענת עליהם מפסיקה למדוד בשקט.
+   ⛔ **מה אינו נאכף כאן:** ה**ערכים** עצמם — הם נבדלים בכוונה, ⛔ ומה
+   שנדרש מהם הוא נימוק כתוב ולא זהות.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const GEN_KEYS = ['name', 'art', 'ink', 'bg', 'tileRadius', 'tileBox', 'mark',
+                    'master', 'bgKey', 'keyTol'];
+  const src = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
+  const blk = /^const APP = \{$([\s\S]*?)^\};$/m.exec(src);
+  t(n++, !!blk, 'ט. בלוק `APP` של המחולל נמצא');
+  const body = blk ? blk[1] : '';
+  const lines = body.split('\n');
+  const keys = lines.map((l) => /^ {2}([A-Za-z][\w]*):/.exec(l)).filter(Boolean).map((m) => m[1]);
+  const missing = GEN_KEYS.filter((k) => !keys.includes(k));
+  const extra = keys.filter((k) => !GEN_KEYS.includes(k));
+  t(n++, missing.length === 0 && extra.length === 0,
+    `ט. `+"`APP`"+` מצהיר את ${GEN_KEYS.length} המפתחות הקנוניים — חסרים ${missing.join(' · ') || 'אפס'}` +
+    `, עודפים ${extra.join(' · ') || 'אפס'}`);
+  /*  ⛔ שדה ריק נושא נימוק **בתוך הבלוק** — ⚠️ נימוק שיושב מחוצה לו אינו
+      נקרא ע"י מי שעורך את השדה, ⛔ והוא נמחק יחד עם הריק בתום לב. */
+  const bare = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^ {2}([A-Za-z][\w]*):\s*(null|\{\}|\[\])\s*,/.exec(lines[i]);
+    if (!m) continue;
+    /*  ⚠️ נימוק אחד רשאי לכסות **רצף** של שדות ריקים — ⛔ שלושת השדות של
+        המסלול הרסטרי יורדים יחד, ⚠️ והערה נפרדת על כל אחד מהם היא בדיוק
+        ההערה על שורה מובנת מאליה שמלמדת את הקורא לדלג. */
+    let j = i - 1, seen = false;
+    while (j >= 0) {
+      if (/[⛔⚠️⭐]/.test(lines[j])) { seen = true; break; }
+      const k = /^ {2}([A-Za-z][\w]*):\s*(null|\{\}|\[\])\s*,/.exec(lines[j]);
+      if (/^ {2}[A-Za-z][\w]*:/.test(lines[j]) && !k) break;
+      j--;
+    }
+    if (!seen) bare.push(m[1]);
+  }
+  t(n++, bare.length === 0,
+    `ט. כל שדה `+"`APP`"+` ריק נושא הערת נימוק במקומו — בלי נימוק ${bare.join(' · ') || 'אפס'}`);
+
+  /*  ⛔ המוטציה על **הבלוק** ולא על הטענה — ⚠️ השמטת שדה ריק היא בדיוק
+      מה שקורה כשמעתיקים `APP` מאפליקציה אחרת. */
+  const drop = (k) => src.replace(new RegExp(`^ {2}${k}:[^\n]*\n`, 'm'), '');
+  const keysOf = (txt) => {
+    const b = /^const APP = \{$([\s\S]*?)^\};$/m.exec(txt);
+    return (b ? b[1] : '').split('\n')
+      .map((l) => /^ {2}([A-Za-z][\w]*):/.exec(l)).filter(Boolean).map((m) => m[1]);
+  };
+  t(n++, !GEN_KEYS.every((k) => keysOf(drop('tileRadius')).includes(k)),
+    'ט. ⛔ מוטציה: השמטת שדה מ-`APP` מפילה את «מצהיר את המפתחות הקנוניים»');
+  /*  ⭐ מוטציית-נגד **חיה**: השדות מסודרים מחדש — ⛔ סדר אינו מפתח, ⚠️ ושתי
+      האפליקציות שהסמל שלהן מצויר בקוד מצהירות אותם בסוף ולא בהתחלה. */
+  const reordered = (() => {
+    const b = /^const APP = \{$([\s\S]*?)^\};$/m.exec(src);
+    const ls2 = b[1].split('\n');
+    const at = ls2.findIndex((l) => /^ {2}tileRadius:/.test(l));
+    const [moved] = ls2.splice(at, 1); ls2.push(moved);
+    return src.replace(b[1], ls2.join('\n'));
+  })();
+  t(n++, GEN_KEYS.every((k) => keysOf(reordered).includes(k)),
+    'ט. ⭐ מוטציית-נגד: סדר שונה של אותם שדות ⛔ אינו מפיל');
 }
 
 /* ── מקודד PNG מינימלי — לשימוש המוטציות בלבד ──────────────────────────── */
