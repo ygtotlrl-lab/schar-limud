@@ -1263,15 +1263,26 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
   const txt = fs.readFileSync(APP.docs, 'utf8');
   const ls = txt.split('\n');
   const heads = [];
+  const marks = {};
   let inRules = false;
   for (const l of ls) {
     const m = /^<!--\s*SHARED:start\s+id="(rules-[a-z]+)"/.exec(l);
     if (m) { inRules = true; continue; }
     if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; continue; }
-    if (inRules && l.startsWith('### ')) heads.push(l.slice(4).trim());
+    if (inRules && l.startsWith('### ')) {
+      const raw = l.slice(4).trim();
+      const m2 = /^(.*?)\s+([◆◇])$/.exec(raw);
+      heads.push(m2 ? m2[1] : raw);
+      marks[m2 ? m2[1] : raw] = m2 ? m2[2] : '';
+    }
   }
   const rowNums = new Set();
   for (const l of ls) { const m = /^\|\s*(\d+)\s*\|/.exec(l); if (m) rowNums.add(Number(m[1])); }
+  /*  ⛔ סימון הלולאה ◆/◇ — ⚠️ נגזר מהשער ⛔ ולא נכתב ביד: ⭐ ◆ הוא זוג
+   *  סגור משני צדדיו — לסעיף יש שורה, **ולשורה יש קיום בטבלה**; ◇ הוא
+   *  צד אחד בלבד. ⛔ ◇ הוא מצב שאמור להיות אפס, ⛔ והשער מפיל עליו.
+   *  ⚠️ הסימן יושב בסוף שורת הכותרת ונחתך לפני ההשוואה למפה, ⛔ שאם לא
+   *  כן הוא היה חלק מהמפתח — ומשנה אותו בכל עדכון. */
   const noRow  = heads.filter((h) => !RULE_ROWS[h]);
   const stale  = Object.keys(RULE_ROWS).filter((h) => !heads.includes(h));
   const badRow = Object.entries(RULE_ROWS).filter(([, n]) => !rowNums.has(n)).map(([h]) => h);
@@ -1287,6 +1298,20 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
   if (!noRow.length && !stale.length && !badRow.length)
     pass(`כל כלל מיוצג בטבלה — ${heads.length} סעיפים, ` +
          `${new Set(Object.values(RULE_ROWS)).size} שורות מייצגות`);
+
+  /*  ⛔ הסימן שכתוב בקובץ מושווה לזה שנגזר — ⚠️ סימן שנכתב ביד הוא הצהרה
+   *  שאיש לא אימת, ⭐ בדיוק כמו «נאכפת בשער אחר» שהייתה מחרוזת. */
+  const wantMark = (h) => (RULE_ROWS[h] && rowNums.has(RULE_ROWS[h])) ? '◆' : '◇';
+  const openLoop = heads.filter((h) => wantMark(h) === '◇');
+  const badMark = heads.filter((h) => marks[h] !== wantMark(h));
+  if (openLoop.length)
+    fail(`סעיפי כלל שהזוג שלהם פתוח (◇): ${openLoop.join(' · ')} — ` +
+         'מוסיפים שורה בטבלה או מרחיבים עמודת תקן קיימת, ומיישרים את הסימן');
+  else if (badMark.length)
+    fail(`סימן לולאה שאינו תואם לנגזר: ${badMark.map((h) => `${h} → ${wantMark(h)}`).join(' · ')} — ` +
+         'הסימן נגזר מהשער, ומיישרים את הקובץ אליו');
+  else pass(`סימון הלולאה — ${heads.length} סעיפים, כולם ◆ (זוג סגור משני הצדדים)`);
+
 
   /*  ⛔ הסבב הנוכחי נקרא מהכותרת (סבב 72) — ⚠️ מספר שנכתב כאן פעם שנייה
    *  היה מתיישן בשקט בדיוק כמו ההערה שהוא בא למדוד. */

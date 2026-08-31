@@ -201,10 +201,29 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   fs.writeFileSync(DOC_IN_WORK, added);
   ok('⛔ מוטציה: סעיף כלל בלי שורה מפיל את «כל כלל מיוצג בטבלה»', !(await runChecker()));
 
+  /*  ⛔ סימון הלולאה — ⚠️ המוטציה משאירה את הסעיף **ואת** שורתו, ⛔ ורק
+   *  מהפכת את הסימן: ⭐ ◇ הוא זוג פתוח מצד אחד, ⛔ והשער מפיל עליו גם
+   *  כשהמפה עצמה שלמה. */
+  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, HEAD.replace(/[◆]$/, '◇')));
+  ok('⛔ מוטציה: היפוך ◆ ל-◇ מפיל את «סימון הלולאה»', !(await runChecker()));
+  /*  ⭐ מוטציית-נגד חיה: ⛔ שני סעיפים סמוכים מחליפים מקום — ⚠️ הזוגות
+   *  נשארים סגורים והמפה אינה זזה, ⛔ ולכן אסור לה להפיל: ⭐ הסימון מודד
+   *  ייצוג, ⛔ ולא את סדר הסעיפים בקובץ. */
+  const two = [...doc.matchAll(/^### ⛔[^\n]*$/gm)].slice(0, 2).map((m) => m[0]);
+  ok('מוטציית-הנגד מצאה שני סעיפים להחלפה', two.length === 2 && two[0] !== two[1]);
+  fs.writeFileSync(DOC_IN_WORK,
+    doc.replace(two[0], '\u0000').replace(two[1], two[0]).replace('\u0000', two[1]));
+  ok('⭐ מוטציית-נגד: החלפת מקום בין שני סעיפים ⛔ אינה מפילה את «סימון הלולאה»',
+     await runChecker());
+
   /*  ⭐ מוטציית-נגד — שינוי חי ועקבי: ⛔ שם הסעיף מוחלף בקובץ ובמפה יחד,
    *  ⚠️ ואסור לו להפיל: ⭐ המפה מודדת ייצוג ולא מחרוזת. */
-  const key = HEAD.replace(/^###\s+/, '');
-  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, HEAD + ' שבטבלה'));
+  /*  ⛔ הסימן ◆ יושב **בסוף** הכותרת, ⚠️ ולכן שם חדש נכנס לפניו ⛔ ולא
+   *  אחריו — סימן שאינו אחרון אינו נחתך, ⭐ והוא הופך לחלק מהמפתח. */
+  const mk = /\s+[◆◇]$/.exec(HEAD);
+  const key = HEAD.replace(/^###\s+/, '').replace(/\s+[◆◇]$/, '');
+  const ren = `### ${key} שבטבלה${mk ? mk[0] : ''}`;
+  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, ren));
   fs.writeFileSync(CAP, capClean.replace(`'${key}':`, `'${key} שבטבלה':`));
   ok('⭐ מוטציית-נגד: שינוי שם סעיף בקובץ ובמפה יחד ⛔ אינו מפיל', await runChecker());
   fs.writeFileSync(CAP, capClean);
