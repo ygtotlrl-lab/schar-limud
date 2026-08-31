@@ -204,7 +204,7 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   /*  ⛔ סימון הלולאה — ⚠️ המוטציה משאירה את הסעיף **ואת** שורתו, ⛔ ורק
    *  מהפכת את הסימן: ⭐ ◇ הוא זוג פתוח מצד אחד, ⛔ והשער מפיל עליו גם
    *  כשהמפה עצמה שלמה. */
-  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, HEAD.replace(/[◆]$/, '◇')));
+  fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, HEAD.replace(/[◆⧉]$/, '◇')));
   ok('⛔ מוטציה: היפוך ◆ ל-◇ מפיל את «סימון הלולאה»', !(await runChecker()));
   /*  ⭐ מוטציית-נגד חיה: ⛔ שני סעיפים סמוכים מחליפים מקום — ⚠️ הזוגות
    *  נשארים סגורים והמפה אינה זזה, ⛔ ולכן אסור לה להפיל: ⭐ הסימון מודד
@@ -220,28 +220,35 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
    *  ⚠️ ואסור לו להפיל: ⭐ המפה מודדת ייצוג ולא מחרוזת. */
   /*  ⛔ הסימן ◆ יושב **בסוף** הכותרת, ⚠️ ולכן שם חדש נכנס לפניו ⛔ ולא
    *  אחריו — סימן שאינו אחרון אינו נחתך, ⭐ והוא הופך לחלק מהמפתח. */
-  const mk = /\s+[◆◇]$/.exec(HEAD);
-  const key = HEAD.replace(/^###\s+/, '').replace(/\s+[◆◇]$/, '');
+  const mk = /\s+[◆◇⧉]$/.exec(HEAD);
+  const key = HEAD.replace(/^###\s+/, '').replace(/\s+[◆◇⧉]$/, '');
   const ren = `### ${key} שבטבלה${mk ? mk[0] : ''}`;
   fs.writeFileSync(DOC_IN_WORK, doc.replace(HEAD, ren));
   fs.writeFileSync(CAP, capClean.replace(`'${key}':`, `'${key} שבטבלה':`));
   ok('⭐ מוטציית-נגד: שינוי שם סעיף בקובץ ובמפה יחד ⛔ אינו מפיל', await runChecker());
   fs.writeFileSync(CAP, capClean);
 
-  /*  ⭐ ו-🔲 אינו קבוע — ⛔ המוטציה מציבה 🔲 בשורה שאינה נמדדת ב-MATRIX:
-   *  ⚠️ כך הטענה שתיפול היא «🔲 אינו קבוע» ולא היפוך תא. */
-  const lines = doc.split('\n');
-  const at = lines.findIndex((l) => /^\|\s*38\s*\|/.test(l));
-  ok('שורת המוטציה ל-🔲 נמצאה', at >= 0);
-  const parts = lines[at].split('|');
-  parts[3 + APP.col] = ' 🔲 ';
-  lines[at] = parts.join('|');
-  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
-  ok('⛔ מוטציה: תא 🔲 בשורה ותיקה מפיל את «🔲 אינו קבוע»', !(await runChecker()));
+  /*  ⛔ והצד השני של הזוג — הסימן שבשורה (סבב 73ב): ⚠️ עד היום הוא הודבק
+   *  על הסעיף בלבד, ⛔ ומחיקתו מהשורה לא הפילה דבר. ⭐ המוטציה מסירה את
+   *  הסימן מסוף תא השם, ⛔ ומשאירה את הסעיף ואת המפה שלמים. */
+  const marked = doc.split('\n').findIndex((l) => /^\|\s*\d+\s*\|[^|]*[◆⧉] \|/.test(l));
+  ok('שורת המוטציה לסימן הלולאה נמצאה', marked >= 0);
+  {
+    const ls2 = doc.split('\n');
+    ls2[marked] = ls2[marked].replace(/([◆⧉]) \|/, '|');
+    fs.writeFileSync(DOC_IN_WORK, ls2.join('\n'));
+  }
+  ok('⛔ מוטציה: הסרת הסימן משורת הטבלה מפילה את «סימון הלולאה בטבלה»',
+     !(await runChecker()));
+  /*  ⭐ מוטציית-נגד חיה: ⛔ אותה שורה מקבלת רווח נוסף לפני הסימן — ⚠️ הסימן
+   *  נשאר אחרון, ⛔ ולכן אסור לה להפיל: ⭐ הטענה מודדת סימן, ולא ריווח. */
+  {
+    const ls2 = doc.split('\n');
+    ls2[marked] = ls2[marked].replace(/([◆⧉]) \|/, ' $1 |');
+    fs.writeFileSync(DOC_IN_WORK, ls2.join('\n'));
+  }
+  ok('⭐ מוטציית-נגד: ריווח נוסף לפני הסימן ⛔ אינו מפיל', await runChecker());
 
-  fs.writeFileSync(CAP, capClean.replace('const FRESH_BOX = {};', 'const FRESH_BOX = { 38: 72 };'));
-  ok('⭐ מוטציית-נגד: 🔲 שהוכרז בסבב הנוכחי ⛔ אינו מפיל', await runChecker());
-  fs.writeFileSync(CAP, capClean);
   fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
 }
 
