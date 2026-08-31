@@ -179,17 +179,51 @@ const SLOW = new Set([
  *  תהליכים, ⛔ והטענה ש«מקבילה איטית יותר» לא עמדה במדידה. ⭐ הפלט נצבר
  *  לכל שער ונכתב בסדר ההכרזה — ⛔ פלט שנשזר בין שערים אינו קריא, ⚠️ וסדר
  *  לפי מי שסיים ראשון משתנה בין הרצה להרצה ושובר השוואת שני לוגים. */
+/*  ⛔ תקציב הזמן של השער הבודד (סבב 74ב) — ⚠️ בלי תקרה, שער שתפח חי
+ *  חודשים בלי שאיש ידע: ⭐ `test_rulesdocs` הגיע ל-77 שניות מפני שרתמת
+ *  המוטציה שלו ישבה מעל סוגר הריצה הפנימית, ⛔ והמספר לא נמדד באף מקום.
+ *  ⚠️ הערך נדיב בכוונה — ⛔ הוא נועד לתפוס שער שתפח בסדר גודל, ⚠️ ולא
+ *  לדרג שערים תקינים זה מול זה. */
+const BUDGET_MS = 10000;
+
+/*  ⛔ חריגה מוכרזת בלבד (סבב 74ב) — ⚠️ שער שחוצה את התקרה ואינו כאן
+ *  **מפיל**, ⭐ והכניסה לכאן היא הכרעת מנהל: ⛔ רשימה שגדלה בשקט היא
+ *  תקרה שאינה קיימת. `שם השער: הנימוק`. */
+const BUDGET_EXEMPT = {
+  /*  ⛔ ארבעת אלה נמדדו ב-74ב חוצים את התקרה, ⛔ ואיש לא מחק אותם ולא
+   *  הרים את התקרה — ⭐ הם מוכרזים כאן עד הכרעת מנהל. ⚠️ מה שמשותף
+   *  לארבעתם: כל אחד מעתיק את העץ ומריץ תהליך `node` נוסף **לכל מוטציה**,
+   *  ⛔ ולכן זמנם גדל עם מספר המוטציות ולא עם גודל הקוד. */
+  'test_readonly.mjs':  'מריץ את הסט המלא על עותק — ⛔ קו הבסיס המוכרז, ' +
+                        'והוא היחיד שרשאי לכך',
+  'test_crossgate.mjs': 'משווה ארבעה שערים זה מול זה, ⛔ וכל מוטציה מריצה ' +
+                        'שניים מהם על עותק',
+  'test_matrix.mjs':    'הופך תא בטבלה ומריץ את check-capabilities על עותק, ' +
+                        '⛔ פעם לכל שורה שאינה מוחרגת',
+  'test_rulesdocs.mjs': 'רתמת המוטציה שלו כבר מתחת לסוגר (סבב 74), ⛔ ומה ' +
+                        'שנשאר הוא עלות המוטציות עצמן',
+  /*  ⛔ החריגה הזו אינה אחידה בארבעתם (סבב 74ב) — ⚠️ נמדד 5.2 שניות שם
+   *  שיש מאסטר רסטרי, ⛔ ו-16–24 שניות שם שהסמל מצויר בצורות: ⭐ המחולל
+   *  רץ אז על נתיב אחר וארוך. ⛔ והרשימה נשארת משותפת — ⚠️ שער שאינו
+   *  קיים באפליקציה פשוט אינו ב-APP.gates שלה. */
+  'test_iconlayer.mjs': 'מריץ את המחולל על כל שכבת האייקונים, ⛔ ובשתיים ' +
+                        'מהן הסמל מצויר בצורות ולא בציור — נתיב ארוך יותר',
+};
+
 const JOBS = Math.max(1, Number(process.env.CHECKJS_JOBS) || Math.min(4, cpus().length));
 
 function runGate(gate) {
   return new Promise((resolve) => {
+    /*  ⛔ השעון נפתח לפני ה-spawn (סבב 74ב) — ⚠️ ההמתנה בתור הבריכה אינה
+     *  זמן השער, ⛔ ומדידה שכוללת אותה הייתה תלויה במספר התהליכים. */
+    const t0 = Date.now();
     const p = spawn(process.execPath, [join(ROOT, 'tools', gate)],
                     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '';
     p.stdout.on('data', (d) => { out += d; });
     p.stderr.on('data', (d) => { err += d; });
-    p.on('error', (e) => resolve({ out, err: err + e.message + '\n', code: 1 }));
-    p.on('close', (code) => resolve({ out, err, code }));
+    p.on('error', (e) => resolve({ out, err: err + e.message + '\n', code: 1, ms: Date.now() - t0 }));
+    p.on('close', (code) => resolve({ out, err, code, ms: Date.now() - t0 }));
   });
 }
 
@@ -203,11 +237,59 @@ async function runPool(list, jobs) {
   return res;
 }
 
+const skipped = APP.gates.filter((g) => SLOW.has(g));
 const wanted = APP.gates.filter((g) => !(FAST && SLOW.has(g)));
-for (const r of await runPool(wanted, JOBS)) {
-  if (r.out) process.stdout.write(r.out);
-  if (r.err) process.stderr.write(r.err);
-  if (r.code !== 0) failures++;
+
+/*  ⛔ שתי הרמות נמדדות ⛔ ואינן מוצהרות (סבב 74ב) — ⚠️ ברירת מחדל
+ *  שהתהפכה היא הפער השקט המושלם: השער עובר, המוטציות לא רצו, ואין סימן.
+ *  ⭐ ולכן הטענה מצמידה את הרמה **לדגל** ⛔ ולא למשתנה שנגזר ממנו: ⚠️
+ *  השוואה בין `FAST` לעצמו עוברת גם כשהברירה התהפכה, ⛔ ובדיוק זה
+ *  «probe שאינו יכול להיכשל». */
+const flagged = process.argv.includes('--fast');
+if (!skipped.length)
+  fail('שתי רמות ריצה: הרמה המהירה אינה מדלגת על דבר — נמדדו 0 שערים ' +
+       'מ-SLOW ב-APP.gates והצפוי לפחות אחד. הרמות זהות, ואין מה לבחור');
+else if (FAST !== flagged)
+  fail(`שתי רמות ריצה: רמת ברירת המחדל אינה המלאה — נמדדה רמה ` +
+       `${FAST ? 'מהירה' : 'מלאה'} והצפוי ${flagged ? 'מהירה' : 'מלאה'}. ` +
+       'הרמה נקבעת בדגל בלבד, ובלעדיו רצה המלאה');
+else if (wanted.length !== APP.gates.length - (FAST ? skipped.length : 0))
+  fail(`שתי רמות ריצה: הרמה אינה מסננת כמצופה — נמדדו ${wanted.length} ` +
+       `שערים והצפוי ${APP.gates.length - (FAST ? skipped.length : 0)}. ` +
+       'הרמה המלאה מריצה את כולם, והמהירה מדלגת על SLOW בלבד');
+else
+  pass(`שתי רמות ריצה — רמת ברירת המחדל מלאה (${APP.gates.length} שערים), ` +
+       `והמהירה מדלגת על ${skipped.length}; הריצה הזו ${FAST ? 'מהירה' : 'מלאה'}`);
+
+const timed = [];
+{
+  const res = await runPool(wanted, JOBS);
+  for (let i = 0; i < wanted.length; i++) {
+    const r = res[i];
+    if (r.out) process.stdout.write(r.out);
+    if (r.err) process.stderr.write(r.err);
+    if (r.code !== 0) failures++;
+    timed.push({ gate: wanted[i], ms: r.ms });
+  }
+}
+
+/*  ⛔ הזמן נמדד ומודפס (סבב 74ב) — ⚠️ תקרה שאיש אינו רואה את המדידה שלה
+ *  מתגלה רק ברגע שהיא נחצית, ⛔ והמגמה שקדמה לה אבודה. */
+const over = timed.filter((x) => x.ms > BUDGET_MS && !BUDGET_EXEMPT[x.gate]);
+for (const x of over)
+  fail(`tools/${x.gate}: חצה את תקציב הזמן — נמדד ${x.ms} מ״ש והתקרה ` +
+       `${BUDGET_MS} מ״ש. מוציאים את רתמת המוטציה אל מתחת לסוגר הריצה ` +
+       'הפנימית, או מכריזים חריגה מנומקת ב-BUDGET_EXEMPT');
+if (!over.length) {
+  /*  ⛔ המדידה מודפסת ולא רק נשפטת — ⚠️ שער שמטפס מ-2 ל-9 שניות עובר
+   *  בשתיקה, ⛔ והמגמה היא מה שמראה אותו לפני שהוא חוצה. ⭐ הסף להדפסה
+   *  הוא שנייה, ⛔ בדיוק הסף שמגדיר את הרמה המהירה. */
+  const loud = timed.filter((x) => x.ms >= 1000).sort((a, b) => b.ms - a.ms)
+                    .map((x) => `${x.gate.replace(/\.mjs$/, '')} ${x.ms}`).join(' · ');
+  const ex = Object.keys(BUDGET_EXEMPT).length;
+  pass(`תקציב זמן לשער — ${timed.length} שערים, תקרה ${BUDGET_MS} מ״ש` +
+       (ex ? `, ${ex} חריגות מוכרזות` : '') +
+       `; מעל שנייה: ${loud || 'אין'} מ״ש`);
 }
 if (FAST) console.log(`\n⚠️ רמה מהירה — ${wanted.length} מתוך ${APP.gates.length} שערים, ` +
                       '⛔ והמוטציות לא רצו: לפני דחיפה מריצים בלי הדגל.');
