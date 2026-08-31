@@ -348,13 +348,39 @@ function capsFails(edit) {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-/*  ⛔ מוטציה: הערת נימוק על שורה ✅✅✅✅ (סבב 72) — ⚠️ היא מתארת מצב
- *  שכבר אינו, ⛔ ומי שקורא אותה מחפש בעיה שנפתרה. */
 /*  ⛔ השורה נבחרת מהטבלה ⛔ ולא נכתבת כמספר — ⚠️ מספר קשיח נסחף בכל
  *  מספור מחדש, ⭐ והמוטציה מפסיקה לפגוע במה שהיא באה למדוד: היא הייתה
  *  עוברת בשקט על שורה שכבר נושאת הערה. */
 const okRow = (doc) => /^\| (\d+) \|(?:[^\n|]*\|){2}(?: ✅ \|){4}\s*\|$/m.exec(doc);
 t(!!okRow(DOC), 'מ18 · נמצאה שורה ✅✅✅✅ עם הערה ריקה למוטציה');
+
+/*  ⛔ מוטציה שמכוונת לשער אחר (סבב 72) — ⚠️ «פרק שחופף לשורה בטבלה»
+ *  נאכף ב-`check-comments`, ⛔ ולכן המוטציה מריצה **אותו** על העותק
+ *  ולא את השער הזה: מוטציה שמריצה את השער הלא-נכון אינה אכיפה. */
+function commentsFails(files) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cc-'));
+  try {
+    execFileSync('cp', ['-r', ROOT + '/.', dir]);
+    for (const [rel, body] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      fs.writeFileSync(path.join(dir, rel), body);
+    }
+    try {
+      execFileSync('node', [path.join(dir, 'tools', 'check-comments.mjs')],
+                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+      return false;
+    } catch { return true; }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+if (!INNER) {
+
+  /*  ⛔ עשר קריאות רתמת המוטציה יושבות מתחת לסוגר (סבב 74) — ⚠️ כל
+   *  אחת מהן היא `cp -r` של העץ ותהליך `node` חדש, ⛔ והריצה הפנימית
+   *  שמריצה אותן שוב לכל מוטציה הכפילה אותן פי מספר המוטציות:
+   *  ⭐ נמדד 77–83 שניות לשער, ⛔ ומהן 2,956 מ״ש מתוך 3,427 ב-spawn. */
+/*  ⛔ מוטציה: הערת נימוק על שורה ✅✅✅✅ (סבב 72) — ⚠️ היא מתארת מצב
+ *  שכבר אינו, ⛔ ומי שקורא אותה מחפש בעיה שנפתרה. */
 t(capsFails((doc) => {
   const m = okRow(doc);
   return doc.replace(m[0], m[0].replace(/\|$/, ' נשאר להמיר את שאר האתרים |'));
@@ -406,27 +432,6 @@ t(commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + `\nconst _r
  *  גבול-מילה אמיתי, ⛔ והטענה מודדת ביטוי מת ולא כל שימוש ב-`\b`. */
 t(!commentsFails({ 'tools/test_bump.mjs': rd('tools/test_bump.mjs') + `\nconst _r72 = ${DEAD}versionCode/;\n` }),
   'נ5 · ⭐ `\\b` לפני אות לטינית ⛔ **אינו** מפיל');
-
-/*  ⛔ מוטציה שמכוונת לשער אחר (סבב 72) — ⚠️ «פרק שחופף לשורה בטבלה»
- *  נאכף ב-`check-comments`, ⛔ ולכן המוטציה מריצה **אותו** על העותק
- *  ולא את השער הזה: מוטציה שמריצה את השער הלא-נכון אינה אכיפה. */
-function commentsFails(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-cc-'));
-  try {
-    execFileSync('cp', ['-r', ROOT + '/.', dir]);
-    for (const [rel, body] of Object.entries(files)) {
-      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-      fs.writeFileSync(path.join(dir, rel), body);
-    }
-    try {
-      execFileSync('node', [path.join(dir, 'tools', 'check-comments.mjs')],
-                   { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
-      return false;
-    } catch { return true; }
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-}
-
-if (!INNER) {
   /*  ⛔ מ1 — בלוק חמישי מפיל את א1. */
   t(fails({ 'CLAUDE.md': DOC + '\n<!-- SHARED:start id="rules-extra" -->\nגוף.\n<!-- SHARED:end -->\n' }),
     'מ1 · בלוק כללים חמישי **מפיל**');
