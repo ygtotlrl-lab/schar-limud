@@ -3,7 +3,7 @@
  *
  * ⛔ **מה שנאכף כאן, וזה כל מה שנאכף:** עשרת קובצי ה-mipmap קיימים
  * ובממדים הנכונים · התוכן שבתוכם באותו גודל נתפס בכל האפליקציות ·
- * **ובמרכז המסגרת**, בסטיית `CENTER_TOL` פיקסלים ·
+ * **ובמרכז המסגרת בלי סטייה** — L=R ו-T=B בכל אחד מ-16 הנכסים ·
  * ו-`ic_launcher_background` **משחזר את שוליי `ic_launcher`**.
  *
  * ⛔ **וצבע הדיו נמדד בשני המסלולים (סבב 72)** — ⚠️ האריח והחזית: נמדד
@@ -80,12 +80,13 @@ const FRAME = { ic_launcher: [48, 72, 96, 144, 192],
 /* ⚠️ גודל התוכן — זהה לשני הנכסים, וזו הנקודה: הלוגו נתפס באותו גודל
    בין אם הוא מוגש כאייקון מלא ובין אם כשכבת adaptive. */
 const CONTENT = [48, 72, 96, 144, 192];
-/* ⛔ סובלנות אפס בארבע הרזולוציות הראשונות, ו-1 ב-xxxhdpi (סבב 71) — ⚠️ הגזירה
-   מגיעה ל-48/72/96/144/192 בדיוק בארבעתן, ⛔ ולכן סטייה כאן היא נכס שנדחף בלי
-   גזירה מחדש. ⚠️ והיחידה ב-xxxhdpi היא מה שצורה עגולה מחזירה בסף אלפא 25
-   כשהמסגרת היא 432. */
-const CONTENT_TOL = [0, 0, 0, 0, 1];
+/* ⛔ סובלנות אפס בכל חמש הרזולוציות (סבב 76) — ⚠️ ההיתר ב-xxxhdpi ירד אחרי
+   שהמחולל מכייל את **שני** הממדים: הצלע שמצוירת אינה הצלע שנמדדת, ⛔ ולכן
+   הוא מנסה מועמדים עד שהנמדד הוא היעד. ⭐ סטייה כאן היא נכס שנדחף בלי
+   גזירה מחדש. */
+const CONTENT_TOL = [0, 0, 0, 0, 0];
 const ALPHA_MIN = 25;    /* ⛔ סף התוכן — ר' הבאנר. */
+const GEN_MAX_SEC = 3;   /* ⛔ תקרת זמן לגזירה המלאה — ר' הטענה שמודדת אותה. */
 const OPAQUE = 250;      /* ⚠️ פיקסל שוליים שקוף למחצה הוא פינה מעוגלת ואינו נמדד. */
 const RING = 4;          /* רוחב טבעת השוליים הנמדדת. */
 const MEAN_TOL = 4;      /* טענה ג(1) — הפרש בין הממוצעים, לערוץ. */
@@ -207,10 +208,6 @@ function predict(bg, x, y, W, H) {
 /*  ⛔ סף הדיו — ההצהרה חייבת לתאר את מה שיש (סבב 68). ⚠️ 4 ולא 0:
     הקטנה תקינה עדיין מזיזה ממוצע בפיקסל-שניים. */
 const INK_TOL = 4;
-/*  ⛔ סובלנות המרכוז היא **פיקסל אחד** (סבב 72) — ⚠️ אפס אינו בר-השגה:
-    תוכן בעל צלע זוגית במסגרת אי-זוגית (ולהפך) נופל חצי פיקסל מהמרכז
-    בהגדרה, ⛔ ושתי מהאפליקציות נושאות צלע כזו. */
-const CENTER_TOL = 1;
 
 /*  ⛔ ששה-עשר הנכסים — ⚠️ הרשימה נגזרת מהדיסק ומ-`FRAME`, ⛔ ואינה מוקלדת:
     ⭐ נכס שנוסף לתיקייה נמדד גם הוא.
@@ -245,18 +242,17 @@ function audit(root) {
       const long = Math.max(box.w, box.h), want = CONTENT[i];
       if (Math.abs(long - want) > CONTENT_TOL[i])
         v.push({ kind: 'content', rel, msg: `צלע ארוכה ${long} ≠ ${want}±${CONTENT_TOL[i]}` });
-      const cdx = box.x + (box.w - 1) / 2 - (img.w - 1) / 2;
-      const cdy = box.y + (box.h - 1) / 2 - (img.h - 1) / 2;
-      if (Math.abs(cdx) > CENTER_TOL || Math.abs(cdy) > CENTER_TOL)
-        v.push({ kind: 'center', rel, msg: `סטיית מרכז (${cdx},${cdy}) > ${CENTER_TOL}` });
     }
 
-  /*  ⛔ שוליים אופקיים שווים **בדיוק** (סבב 75) — ⚠️ סובלנות המרכוז היא
-      פיקסל, ⛔ והיא נדרשת בציר האנכי בלבד: ⭐ הצלע הארוכה מכוילת למספר
-      זוגי במסגרת זוגית, ⛔ ולכן שמאל וימין מתחלקים שווה בכל אחד מ-16
-      הנכסים. ⚠️ והמדידה היא על **תיבת התוכן שנמדדה** ⛔ ולא על התיבה
-      הנומינלית: אנטי-אליאסינג מוריד עמודה מתחת לסף, ⭐ וזה בדיוק מה
-      שהטענה באה לתפוס. */
+  /*  ⛔ שוליים שווים **בדיוק בשני הצירים** (סבב 76) — ⚠️ עד כאן נמדד הציר
+      האופקי בלבד וסובלנות המרכוז כיסתה את האנכי בפיקסל, ⛔ וארבעה נכסים
+      חיו כך עם T/B נבדלים. ⭐ שתי צלעות התוכן מכוילות לזוגי במסגרת זוגית,
+      ⛔ ולכן שני הצירים מתחלקים שווה בכל אחד מ-16 הנכסים — ⚠️ והטענה הזו
+      **בלעה** את טענת המרכוז: L=R ו-T=B הם בדיוק «במרכז, בלי סטייה».
+      ⚠️ והמדידה היא על **תיבת התוכן שנמדדה** ⛔ ולא על התיבה הנומינלית:
+      אנטי-אליאסינג מוריד עמודה מתחת לסף, ⭐ וזה מה שהטענה באה לתפוס.
+      ⛔ ואין למדוד כאן מרכז מסה — ⚠️ נמדד שהוא תכונה של הציור ולא של
+      המיקום, ⛔ ואכיפה עליו הייתה אוסרת לוגו שיש בו מילים. */
   for (const rel of allAssets(root)) {
     const p = join(root, rel);
     if (!existsSync(p)) { v.push({ kind: 'missing', rel }); continue; }
@@ -264,10 +260,12 @@ function audit(root) {
     try { img = decodePNG(readFileSync(p)); }
     catch (e) { v.push({ kind: 'decode', rel, msg: e.message }); continue; }
     const box = contentBox(img);
-    if (!box) { v.push({ kind: 'h-margin', rel, msg: 'ריק' }); continue; }
+    if (!box) { v.push({ kind: 'margin', rel, msg: 'ריק' }); continue; }
     const left = box.x, right = img.w - (box.x + box.w);
-    if (left !== right)
-      v.push({ kind: 'h-margin', rel, msg: `שוליים ${left}/${right} — הפרש ${left - right}` });
+    const top = box.y, bottom = img.h - (box.y + box.h);
+    if (left !== right || top !== bottom)
+      v.push({ kind: 'margin', rel,
+               msg: `L=${left}/R=${right} · T=${top}/B=${bottom} — הפרש ${left - right}/${top - bottom}` });
   }
 
   /*  ⛔ רקע האריח שווה למוצהר **בדיוק** (סבב 72) — ⚠️ הסובלנות כאן היא אפס
@@ -431,8 +429,6 @@ t(n++, !base.some(x => x.kind === 'missing'), `א. עשרת קובצי ה-mipmap
 t(n++, !base.some(x => x.kind === 'decode'), `א. כל העשרה נקראים ${of('decode')}`);
 t(n++, !base.some(x => x.kind === 'frame'), `א. ממדי המסגרת — 48/72/96/144/192 ו-108/162/216/324/432 ${of('frame')}`);
 t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אלפא ${ALPHA_MIN} — ±${CONTENT_TOL.join('/')} ${of('content')}`);
-t(n++, !base.some(x => x.kind === 'center'),
-  `ב(1). תיבת התוכן במרכז המסגרת — סטייה ≤ ${CENTER_TOL} ${of('center')}`);
 t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
@@ -447,8 +443,8 @@ t(n++, !base.some(x => x.kind === 'tile-ink'),
   `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
 /*  ⛔ הטענה מודדת את **כל** 16 הנכסים (סבב 75) — ⚠️ עשרת ה-mipmap ושישה
     שב-`icons/`, ⛔ ולא רק אלה שיש להם מסגרת מוצהרת. */
-t(n++, !base.some(x => x.kind === 'h-margin'),
-  `ב(2). שוליים אופקיים שווים בכל אחד מ-${allAssets(ROOT).length} הנכסים ${of('h-margin')}`);
+t(n++, !base.some(x => x.kind === 'margin'),
+  `ב(1). שוליים שווים — L=R ו-T=B בכל אחד מ-${allAssets(ROOT).length} הנכסים ${of('margin')}`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -467,9 +463,18 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
   try {
     for (const d of ['tools', 'design', 'icons', RES])
       cpSync(join(ROOT, d), join(g, d), { recursive: true });
+    const t0 = Date.now();
     const run = spawnSync(process.execPath, [join(g, 'tools', 'gen-icons.mjs')],
                           { cwd: g, encoding: 'utf8' });
+    const genSec = (Date.now() - t0) / 1000;
     t(n++, run.status === 0, `ו. \`gen-icons\` רץ ומסיים בהצלחה ${(run.stderr || '').split('\n')[0] || ''}`);
+    /*  ⛔ תקרת זמן לגזירה (סבב 76) — ⚠️ הגזירה בענף הצורות מדדה כל פיקסל
+        ב-64 דגימות, גם הרחק מהגבול: ⭐ נמדד 10.07 שניות מול 0.40, ⛔ והפער
+        גרר את השער כולו ל-26.5 שניות באחת ול-5.5 באחרת — ⚠️ ואיש לא מדד.
+        ⛔ והתקרה נדיבה פי כמה מהנמדד — ⚠️ היא תופסת נסיגה בסדר גודל,
+        ⛔ ואינה מדרגת מכונה מהירה מול איטית. */
+    t(n++, genSec <= GEN_MAX_SEC,
+      `ו. הגזירה המלאה ${genSec.toFixed(2)} שניות ≤ ${GEN_MAX_SEC} — ⛔ פיקסל שאינו על הגבול מוכרע בקריאה אחת ולא ב-64`);
     const assets = [];
     for (const f of readdirSync(join(ROOT, 'icons'))) assets.push(`icons/${f}`);
     for (const d of DENS) for (const a of Object.keys(FRAME)) assets.push(`${RES}/mipmap-${d}/${a}.png`);
@@ -615,7 +620,7 @@ t(n++, audit(tmp).length === 0, 'נגד: עותק נקי עובר את הביק�
 /* ⚠️ `kinds` מכיל `__none__` כשהציפייה היא **אפס** הפרות — ⛔ מוטציית-נגד
    שאין לה ציפייה מפורשת הייתה עוברת על כל תוצאה. */
 const ALL_KINDS = ['missing', 'decode', 'frame', 'content', 'extra', 'heavy',
-                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'h-margin'];
+                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'margin'];
 const mutate = (label, fn, kinds, notKinds = []) => {
   const bak = join(tmp, 'bak');
   rmSync(bak, { recursive: true, force: true });
@@ -678,26 +683,24 @@ mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
   writeFileSync(p, encodePNG(img));
 }, ['content']);
 
-/* ⭐ מוטציית-נגד: הזזת התוכן בלי לשנות את גודלו ⛔ אינה מפילה —
-   ⚠️ הטענה מודדת צלע ⛔ ולא מיקום, ובלעדיה סובלנות אפס הייתה נקראת
-   כאיסור על כל נגיעה בנכס. ⭐ והיא גם מה שמוכיח שסובלנות המרכוז אינה
-   אפס (סבב 72): ⛔ פיקסל אחד עובר, שלושה נופלים.
-   ⛔ **וההזזה אנכית ולא אופקית (סבב 75)** — ⚠️ הציר האופקי נושא מאז
-   טענה בסובלנות **אפס**, ⛔ והזזה אופקית בפיקסל הייתה מפילה אותה:
-   ⭐ שתי הטענות אינן סותרות — המרכוז סובל פיקסל, והשוליים האופקיים לא. */
-mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה מפילה', () => {
-  const p = mip('mdpi', 'ic_launcher_foreground');
+/* ⭐ מוטציית-נגד: שינוי **צבע** של פיקסל אטום ⛔ אינו מפיל — ⚠️ הטענות
+   מודדות צלע ומיקום, ⛔ ולא ערוץ צבע, ובלעדיה סובלנות אפס בשני הצירים
+   הייתה נקראת כאיסור על כל נגיעה בנכס.
+   ⛔ **והנכס הוא האריח (סבב 76)** — ⚠️ האריח אטום מקצה לקצה, ולכן תיבת
+   התוכן שלו היא המסגרת כולה ואינה זזה מפיקסל שצבעו השתנה; ⛔ והזזה אנכית
+   בפיקסל, שהייתה מוטציית-הנגד עד כאן, מפילה מאז שהציר האנכי נמדד
+   בסובלנות אפס. */
+mutate('⭐ מוטציית-נגד: שינוי צבע פיקסל אטום ⛔ אינו מפיל', () => {
+  const p = mip('mdpi', 'ic_launcher');
   const img = decodePNG(readFileSync(p));
-  const out = Buffer.alloc(img.data.length);
-  for (let y = img.h - 1; y >= 1; y--)
-    img.data.copy(out, y * img.w * 4, (y - 1) * img.w * 4, y * img.w * 4);
-  out.copy(img.data);
+  const k = ((img.h >> 1) * img.w + (img.w >> 1)) * 4;
+  img.data[k] = img.data[k] ^ 0x20;
   writeFileSync(p, encodePNG(img));
 }, ['__none__']);
 
 /*  ⛔ שוליים אופקיים — המוטציה מזיזה את התוכן פיקסל אחד ימינה (סבב 75):
-    ⚠️ הגודל אינו משתנה ולכן טענת הצלע אינה נוגעת, ⛔ והמרכוז סובל פיקסל —
-    ⭐ הטענה היחידה שאמורה ליפול כאן היא «שוליים אופקיים שווים».
+    ⚠️ הגודל אינו משתנה ולכן טענת הצלע אינה נוגעת — ⭐ הטענה היחידה
+    שאמורה ליפול כאן היא «שוליים שווים», והיא נופלת על L≠R.
     ⚠️ והמוטציה על **הנכס** ולא על המחולל: ⛔ הרצת המחולל בתוך השער עלתה
     8–12 שניות לכל מוטציה שם שהסמל מצויר בצורות, ⭐ והמנגנון שהטענה
     מודדת הוא הביקורת ⛔ ולא דרך היצירה. */
@@ -710,21 +713,21 @@ mutate('הזזת התוכן בפיקסל אופקית — mdpi', () => {
       img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - 1) * 4, (y * img.w + x) * 4);
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
-}, ['h-margin']);
+}, ['margin']);
 
 /*  ⛔ המוטציה מזיזה ⛔ ואינה מקטינה (סבב 72) — ⚠️ תוכן שהוקטן נופל ממילא
-    על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת המרכוז:
-    היא הטענה **היחידה** שאמורה ליפול כאן. */
-mutate(`הזזת התוכן ב-${CENTER_TOL + 2} פיקסלים — xxxhdpi`, () => {
+    על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת השוליים.
+    ⛔ **וההזזה אנכית (סבב 76)** — ⚠️ המוטציה האופקית שמעליה מבודדת את L=R,
+    ⭐ וזו מבודדת את T=B: ⛔ ציר שאין לו מוטציה משלו אינו נמדד. */
+mutate('הזזת התוכן בפיקסל אנכית — xxxhdpi', () => {
   const p = mip('xxxhdpi', 'ic_launcher_foreground');
   const img = decodePNG(readFileSync(p));
-  const d = CENTER_TOL + 2, out = Buffer.alloc(img.data.length);
-  for (let y = 0; y < img.h; y++)
-    for (let x = img.w - 1; x >= d; x--)
-      img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - d) * 4, (y * img.w + x - d + 1) * 4);
+  const out = Buffer.alloc(img.data.length);
+  for (let y = img.h - 1; y >= 1; y--)
+    img.data.copy(out, y * img.w * 4, (y - 1) * img.w * 4, y * img.w * 4);
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
-}, ['center']);
+}, ['margin']);
 
 /*  ⛔ המוטציה מכהה את דיו האריח בלבד (סבב 72) — ⚠️ בדיוק הסטייה שהייתה
     בעץ במשך סבבים: ⭐ החזית נשארת במקומה, ⛔ והטענה שנופלת היא זו של האריח. */
