@@ -16,7 +16,8 @@
  *
  * ⚠️ **ומה שאינו נאכף כאן:** ⛔ השער רואה **מזהים**, ולא חיווט: כפתור
  * שיורד מהמסך בלי שנמחקה פונקציה אינו נראה לו — ⭐ ולכן החיווט פר-מוסד
- * נמדד בשער השיתוף, בנפרד.
+ * נמדד בשער השיתוף, בנפרד. ⚠️ השער משווה `HEAD^` ל-`HEAD`; ⛔ בקומיט מיזוג
+ * ה-`HEAD^` הוא `main` הישן, ⚠️ ולכן שינוי צורה נראה כמחיקה.
  */
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -39,11 +40,17 @@ const git = (...a) => execFileSync('git', ['-C', ROOT, ...a], { encoding: 'utf8'
 /*  ⛔ המזהים נשלפים מהתוכן ⛔ ולא משורות הדיף (סבב 72) — ⚠️ שורה שהשתנתה
     מופיעה גם כמחיקה וגם כהוספה, ⭐ והשוואת **הגדרות** היא מה שמבדיל בין
     «נמחק» ל«נערך». */
-const DEF = [/\bfunction\s+([A-Za-z_$][\w$]{3,})\s*\(/g,
-             /\b(?:const|let|var)\s+([A-Za-z_$][\w$]{3,})\s*=\s*(?:function|\([^)]*\)\s*=>)/g];
+const DEF = [/\b(?:async\s+)?function\s+([A-Za-z_$][\w$]{3,})\s*\(/g,
+             /\b(?:const|let|var)\s+([A-Za-z_$][\w$]{3,})\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)/g,
+             /^[ \t]*(?:async\s+)?([A-Za-z_$][\w$]{3,})\s*\([^()]*\)\s*\{/gm];
+/*  ⛔ מילת שפה אינה הגדרה (סבב 72) — ⚠️ תבנית המתודה תופסת גם `while (x) {`,
+    ⛔ ומזהה כזה שנעלם משורה אחת נראה כמחיקה של פונקציה. */
+const KW = new Set(['case', 'catch', 'class', 'const', 'delete', 'else', 'export',
+                    'function', 'import', 'return', 'super', 'switch', 'throw',
+                    'typeof', 'void', 'while', 'yield']);
 export function defsOf(text) {
   const out = new Set();
-  for (const re of DEF) for (const m of text.matchAll(re)) out.add(m[1]);
+  for (const re of DEF) for (const m of text.matchAll(re)) if (!KW.has(m[1])) out.add(m[1]);
   return out;
 }
 const SCAN = /\.(mjs|js|html|java)$/;
@@ -106,6 +113,38 @@ if (!prev) {
   const withCaller = new Map([['defsOf', 'x.mjs']]);
   t(orphans(withCaller, new Map(), fake).length === 1,
     '⛔ מוטציה: מזהה שנמחק ויש לו קורא — נתפס');
+
+  /*  ⛔ מוטציית-נגד על **צורה** (סבב 72) — ⚠️ זו בדיוק המוטציה שהפילה את
+      המיזוג: `async` שנוסף לחץ אינו מחיקה, ⛔ ואסור לו להפיל. */
+  const asDefs = (txt) => new Map([...defsOf(txt)].map((d) => [d, 'index.html']));
+  const plain = asDefs('const callersOf = (id) => { return id; };');
+  const asyn = asDefs('const callersOf = async (id) => { return id; };');
+  t(plain.has('callersOf') && asyn.has('callersOf'),
+    '⛔ חץ רגיל וחץ `async` — שניהם נראים כהגדרה');
+  t(asDefs('async function callersOf(id) { return id; }').has('callersOf'),
+    '⛔ ו-`async function` אף הוא');
+  t(asDefs('  callersOf(id) { return id; }').has('callersOf'), '⛔ וכך גם מתודה');
+  t(asDefs('  while (id) { return id; }').size === 0,
+    '⭐ מוטציית-נגד: `while (x) {` אינו מזהה — ⛔ מילת שפה אינה הגדרה');
+  t(orphans(plain, asyn, fake).length === 0,
+    '⭐ מוטציית-נגד: הפיכת `const f = (x) =>` ל-`async` ⛔ אינה מפילה');
+  t(orphans(plain, new Map(), fake).length === 1,
+    '⛔ מוטציה: מחיקה אמיתית של אותה הגדרה, ולה קורא — מפילה');
+}
+
+/*  ⛔ האימות על העץ החי (סבב 72) — ⚠️ העיוורון לא נראה במודל אלא בעץ:
+    הגדרה שאינה נראית לשער נקראת כמחיקה בכל שינוי צורה שייגע בה. */
+{
+  const RE = /(?:const|let|var)\s+([A-Za-z_$][\w$]{3,})\s*=\s*async\s*\(/g;
+  let seen = 0; const missed = [];
+  for (const f of TREE.filter((p) => /\.(mjs|js|html)$/.test(p))) {
+    const txt = fs.readFileSync(f, 'utf8');
+    const d = defsOf(txt);
+    for (const m of txt.matchAll(RE)) { seen++; if (!d.has(m[1])) missed.push(m[1]); }
+  }
+  t(seen > 0 && missed.length === 0,
+    `⛔ כל הגדרות החץ-\`async\` בעץ נראות לשער — נמדדו ${seen}, ואינן נראות ${missed.length}` +
+    (missed.length ? ': ' + missed.join(' · ') : ''));
 }
 
 console.log(failures ? `\n❌ שער ההסרות — ${failures} נכשלו` : `\n✅ שער ההסרות — ${n} טענות עברו`);
