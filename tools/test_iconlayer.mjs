@@ -501,34 +501,6 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
             'ז. ⭐ מוטציית-נגד: `ALPHA_MIN` בפיקסל אחד ⛔ אינו מפיל', false);
     }
 
-    /*  ⛔ שוליים אופקיים — המוטציה שוברת את **המנגנון** (סבב 75): ⚠️ צלע
-        הרוחב מוקטנת באחד ויוצאת אי-זוגית במסגרת זוגית, ⛔ ושמאל וימין
-        מפסיקים להתחלק שווה. ⭐ והמוטציה נוקבת בשם הטענה שתיפול. */
-    {
-      const gp2 = join(g, 'tools', 'gen-icons.mjs');
-      const src2 = readFileSync(gp2, 'utf8');
-      /*  ⛔ שני מסלולי מיקום — ⚠️ ציור בצורות ממקם ב-`x0`, ⛔ ומאסטר רסטרי
-          ממקם ב-`bx`: ⭐ המוטציה נוגעת בשניהם, שאם לא כן היא נבלעת
-          באפליקציה שאינה במסלול שנגעו בו. */
-      const CX = ['const x0 = Math.round((canvas - w) / 2)',
-                  'const bx = Math.round((canvas - aw) / 2)'];
-      t(n++, CX.every((s) => src2.includes(s)), 'ח. שני אתרי המרכוז האופקי קיימים במחולל');
-      const hm = (fn, label, want) => {
-        writeFileSync(gp2, CX.reduce((s, c) => s.replace(c, fn(c)), src2));
-        const r = spawnSync(process.execPath, [gp2], { cwd: g, encoding: 'utf8' });
-        const bad = r.status !== 0 || audit(g).some((x) => x.kind === 'h-margin');
-        t(n++, bad === want, label);
-        writeFileSync(gp2, src2);
-        spawnSync(process.execPath, [gp2], { cwd: g, encoding: 'utf8' });
-      };
-      hm((c) => c + ' + 1',
-         'ח. ⛔ מוטציה: הזזת המרכוז האופקי בפיקסל מפילה את «שוליים אופקיים שווים»', true);
-      /*  ⭐ מוטציית-נגד חיה: ⛔ `round` ⟵ `floor` על אותו ביטוי — ⚠️ המרווח
-          זוגי בכל הנכסים, ⛔ ולכן שתי הפונקציות מחזירות אותו מספר: ⭐ שינוי
-          אמיתי בקוד שאסור לו להפיל. */
-      hm((c) => c.replace('Math.round', 'Math.floor'),
-         'ח. ⭐ מוטציית-נגד: `floor` במקום `round` על מרווח זוגי ⛔ אינו מפיל', false);
-    }
   } finally { rmSync(g, { recursive: true, force: true }); }
 }
 
@@ -643,7 +615,7 @@ t(n++, audit(tmp).length === 0, 'נגד: עותק נקי עובר את הביק�
 /* ⚠️ `kinds` מכיל `__none__` כשהציפייה היא **אפס** הפרות — ⛔ מוטציית-נגד
    שאין לה ציפייה מפורשת הייתה עוברת על כל תוצאה. */
 const ALL_KINDS = ['missing', 'decode', 'frame', 'content', 'extra', 'heavy',
-                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel'];
+                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'h-margin'];
 const mutate = (label, fn, kinds, notKinds = []) => {
   const bak = join(tmp, 'bak');
   rmSync(bak, { recursive: true, force: true });
@@ -722,6 +694,23 @@ mutate('⭐ מוטציית-נגד: הזזת התוכן בפיקסל ⛔ אינה
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
 }, ['__none__']);
+
+/*  ⛔ שוליים אופקיים — המוטציה מזיזה את התוכן פיקסל אחד ימינה (סבב 75):
+    ⚠️ הגודל אינו משתנה ולכן טענת הצלע אינה נוגעת, ⛔ והמרכוז סובל פיקסל —
+    ⭐ הטענה היחידה שאמורה ליפול כאן היא «שוליים אופקיים שווים».
+    ⚠️ והמוטציה על **הנכס** ולא על המחולל: ⛔ הרצת המחולל בתוך השער עלתה
+    8–12 שניות לכל מוטציה שם שהסמל מצויר בצורות, ⭐ והמנגנון שהטענה
+    מודדת הוא הביקורת ⛔ ולא דרך היצירה. */
+mutate('הזזת התוכן בפיקסל אופקית — mdpi', () => {
+  const p = mip('mdpi', 'ic_launcher_foreground');
+  const img = decodePNG(readFileSync(p));
+  const out = Buffer.alloc(img.data.length);
+  for (let y = 0; y < img.h; y++)
+    for (let x = img.w - 1; x >= 1; x--)
+      img.data.copy(out, (y * img.w + x) * 4, (y * img.w + x - 1) * 4, (y * img.w + x) * 4);
+  out.copy(img.data);
+  writeFileSync(p, encodePNG(img));
+}, ['h-margin']);
 
 /*  ⛔ המוטציה מזיזה ⛔ ואינה מקטינה (סבב 72) — ⚠️ תוכן שהוקטן נופל ממילא
     על צלע התוכן, ⭐ והזזה בגודל קבוע היא מה שמבודד את טענת המרכוז:
