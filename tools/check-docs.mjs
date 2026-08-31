@@ -51,13 +51,13 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 76];
+export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 77, 124];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-session',  'c280d9ef7817f3a2'],
-  ['rules-writing',  '050188fe4d531f9f'],
-  ['rules-table',    'cc7bce2595234830'],
+  ['rules-session',  '34634b5752f7ada5'],
+  ['rules-writing',  'ea24adc57e538cd8'],
+  ['rules-table',    '8ced0fef453c8e53'],
   ['rules-enforce',  '860439cc4e39d85b'],
 ];
 
@@ -249,6 +249,41 @@ for (const [id, sha] of CANON) {
       }
       /* here === null כבר דווח בסעיף ג — אין טעם לדווח פעמיים. */
     }
+  }
+}
+
+/* ── ה2. קידום `CACHE_NAME` מול origin/main (סבב 73ב) ───────────────────────
+ *  ⛔ אותו מנגנון בדיוק כמו קידום שורת «עודכן לאחרונה», ⚠️ ועל קובץ אחר:
+ *  סבב שנגע ב-`index.html` או ב-`sw.js` ולא קידם את `CACHE_NAME` משאיר את
+ *  המכשיר המותקן על הקוד הישן — ⛔ הדפדפן מגיש מהמטמון, והשינוי אינו מגיע
+ *  לעולם. ⚠️ אין בסיס להשוואה ⇒ מדלגים באזהרה, ⛔ ואין להפוך זאת לכישלון. */
+{
+  const git = (...args) => spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const skip = (why) => warn(`דילוג על בדיקת קידום \`CACHE_NAME\` — ${why}. ` +
+                             'זו אזהרה בלבד; השער אינו נופל.');
+  /*  ⛔ השם נקרא מהקובץ ⛔ ואינו מוצהר כאן — ⚠️ הקידומת נבדלת בין הריפו,
+   *  ⭐ ומה שנמדד הוא **השינוי** ולא הערך. */
+  const nameOf = (t) => (/CACHE_NAME\s*=\s*'([^']+)'/.exec(t) || [])[1] || null;
+  const WATCH = ['index.html', 'sw.js'];
+  const ver = git('--version');
+  if (ver.error || ver.status !== 0) skip('git אינו זמין בסביבה');
+  else if (git('rev-parse', '--is-inside-work-tree').stdout.trim() !== 'true')
+    skip('התיקייה אינה עותק עבודה של git');
+  else if (git('rev-parse', '--verify', '--quiet', 'origin/main').status !== 0)
+    skip('אין origin/main להשוות אליו (clone רדוד או ריפו בלי remote)');
+  else if (!fs.existsSync('sw.js')) skip('אין `sw.js` בריפו');
+  else {
+    const touched = WATCH.filter((f) => fs.existsSync(f) &&
+      git('diff', '--quiet', 'origin/main', '--', f).status !== 0);
+    const base = git('show', 'origin/main:./sw.js');
+    const there = base.status === 0 ? nameOf(base.stdout) : null;
+    const here = nameOf(fs.readFileSync('sw.js', 'utf8'));
+    if (!touched.length) pass('`CACHE_NAME` — קובצי המקור זהים ל-origin/main, ואין מה לקדם');
+    else if (there === null) pass('`CACHE_NAME` אינו קיים ב-origin/main — הוא נוסף בשינוי הזה');
+    else if (here === there)
+      fail(`${touched.join(' + ')} שונים מול origin/main ו-\`CACHE_NAME\` לא קודם — ` +
+           `נמדד «${there}» בשני הצדדים והצפוי ערך חדש. מקדמים את \`CACHE_NAME\` באותו קומיט`);
+    else pass(`\`CACHE_NAME\` קודם מול origin/main: «${there}» ← «${here}» (${touched.join(' + ')})`);
   }
 }
 
