@@ -305,8 +305,13 @@ function tile(size, box) {
 /* ⛔ חזית ה-adaptive: הסמל בלבד, ⛔ וצלע התוכן היא **בדיוק** היעד (סבב 71) —
    ⚠️ הסמל ממוקם על גבול פיקסל ובגודל שלם, ולכן הפיקסל החיצוני מכוסה
    והשכן שמעבר לו ריק: ⛔ הצלע אינה תלויה בסף האלפא שבו מודדים. */
+/*  ⛔ הצלע מעוגלת לזוגי לפני המיקום (סבב 75) — ⚠️ המסגרת זוגית בכל
+    הנכסים, ⛔ וצלע תוכן אי-זוגית בתוכה אינה ניתנת לחלוקה שווה: ⭐ נמדד
+    171 בתוך 432 והשוליים יצאו 130/131. ⛔ והעיגול הוא לזוגי הקרוב ⛔ ולא
+    כלפי מעלה — ⚠️ עיגול בכיוון אחד היה מזיז את הסמל בפיקסל בכל נכס. */
+const evenRound = (v) => 2 * Math.round(v / 2);
 function foreground(canvas, target) {
-  const w = target, h = Math.round(target * APP.mark.h / APP.mark.w);
+  const w = target, h = evenRound(target * APP.mark.h / APP.mark.w);
   const x0 = Math.round((canvas - w) / 2), y0 = Math.round((canvas - h) / 2);
   if (APP.art === 'master') {
     /*  ⛔ הרוחב מכויל למדידה ⛔ ולא מחושב (סבב 71) — ⚠️ קצה הציור שבמאסטר
@@ -315,7 +320,7 @@ function foreground(canvas, target) {
     const m = masterMask();
     let a = null, aw = 0, ah = 0;
     for (const cand of [w, w + 1, w + 2, w + 3, w - 1]) {
-      const ch = Math.round(cand * APP.mark.h / APP.mark.w);
+      const ch = evenRound(cand * APP.mark.h / APP.mark.w);
       const t = scaleMask(m.a, m.w, m.h, cand, ch);
       let x0b = cand, y0b = ch, x1b = -1, y1b = -1;
       for (let y = 0; y < ch; y++)

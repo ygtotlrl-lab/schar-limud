@@ -16,8 +16,8 @@ android {
         // ב-`android/README.md`, ⛔ שהיא מקור האמת היחיד להיסטוריה
         // (כלל ברזל 21); `tools/test_gradle.mjs` אוכף את הקידום מול
         // קומיט הקידום האחרון.
-        versionCode 12
-        versionName "12.0"
+        versionCode 13
+        versionName "13.0"
     }
 
     buildTypes {
