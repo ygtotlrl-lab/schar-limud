@@ -11,8 +11,17 @@
  *    2. מריץ node --check על sw.js.
  *    3. מאמת כללי-אמת שפרסר אינו תופס (APP.rules — פר-אפליקציה; כל כלל
  *       נמדד מהקבצים של האפליקציה עצמה ולא הועתק מריפו אחר).
- *    4. מריץ את כל שערי האחידות ואת חבילות בדיקות הסבבים (APP.gates).
+ *    4. מריץ את כל שערי האחידות ואת חבילות בדיקות הסבבים (APP.gates),
+ *       בבריכה מקבילה שגודלה CHECKJS_JOBS.
  *       CHECKJS_STAGES_ONLY=1 עוצר אחרי שלב 3, בלי חבילות הבדיקה.
+ *
+ *  ⭐ שתי רמות ריצה, ⛔ והדגל הוא מה שמבדיל ביניהן:
+ *    • מלאה — `node tools/check-js.mjs`, ברירת המחדל: כל השערים וכל
+ *      המוטציות. ⛔ זו הריצה שלפני דחיפה, פעם אחת — ⚠️ המוטציות הן מה
+ *      שמוכיח שהשער מפיל, ⛔ ואינן מדולגות בה.
+ *    • מהירה — `node tools/check-js.mjs --fast`: השערים שנמדדו מתחת
+ *      לשנייה, בלי רתמות המוטציה. ⭐ זו הריצה שבמהלך העבודה, אחרי כל
+ *      שינוי — ⛔ ואינה מחליפה את המלאה לפני דחיפה.
  *
  *  ⭐ השער נולד ב-gius (סבב 11) וחי שם לבדו עשרה סבבים בלי שאיש החליט על
  *  כך — הפער שהוליד את כלל ברזל 14. מסבב 33 הוא זהה בית-לבית בארבעת
@@ -23,8 +32,8 @@
  *  יציאה בקוד שונה מאפס אם כשל אחד או יותר.
  */
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { execFileSync, spawn } from 'node:child_process';
+import { tmpdir, cpus } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -144,14 +153,64 @@ if (process.env.CHECKJS_STAGES_ONLY) {
 }
 
 /* ── 4. שערי האחידות וחבילות הבדיקה (APP.gates) ────────────────────────── */
-for (const gate of APP.gates) {
-  try {
-    execFileSync(process.execPath, [join(ROOT, 'tools', gate)],
-                 { cwd: ROOT, stdio: 'inherit' });
-  } catch (e) {
-    failures++;
-  }
+/*  ⛔ הרמה נקבעת בדגל מפורש, ⛔ וברירת המחדל היא המלאה — ⚠️ מי ששוכח
+ *  את הדגל מקבל את הבדיקה החזקה ולא את החלשה, ⛔ והיפוך הברירה היה הופך
+ *  שכחה לפער שקט: השער עובר, והמוטציות לא רצו. */
+const FAST = process.argv.includes('--fast');
+
+/*  ⛔ כל השערים נכנסים לבריכה, ⛔ ואין רשימה סדרתית — ⚠️ נסרקו ונמצאו
+ *  עצמאיים: כל אחד כותב לתיקיית `mkdtemp` משלו, ⛔ ואף אחד אינו קורא את
+ *  פלטו של אחר. ⭐ והשער שמריץ את הסט המלא על עותק נמדד ⛔ ולא שוער:
+ *  הוצאתו מהבריכה עלתה 43–44 שניות מול 37, ⚠️ מפני שהוא הארוך מכולם
+ *  והרצתו לבדו מסדרת את מה שאפשר לחפוף. */
+
+/*  ⛔ השערים שנמדדו מעל שנייה, ⛔ והיחידים שהרמה המהירה מדלגת עליהם —
+ *  ⚠️ כולם מריצים מוטציות, וכל מוטציה היא עותק עץ ותהליך חדש. ⛔ והרשימה
+ *  משותפת לארבעתם — ⚠️ שער שאינו קיים באפליקציה פשוט אינו ב-APP.gates
+ *  שלה, ⛔ ואינו דורש רשימה פרטית. */
+const SLOW = new Set([
+  'test_readonly.mjs', 'test_crossgate.mjs', 'test_matrix.mjs',
+  'test_iconlayer.mjs', 'test_rulesdocs.mjs', 'test_offline_login.mjs',
+  'test_android.mjs', 'test_budget.mjs', 'test_archive.mjs',
+  'test_md.mjs', 'test_idarg.mjs',
+]);
+
+/*  ⛔ המקביליות נמדדה ולא שוערה — ⚠️ 244.8 שניות סדרתי מול 120.1 בארבעה
+ *  תהליכים, ⛔ והטענה ש«מקבילה איטית יותר» לא עמדה במדידה. ⭐ הפלט נצבר
+ *  לכל שער ונכתב בסדר ההכרזה — ⛔ פלט שנשזר בין שערים אינו קריא, ⚠️ וסדר
+ *  לפי מי שסיים ראשון משתנה בין הרצה להרצה ושובר השוואת שני לוגים. */
+const JOBS = Math.max(1, Number(process.env.CHECKJS_JOBS) || Math.min(4, cpus().length));
+
+function runGate(gate) {
+  return new Promise((resolve) => {
+    const p = spawn(process.execPath, [join(ROOT, 'tools', gate)],
+                    { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '', err = '';
+    p.stdout.on('data', (d) => { out += d; });
+    p.stderr.on('data', (d) => { err += d; });
+    p.on('error', (e) => resolve({ out, err: err + e.message + '\n', code: 1 }));
+    p.on('close', (code) => resolve({ out, err, code }));
+  });
 }
+
+async function runPool(list, jobs) {
+  const res = new Array(list.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < list.length) { const i = next++; res[i] = await runGate(list[i]); }
+  };
+  await Promise.all(Array.from({ length: Math.min(jobs, list.length) }, worker));
+  return res;
+}
+
+const wanted = APP.gates.filter((g) => !(FAST && SLOW.has(g)));
+for (const r of await runPool(wanted, JOBS)) {
+  if (r.out) process.stdout.write(r.out);
+  if (r.err) process.stderr.write(r.err);
+  if (r.code !== 0) failures++;
+}
+if (FAST) console.log(`\n⚠️ רמה מהירה — ${wanted.length} מתוך ${APP.gates.length} שערים, ` +
+                      '⛔ והמוטציות לא רצו: לפני דחיפה מריצים בלי הדגל.');
 
 /*  ⛔ תיקיית העבודה נמחקת בכל מסלול יציאה (סבב 72) — ⚠️ נמדד: היא נשארה
  *  בכל הרצה, ⛔ ואלפי עותקים מילאו את הדיסק עד ENOSPC. */
