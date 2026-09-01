@@ -320,6 +320,17 @@ console.log('  — מוטציות —');
   assert(mut._mergePick({ t: 20, n: 'l' }, { t: 20, n: 'r' }, 'k', false, ts, null).n === 'l',
     '17 · מוטציה: היפוך שובר-השוויון מפיל את טענה 8');
 }
+/*  ⭐ מוטציית-נגד: שם הפרמטר שהוחלף **בעקביות** בליבה — ⚠️ שינוי חי שאסור
+ *  לו להפיל: ⛔ הליבה מודדת **מי מנצח**, ⛔ ולא איך קוראים לצדדים. */
+{
+  const renamed = SRC.replace(/\bisPend\b/g, 'isWaiting');
+  assert(renamed !== SRC, 'נ1א · המוטציית-נגד אכן מחליפה את שם הפרמטר בעקביות');
+  const anti = coreBuild(renamed);
+  const before = T(C.merge(coreBuild(SRC), [C.rec('a', 5, 'מקומי-ישן')], [C.rec('a', 9, 'ענן-חדש')], ['a']));
+  const after = T(C.merge(anti, [C.rec('a', 5, 'מקומי-ישן')], [C.rec('a', 9, 'ענן-חדש')], ['a']));
+  assert(before === after,
+    'נ1ב · ⭐ שם פרמטר שהוחלף בעקביות ⛔ אינו מפיל — נמדד המנגנון, לא השם');
+}
 {
   const w = cut(C.wrapFn, SRC);
   const flipped = w.replace(C.knobs[0], C.knobFlip);

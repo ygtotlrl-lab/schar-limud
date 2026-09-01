@@ -51,14 +51,14 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 88, 138];
+export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 89, 140];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-session',  'adb99c2bc77f3fde'],
-  ['rules-writing',  '19cd78f2e1d4dadf'],
-  ['rules-table',    'e6d7f91c64277151'],
-  ['rules-enforce',  '71ee46fb2c9968bc'],
+  ['rules-session',  '8ecb5417a9c67efb'],
+  ['rules-writing',  '39ebc2b8c31d646b'],
+  ['rules-table',    '5b966ece06869da0'],
+  ['rules-enforce',  'f070126475ca7938'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -122,15 +122,18 @@ function stampOf(text) {
     if (!inFence[i] && lines[i].startsWith(STAMP_PREFIX)) hits.push(i);
   }
   if (hits.length === 0) {
-    fail('שורת «עודכן לאחרונה» חסרה. הפורמט: «עודכן לאחרונה: סבב N · YYYY-MM-DD»');
+    fail('שורת «עודכן לאחרונה» חסרה — נמדדו 0 מופעים והצפוי אחד. ' +
+       'מוסיפים אותה בראש הקובץ, בפורמט «עודכן לאחרונה: סבב N · YYYY-MM-DD»');
   } else if (hits.length > 1) {
-    fail(`שורת «עודכן לאחרונה» מופיעה ${hits.length} פעמים (שורות ${hits.map(i => i + 1).join(', ')}) — צריכה להיות אחת`);
+    fail(`שורת «עודכן לאחרונה» — נמדדו ${hits.length} מופעים (שורות ` +
+       `${hits.map(i => i + 1).join(', ')}) והצפוי אחד. מסירים את העודפים`);
   } else {
     const i = hits[0];
     const m = STAMP_RE.exec(lines[i]);
     if (!m) fail(`שורת «עודכן לאחרונה» בפורמט שגוי (שורה ${i + 1}): «${lines[i]}». ` +
-                 'הפורמט המדויק: «עודכן לאחרונה: סבב N · YYYY-MM-DD»');
-    else if (i > 5) fail(`שורת «עודכן לאחרונה» יושבת בשורה ${i + 1} — היא חייבת להיות בראש הקובץ`);
+                 'נמדד פורמט אחר. מתקנים ל-«עודכן לאחרונה: סבב N · YYYY-MM-DD»');
+    else if (i > 5) fail(`שורת «עודכן לאחרונה» — נמדדה בשורה ${i + 1} והצפוי בראש הקובץ. ` +
+       `מעבירים אותה למעלה`);
     else pass(`שורת העדכון תקינה: סבב ${m[1]} · ${m[2]}-${m[3]}-${m[4]}`);
   }
 }
@@ -145,36 +148,44 @@ for (let i = 0; i < lines.length; i++) {
   if (START_LOOSE.test(l)) {
     const m = START_RE.exec(l);
     if (!m || !m[1].trim()) {
-      fail(`שורה ${i + 1}: סימון SHARED:start בלי id תקין — «${l.trim()}»`);
+      fail(`שורה ${i + 1}: SHARED:start בלי id תקין — נמדד «${l.trim()}» ` +
+       `והצפוי id="<שם>". מתקנים את הסימון`);
       markerError = true; continue;
     }
     if (open) {
-      fail(`שורה ${i + 1}: SHARED:start id="${m[1]}" בתוך בלוק פתוח id="${open.id}" — קינון אסור`);
+      fail(`שורה ${i + 1}: SHARED:start id="${m[1]}" בתוך בלוק פתוח ` +
+       `id="${open.id}" — נמדד קינון והצפוי בלוקים סמוכים. מסירים את הקינון`);
       markerError = true; continue;
     }
     open = { id: m[1], from: i + 1, body: [] };
     continue;
   }
   if (END_RE.test(l)) {
-    if (!open) { fail(`שורה ${i + 1}: SHARED:end בלי start תואם`); markerError = true; continue; }
+    if (!open) { fail(`שורה ${i + 1}: SHARED:end בלי start תואם — נמדד סוגר יתום ` +
+       `והצפוי זוג. מוסיפים את סמן הפתיחה, או מסירים את הסוגר`); markerError = true; continue; }
     found.push({ id: open.id, from: open.from, to: i + 1, body: open.body.join('\n').trim() });
     open = null;
     continue;
   }
   if (open) open.body.push(l);
 }
-if (open) { fail(`בלוק id="${open.id}" (שורה ${open.from}) לא נסגר ב-SHARED:end`); markerError = true; }
+if (open) { fail(`בלוק id="${open.id}" (שורה ${open.from}) לא נסגר — נמדד ` +
+       `סמן פתיחה בלי סוגר. מוסיפים SHARED:end בסוף הבלוק`); markerError = true; }
 
 const dup = found.map(b => b.id).filter((id, k, arr) => arr.indexOf(id) !== k);
-if (dup.length) { fail('מזהי SHARED כפולים: ' + [...new Set(dup)].join(', ')); markerError = true; }
+if (dup.length) { fail('מזהי SHARED כפולים: ' + [...new Set(dup)].join(', ') +
+                       ' — הצפוי מזהה ייחודי לכל בלוק. מעדכנים את השם הכפול'); markerError = true; }
 
 const canonIds = CANON.map(c => c[0]);
 const foundIds = found.map(b => b.id);
 const missing = canonIds.filter(id => !foundIds.includes(id));
 const extra   = foundIds.filter(id => !canonIds.includes(id));
-if (missing.length) fail('בלוקים משותפים חסרים מהקובץ: ' + missing.join(', '));
+if (missing.length) fail(`בלוקים משותפים חסרים מהקובץ: ${missing.join(', ')} — נמדדו ` +
+                         `${canonIds.length - missing.length} מתוך ${canonIds.length}. ` +
+                         `מוסיפים אותם מריפו אחות`);
 if (extra.length)   fail('בלוקים משותפים שאינם ברשימה הקנונית: ' + extra.join(', ') +
-                         ' — פרק משותף חדש מחייב עדכון של ארבעת עותקי הבדיקה');
+                         ` — נמדדו ${extra.length} מעבר ל-${canonIds.length} הקנוניים. ` +
+                         'מוסיפים אותם לרשימה הקנונית בארבעת עותקי הבדיקה, או מסירים אותם');
 if (!markerError && !missing.length && !extra.length) {
   pass(`סימוני SHARED מאוזנים ותקינים — ${found.length} בלוקים, כל המזהים ברשימה הקנונית`);
 }
@@ -187,7 +198,7 @@ for (const [id, sha] of CANON) {
   if (got !== sha) {
     fail(`בלוק "${id}" (שורות ${b.from}–${b.to}): אינו זהה לחתימה הקנונית — ${got} ` +
          `במקום ${sha}. שינוי בפרק משותף חייב להיעשות בארבע האפליקציות ` +
-         `ובארבעת עותקי הבדיקה, באותו סבב.`);
+         `ובארבעת עותקי הבדיקה, באותו סבב. מיישרים את הבלוק, או מעדכנים את החתימה`);
   } else {
     pass(`בלוק "${id}": זהה לחתימה הקנונית (${sha})`);
   }
@@ -202,7 +213,8 @@ for (const [id, sha] of CANON) {
     for (const p of PRIVATE_HEADINGS) {
       if (p.re.test(lines[i]) && inside(i)) {
         fail(`שורה ${i + 1}: פרק «${p.name}» יושב בתוך בלוק SHARED. ` +
-             `הוא פרטי בהגדרה (כלל ברזל 8, סעיף 5) — לכל אפליקציה תוכן משלה.`);
+             `הוא פרטי בהגדרה — נמדד בתוך בלוק משותף והצפוי מחוצה לו. ` +
+        `מעבירים אותו לחלק הפרטי: לכל אפליקציה תוכן משלה`);
         bad++;
       }
     }
@@ -243,7 +255,8 @@ for (const [id, sha] of CANON) {
       } else if (here !== null && here === there) {
         fail('CLAUDE.md שונה ושורת העדכון לא קודמה — ' +
              `«${there}» זהה לזו שב-origin/main. כלל ברזל 8, סעיף 2: כל סבב ` +
-             'מקדם את שורת «עודכן לאחרונה», גם סבב שנגע רק בקובץ אחד.');
+             'מקדמים את שורת «עודכן לאחרונה» — נמדדה שורה זהה והצפוי ערך חדש; ' +
+             'גם סבב שנגע רק בקובץ אחד.');
       } else if (here !== null) {
         pass(`שורת העדכון קודמה מול origin/main: «${there}» ← «${here}»`);
       }
@@ -331,7 +344,8 @@ const MD_SKELETONS = [
 ];
 
 for (const spec of MD_SKELETONS) {
-  if (!fs.existsSync(spec.file)) { fail(`${spec.file} חסר — שלושת קובצי ה-md הנלווים חובה בארבעת הריפו`); continue; }
+  if (!fs.existsSync(spec.file)) { fail(`${spec.file} חסר — נמדדו 0 עותקים והצפוי אחד. מוסיפים אותו ` +
+      `מריפו אחות: שלושת קובצי ה-md הנלווים חובה בארבעת הריפו`); continue; }
   const ls = fs.readFileSync(spec.file, 'utf8').split('\n');
   const mask = fenceMask(ls);
   const heads = ls.map((l, i) => (mask[i] ? '' : l)).filter(l => /^##\s/.test(l));
@@ -344,7 +358,8 @@ for (const spec of MD_SKELETONS) {
       const anywhere = heads.some(h => re.test(h));
       fail(`${spec.file}: הפרק «${label}» ` +
            (anywhere ? 'קיים אך לא בסדר הקנוני' : 'חסר') +
-           ' — שלד הקובץ נקבע בסבב 39 והוא זהה בארבעת הריפו.');
+           ' — נמדד מצב אחר מהקנוני. מוסיפים או מעבירים את הפרק: ' +
+        'שלד הקובץ נקבע בסבב 39 והוא זהה בארבעת הריפו');
     } else at = found + 1;
   }
   if (ok) pass(`${spec.file} — ${spec.need.length} פרקי השלד קיימים ובסדר`);
@@ -392,7 +407,8 @@ function scanShared(file) {
     const l = ls[i];
     if (START_LOOSE.test(l)) {
       const m = START_RE.exec(l);
-      if (!m || !m[1].trim()) { fail(`${file} שורה ${i + 1}: SHARED:start בלי id תקין`); err = true; continue; }
+      if (!m || !m[1].trim()) { fail(`${file} שורה ${i + 1}: SHARED:start בלי id תקין — נמדד סימון ` +
+          `בלי id והצפוי id="<שם>". מתקנים את הסימון`); err = true; continue; }
       if (open) { fail(`${file} שורה ${i + 1}: קינון SHARED אסור`); err = true; continue; }
       open = { id: m[1], from: i + 1, body: [] };
       continue;
@@ -405,7 +421,8 @@ function scanShared(file) {
     }
     if (open) open.body.push(l);
   }
-  if (open) { fail(`${file}: בלוק id="${open.id}" (שורה ${open.from}) לא נסגר`); err = true; }
+  if (open) { fail(`${file}: בלוק id="${open.id}" (שורה ${open.from}) לא נסגר — ` +
+        `נמדד סמן פתיחה בלי סוגר. מוסיפים SHARED:end`); err = true; }
   return { blocks: out, err };
 }
 
@@ -420,13 +437,16 @@ function scanShared(file) {
     const { blocks, err } = scanShared(file);
     const ids = blocks.map(b => b.id);
     const dup = ids.filter((id, k) => ids.indexOf(id) !== k);
-    if (dup.length) fail(`${file}: מזהי SHARED כפולים — ${[...new Set(dup)].join(', ')}`);
+    if (dup.length) fail(`${file}: מזהי SHARED כפולים — ${[...new Set(dup)].join(', ')}; ` +
+        `הצפוי מזהה ייחודי. מעדכנים את השם הכפול`);
     const miss = want.map(w => w[0]).filter(id => !ids.includes(id));
     const extra = ids.filter(id => !want.some(w => w[0] === id));
     if (miss.length)  fail(`${file}: פסקאות משותפות חסרות — ${miss.join(', ')}. ` +
-                           'פסקה משותפת שנמחקה היא בדיוק הסחיפה שסעיף ז בא לתפוס.');
+                           'נמדדו פסקאות חסרות והצפוי אפס. מוסיפים אותן מריפו אחות — ' +
+        'פסקה משותפת שנמחקה היא בדיוק הסחיפה שסעיף ז בא לתפוס');
     if (extra.length) fail(`${file}: בלוקי SHARED שאינם ברשימה הקנונית — ${extra.join(', ')} ` +
-                           '— פסקה משותפת חדשה מחייבת עדכון של ארבעת עותקי הבדיקה');
+                           `— נמדדו ${extra.length} מעבר לרשימה הקנונית. מוסיפים אותן ` +
+        'לרשימה בארבעת עותקי הבדיקה, או מסירים אותן');
     let ok = !err && !miss.length && !extra.length && !dup.length;
     for (const [id, sha] of want) {
       const b = blocks.find(x => x.id === id);
@@ -436,7 +456,8 @@ function scanShared(file) {
         ok = false;
         fail(`${file} — פסקה "${id}" (שורות ${b.from}–${b.to}): אינה זהה לחתימה ` +
              `הקנונית — ${got} במקום ${sha}. שינוי בפסקה משותפת נעשה בארבעת ` +
-             'הריפו ובארבעת עותקי הבדיקה, באותו סבב.');
+             'הריפו ובארבעת עותקי הבדיקה, באותו סבב. מיישרים את הפסקה, ' +
+        'או מעדכנים את החתימה');
       }
     }
     if (ok) pass(`${file} — ${want.length} הפסקאות המשותפות זהות לחתימה הקנונית`);
@@ -461,25 +482,35 @@ const CANON_MANIFEST = [
   ['orientation', 'portrait'],
   ['lang',        'he'],
   ['dir',         'rtl'],
+  /*  ⛔ `id` ו-`start_url` מוצהרים (סבב 79) — ⚠️ מניפסט בלי `id` גוזר אותו
+   *  מ-`start_url`, ⛔ ושינוי של `start_url` מנתק אז את ההתקנה הקיימת
+   *  ומייצר אפליקציה שנייה. ⭐ הערך יחסי, ולכן «זהה» כאן פירושו **אותה
+   *  צורה** — ⛔ וכל אפליקציה נפתרת ל-scope שלה. */
+  ['id',          './'],
+  ['start_url',   './index.html'],
 ];
 {
   const file = 'manifest.json';
   if (!fs.existsSync(file)) {
-    fail('manifest.json חסר — הוא בסט הקנוני של check-structure');
+    fail('manifest.json חסר — נמדדו 0 עותקים והצפוי אחד. ' +
+         'מוסיפים אותו מריפו אחות');
   } else {
     let mf = null;
     try { mf = JSON.parse(fs.readFileSync(file, 'utf8')); }
-    catch (e) { fail(`manifest.json אינו JSON תקין — ${e.message}`); }
+    catch (e) { fail(`manifest.json אינו JSON תקין — נמדד «${e.message}» והצפוי ` +
+      `פרסור שעובר. מתקנים את הקובץ`); }
     if (mf) {
       let ok = true;
       for (const [key, want] of CANON_MANIFEST) {
         if (!(key in mf)) {
           ok = false;
-          fail(`manifest.json: המפתח המשותף "${key}" חסר — ערכו הקנוני «${want}»`);
+          fail(`manifest.json: המפתח המשותף "${key}" חסר — נמדד היעדר והצפוי ` +
+          `«${want}». מוסיפים אותו`);
         } else if (mf[key] !== want) {
           ok = false;
           fail(`manifest.json: "${key}" הוא «${mf[key]}» במקום «${want}». ` +
-               'ערך משותף משתנה בארבעת הריפו ובארבעת עותקי הבדיקה, באותו סבב.');
+               'מיישרים את הערך — ערך משותף משתנה בארבעת הריפו ובארבעת ' +
+          'עותקי הבדיקה, באותו סבב');
         }
       }
       if (ok) pass(`manifest.json — ${CANON_MANIFEST.length} ערכי המפתחות המשותפים תואמים`);
@@ -506,10 +537,12 @@ const CANON_MANIFEST = [
       let iok = true;
       for (const [src, sizes, purpose] of CANON_ICONS) {
         const e = icons.find((i) => i && i.src === src);
-        if (!e) { iok = false; fail(`manifest.json: האייקון "${src}" אינו מוצהר`); continue; }
+        if (!e) { iok = false; fail(`manifest.json: האייקון "${src}" אינו מוצהר — נמדד היעדר ` +
+        `והצפוי הצהרה. מוסיפים אותו לרשימה`); continue; }
         if (e.sizes !== sizes) {
           iok = false;
-          fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes}`);
+          fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes} — ` +
+        `מעדכנים את השדה`);
         }
         /*  ⚠️ `null` בטבלה = «אין `purpose`» (סבב 72) — ⛔ ולא «any»:
             favicon ואייקון אייפון אינם נכסי PWA, ⭐ והצהרת `purpose`
@@ -518,14 +551,15 @@ const CANON_MANIFEST = [
           iok = false;
           fail(`manifest.json: "${src}" מוצהר purpose="${e.purpose}" במקום "${purpose}" — ` +
                'אייקון מלא אינו maskable (כלל ברזל 25); "any maskable" הוא מה שגרם ' +
-               'לקרניים להיחתך בעיגול הלאנצ\'ר.');
+               'לקרניים להיחתך בעיגול הלאנצ\'ר. מעדכנים את השדה');
         }
       }
       for (const i of icons) {
         if (!i || !i.src) continue;
         if (!fs.existsSync(i.src)) {
           iok = false;
-          fail(`manifest.json: "${i.src}" מוצהר אך אינו קיים בריפו — 404 שקט`);
+          fail(`manifest.json: "${i.src}" מוצהר אך אינו קיים בריפו — נמדד ` +
+        `היעדר בעץ, 404 שקט. מוסיפים את הנכס, או מסירים את ההצהרה`);
         }
       }
       if (iok) pass(`manifest.json — שלושת האייקונים הקנוניים מוצהרים, וכל src מצביע על קובץ קיים`);
@@ -580,7 +614,7 @@ const MD_SPLIT = {
 for (const [f, cap] of Object.entries(MD_MAX)) {
   const [s0, p0] = MD_SPLIT[f];
   if (s0 + p0 !== cap)
-    fail(`${f}: תקרות החלקים ${s0}+${p0}=${s0 + p0} ואינן שוות לתקרת הקובץ ${cap} — ` +
+    fail(`${f}: תקרות החלקים — נמדד ${s0}+${p0}=${s0 + p0} והצפוי ${cap}. ` +
          'מיישרים את שלושת המספרים באותה הכרעה');
 }
 
@@ -620,14 +654,15 @@ const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
   if (rounds.length > DOC_MAX_ROUNDS) {
     const over = rounds.slice(0, rounds.length - DOC_MAX_ROUNDS).map((r) => r.name);
     fail(`${APP.file}: ${rounds.length} פרקי סבבים, והחלון הוא ${DOC_MAX_ROUNDS} ` +
-         `(כלל ברזל 18). יש למחוק באותו קומיט — הישנים ראשונים: ${over.join(' · ')}`);
+         `והצפוי ${DOC_MAX_ROUNDS}. יש למחוק באותו קומיט — הישנים ` +
+         `ראשונים: ${over.join(' · ')}`);
   } else {
     pass(`תקציב התיעוד — ${rounds.length}/${DOC_MAX_ROUNDS} פרקי סבבים`);
   }
   const n = src.endsWith('\n') ? lines.length - 1 : lines.length;
   if (n > DOC_MAX_LINES) {
-    fail(`${APP.file}: ${n} שורות — ${n - DOC_MAX_LINES} מעל התקרה של ${DOC_MAX_LINES} ` +
-         '(כלל ברזל 18). סבב שחוצה את התקרה גוזם פרקי סבבים באותו קומיט.');
+    fail(`${APP.file}: נמדדו ${n} שורות — ${n - DOC_MAX_LINES} מעל התקרה של ${DOC_MAX_LINES} ` +
+         '— גוזמים פרקי סבבים באותו קומיט');
   } else {
     pass(`תקציב התיעוד — ${n}/${DOC_MAX_LINES} שורות`);
   }
@@ -660,16 +695,16 @@ const DOC_MAX_PRIVATE = 300;
   const priv = kind.filter(k => k !== 1).length;
   const shared = kind.filter(k => k === 1).length;
   if (shared > DOC_MAX_SHARED) {
-    fail(`${APP.file}: החלק המשותף הוא ${shared} שורות — ${shared - DOC_MAX_SHARED} ` +
-         `מעל התקרה של ${DOC_MAX_SHARED}.`);
+    fail(`${APP.file}: החלק המשותף נמדד ${shared} שורות — ${shared - DOC_MAX_SHARED} ` +
+         `מעל התקרה של ${DOC_MAX_SHARED}. גוזמים פרוזה משותפת באותו קומיט`);
   } else {
     pass(`תקציב התיעוד — ${shared}/${DOC_MAX_SHARED} שורות בחלק המשותף`);
   }
   for (const [f, cap] of Object.entries(MD_MAX)) {
-    if (!fs.existsSync(f)) { fail(`${f} חסר`); continue; }
+    if (!fs.existsSync(f)) { fail(`${f} חסר — נמדדו 0 עותקים והצפוי אחד. מוסיפים אותו מריפו אחות`); continue; }
     const t = fs.readFileSync(f, 'utf8').split('\n');
     const n = t[t.length - 1] === '' ? t.length - 1 : t.length;
-    if (n > cap) fail(`${f}: ${n} שורות — ${n - cap} מעל התקרה של ${cap}.`);
+    if (n > cap) fail(`${f}: נמדדו ${n} שורות — ${n - cap} מעל התקרה של ${cap}. גוזמים באותו קומיט`);
     else pass(`תקציב התיעוד — ${f}: ${n}/${cap} שורות`);
     /*  ⛔ הפיצול נמדד באותה מסכת גדרות-קוד (סבב 71) — ⚠️ סמן SHARED
      *  שבתוך דוגמה אינו בלוק אמיתי, ⛔ וספירה גולמית הייתה מדווחת
@@ -683,12 +718,14 @@ const DOC_MAX_PRIVATE = 300;
       else if (END_RE.test(ls[i]) && open >= 0) { sh += i - open + 1; open = -1; }
     }
     const pv = n - sh;
-    if (sh > capS) fail(`${f}: החלק המשותף ${sh} שורות — ${sh - capS} מעל התקרה של ${capS}.`);
-    else if (pv > capP) fail(`${f}: החלק הפרטי ${pv} שורות — ${pv - capP} מעל התקרה של ${capP}.`);
+    if (sh > capS) fail(`${f}: החלק המשותף נמדד ${sh} שורות — ${sh - capS} מעל התקרה של ` +
+        `${capS}. גוזמים באותו קומיט`);
+    else if (pv > capP) fail(`${f}: החלק הפרטי נמדד ${pv} שורות — ${pv - capP} מעל התקרה של ` +
+        `${capP}. גוזמים באותו קומיט`);
     else pass(`תקציב התיעוד — ${f}: ${sh}/${capS} משותף · ${pv}/${capP} פרטי`);
   }
   if (priv > DOC_MAX_PRIVATE) {
-    fail(`${APP.file}: החלק הפרטי-הקבוע הוא ${priv} שורות — ${priv - DOC_MAX_PRIVATE} ` +
+    fail(`${APP.file}: החלק הפרטי-הקבוע נמדד ${priv} שורות — ${priv - DOC_MAX_PRIVATE} ` +
          `מעל התקרה של ${DOC_MAX_PRIVATE} (כלל ברזל 18). גוזמים באותו קומיט, ` +
          'ולקח שראוי להישמר עולה לכלל ברזל או להערה בקוד לפני המחיקה.');
   } else {
@@ -713,16 +750,20 @@ const DOC_MAX_PRIVATE = 300;
    *  ב-`## ⭐` שהוא כותרת הפרק עצמו, ⛔ וכל `##` נוסף בתוכם הוא פרק שנשתל
    *  בטעות בבלוק שהחתימה נועלת. */
   const alien = shrd.filter((h) => SCREENS.test(h) || ROUND_H2.test(h));
-  if (alien.length) fail(`${APP.file}: פרק אפליקציה בתוך בלוק משותף — ${alien.join(' · ')}`);
+  if (alien.length) fail(`${APP.file}: פרק אפליקציה בתוך בלוק משותף — נמדדו ` +
+      `${alien.length} (${alien.join(' · ')}) והצפוי אפס. מעבירים אותם לחלק הפרטי`);
   else pass(`תוכן החלק המשותף — ${found.length} בלוקים, ואין בהם פרק אפליקציה`);
 
   const screens = priv.filter((h) => SCREENS.test(h));
   const rounds  = priv.filter((h) => ROUND_H2.test(h));
   const other   = priv.filter((h) => !SCREENS.test(h) && !ROUND_H2.test(h));
   if (screens.length !== 1)
-    fail(`${APP.file}: החלק הפרטי מחזיק ${screens.length} פרקי «מסכים ולוגיקה» ואחד נדרש.`);
+    fail(`${APP.file}: נמדדו ${screens.length} פרקי «מסכים ולוגיקה» ` +
+      `בחלק הפרטי והצפוי אחד. ממזגים אותם, או מסירים את העודפים`);
   else if (other.length)
-    fail(`${APP.file}: פרק בחלק הפרטי שאינו מסכים ולוגיקה ואינו פרק סבב — ${other.join(' · ')}`);
+    fail(`${APP.file}: פרק בחלק הפרטי שאינו מסכים ולוגיקה ואינו פרק סבב — ` +
+      `נמדדו ${other.length} (${other.join(' · ')}) והצפוי אפס. ממזגים אותם ` +
+      `לתוך «מסכים ולוגיקה», או מסירים אותם`);
   else pass(`תוכן החלק הפרטי — «${screens[0].replace(/^##\s+/, '')}» ו-${rounds.length} פרקי סבבים`);
 }
 
@@ -749,7 +790,8 @@ const DOC_MAX_PRIVATE = 300;
       if (mk[i] || !/^##\s/.test(ls[i])) continue;
       for (const [re, what] of rules) if (re.test(ls[i])) hits.push(`שורה ${i + 1}: ${what}`);
     }
-    if (hits.length) fail(`${f}: פרק מתחום של קובץ אחר — ${hits.join(' · ')}`);
+    if (hits.length) fail(`${f}: פרק מתחום של קובץ אחר — נמדדו ${hits.length} ` +
+      `(${hits.join(' · ')}) והצפוי אפס. מעבירים אותם לקובץ שתחומו`);
     else pass(`תוכן ${f} — אין בו פרק מתחום של קובץ אחר`);
   }
 }
@@ -765,14 +807,15 @@ const DOC_MAX_PRIVATE = 300;
 {
   const ids = found.map((b) => b.id).join(',');
   const want = CANON.map((c) => c[0]).join(',');
-  if (ids !== want) fail(`${APP.file}: סדר הבלוקים [${ids}] ≠ הסדר הקנוני [${want}]`);
+  if (ids !== want) fail(`${APP.file}: סדר הבלוקים — נמדד [${ids}] במקום הסדר הקנוני [${want}]. ` +
+      `מעדכנים את הסדר`);
   else pass(`סדר הבלוקים ב-${APP.file} — ${found.length} בלוקים בסדר הקנוני`);
 
   for (const f of [...new Set(CANON_MD.map((c) => c[0]))]) {
     if (!fs.existsSync(f)) continue;
     const got = scanShared(f).blocks.map((b) => b.id).join(',');
     const exp = CANON_MD.filter((c) => c[0] === f).map((c) => c[1]).join(',');
-    if (got !== exp) fail(`${f}: סדר הבלוקים [${got}] ≠ הסדר הקנוני [${exp}]`);
+    if (got !== exp) fail(`${f}: סדר הבלוקים — נמדד [${got}] במקום הסדר הקנוני [${exp}]. מעדכנים את הסדר`);
     else pass(`סדר הבלוקים ב-${f} — ${exp.split(',').length} בלוקים בסדר הקנוני`);
   }
 
@@ -781,9 +824,11 @@ const DOC_MAX_PRIVATE = 300;
     if (!head) return;
     const txt = body.join('\n');
     seen++;
-    if (!txt.includes('⛔')) { fail(`${APP.file}: פרק הכלל «${head}» בלי ⛔ — מה נאכף אינו כתוב`); bad++; }
+    if (!txt.includes('⛔')) { fail(`${APP.file}: פרק הכלל «${head}» — נמדדו 0 סימני ⛔ והצפוי ` +
+          `לפחות אחד. מוסיפים את מה שנאכף`); bad++; }
     else if (!txt.includes('⚠️') && !txt.includes('⭐')) {
-      fail(`${APP.file}: פרק הכלל «${head}» בלי ⚠️ או ⭐ — הנימוק אינו כתוב`); bad++;
+      fail(`${APP.file}: פרק הכלל «${head}» — נמדדו 0 סימני ⚠️/⭐ והצפוי ` +
+          `לפחות אחד. מוסיפים את הנימוק המדוד`); bad++;
     }
     head = null; body = [];
   };

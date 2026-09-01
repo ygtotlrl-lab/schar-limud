@@ -1,16 +1,24 @@
 #!/usr/bin/env node
-/* סבב 44 — אכיפת תוכן ל-manifest.json.
+/*  test_manifest.mjs — תוכן ה-`manifest.json` ושם האפליקציה.
  *
- * ⚠️ הבודק שנוסף בסבב 33 (check-structure) אוכף את **קיומו** של
- * manifest.json ותו לא, ולכן שני הבדלי ערך שרדו בו בשקט: display
- * (fullscreen מול standalone) ו-orientation (portrait-primary מול
- * portrait). ⛔ זו אותה צורת כשל של סבב 39 בציר אחר — שם הושוו שמות
- * הכותרות ולא תוכנן.
+ *  **מה נאכף:** (א) ששת השדות המשותפים נושאים **ערך זהה** בארבעתם, ⛔ ובודק
+ *  התיעוד נופל על שינוי של כל אחד מהם ⛔ ואינו נופל על שינוי ערך פרטי;
+ *  (ב) שם האפליקציה זהה בחמישה מקומות — ⚠️ העוגן הוא `short_name`.
  *
- * הבדיקה הזו מריצה את check-docs האמיתי על עותק מוטב בתיקייה זמנית
- * ודורשת שהוא יפול על שינוי ערך משותף, ⛔ ושלא יפול על שינוי ערך פרטי.
- * ⛔ המוטציות אינן נכתבות לעץ (הלקח של סבב 42ג).
+ *  **הנימוק המדוד:** הבודק אכף את **קיומו** של הקובץ ותו לא, ⛔ ולכן שני
+ *  הבדלי ערך שרדו בו בשקט; ⛔ ושם אחת האפליקציות נמדד בן ארבע מילים
+ *  ב-`name` וב-`<title>` מול מילה אחת ב-`short_name`.
+ *
+ *  **מה יישבר בלעדיו:** ⛔ מניפסט בלי `id` גוזר אותו מ-`start_url`, ⚠️ ושינוי
+ *  של `start_url` מנתק אז את ההתקנה הקיימת ⛔ ומייצר אפליקציה שנייה
+ *  במסך הבית; ⚠️ ושם שנבדל באחד המקומות מוצג למשתמש בשניים.
+ *
+ *  **מה אינו נאכף כאן:** ⛔ הערכים הפרטיים — ⚠️ צבע, תיאור ורשימת האייקונים
+ *  הם זהות חזותית פר-אפליקציה, ⛔ ויישורם היה שובר אותה.
+ *
+ *  ⛔ המוטציות אינן נכתבות לעץ — עותק זמני, והבודק האמיתי רץ עליו.
  */
+
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -20,7 +28,7 @@ import { execFileSync } from 'child_process';
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
-export const ROWS = [];
+export const ROWS = [3, 90];
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
@@ -30,10 +38,14 @@ const bad = (n, m) => { fail++; console.log(`  FAIL ${n} · ${m}`); };
 const t = (n, cond, m) => cond ? ok(n, m) : bad(n, m);
 
 /* ── הערכים הקנוניים, כפי שהם רשומים ב-check-docs ──────────────────────── */
-const SHARED = { display: 'standalone', orientation: 'portrait', lang: 'he', dir: 'rtl' };
+/*  ⛔ ששת השדות הזהים — ⚠️ `id` ו-`start_url` נכנסו לכאן (סבב 79):
+    ⭐ מניפסט בלי `id` גוזר אותו מ-`start_url`, ⛔ ואז שינוי של
+    `start_url` מנתק את ההתקנה הקיימת ⛔ ומייצר אפליקציה שנייה. */
+const SHARED = { display: 'standalone', orientation: 'portrait', lang: 'he', dir: 'rtl',
+                 id: './', start_url: './index.html' };
 /* ⛔ אלה נשארים פרטיים ואין לאכוף את ערכם (סבב 44) — זהות חזותית
-   פר-אפליקציה, ו-start_url גוזר את ה-id המשתמע (סבב 39). */
-const PRIVATE = ['name', 'short_name', 'description', 'start_url',
+   פר-אפליקציה. */
+const PRIVATE = ['name', 'short_name', 'description',
                  'scope', 'icons', 'theme_color', 'background_color'];
 
 const mfPath = path.join(ROOT, 'manifest.json');
@@ -58,6 +70,34 @@ for (const [k, v] of Object.entries(SHARED)) {
 }
 t(n++, !PRIVATE.some(k => new RegExp(`\\['${k}',`).test(docs)),
   '⛔ ואף מפתח פרטי אינו ברשימה — יישור שלו היה שובר זהות חזותית');
+
+/* ── שם האפליקציה — מקור אחד בחמישה מקומות ─────────────────────────────── */
+/*  ⛔ הטענה על **ערך** ⛔ ולא על קיום — ⚠️ שם שנבדל באחד מהמקומות מוצג
+ *  למשתמש בשניים, ⛔ ואינו נראה למי שעורך את השלישי: ⭐ נמדד שם בן ארבע
+ *  מילים ב-`name` וב-`<title>` מול שם בן מילה אחת ב-`short_name`.
+ *  ⛔ **והעוגן הוא `short_name`** — ⚠️ הוא הקצר מכולם, ⭐ והוא מה שמופיע
+ *  תחת האייקון במסך הבית. */
+const NAME = mf && mf.short_name;
+const rd = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const html = rd('index.html');
+/*  ⛔ הראשון בקובץ ⛔ ולא כל התאמה — ⚠️ יש קוד שבונה `<title>` למסמך
+    שהוא מייצא, ⭐ והוא אינו כותרת האפליקציה. */
+const title = (/<title>([^<]*)<\/title>/.exec(html) || [])[1];
+const readme = (/^#\s+(.+?)\s*$/m.exec(rd('README.md')) || [])[1];
+const label = (/android:label="([^"]*)"/.exec(rd('android/app/src/main/AndroidManifest.xml')) || [])[1];
+const NAME_SITES = [['name', mf && mf.name], ['<title>', title],
+                    ['כותרת README', readme], ['android:label', label]];
+for (const [where, got] of NAME_SITES)
+  t(n++, got === NAME, `שם האפליקציה ב-${where} — נמדד «${got}» והצפוי «${NAME}»`);
+
+/*  ⛔ מוטציה שרצה בפועל — ⚠️ הטענה על השם יושבת כאן ⛔ ולא ב-check-docs,
+    ⭐ ולכן המוטציה נמדדת על אותה גזירה בדיוק. */
+t(n++, ((/<title>([^<]*)<\/title>/.exec(
+    html.replace('<title>' + NAME + '</title>', '<title>' + NAME + ' — כלי ניהול</title>')) || [])[1]) !== NAME,
+  '⛔ מוטציה: תוספת לשם ב-`<title>` נתפסת ע"י טענת השם האחיד');
+t(n++, ((/^#\s+(.+?)\s*$/m.exec(
+    rd('README.md').replace(/^# .+$/m, '#   ' + NAME + '  ')) || [])[1]) === NAME,
+  '⭐ מוטציית-נגד: רווחים סביב הכותרת ב-README ⛔ אינם מפילים — נמדד השם, לא הריווח');
 
 /* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
 function runDocsOn(mutManifest) {
@@ -91,6 +131,17 @@ t(n++, runDocsOn(mutPrivate) === true,
 const mutMissing = { ...mf }; delete mutMissing.display;
 t(n++, runDocsOn(mutMissing) === false,
   '⛔ מוטציה: מפתח משותף שנמחק כליל **מפיל** — היעדר אינו פטור');
+
+/*  ⛔ `id` הוא שדה זהה מסבב 79 — ⚠️ שינויו מנתק את ההתקנה הקיימת. */
+const mutId = { ...mf, id: './app' };
+t(n++, runDocsOn(mutId) === false,
+  '⛔ מוטציה: שינוי `id` **מפיל** — שדות זהים ב-manifest');
+const mutStart = { ...mf, start_url: './' };
+t(n++, runDocsOn(mutStart) === false,
+  '⛔ מוטציה: שינוי `start_url` **מפיל** — שדות זהים ב-manifest');
+const mutDesc = { ...mf, description: mf.description + '.' };
+t(n++, runDocsOn(mutDesc) === true,
+  '⭐ מוטציית-נגד: שינוי `description` ⛔ **אינו** מפיל — הוא פרטי');
 
 console.log(`\n${fail ? '❌' : '✓'} סבב 44 (manifest) — ${pass} טענות עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

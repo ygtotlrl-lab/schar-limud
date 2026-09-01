@@ -1,21 +1,26 @@
 #!/usr/bin/env node
-/*  test_cron.mjs — סבב 35ג: פינוי גיבויים אוטומטי במסד (pg_cron).
+/*  test_cron.mjs — פינוי הגיבויים האוטומטי במסד.
  *
- *  ⚠️ שמו הקודם היה `test_round35c_cron.mjs` (השם השתנה בסבב 67 —
- *  שם המבחן נגזר מהנושא ולא ממספר הסבב). ⛔ מיגרציות שכבר רצו
- *  (`004`, `014`) מפנות לשם הישן, ⛔ ואין לערוך אותן.
- *  שלושה חלקים:
- *    1. שכבת הלקוח — `_bkRetention` שבמודול המשותף: רשימת-היתר ולא קידומת,
- *       נכשלת-סגור, ורישום `retention` רק כשנמחק משהו. ⛔ אין להסיר אותה.
- *    2. המיגרציה — צורה (אידמפוטנטיות, `security definer`, שלילת ההרשאה
- *       מ-anon, `unschedule` לפני `schedule`) והתנהגות, דרך סימולטור צר
- *       שקורא את רשימת-ההיתר, את בדיקות השפיות ואת תנאי ה-DELETE.
- *    3. מוטציות: הרחבת רשימת-ההיתר לקידומת `PRE_*` חייבת להיתפס, וריקון
- *       הרשימה חייב לגרום לפונקציה לסרב לרוץ.
+ *  **מה נאכף:** שלוש שכבות — (1) שכבת הלקוח: רשימת-היתר ⛔ ולא קידומת,
+ *  ⛔ נכשלת-סגור, ורישום רק כשנמחק משהו; (2) המיגרציה: אידמפוטנטיות,
+ *  `security definer`, שלילת ההרשאה מ-`anon`, ו-`unschedule` לפני
+ *  `schedule`; (3) מוטציות: הרחבת הרשימה לקידומת חייבת להיתפס, ⛔ וריקונה
+ *  חייב לגרום לפונקציה לסרב לרוץ.
  *
- *  ⚠️ המיגרציה **נכתבה ולא הורצה** — הבדיקה קוראת את הקובץ שבריפו, ואינה
- *     מתחברת לשום מסד.
+ *  **הנימוק המדוד:** 57 שורות גיבוי שישבו תחת קידומות שמורות נמחקו
+ *  ואינן ניתנות לשחזור — ⚠️ מסלול Free אינו כולל גיבויי פרויקט.
+ *
+ *  **מה יישבר בלעדיו:** ⛔ פינוי שנשען על קידומת תופס גם גיבוי שאין
+ *  למחקו לעולם, ⚠️ והמחיקה בלתי-הפיכה.
+ *
+ *  **מה אינו נאכף כאן:** ⛔ הבדיקה קוראת את הקובץ שבריפו ⛔ ואינה מתחברת
+ *  לשום מסד — ⚠️ מיגרציה שנכתבה ולא הורצה עוברת אותה במלואה, ⭐ ואימות
+ *  המסד החי הוא פעולת מנהל.
+ *
+ *  ⚠️ שם הקובץ נגזר מהנושא ⛔ ולא ממספר הסבב; ⛔ מיגרציות שכבר רצו מפנות
+ *  לשם הישן, ⛔ ואין לערוך אותן.
  */
+
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,11 +86,20 @@ function sweepBody(sql) {
 
 const PROTECTED = (k) => /^PRE_/.test(k) || /^ORPHAN_/.test(k) || /^pre-delete-/.test(k);
 
+/*  שם משתנה רשימת-ההיתר — ⛔ נגזר מההצהרה ⛔ ואינו מוקלד (סבב 79):
+ *  ⚠️ הרתמה שקידדה `v_keys` בקשיחות מדדה את **השם** ולא את המנגנון,
+ *  ⛔ ושם שהוחלף בעקביות היה מפיל אותה בזמן שהקוד תקין. */
+function arrVar(body) {
+  const m = /(\w+)\s+text\[\]\s*:=\s*public\.bk_retention_keys\(\)/.exec(body);
+  return m ? m[1] : 'v_keys';
+}
+
 /* הרצה מדומה. זורקת מחרוזת `refuse:*` כשהפונקציה מסרבת לרוץ. */
 function simulateSweep(sql, rows, days, nowMs) {
   const keys = sqlKeys(sql) || [];
   const body = sweepBody(sql);
-  const gEmpty = /cardinality\(v_keys\)\s*=\s*0[\s\S]{0,200}?raise exception/.test(body);
+  const av = arrVar(body);
+  const gEmpty = new RegExp('cardinality\\(' + av + '\\)\\s*=\\s*0[\\s\\S]{0,200}?raise exception').test(body);
   const gProt = /PRE\\_%[\s\S]{0,300}?raise exception/.test(body);
   const gDays = /p_days\s*<\s*7[\s\S]{0,200}?raise exception/.test(body);
   if (gEmpty && keys.length === 0) throw 'refuse:empty';
@@ -95,7 +109,7 @@ function simulateSweep(sql, rows, days, nowMs) {
   const del = /delete\s+from\s+public\.kv_backup([\s\S]*?);/.exec(body);
   const where = del ? del[1] : '';
   let match;
-  if (/key\s*=\s*any\s*\(\s*v_keys\s*\)/.test(where)) match = (r) => keys.indexOf(r.key) !== -1;
+  if (new RegExp('key\\s*=\\s*any\\s*\\(\\s*' + av + '\\s*\\)').test(where)) match = (r) => keys.indexOf(r.key) !== -1;
   else {
     const lk = /key\s+like\s+'([^']*)%'/.exec(where);
     match = lk ? (r) => r.key.indexOf(lk[1].replace(/\\/g, '')) === 0 : () => true;
@@ -155,18 +169,27 @@ function fixture(dailyKey) {
 /* ══════════════════════════════════════════════════════════════════════════
    1 · המודול בקוד — שכבת הלקוח שנכשלת-סגור, ⛔ ואין להסיר אותה
    ══════════════════════════════════════════════════════════════════════════ */
+/*  ⛔ מונה ולא נוכחות (סבב 79) — ⚠️ `test(SRC)` עובר גם על הצהרה כפולה
+ *  בשני ערכים וגם על שורה שיושבת בתוך הערה: ⭐ הטענה על **מספר המופעים**,
+ *  והוא מודפס. */
+const srcCount = (re) => (SRC.match(new RegExp(re.source, 'g')) || []).length;
+const once = (re, label) => {
+  const n = srcCount(re);
+  assert(n === 1, `${label} — נמדדו ${n} מופעים והצפוי 1`);
+};
+
 function t1() {
-  assert(/function _bkRetention\(c, keys\)/.test(SRC),
+  once(/function _bkRetention\(c, keys\)/,
     '1א · `_bkRetention` קיימת במודול המשותף (סבב 35ג — ⛔ אין להסיר)');
-  assert(/\.in\('key', keys\)/.test(SRC),
+  once(/\.in\('key', keys\)/,
     '1ב · הגריעה מוגבלת לרשימת-היתר של מפתחות (`in(\'key\', keys)`) ולא לקידומת');
-  assert(/if \(!c \|\| !Array\.isArray\(keys\) \|\| !keys\.length\) return 0;/.test(SRC),
+  once(/if \(!c \|\| !Array\.isArray\(keys\) \|\| !keys\.length\) return 0;/,
     '1ג · רשימה ריקה ⇒ הפונקציה יוצאת בלי למחוק דבר');
-  assert(/if \(!del \|\| del\.error \|\| !Array\.isArray\(del\.data\)\) return 0;/.test(SRC),
+  once(/if \(!del \|\| del\.error \|\| !Array\.isArray\(del\.data\)\) return 0;/,
     '1ד · נכשלת סגור — שגיאה (כולל היעדר הרשאת DELETE) מוחזרת כאפס בשקט');
-  assert(/if \(n > 0\) logAction\('retention'/.test(SRC),
+  once(/if \(n > 0\) logAction\('retention'/,
     '1ה · `retention` נרשם ליומן רק כשנמחק משהו בפועל');
-  assert(/var BK_RETENTION_DAYS = 30;/.test(SRC),
+  once(/var BK_RETENTION_DAYS = 30;/,
     '1ו · חלון השמירה הוא 30 יום');
   // מפתחות הגיבוי היומי — נגזרים מ-`BK_CFG.sources()` ומושווים לרשימה שבבלוק APP.
   const derived = bkKeysFromSrc(SRC);
@@ -279,6 +302,17 @@ function t4(sql) {
     const r = simulateSweep(mut, fixture(daily), 30, Date.now());
     assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) === -1 || r.left.indexOf('zar_lo_barshima') === -1,
       '4ז · DELETE בלי רשימת-ההיתר מוחק מפתחות מוגנים/זרים — טענות 3ג–3ה היו נכשלות');
+  }
+  /*  ⭐ מוטציית-נגד: שם משתנה ה-PL/pgSQL שהוחלף **בעקביות** — ⚠️ שינוי חי
+   *  שאסור לו להפיל: ⛔ הטענות מודדות את המנגנון — רשימת-היתר, תקרה
+   *  והגנות — ⛔ ולא את שמות המשתנים שבתוכו. */
+  {
+    const renamed = sql.replace(/\bv_keys\b/g, 'v_allow');
+    assert(renamed !== sql, 'נ1א · המוטציית-נגד אכן מחליפה את שם המשתנה בעקביות');
+    const r = simulateSweep(renamed, fixture(daily), 30, Date.now());
+    assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) !== -1 &&
+           r.left.indexOf('zar_lo_barshima') !== -1,
+      'נ1ב · ⭐ שם משתנה שהוחלף בעקביות ⛔ אינו מפיל — נמדד המנגנון, לא השם');
   }
 }
 
