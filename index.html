@@ -201,7 +201,7 @@ body.locked{overflow:hidden}
       <label for="au-pass">סיסמה</label>
       <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <button class="auth-btn" id="auth-btn" onclick="doLogin()">כניסה</button>
+    <button class="auth-btn" id="auth-btn" data-act="login">כניסה</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-spinner" id="auth-spinner"></div>
   </div>
@@ -212,7 +212,7 @@ body.locked{overflow:hidden}
     <span class="nav-title">שכר לימוד</span>
     <span class="nav-user">
       <span id="nav-username"></span>
-      <button class="nav-logout" onclick="doLogout()">יציאה</button>
+      <button class="nav-logout" data-act="logout">יציאה</button>
     </span>
   </div>
 
@@ -225,9 +225,9 @@ body.locked{overflow:hidden}
           <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
                אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
           <div style="display:flex;align-items:center;gap:8px">
-            <button class="btn sm out" onclick="dashPrevYear()" title="שנה קודמת">&#9654;</button>
+            <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת">&#9654;</button>
             <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
-            <button class="btn sm out" onclick="dashNextYear()" title="שנה הבאה">&#9664;</button>
+            <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה">&#9664;</button>
           </div>
         </div>
         <div class="dash-scroll">
@@ -245,7 +245,7 @@ body.locked{overflow:hidden}
       <div class="card" id="dash-month-card" style="display:none">
         <div class="card-hdr">
           <h3 id="dash-month-title">פירוט חודש</h3>
-          <button class="btn sm out" onclick="closeDashMonth()">סגור</button>
+          <button class="btn sm out" data-act="dash-month-close">סגור</button>
         </div>
         <div id="dash-month-list"></div>
       </div>
@@ -283,7 +283,7 @@ body.locked{overflow:hidden}
             <label for="txn-note">הערה</label>
             <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
-          <button class="btn" style="width:100%" onclick="saveTxn()">שמור תשלום</button>
+          <button class="btn" style="width:100%" data-act="txn-save">שמור תשלום</button>
         </div>
       </div>
       <div class="card">
@@ -319,10 +319,10 @@ body.locked{overflow:hidden}
                 <div class="sc-name" id="sc-name"></div>
                 <div class="sc-meta" id="sc-meta"></div>
               </div>
-              <button class="sc-tog tog-act-off" id="sc-active-tog" onclick="toggleStudentActive()">פעיל</button>
+              <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
             </div>
           </div>
-          <div class="acc-hdr" onclick="toggleAcc('sc-settings')">
+          <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
             <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
           </div>
           <div class="acc-body" id="acc-sc-settings">
@@ -355,9 +355,9 @@ body.locked{overflow:hidden}
               <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
             <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
-            <button class="btn" onclick="saveStudentSettings()">שמור</button>
+            <button class="btn" data-act="student-settings-save">שמור</button>
           </div>
-          <div class="acc-hdr" onclick="toggleAcc('sc-annual')" style="border-top:1px solid var(--border)">
+          <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-annual" style="border-top:1px solid var(--border)">
             <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
           </div>
           <div class="acc-body" id="acc-sc-annual">
@@ -375,7 +375,7 @@ body.locked{overflow:hidden}
               <div id="sc-txn-list"></div>
             </div>
             <div style="margin-top:12px">
-              <button class="btn sm" onclick="scPastShow()">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
+              <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
               <div id="sc-past"></div>
             </div>
           </div>
@@ -399,7 +399,7 @@ body.locked{overflow:hidden}
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input aria-label="2000" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
-            <button class="btn" onclick="saveDefaultTuition()">שמור</button>
+            <button class="btn" data-act="tuition-save">שמור</button>
           </div>
         </div>
         <!-- סבב 26: כרטיס «שינוי סיסמת מנהל» הוסר יחד עם השער שהוא שירת.
@@ -408,21 +408,21 @@ body.locked{overflow:hidden}
         <div class="card">
           <div class="card-hdr">
             <h3>&#128100; תלמידים</h3>
-            <button class="btn sm" onclick="openAddStudent()">+ הוסף</button>
+            <button class="btn sm" data-act="student-open-add">+ הוסף</button>
           </div>
           <div id="set-students-list"></div>
         </div>
         <div class="card">
           <div class="card-hdr">
             <h3>אמצעי תשלום</h3>
-            <button class="btn sm" onclick="addListItem('payment_methods')">+ הוסף</button>
+            <button class="btn sm" data-act="list-add" data-list="payment_methods">+ הוסף</button>
           </div>
           <div id="set-methods-list"></div>
         </div>
         <div class="card">
           <div class="card-hdr">
             <h3>סעיפים</h3>
-            <button class="btn sm" onclick="addListItem('sections')">+ הוסף</button>
+            <button class="btn sm" data-act="list-add" data-list="sections">+ הוסף</button>
           </div>
           <div id="set-sections-list"></div>
         </div>
@@ -434,16 +434,16 @@ body.locked{overflow:hidden}
   </div>
 
   <div id="tabbar">
-    <button class="tab-btn active" id="tab-dash" onclick="showPanel('dash',this)">
+    <button class="tab-btn active" id="tab-dash" data-act="show-panel" data-panel="dash">
       <span class="ti">&#128202;</span><span>לוח בקרה</span>
     </button>
-    <button class="tab-btn" id="tab-txn" onclick="showPanel('txn',this)">
+    <button class="tab-btn" id="tab-txn" data-act="show-panel" data-panel="txn">
       <span class="ti">&#128179;</span><span>תשלום</span>
     </button>
-    <button class="tab-btn" id="tab-student" onclick="showPanel('student',this)">
+    <button class="tab-btn" id="tab-student" data-act="show-panel" data-panel="student">
       <span class="ti">&#128100;</span><span>תלמיד</span>
     </button>
-    <button class="tab-btn" id="tab-settings" onclick="showPanel('settings',this)">
+    <button class="tab-btn" id="tab-settings" data-act="show-panel" data-panel="settings">
       <span class="ti">&#9881;</span><span>הגדרות</span>
     </button>
   </div>
@@ -3824,7 +3824,7 @@ function renderDash(){
   // וחודש בעמודה — כמו גיליון שכר לימוד קלאסי.
   var hdr='<tr><th class="stu">תלמיד</th>';
   YEAR_MONTHS.forEach(function(m){
-    hdr+='<th class="num mo" title="'+esc(monthLabel(DASH_YEAR,m))+' — לחיצה לפירוט" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+MONTH_HE_SHORT[m]+'</th>';
+    hdr+='<th class="num mo" title="'+esc(monthLabel(DASH_YEAR,m))+' — לחיצה לפירוט" data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">'+MONTH_HE_SHORT[m]+'</th>';
   });
   hdr+='<th class="num tot">סה"כ</th></tr>';
   document.getElementById('dash-thead').innerHTML=hdr;
@@ -3838,10 +3838,10 @@ function renderDash(){
       // נרשמה בו תנועה. תשלום מראש/בדיעבד מוצג תמיד, כדי שסכום העמודה
       // יהיה שווה בדיוק לסכום התנועות של החודש.
       if(!v&&!studentInMonth(s,DASH_YEAR,m)){
-        cells+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" onclick="showDashMonth('+DASH_YEAR+','+m+')">·</td>';return;
+        cells+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">·</td>';return;
       }
       var extra=v&&!studentInMonth(s,DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לטווח הפעילות של התלמיד"':'';
-      cells+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(v?fmt(v):'—')+'</td>';
+      cells+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">'+(v?fmt(v):'—')+'</td>';
     });
     grand=Math.round((grand+tot)*100)/100;
     rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cells+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
@@ -3853,7 +3853,7 @@ function renderDash(){
   var tgt={},grandTgt=0;
   YEAR_MONTHS.forEach(function(m){tgt[m]=monthTarget(DASH_YEAR,m);grandTgt+=tgt[m];});
   var tf='<tr class="top"><td class="stu">סה"כ נגבה</td>';
-  YEAR_MONTHS.forEach(function(m){tf+='<td class="num mo" onclick="showDashMonth('+DASH_YEAR+','+m+')">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
+  YEAR_MONTHS.forEach(function(m){tf+='<td class="num mo" data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
   tf+='<td class="num tot">'+fmt(grand)+'</td></tr>';
   tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש × שכר הלימוד החודשי שלהם">יעד</td>';
   YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(tgt[m]?fmt(tgt[m]):'—')+'</td>';});
@@ -4010,6 +4010,28 @@ var DOM_ACTIONS = {
   'ask-no':       function () { closeAsk(false); },
   'ask-yes':      function () { closeAsk(true); },
   'student-add':  function () { saveNewStudent(); },
+  /*  ⛔ פאנל · אקורדיון · ורשימה עוברים בדלגציה (סבב 79) — ⚠️ `showPanel`
+   *  מקבלת את הכפתור שנלחץ, ⛔ ולכן `this` שהיה ב-`onclick` הוא ה-`el`
+   *  שכאן: ⭐ אותה פונקציה בדיוק, ⛔ ולא מסלול שני. */
+  'show-panel':   function (el) { showPanel(el.getAttribute('data-panel'), el); },
+  'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
+  'list-add':     function (el) { addListItem(el.getAttribute('data-list')); },
+  /*  ⚠️ שנה וחודש הם **מספרים** כאן — ⛔ הם נכנסים לחישוב טווח ולא
+   *  להשוואת מפתח, ⭐ וההמרה נעשית באותו קומיט של ההמרה לדלגציה. */
+  'dash-month':   function (el) { showDashMonth(Number(el.getAttribute('data-year')),
+                                                Number(el.getAttribute('data-month'))); },
+  'sc-year':      function (el) { scSelectYear(Number(el.getAttribute('data-year'))); },
+  'dash-prev-year':          function () { dashPrevYear(); },
+  'dash-next-year':          function () { dashNextYear(); },
+  'dash-month-close':        function () { closeDashMonth(); },
+  'sc-past-show':            function () { scPastShow(); },
+  'student-toggle-active':   function () { toggleStudentActive(); },
+  'student-open-add':        function () { openAddStudent(); },
+  'student-settings-save':   function () { saveStudentSettings(); },
+  'txn-save':                function () { saveTxn(); },
+  'tuition-save':            function () { saveDefaultTuition(); },
+  'login':                   function () { doLogin(); },
+  'logout':                  function () { doLogout(); },
 };
 document.addEventListener('click', function (ev) {
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
@@ -4052,7 +4074,7 @@ function renderStudentCard(){
 function renderScYearTabs(){
   var y={};TRANSACTIONS.filter(function(t){return t.student_id===SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;
   var sorted=Object.keys(y).map(Number).sort();if(!SC_YEAR||!y[SC_YEAR])SC_YEAR=acadYearOf(todayStr());
-  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===SC_YEAR?' active':'')+'" onclick="scSelectYear('+yr+')">'+acadYearLabel(yr)+'</button>';}).join('');
+  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+acadYearLabel(yr)+'</button>';}).join('');
 }
 function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
 function renderScAnnual(){
