@@ -158,7 +158,7 @@ const CAPS = {
   },
   backup: {
     name: 'גיבוי יומי אוטומטי',
-    block: { sha: '1dba3e5eae1b810c', lines: 261,
+    block: { sha: '3897d825545b7954', lines: 268,
              start: '/* ═══ גיבוי יומי ויומן פעולות',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],
@@ -651,6 +651,25 @@ function checkerMissions() {
  *  (סבב 79) — ⚠️ הודעת אימות חייבת להישאר על המסך בזמן שהמשתמש מקליד
  *  מחדש, ⭐ וטוסט שנעלם אחרי שלוש שניות משאיר טופס בלי הסבר; ⛔ ומזהה
  *  שמוכרז ואינו קיים מפיל אף הוא — ⚠️ רשימת-היתר שהתיישנה היא שארית. */
+/*  ⛔ `catch` ריק סביב **כתיבה** — ⚠️ הכלל אינו «אין `catch` ריק»: ⭐ יש
+ *  מסלולים שבהם היעדר ערך הוא תשובה תקפה ואין מה לרשום; ⛔ מה שנמדד הוא
+ *  `catch` ריק ש**גוף ה-try שלו כותב** — מקומית או לענן. ⛔ ו-`reg.update()`
+ *  אינו כתיבה — ⚠️ הוא רענון ה-service worker, ⛔ ואין לו נתון שיאבד. */
+const WRITE_CALL = /lsSet\s*\(|localStorage\s*\.\s*setItem|\.upsert\s*\(|\.insert\s*\(|sbSet\s*\(|ysCfgSet\s*\(|\bSB\b[\s\S]{0,80}?\.update\s*\(/;
+function silentWriteCatches() {
+  const out = [];
+  const re = /catch\s*\([^)]*\)\s*\{\s*\}/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const back = src.slice(Math.max(0, m.index - 700), m.index);
+    const t = back.lastIndexOf('try');
+    const body = t >= 0 ? back.slice(t) : back;
+    if (/reg\s*\.\s*update\s*\(/.test(body)) continue;
+    if (WRITE_CALL.test(body)) out.push(src.slice(0, m.index).split('\n').length);
+  }
+  return out;
+}
+
 function errPatternSites() {
   const found = (src.match(/id="([^"]*err[^"]*)"/gi) || [])
     .map((m) => m.replace(/^id="|"$/g, ''));
@@ -1034,6 +1053,7 @@ const MATRIX = [
   { row: 16, name: 'בודקים — קיום', probe: () => checkerSet() },
   { row: 17, name: 'בודקים — משימה מוצהרת', probe: () => checkerMissions() },
   { row: 67, name: 'דפוס הודעת שגיאה יחיד', probe: () => errPatternSites() === 0 },
+  { row: 118, name: 'רישום כשלי כתיבה', probe: () => silentWriteCatches().length === 0 },
   { row: 53, name: 'חלון חם במכשיר',
     probe: () => /\benabled\s*:\s*true\b/.test(cfgBlock('HW_CFG')) },
   { row: 53, name: 'שחזור מקומי מהענן',
@@ -1377,7 +1397,6 @@ const GATES = {
   115: { claim: 'type=password' },
   116: { claim: 'aria-label' },
   117: { manual: 'שני מנועי תאריך — ⛔ טרם הוכרע איזה, ואין מה לאכוף' },
-  118: { manual: '«`catch` ריק סביב כתיבה» טרם נוסח כשער — נסרק ידנית בכל סבב שנוגע' },
   122: { claim: 'pass_salt' },
   124: { manual: 'מצב העמודה במסד אינו נראה מהריפו' },
   126: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
