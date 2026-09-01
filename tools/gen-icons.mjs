@@ -126,24 +126,35 @@ const ALPHA_MIN = 25;         /* סף התוכן — זהה לסף שהשער מ
 /* ── צורות: כיסוי הפיקסל, בדגימת-יתר ───────────────────────────────────── */
 /* ⛔ הכיסוי מחושב בדגימת-יתר ⛔ ולא בנוסחה (סבב 71) — ⚠️ נוסחה נותנת קצה חד, ⛔ והקצה
    הוא בדיוק מה שהשער מודד: פיקסל שקוף למחצה קובע אם הצלע היא 48 או 49. */
+/*  ⛔ הצורה מחזירה **מרחק מסומן** ⛔ ולא בוליאני — ⚠️ המרחק הוא מה שמתיר
+    להכריע פיקסל שלם בקריאה אחת במקום ב-64: ⭐ פונקציית מרחק אמיתית משתנה
+    לכל היותר כמו המרחק עצמו, ⛔ ולכן פיקסל שמרכזו רחוק מחצי-אלכסון מהגבול
+    הוא כולו בפנים או כולו בחוץ — ⚠️ והדגימה על פיקסלי הגבול נשארת כשהייתה.
+    ⛔ ואין להחליף את המרחק בנוסחת כיסוי — ⚠️ ההכרעה כאן היא **מתי לדגום**,
+    ⛔ ולא **כמה** יצא. */
+const HALF_DIAG = 0.7072;    /* ⛔ חצי אלכסון הפיקסל, מעוגל כלפי מעלה — ⚠️ עיגול
+                                כלפי מטה היה מכריע פיקסל גבול בלי לדגום אותו. */
 const cover = (shape, x, y) => {
+  const d = shape(x + 0.5, y + 0.5);
+  if (d <= -HALF_DIAG) return 1;
+  if (d >= HALF_DIAG) return 0;
   let hit = 0;
   for (let sy = 0; sy < SS; sy++)
     for (let sx = 0; sx < SS; sx++) {
       const px = x + (sx + 0.5) / SS, py = y + (sy + 0.5) / SS;
-      if (shape(px, py)) hit++;
+      if (shape(px, py) <= 0) hit++;
     }
   return hit / (SS * SS);
 };
 const roundRect = (x0, y0, w, h, r) => (px, py) => {
   const cx = x0 + w / 2, cy = y0 + h / 2;
   const qx = Math.abs(px - cx) - (w / 2 - r), qy = Math.abs(py - cy) - (h / 2 - r);
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r <= 0;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 };
 const ring = (cx, cy, ro, ri) => (px, py) => {
-  const d = Math.hypot(px - cx, py - cy); return d <= ro && d >= ri;
+  const d = Math.hypot(px - cx, py - cy); return Math.max(d - ro, ri - d);
 };
-const disc = (cx, cy, r) => (px, py) => Math.hypot(px - cx, py - cy) <= r;
+const disc = (cx, cy, r) => (px, py) => Math.hypot(px - cx, py - cy) - r;
 
 /* ⛔ ההרכבה היא **בהכפלה מוקדמת באלפא**, וה-RGB מחולק באלפא בסוף (סבב 71) —
    ⚠️ בלי החלוקה נכתב ל-PNG ערך מוכפל, כלומר פיקסל בעל אלפא חלקית יוצא כהה
@@ -192,7 +203,7 @@ function flatten(c) {
   }
   return px;
 }
-const contentLong = (px, size) => {
+const contentBox = (px, size) => {
   let x0 = size, y0 = size, x1 = -1, y1 = -1;
   for (let y = 0; y < size; y++)
     for (let x = 0; x < size; x++)
@@ -200,7 +211,18 @@ const contentLong = (px, size) => {
         if (x < x0) x0 = x; if (x > x1) x1 = x;
         if (y < y0) y0 = y; if (y > y1) y1 = y;
       }
-  return x1 < 0 ? 0 : Math.max(x1 - x0 + 1, y1 - y0 + 1);
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+};
+/* תיבת התוכן במסכת אלפא 0..1, באותו סף בדיוק */
+const maskBox = (a, w, h) => {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (a[y * w + x] >= ALPHA_MIN / 255) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
 };
 
 /* ── מאסטר רסטרי: מסכה מהמרחק לצבע הרקע, והקטנה בהכפלה מוקדמת ──────────── */
@@ -261,14 +283,18 @@ function scaleMask(src, sw, sh, dw, dh) {
 /* ── הצייר: אריח מלא, ומסכת הסמל ───────────────────────────────────────── */
 /* ⛔ הסמל מוגדר בתיבת תוכן מנורמלת (סבב 71) — ⚠️ 0..1 על הצלע הארוכה, ולכן אותה
    הצהרה משרתת אריח 16 ו-mipmap 432, ⛔ בלי מספר קסם לכל גודל. */
-function markShapes(box) {          /* box = {x, y, w, h} בפיקסלים */
-  const s = box.w / APP.mark.w;
+/*  ⛔ הקנה נמסר ⛔ ואינו נגזר מהתיבה — ⚠️ החזית מכיילת את שני הממדים
+    בנפרד, והאריח מוסר את **אותו** קנה לשניהם: ⛔ גזירה מחדש מתוך התיבה
+    הייתה מחזירה שני ערכים שנבדלים בסיבית האחרונה, ⚠️ ואז אותו סמל בדיוק
+    יוצא בקצה אחר. ⛔ ורדיוס הפינה נשען על הקנה האופקי — עיגול הוא עיגול. */
+function markShapes(box) {          /* box = {x, y, sx, sy} בפיקסלים */
+  const { x, y, sx, sy } = box;
   return APP.mark.shapes.map((sh) => {
     if (sh.kind === 'rect') return { alpha: sh.alpha,
-      shape: roundRect(box.x + sh.x * s, box.y + sh.y * s, sh.w * s, sh.h * s, sh.r * s) };
+      shape: roundRect(x + sh.x * sx, y + sh.y * sy, sh.w * sx, sh.h * sy, sh.r * sx) };
     if (sh.kind === 'ring') return { alpha: sh.alpha,
-      shape: ring(box.x + sh.cx * s, box.y + sh.cy * s, sh.ro * s, sh.ri * s) };
-    return { alpha: sh.alpha, shape: disc(box.x + sh.cx * s, box.y + sh.cy * s, sh.r * s) };
+      shape: ring(x + sh.cx * sx, y + sh.cy * sy, sh.ro * sx, sh.ri * sx) };
+    return { alpha: sh.alpha, shape: disc(x + sh.cx * sx, y + sh.cy * sy, sh.r * sx) };
   });
 }
 function paintBg(c, shape) {
@@ -299,58 +325,63 @@ function tile(size, box) {
   const w = box.w * size, h = w * APP.mark.h / APP.mark.w;
   const x = box.x === undefined ? (size - w) / 2 : box.x * size;
   const y = box.y === undefined ? (size - h) / 2 : box.y * size;
-  for (const m of markShapes({ x, y, w, h })) paint(c, m.shape, APP.ink, m.alpha);
+  const s = w / APP.mark.w;
+  for (const m of markShapes({ x, y, sx: s, sy: s })) paint(c, m.shape, APP.ink, m.alpha);
   return flatten(c);
 }
 /* ⛔ חזית ה-adaptive: הסמל בלבד, ⛔ וצלע התוכן היא **בדיוק** היעד (סבב 71) —
    ⚠️ הסמל ממוקם על גבול פיקסל ובגודל שלם, ולכן הפיקסל החיצוני מכוסה
    והשכן שמעבר לו ריק: ⛔ הצלע אינה תלויה בסף האלפא שבו מודדים. */
-/*  ⛔ הצלע מעוגלת לזוגי לפני המיקום (סבב 75) — ⚠️ המסגרת זוגית בכל
-    הנכסים, ⛔ וצלע תוכן אי-זוגית בתוכה אינה ניתנת לחלוקה שווה: ⭐ נמדד
-    171 בתוך 432 והשוליים יצאו 130/131. ⛔ והעיגול הוא לזוגי הקרוב ⛔ ולא
-    כלפי מעלה — ⚠️ עיגול בכיוון אחד היה מזיז את הסמל בפיקסל בכל נכס. */
+/*  ⛔ שתי הצלעות מעוגלות לזוגי (סבב 75) — ⚠️ המסגרת זוגית בכל הנכסים,
+    ⛔ וצלע תוכן אי-זוגית בתוכה אינה ניתנת לחלוקה שווה: ⭐ נמדד 171 בתוך 432
+    והשוליים יצאו 130/131. ⛔ והעיגול הוא לזוגי הקרוב ⛔ ולא כלפי מעלה —
+    ⚠️ עיגול בכיוון אחד היה מזיז את הסמל בפיקסל בכל נכס. */
 const evenRound = (v) => 2 * Math.round(v / 2);
-function foreground(canvas, target) {
-  const w = target, h = evenRound(target * APP.mark.h / APP.mark.w);
-  const x0 = Math.round((canvas - w) / 2), y0 = Math.round((canvas - h) / 2);
-  if (APP.art === 'master') {
-    /*  ⛔ הרוחב מכויל למדידה ⛔ ולא מחושב (סבב 71) — ⚠️ קצה הציור שבמאסטר
-        הוא אנטי-אליאסינג, ולכן הקטנה ל-`target` בדיוק מחזירה לפעמים
-        `target-1`: העמודה החיצונית יורדת מתחת לסף. ⛔ «כמעט» כאן הוא ❌. */
-    const m = masterMask();
-    let a = null, aw = 0, ah = 0;
-    for (const cand of [w, w + 1, w + 2, w + 3, w - 1]) {
-      const ch = evenRound(cand * APP.mark.h / APP.mark.w);
-      const t = scaleMask(m.a, m.w, m.h, cand, ch);
-      let x0b = cand, y0b = ch, x1b = -1, y1b = -1;
-      for (let y = 0; y < ch; y++)
-        for (let x = 0; x < cand; x++)
-          if (t[y * cand + x] >= ALPHA_MIN / 255) {
-            if (x < x0b) x0b = x; if (x > x1b) x1b = x;
-            if (y < y0b) y0b = y; if (y > y1b) y1b = y;
-          }
-      if (x1b >= 0 && Math.max(x1b - x0b + 1, y1b - y0b + 1) === target) {
-        a = t; aw = cand; ah = ch; break;
+/*  ⛔ הצלע שמצוירת אינה הצלע שנמדדת — ⚠️ שורת הקצה יורדת מתחת ל-`ALPHA_MIN`
+    באנטי-אליאסינג, ⛔ ולכן מנסים מועמדים עד שהנמדד **הוא** היעד: ⭐ בשני
+    הממדים, ⛔ ולא ברוחב בלבד. ⚠️ «כמעט» כאן הוא ❌: גובה נמדד 171 במקום 172
+    הוציא את השוליים 130/131. */
+const CANDS = (n) => [n, n + 1, n + 2, n + 3, n - 1];
+/*  ⛔ מסכת הסמל בתיבה `dw`×`dh` — אלפא בלבד: ⚠️ הדיו אחיד בכל פיקסל, ⛔ ולכן
+    המסכה היא כל התמונה. ⭐ ושני הקנים נפרדים — זה מה שמתיר לכייל גובה בלי
+    לגעת ברוחב. */
+function markMask(dw, dh) {
+  if (APP.art === 'master') { const m = masterMask(); return scaleMask(m.a, m.w, m.h, dw, dh); }
+  const a = new Float64Array(dw * dh);
+  for (const m of markShapes({ x: 0, y: 0, sx: dw / APP.mark.w, sy: dh / APP.mark.h }))
+    for (let y = 0; y < dh; y++)
+      for (let x = 0; x < dw; x++) {
+        const cv = cover(m.shape, x, y) * m.alpha;
+        if (!cv) continue;
+        const i = y * dw + x;
+        a[i] = a[i] * (1 - cv) + cv;
       }
+  return a;
+}
+function foreground(canvas, target) {
+  const W = target, H = evenRound(target * APP.mark.h / APP.mark.w);
+  let a = null, aw = 0, ah = 0, b = null;
+  for (const dw of CANDS(W)) {
+    for (const dh of CANDS(H)) {
+      const t = markMask(dw, dh), bb = maskBox(t, dw, dh);
+      if (bb && bb.x1 - bb.x0 + 1 === W && bb.y1 - bb.y0 + 1 === H) { a = t; aw = dw; ah = dh; b = bb; break; }
     }
-    if (!a) throw new Error(`מסכת המאסטר אינה מגיעה לצלע ${target}`);
-    const bx = Math.round((canvas - aw) / 2), by = Math.round((canvas - ah) / 2);
-    const px = Buffer.alloc(canvas * canvas * 4);
-    for (let k = 0; k < canvas * canvas; k++) {
-      px[k*4] = APP.ink[0]; px[k*4+1] = APP.ink[1]; px[k*4+2] = APP.ink[2];
-    }
-    for (let y = 0; y < ah; y++)
-      for (let x = 0; x < aw; x++)
-        px[((y + by) * canvas + (x + bx)) * 4 + 3] = Math.round(a[y * aw + x] * 255);
-    return px;
+    if (a) break;
   }
-  const c = canvasOf(canvas);
-  for (const m of markShapes({ x: x0, y: y0, w, h })) paint(c, m.shape, APP.ink, m.alpha);
-  const px = flatten(c);
+  if (!a) throw new Error(`הסמל אינו מגיע לתיבת תוכן ${W}×${H}`);
+  /*  ⛔ המיקום נגזר מתיבת התוכן **שנמדדה** ⛔ ולא מגודל המסכה — ⚠️ מסכה
+      שגדולה בפיקסל מהתוכן שבתוכה מזיזה אותו בחצי פיקסל, ⛔ והשוליים חוזרים
+      להיות 130/131. */
+  const bx = (canvas - W) / 2 - b.x0, by = (canvas - H) / 2 - b.y0;
   /*  ⛔ ה-RGB הוא הדיו בכל פיקסל, גם בשקוף (סבב 71) — ⚠️ פיקסל שקוף שה-RGB
       שלו שחור נמרח פנימה בכל הקטנה עתידית, ⛔ ומכהה את הקצה. */
-  for (let k = 0; k < canvas * canvas; k++)
-    if (px[k*4+3] === 0) { px[k*4] = APP.ink[0]; px[k*4+1] = APP.ink[1]; px[k*4+2] = APP.ink[2]; }
+  const px = Buffer.alloc(canvas * canvas * 4);
+  for (let k = 0; k < canvas * canvas; k++) {
+    px[k*4] = APP.ink[0]; px[k*4+1] = APP.ink[1]; px[k*4+2] = APP.ink[2];
+  }
+  for (let y = 0; y < ah; y++)
+    for (let x = 0; x < aw; x++)
+      px[((y + by) * canvas + (x + bx)) * 4 + 3] = Math.round(a[y * aw + x] * 255);
   return px;
 }
 
@@ -378,8 +409,13 @@ for (const [d, scale] of DENS) {
   const legacy = Math.round(48 * scale), fg = Math.round(108 * scale);
   put(join(dir, 'ic_launcher.png'), encodePng(legacy, legacy, tile(legacy, APP.tileBox)));
   const px = foreground(fg, legacy);
-  const got = contentLong(px, fg);
-  if (got !== legacy) throw new Error(`${d}: צלע התוכן ${got} ≠ ${legacy}`);
+  const b = contentBox(px, fg);
+  if (!b) throw new Error(`${d}: החזית ריקה`);
+  const cw = b.x1 - b.x0 + 1, chh = b.y1 - b.y0 + 1;
+  if (cw !== legacy) throw new Error(`${d}: צלע התוכן ${cw} ≠ ${legacy}`);
+  const L = b.x0, R = fg - 1 - b.x1, T = b.y0, B = fg - 1 - b.y1;
+  if (L !== R || T !== B)
+    throw new Error(`${d}: שוליים L=${L}/R=${R} · T=${T}/B=${B} בתוכן ${cw}×${chh} — ⛔ נדרש L=R ו-T=B`);
   put(join(dir, 'ic_launcher_foreground.png'), encodePng(fg, fg, px));
 }
 console.log(`gen-icons — ${wrote} קבצים נכתבו (${APP.name})`);
