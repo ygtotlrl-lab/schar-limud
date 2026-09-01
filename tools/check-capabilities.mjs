@@ -75,12 +75,12 @@ const APP = {
   passFpFillFn: 'slEnsurePassFp',
   userCreateFn: null,
   passFpMakeFn: null,
-  gapRows: [87, 89, 113, 111, 118, 132],
+  gapRows: [87, 89, 116, 114, 121, 135],
   tableProbe: {
     /*  ⛔ ערך ולא נוכחות (סבב 72) — ⚠️ כל `upsert` נושא `onConflict`,
      *  ⛔ וכל מפתח שנכתב בקוד מוכרז ומנומק ב-`APP.conflictKeys`: ⭐ מפתח
      *  שאינו מפתח הזהות של הטבלה יוצר שורה שנייה לאותה רשומה. */
-    101: (c) => {
+    104: (c) => {
       const ups = [...c.code.matchAll(/\.upsert\(/g)];
       if (!ups.length) return false;
       for (const m of ups)
@@ -94,15 +94,15 @@ const APP = {
      *  ממנו: מספר הסיבובים מהקבוע, ⛔ ו-`SHA-256` ו-256 הביט מהקריאה
      *  ל-`deriveBits` עצמה. ⭐ עד סבב 72 השורה נשאה «אין שער שמודד», ⛔ והיא
      *  ניתנת למדידה במלואה. */
-    115: (c) => c.hasCode(/SL_PASS_ITER_USER\s*=\s*100000\b/)
+    118: (c) => c.hasCode(/SL_PASS_ITER_USER\s*=\s*100000\b/)
           && /iterations:\s*SL_PASS_ITER_USER,\s*hash:\s*'SHA-256'/.test(c.src)
           && /deriveBits\([\s\S]{0,200}?key,\s*256\)/.test(c.code),
     // ⚠️ מתועד ❌ במטריצה — `doLogin` מריצה משיכה מלאה כפויה במקום נתיב חלקי.
-    114:  () => false,
+    117:  () => false,
     // חמש טבלאות `sl_` מאז ההקמה — המראה נבנית מהן ישירות.
-    95: (c) => c.hasCode(/\bSL_TABLES\b/),
+    96: (c) => c.hasCode(/\bSL_TABLES\b/),
     // ⚠️ מתועד ❌ במטריצה — המנהל מנהל סיסמאות מלוח הבקרה של Supabase.
-    113: () => false,
+    116: () => false,
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -731,6 +731,43 @@ function colPatternGaps() {
   return out;
 }
 
+/*  ⛔ תקן קובץ המיגרציה — ⚠️ ארבע הפרות אפשריות, ⭐ וכל אחת מהן היא מסלול
+ *  שאין ממנו חזרה: ⛔ `create table` בלי `if not exists` נופל בהרצה שנייה,
+ *  ⛔ `delete`/`truncate` ל-`anon` פותח מחיקה פיזית מהלקוח, ⛔ טבלה בלי
+ *  מזהה שנוצר במכשיר יוצרת רשומה כפולה בניסיון חוזר, ⛔ וקובץ בלי באנר
+ *  אינו מצהיר אם רץ. */
+const MIG_BANNER = /^-- ={40,}\n-- \S+\.sql — \S[^\n]*\n-- ={40,}\n--\n-- ⛔/;
+function migContentGaps() {
+  const out = [];
+  for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
+    const raw = fs.readFileSync('migrations/' + f, 'utf8');
+    const sql = raw.replace(/--[^\n]*/g, ' ');
+    if (!MIG_BANNER.test(raw)) out.push(`${f}: אין באנר תקני בראש`);
+    if (/create\s+table\s+(?!if\s+not\s+exists)/i.test(sql)) out.push(`${f}: create table בלי if not exists`);
+    for (const m of sql.matchAll(/grant\s+([a-z, ]+?)\s+on\s+[^;]*?\s+to\s+([^;]+);/gi))
+      if (/\b(delete|truncate)\b/i.test(m[1]) && /\b(anon|authenticated)\b/i.test(m[2]))
+        out.push(`${f}: grant ${m[1].trim()} ל-anon/authenticated`);
+  }
+  /*  ⛔ מזהה שנוצר במכשיר — ⚠️ `client_id text` או `id uuid` עם ברירת מחדל:
+   *  ⭐ שתי צורות לאותו דבר, ⛔ והבחירה ביניהן היא הבדל מכוון בין הריפו. */
+  for (const [t, cols] of declaredTables()) {
+    if (!cols.has('deleted')) continue;
+    if (cols.has('client_id')) continue;
+    if ((cols.get('id') || '').startsWith('uuid')) continue;
+    out.push(`${t}: מחיקה רכה בלי מזהה שנוצר במכשיר`);
+  }
+  return out;
+}
+/*  ⛔ תקרת שורות לקובץ מיגרציה — ⚠️ קובץ הסכימה הראשונית מוחרג בתקן עצמו
+ *  ⛔ ולא ברשימה: ⭐ הוא הסכימה המלאה ונכתב פעם אחת, ⚠️ וכל היתר הם שינוי
+ *  אחד. ⛔ והחריגה נגזרת מהסדר ⛔ ואינה מוקלדת — הקובץ הראשון בתיקייה. */
+const MIG_MAX_LINES = 250;
+function migLineGaps() {
+  const files = fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort();
+  return files.slice(1).filter((f) =>
+    fs.readFileSync('migrations/' + f, 'utf8').split('\n').length - 1 > MIG_MAX_LINES);
+}
+
 /*  שורות המטריצה. `probe` מחזירה true כשהיכולת **קיימת בפועל**.
  *  `desc` — שורה תיאורית (לא ✅/❌): מחזירה את הטקסט שהתא חייב לשאת.
  *  `exempt` — שורה שאינה ניתנת לאימות מהריפו, עם נימוק בן שורה.
@@ -753,12 +790,16 @@ const MATRIX = [
    *  ⛔ ואותו סמל בדיוק נמדד בצלע אחרת — בשקט, בלי שער שנופל. */
   { row: 86, name: 'דגימת-יתר במחולל',
     probe: () => Number((/^const SS = (\d+);/m.exec(genSrc()) || [])[1]) === GEN_SS },
-  { row: 115, name: '`PBKDF2` — פרמטרים', app: true },
-  { row: 105, name: 'דפוס עמודות אחיד',
+  { row: 118, name: '`PBKDF2` — פרמטרים', app: true },
+  { row: 101, name: '`migrations/` — תוכן',
+    probe: () => migContentGaps().length === 0 },
+  { row: 102, name: '`migrations/` — כמות',
+    probe: () => migLineGaps().length === 0 },
+  { row: 108, name: 'דפוס עמודות אחיד',
     probe: () => colPatternGaps().length === 0 },
   { row: 27, name: 'שער אינו מקליד מספר שורה',
     probe: () => typedRowSites().length === 0 },
-  { row: 125, name: 'פונקציה בלי קוראים',
+  { row: 128, name: 'פונקציה בלי קוראים',
     probe: () => orphanFns().length === 0 },
   /*  ⛔ ערך ולא נוכחות שם (סבב 76) — ⚠️ הטענה אינה «`waitFor` קיים» אלא
    *  **שאין המתנה על שעון** בשום שער: ⭐ שינה קבועה נגמרת על מכונה עמוסה
@@ -770,7 +811,7 @@ const MATRIX = [
    *  לה היא קוד מת שהשער מאשר · ⛔ **והשדה שסומן כסוד אינו שורד אותה**,
    *  ⚠️ והוא קיים בקוד במקום אחר — ⭐ שדה שאינו קיים כלל היה הופך את
    *  הטענה לבלתי-אפשרית להפרה, ⛔ כלומר לטענה שאינה נמדדת. */
-  { row: 119, name: 'סודות אינם עוזבים את המכשיר',
+  { row: 122, name: 'סודות אינם עוזבים את המכשיר',
     probe: () => {
       const fn = APP.secretStripFn, f = APP.secretField;
       if (!fn || !f) return false;
@@ -779,20 +820,20 @@ const MATRIX = [
       const re = new RegExp('\\b' + f + '\\b');
       return callSites(fn).length > 0 && !re.test(body) && re.test(src);
     } },
-  { row: 101, name: 'דפוס `upsert` — onConflict מוכרז', app: true },
+  { row: 104, name: 'דפוס `upsert` — onConflict מוכרז', app: true },
   /*  ⛔ שני ענפים ולא ענף אחד (סבב 76) — ⚠️ «טביעה חסרה מושלמת אוטומטית»
    *  נמדדת במסלול ההשלמה במקום שיש בו כזה, ⭐ ובמקום שאין בו — בכך
    *  **שאין מסלול שיוצר משתמש בלי טביעה**: ⛔ מסלול השלמה באפליקציה
    *  שכל משתמשיה נוצרים במסך שגוזר טביעה הוא קוד מת, ⚠️ ובאחת מהן הוא
    *  אף הוסר בהחלטת מנהל מפני שהיה הקורא האחרון של הסיסמה הגלויה. */
-  { row: 117, name: 'טביעה חסרה מושלמת אוטומטית',
+  { row: 120, name: 'טביעה חסרה מושלמת אוטומטית',
     probe: () => APP.passFpFillFn
       ? (!!fnBody(APP.passFpFillFn) && callSites(APP.passFpFillFn).length > 0)
       : (!!APP.userCreateFn && !!APP.passFpMakeFn &&
          new RegExp('\\b' + APP.passFpMakeFn + '\\s*\\(').test(fnBody(APP.userCreateFn))) },
-  { row: 117, name: 'כניסה אופליין',
+  { row: 120, name: 'כניסה אופליין',
     probe: () => !!(APP.offlineLoginFn && fnRange(APP.offlineLoginFn)) },
-  { row: 94, name: 'עריכת נתונים אופליין',
+  { row: 95, name: 'עריכת נתונים אופליין',
     probe: () => hasCode(/\bpendMark\s*\(/) },
   /*  ⛔ «דלגציה» נמדדת כיחס ⛔ ולא כאפס `onclick` (סבב 71) — ⚠️ דרישת
    *  אפס הייתה מסמנת ❌ גם לאפליקציה שכל מסכיה עוברים במאזין אחד ונשארו
@@ -802,12 +843,12 @@ const MATRIX = [
    *  מקוד הלקוח, ⛔ **וגם** `DELETE FROM` בקובצי המיגרציה. ⭐ שער שמדד
    *  רק את הראשון היה מאשר מיגרציה שמוחקת נתונים פיזית, ⛔ וזה בדיוק
    *  המסלול שאין ממנו חזרה. */
-  { row: 104, name: 'מחיקה רכה בלבד — אין `DELETE` פיזי',
+  { row: 107, name: 'מחיקה רכה בלבד — אין `DELETE` פיזי',
     probe: () => !/\.delete\s*\(/.test(code) && sqlDeletesEntity().length === 0 },
   /*  ⛔ דגל מעבר נמדד לפי **ערכו** ⛔ ולא לפי קיומו (סבב 71) — ⚠️ הדגל
    *  נשאר בקוד גם אחרי שכובה, וזו כל התכלית שלו: נתיב חזרה. ⭐ ולכן
    *  השורה ✅ כשאין אף דגל **דלוק**, ⛔ ולא כשאין דגלים. */
-  { row: 121, name: 'דגלי מעבר — אין דגל דלוק',
+  { row: 124, name: 'דגלי מעבר — אין דגל דלוק',
     probe: () => legacyFlagsOn().length === 0 },
   { row: 63, name: 'טיפול באירועים — דלגציה ממאזין אחד',
     probe: () => {
@@ -815,14 +856,14 @@ const MATRIX = [
       const deleg  = (src.match(/data-act=/g) || []).length;
       return CLICK_LISTENER.test(src) && deleg > inline;
     } },
-  { row: 114, name: 'נתיב עדכון חלקי למראת המשתמשים', app: true },
+  { row: 117, name: 'נתיב עדכון חלקי למראת המשתמשים', app: true },
   /*  ⛔ הערך ולא הצורה (סבב 75) — ⚠️ `LS_SWEEP_PCT` חי ב-`index.html`
    *  ⛔ ואף שער לא הזכיר אותו: ⭐ סף הפינוי הוא מספר שהטבלה מצהירה,
    *  ⚠️ והוא נקרא כמספר ⛔ ולא כמחרוזת — 0.6 ו-0.60 הם אותו סף. */
   { row: 65, name: 'פינוי אוטומטי',
     probe: () => /tier2\s*[:=]\s*\[\s*\{/.test(policyBlock()) &&
                  Number((/LS_SWEEP_PCT\s*=\s*([\d.]+)/.exec(src) || [])[1]) === LS_SWEEP_PCT },
-  { row: 107, name: 'אימות פינוי מול הענן',
+  { row: 110, name: 'אימות פינוי מול הענן',
     probe: () => /\bverify\s*:/.test(policyBlock()) },
   { row: 89, name: 'שיתוף קבצים',
     probe: () => hasCode(/_androidShareImage|navigator\s*\.\s*share\b/) },
@@ -839,11 +880,11 @@ const MATRIX = [
   { row: 93, name: 'מפתח חתימה קבוע בריפו',
     probe: () => hasPath('signing') &&
                  fs.readdirSync('signing').some((f) => f.endsWith('.keystore')) },
-  { row: 97, name: 'מקור אמת יחיד לסכימה', probe: () => hasPath(APP.schemaFile) },
-  { row: 98, name: 'קובץ התקנה מלא',       probe: () => hasPath(APP.schemaFile) },
+  { row: 98, name: 'מקור אמת יחיד לסכימה', probe: () => hasPath(APP.schemaFile) },
+  { row: 99, name: 'קובץ התקנה מלא',       probe: () => hasPath(APP.schemaFile) },
   { row: 51, name: 'גיבוי יומי אוטומטי',   probe: () => present.backup === true },
   { row: 51, name: 'יומן פעולות',          probe: () => present.log === true },
-  { row: 95, name: 'נתונים בטבלאות מובנות', app: true },
+  { row: 96, name: 'נתונים בטבלאות מובנות', app: true },
   /*  ⭐ סבב 70 — ⛔ ה-probe מאמת את **הסט** ולא קיום קובץ אחד: בודק שנשאר
    *  אחרי שתפקידו נגמר הוא שער שרץ בלי שיש לו מה לאכוף, ⚠️ ו-probe שהסתפק
    *  בקיום `check-js` היה מדווח ✅ על כל סט שהוא. */
@@ -854,8 +895,8 @@ const MATRIX = [
     probe: () => /\benabled\s*:\s*true\b/.test(cfgBlock('HW_CFG')) },
   { row: 52, name: 'שחזור מקומי מהענן',
     probe: () => callSites('hwRestoreMount').length > 0 },
-  { row: 113, name: 'מסך שינוי סיסמה עצמי', app: true },
-  { row: 134, name: 'מטמון-CDN מראש עם ריפוי עצמי',
+  { row: 116, name: 'מסך שינוי סיסמה עצמי', app: true },
+  { row: 137, name: 'מטמון-CDN מראש עם ריפוי עצמי',
     probe: () => fileHas('sw.js', /CDN_ASSETS/) && fileHas('sw.js', /ensureCdnCached/) },
   { row: 51, name: 'גיבוי יומי מטבלאות מובנות',
     exempt: 'התא מצהיר שהגיבוי **קורא** מטבלאות מובנות, וזו עובדת מסד ולא ' +
@@ -864,7 +905,7 @@ const MATRIX = [
             'מונע את כתיבת הדגל היומי ומשתק את הגריעה — נמדד בהנהלה, 66 ' +
             'גיבויים ביום. הצד שכן נבדק — הצהרת המקורות מול APP.tables — ' +
             'נאכף ב-test_sources.mjs, ורשימת-ההיתר ב-test_cron.mjs.' },
-  { row: 102, name: 'פינוי גיבויים אוטומטי במסד',
+  { row: 105, name: 'פינוי גיבויים אוטומטי במסד',
     exempt: 'התא מצהיר שמשימת `pg_cron` **רשומה ופעילה במסד**, ואין דרך ' +
             'לראות זאת מהריפו. הצד שכן נבדק — `_bkRetention` וקובץ המיגרציה — ' +
             'נאכף ב-test_cron.mjs, שנועל גם את התזמון.' },
@@ -874,7 +915,7 @@ const MATRIX = [
    *  אמיתי ולא שמו של קובץ. */
   { row: 53, name: 'מנוע מיזוג עם הגנת ⏳',
     probe: () => /isPend \|\| tsOf\(loc\) > tsOf\(rem\)/.test(fnBody('_mergePick')) },
-  { row: 117, name: 'חסימת משתמש מושבת בכניסה אופליין',
+  { row: 120, name: 'חסימת משתמש מושבת בכניסה אופליין',
     probe: () => !!APP.offlineLoginFn &&
                  /\bactive\s*!==\s*true\b/.test(fnBody(APP.offlineLoginFn)) },
   /*  ⚠️ ה-probe בודק **קריאה מקוד האפליקציה** ולא את עצם קיום המודול:
@@ -909,7 +950,7 @@ const MATRIX = [
    *  (`verifyFn`) ואז מוודא שהפונקציה הזו באמת נקראת ב-`index.html` —
    *  כלומר הוא נשען על הקוד ולא על קיום הקובץ בלבד. ⛔ הצהרה בלי קריאה
    *  היא בדיוק המצב שהמטריצה אמורה לתפוס.                            */
-  { row: 117, name: 'אימות מול טביעה בענן',
+  { row: 120, name: 'אימות מול טביעה בענן',
     probe: () => {
       const p = 'tools/test_passwords.mjs';
       if (!hasPath(p)) return false;
@@ -937,7 +978,7 @@ const MATRIX = [
    *  הליבה המשותפת שנמצאה וחתימתה תואמת (`present.swcore`), ו-`SW_CFG`
    *  שמוגדר ב-`sw.js` מעליה. ⛔ ליבה בלי `SW_CFG` היא קוד שהועתק ולא
    *  מודול — הפרמטרים הם מה שמאפשר לליבה להיות זהה בית-לבית.        */
-  { row: 134, name: 'מודול ה-service worker',
+  { row: 137, name: 'מודול ה-service worker',
     probe: () => present.swcore === true && fileHas('sw.js', /var\s+SW_CFG\s*=/) },
   /*  ⭐ סבב 44 — ניסיון חוזר בתור הסנכרון. ה-probe דורש את **שני**
    *  התנאים: הליבה שנמצאה וחתימתה תואמת (`present.retry`), ו-`RTY_CFG`
@@ -976,7 +1017,7 @@ const MATRIX = [
    *  `skipWaiting` (סבב 42ג): הבדיקה **מגלה** גרסה, והמשתמש מחליט.
    *  ⚠️ ה-probe דורש את שני חלקי המנגנון — `reg.update()` והמרווח —
    *  מפני שקריאה בלי מרווח היא בדיקה חד-פעמית בעלייה, וזה מה שהיה. */
-  { row: 133, name: 'בדיקת עדכון תקופתית ל-service worker',
+  { row: 136, name: 'בדיקת עדכון תקופתית ל-service worker',
     probe: () => hasCode(/\breg\s*\.\s*update\s*\(/) &&
                  hasCode(/setInterval\(\s*\w+\s*,\s*30\s*\*\s*60\s*\*\s*1000\s*\)/) },
   /*  ⭐ סבב 53 — שלוש שורות תשתית שהיו קיימות בארבעתן **ולא נמדדו כאן
@@ -1004,14 +1045,14 @@ const MATRIX = [
    *  ⛔ ושינוי הגיל מ-90 יום ל-9 היה עובר בשקט: ⭐ הוא מכפיל את המספרים
    *  שבביטוי ומשווה למילישניות של 90 יום, ⛔ ולכן הוא עיוור לריווח
    *  ולצורת הכתיבה ⚠️ ורגיש לערך בלבד. */
-  { row: 103, name: 'גריעת tombstones לפי גיל',
+  { row: 106, name: 'גריעת tombstones לפי גיל',
     probe: () => {
       const m = /TOMBSTONE_TTL_MS\s*=\s*([^;\n]+)/.exec(code);
       if (!m) return false;
       const ns = m[1].match(/\d+/g);
       return !!ns && ns.reduce((a, b) => a * Number(b), 1) === TOMB_TTL_MS;
     } },
-  { row: 132, name: 'אוטו-אפדייט מ-raw.githubusercontent',
+  { row: 135, name: 'אוטו-אפדייט מ-raw.githubusercontent',
     probe: () => hasCode(/UPDATE_INTERVAL_MS/) && hasCode(/\bRAW_URL\b/) },
   /*  ⭐ סבב 56 — מקור הקריאה. ⚠️ **שורה תיאורית ולא ✅/❌**: היא מודדת
    *  מאיפה נקראים הנתונים, ולא אם יכולת קיימת. `APP.kvFallbackFn` מצהיר
@@ -1045,7 +1086,7 @@ const MATRIX = [
    *  נותן ✅ גם לאייקון שתופס 32% מהמסגרת בזמן שהאחיות תופסות 44%. */
   { row: 83, name: 'שכבת אייקונים',
     probe: () => iconAudit('.').length === 0 },
-  { row: 108, name: 'שכבת קלט אחידה',
+  { row: 111, name: 'שכבת קלט אחידה',
     probe: () => inputAudit('.').length === 0 },
   /*  ⛔ ❌ מנומק (סבב 67) — אין כאן מסך ניהול משתמשים, ואין לא
    *  שינוי סיסמה עצמי ולא החלפת משתמש; ⚠️ המנהל הוא המשתמש
@@ -1059,7 +1100,7 @@ const MATRIX = [
     probe: () => /function openModal\s*\(\s*title\s*,\s*body\s*,\s*foot\s*\)/.test(code) &&
                  /id="modal"/.test(src) && /id="ask"/.test(src) &&
                  /function closeAsk/.test(code) },
-  { row: 113, name: 'שכבת כניסה מלאה',
+  { row: 116, name: 'שכבת כניסה מלאה',
     probe: () => false },
 ];
 
@@ -1149,7 +1190,7 @@ const GATES = {
   41: { claim: 'COUNT_NOTE' },
   42: { manual: 'עדכון הסימון הוא התנהגות סשן שאינה בעץ — ⛔ נאכף רק בתוצאתו' },
   37: { manual: 'קריאת הטבלה לפני הכתיבה היא התנהגות סשן שאינה בעץ — ⛔ נאכפת רק בתוצאתה' },
-  135: { claim: 'CACHE_NAME' },
+  138: { claim: 'CACHE_NAME' },
   26: { manual: 'מספר בדיווח הוא התנהגות סשן שאינה בעץ — ⛔ אין קובץ שאפשר למדוד בו את הדיווח, ⚠️ ונאכף בתוצאתו בלבד' },
   28: { claim: 'drift' },
   34: { claim: 'measure-gap',
@@ -1173,34 +1214,35 @@ const GATES = {
   70: { claim: 'עברית' },
   71: { claim: 'RULE_W' },
   72: { claim: 'BANNER_W' },
-  126: { claim: 'CSS מתות' },
+  129: { claim: 'CSS מתות' },
   73: { manual: '«למה ולא מה» הוא קריאת משמעות — ⛔ שער מודד צורה בלבד, ⚠️ והמונה נמדד ידנית' },
   74: { claim: 'מפנה לקובץ' },
   81: { claim: 'android/app/src/main' },
   87: { claim: 'fgDriftMax' },
   88: { claim: 'CANON_MANIFEST' },
   90: { claim: 'BUILD_SHA' },
+  94: { claim: 'SHARED_SHA' },
   92: { claim: 'versionCode' },
   79: { claim: 'WebView' },
-  96: { manual: 'נפילה-חזרה ל-`kv` נסרקת ידנית; ⛔ קיום המפתחות במסד אינו נראה מהריפו' },
-  99: { claim: 'migrations' },
-  100: { manual: 'ההרשאות יושבות במסד ואינן נראות מהריפו — אימות הוא פעולת מנהל' },
-  106: { manual: 'חתימת הסכימה החיה נגזרת מ-`information_schema` ואינה נראית מהריפו — ⛔ ההשוואה היא פעולת מנהל' },
-  109: { claim: 'type=password' },
-  110: { claim: 'aria-label' },
-  111: { manual: 'שני מנועי תאריך — ⛔ טרם הוכרע איזה, ואין מה לאכוף' },
-  112: { manual: '«`catch` ריק סביב כתיבה» טרם נוסח כשער — נסרק ידנית בכל סבב שנוגע' },
-  116: { claim: 'pass_salt' },
-  118: { manual: 'מצב העמודה במסד אינו נראה מהריפו' },
-  120: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
-  122: { claim: '⏳' },
-  123: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
-  130: { manual: 'קיום טבלה או מפתח במסד אינו נראה מהריפו' },
-  128: { manual: 'מצב ההרצה יושב ב-`schema_migrations` ואינו נראה מהריפו' },
-  124: { manual: '«קובץ בלי קורא» דורש סריקה על ארבעת הריפו — נעשה ידנית' },
-  131: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
-  127: { manual: 'רשימת-היתר הגיבויים יושבת במיגרציה שכבר רצה' },
-  129: { manual: 'מצב הענפים המרוחקים אינו נראה מעותק העבודה' },
+  97: { manual: 'נפילה-חזרה ל-`kv` נסרקת ידנית; ⛔ קיום המפתחות במסד אינו נראה מהריפו' },
+  100: { claim: 'migrations' },
+  103: { manual: 'ההרשאות יושבות במסד ואינן נראות מהריפו — אימות הוא פעולת מנהל' },
+  109: { manual: 'חתימת הסכימה החיה נגזרת מ-`information_schema` ואינה נראית מהריפו — ⛔ ההשוואה היא פעולת מנהל' },
+  112: { claim: 'type=password' },
+  113: { claim: 'aria-label' },
+  114: { manual: 'שני מנועי תאריך — ⛔ טרם הוכרע איזה, ואין מה לאכוף' },
+  115: { manual: '«`catch` ריק סביב כתיבה» טרם נוסח כשער — נסרק ידנית בכל סבב שנוגע' },
+  119: { claim: 'pass_salt' },
+  121: { manual: 'מצב העמודה במסד אינו נראה מהריפו' },
+  123: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
+  125: { claim: '⏳' },
+  126: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
+  133: { manual: 'קיום טבלה או מפתח במסד אינו נראה מהריפו' },
+  131: { manual: 'מצב ההרצה יושב ב-`schema_migrations` ואינו נראה מהריפו' },
+  127: { manual: '«קובץ בלי קורא» דורש סריקה על ארבעת הריפו — נעשה ידנית' },
+  134: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
+  130: { manual: 'רשימת-היתר הגיבויים יושבת במיגרציה שכבר רצה' },
+  132: { manual: 'מצב הענפים המרוחקים אינו נראה מעותק העבודה' },
   76: { claim: 'CLEANUP_SHA' },
   77: { claim: 'בלוק ה-APP' },
 };

@@ -1,21 +1,23 @@
--- ============================================================
--- שכר לימוד — הסכימה המלאה (מקור האמת היחיד)
--- שם המיגרציה: initial_schema
--- הרץ ב-Supabase SQL Editor (פרויקט kxbtskqobynewvnckaaz):
---   https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new
--- ============================================================
+-- ============================================================================
+-- 000_initial_schema.sql — שכר לימוד — הסכימה המלאה (מקור האמת היחיד)
+-- ============================================================================
+--
+-- ⛔ **רץ במסד.** ⛔ מיגרציה שכבר רצה אינה נערכת — ⚠️ המסד החיל אותה,
+--    ועריכה שלה יוצרת מצב שבו הקובץ מתאר משהו אחר ממה שרץ; ⛔ שינוי מבני
+--    נעשה בקובץ הבא בתור.
+--
 -- ⚠️ הקובץ הזה הוא **מקור האמת היחיד** לסכימה.
---    * `supabase-setup.sql` **נמחק בסבב 33** — הוא היה קובץ הפניה בלבד,
+-- * `supabase-setup.sql` **נמחק** — הוא היה קובץ הפניה בלבד,
 --      בלי סכימה, ותוכנו (הוראת ההתקנה) מכוסה בכותרת הזו.
 --    * `index.html` **מושך את הקובץ הזה ב-fetch** ומציג אותו במסך ההגדרה
 --      הראשונית. ⛔ אין בו עותק מוטבע של הסכימה, ואין להחזיר אותו — הוא
---      הוסר בהשלמת סבב 24 יחד עם `tools/sync-setup-sql.py`, מפני שהוא היה
+-- הוסר ב יחד עם `tools/sync-setup-sql.py`, מפני שהוא היה
 --      מקור אמת שני שמתיישן בשקט. כשל משיכה מציג הודעה עם קישור לקובץ
 --      ב-GitHub, ולא סכימה שאיננו יודעים אם היא עדכנית.
 --    כל שינוי סכימה נכנס כאן **וגם** כמיגרציית שדרוג נפרדת (00N_) עבור
 --    התקנות קיימות.
 --
--- ⛔⛔ מה «אידמפוטנטי» חייב להיות כאן (סבב 27)
+-- ⛔⛔ מה «אידמפוטנטי» חייב להיות כאן
 --    `CREATE TABLE IF NOT EXISTS` **מדלג לגמרי** על טבלה קיימת. כלומר קובץ
 --    שרק יוצר טבלאות הוא אידמפוטנטי במובן חסר הערך — הרצה חוזרת אינה
 --    מזיקה — ובדיוק לא במובן שחשוב: **התקנה ותיקה שמריצה אותו מחדש אינה
@@ -32,7 +34,7 @@
 --    ⛔ **ואין לגעת בנתונים** — מבנה בלבד. ה-`UPDATE` היחיד בקובץ הזה הוא
 --    זה שממלא `role` בשורות שקדמו לעמודה, והוא מסויג ב-`WHERE role IS NULL`.
 --
---    ✅ **נמדד בסבב 27, לא הוצהר:** כל עמודה שנוספה אחרי ההתקנה הראשונה
+-- ⭐ **מה שקיים ואינו מוצהר:** כל עמודה שנוספה אחרי ההתקנה הראשונה
 --    (001–011) מיוצגת כאן בשורת התכנסות, וכך גם כל אינדקס, טריגר, פוליסה
 --    ואילוץ. ⚠️ מיגרציה חדשה מחייבת גם שורה כאן — קובץ שרק גדל ב-`00N_`
 --    ולא כאן שובר בדיוק את ההבטחה שבראש הפרק.
@@ -61,7 +63,7 @@
 --    בטעות שולל הרשאה ולא מעניק אותה.
 -- ⛔ **ואין DEFAULT כלל** — כמו `ys_users` בהנהלה. יצירת משתמש **חייבת**
 --    לציין `role` במפורש, אחרת ה-INSERT נכשל במסד. ברירת מחדל שמעניקה
---    הרשאה היא בדיוק הכשל שסבב 26 בא לסגור; ר' `migrations/011`.
+-- הרשאה היא בדיוק הכשל ש בא לסגור; ר' `migrations/011`.
 CREATE TABLE IF NOT EXISTS public.sl_users (
   id         SERIAL PRIMARY KEY,
   username   TEXT UNIQUE NOT NULL,
@@ -69,22 +71,22 @@ CREATE TABLE IF NOT EXISTS public.sl_users (
   pass_salt  TEXT,
   pass_fp    TEXT,
   role       TEXT NOT NULL,
-  -- ⭐ `active` — המחיקה הרכה של משתמש (סבב 37, `migrations/013`).
-  --    ⛔ אין `deleted` על טבלת משתמשים, ואין להוסיף (סבב 37) — `active=false`
+  -- ⭐ `active` — המחיקה הרכה של משתמש.
+  -- ⛔ אין `deleted` על טבלת משתמשים, ואין להוסיף — `active=false`
   --    הוא המנגנון בארגון כולו (כלל קריטי 4 ב-gius), ועמודה שנייה לאותו
   --    מושג היא מקור אמת שני. העמודה נוספה והוסרה באותו יום בהכרעת
-  --    המנהל; נמדד 2026-08-18: אינה קיימת.
+  -- המנהל; אינה קיימת.
   active     BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   -- ⭐ `updated_at` — שובר-שוויון דטרמיניסטי להתנגשות על שורת משתמש
-  --    (סבב 37, `migrations/013`). הטריגר `sl_users_touch` נוצר בהמשך הקובץ.
+  --. הטריגר `sl_users_touch` נוצר בהמשך הקובץ.
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- שדרוג התקנה שנוצרה לפני 010
 ALTER TABLE public.sl_users
   ADD COLUMN IF NOT EXISTS pass_salt TEXT,
   ADD COLUMN IF NOT EXISTS pass_fp   TEXT;
--- שדרוג התקנה שנוצרה לפני 013 — ⛔ ברירת המחדל היא TRUE (סבב 37):
+-- שדרוג התקנה שנוצרה לפני 013 — ⛔ ברירת המחדל היא TRUE:
 -- `DEFAULT false` היה נועל בחוץ את כל המשתמשים הקיימים ברגע ההרצה.
 ALTER TABLE public.sl_users ADD COLUMN IF NOT EXISTS active BOOLEAN;
 UPDATE public.sl_users SET active = TRUE WHERE active IS NULL;
@@ -102,13 +104,13 @@ ALTER TABLE public.sl_users
 UPDATE public.sl_users SET role = 'admin' WHERE role IS NULL;
 ALTER TABLE public.sl_users ALTER COLUMN role SET NOT NULL;
 ALTER TABLE public.sl_users ALTER COLUMN role DROP DEFAULT;
--- ⚠️ ההרשאות של `anon` ושל `authenticated` צומצמו בסבב 29, בהחלטת המנהל
+-- ⚠️ ההרשאות של `anon` ושל `authenticated` צומצמו, בהחלטת המנהל
 --    (`migrations/012`).
 -- ⛔ **REVOKE לפני GRANT, ואין לקצר לשורת GRANT אחת:** פרויקט Supabase
 --    סטנדרטי מגיע עם `ALTER DEFAULT PRIVILEGES … GRANT ALL`, ולכן הטבלה
 --    **נולדת** עם DELETE ו-TRUNCATE לשני התפקידים — ו-GRANT הוא אדיטיבי בלבד
 --    ואינו מסיר אותם. השורה הזו היא גם שורת ההתכנסות להתקנה ותיקה.
--- ⛔ אין להחזיר להם את DELETE/TRUNCATE (סבב 29) — אין באפליקציה אף
+-- ⛔ אין להחזיר להם את DELETE/TRUNCATE — אין באפליקציה אף
 --    מסלול מחיקה מול המסד (אפס `.delete()`), וכל מחיקה היא soft-delete
 --    שמתבצעת ב-UPDATE (כללים קריטיים 5 ו-6).
 -- ⚠️ הרשאת ה-SEQUENCE נשארת: INSERT על טבלת SERIAL דורש USAGE על הרצף.
@@ -198,7 +200,7 @@ GRANT USAGE, SELECT ON SEQUENCE public.sl_students_id_seq TO anon, authenticated
 ALTER TABLE public.sl_students ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_students_all" ON public.sl_students;
 CREATE POLICY "sl_students_all" ON public.sl_students FOR ALL USING (true) WITH CHECK (true);
--- ⛔ אינדקס **מלא** ולא חלקי (סבב 37, `migrations/014`) — מאז 008 המראה
+-- ⛔ אינדקס **מלא** ולא חלקי — מאז 008 המראה
 --    מושכת `select('*')` והסינון עבר ל-`slApplyMirror` בצד הלקוח, ולכן
 --    אינדקס עם `WHERE deleted = false` אינו משרת עוד אף שאילתה.
 CREATE INDEX IF NOT EXISTS sl_students_name_idx
@@ -249,7 +251,7 @@ GRANT USAGE, SELECT ON SEQUENCE public.sl_transactions_id_seq TO anon, authentic
 ALTER TABLE public.sl_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "sl_transactions_all" ON public.sl_transactions;
 CREATE POLICY "sl_transactions_all" ON public.sl_transactions FOR ALL USING (true) WITH CHECK (true);
--- ⛔ אינדקס **מלא** ולא חלקי (סבב 37, `migrations/014`) — ר' ההסבר אצל
+-- ⛔ אינדקס **מלא** ולא חלקי — ר' ההסבר אצל
 --    `sl_students_name_idx` למעלה.
 CREATE INDEX IF NOT EXISTS sl_transactions_student_date_idx
   ON public.sl_transactions (student_id, date);
@@ -340,25 +342,25 @@ DROP POLICY IF EXISTS "sl_lists_all" ON public.sl_lists;
 CREATE POLICY "sl_lists_all" ON public.sl_lists FOR ALL USING (true) WITH CHECK (true);
 
 -- ---------- נתוני פתיחה ----------
--- ⛔ **אין כאן משתמש ברירת מחדל, ואין להחזיר אותו** (סבב 24).
+-- ⛔ **אין כאן משתמש ברירת מחדל, ואין להחזיר אותו**.
 -- עד הסבב הזה ישבה כאן שורת INSERT ל-`sl_users` שיצרה חשבון בשם admin
 -- ובאותה סיסמה עצמה — כלומר **כל התקנה טרייה נולדה עם חשבון שסיסמתו
 -- ידועה לכל העולם**, על מסד
 -- שה-RLS שלו פתוח (`USING (true)`) ושכתובתו מופיעה בקוד המקור. במסד הייצור
 -- הנוכחי הוא אינו קיים (אומת: משתמש אחד בלבד, סיסמה בת שש ספרות), אבל
--- לכל התקנה **עתידית** זו פצצה רדומה — בדיוק זו שהוסרה מ-hanhala בסבב 21.
+-- לכל התקנה **עתידית** זו פצצה רדומה — בדיוק זו שהוסרה מ-hanhala.
 --
 -- יצירת המשתמש הראשון היא פעולה ידנית ומודעת. הרץ כאן, אחרי החלפת הערכים:
 --     INSERT INTO public.sl_users (username, password, role)
 --     VALUES ('שם המשתמש שלך', '123456', 'admin');
--- (סיסמה בת שש ספרות — סבב 19.) האפליקציה מציגה את ההנחיה הזו מעצמה
+-- (סיסמה בת שש ספרות —.) האפליקציה מציגה את ההנחיה הזו מעצמה
 -- כשהיא מזהה שהטבלה ריקה.
--- ⚠️ **`role` במפורש, ואין ברירת מחדל** (סבב 26): הוא מקור האמת היחיד
+-- ⚠️ **`role` במפורש, ואין ברירת מחדל**: הוא מקור האמת היחיד
 -- להרשאות, ולעמודה אין `DEFAULT` — כלומר INSERT בלי `role` **נכשל במסד**.
 -- המשתמש הראשון חייב להיות `'admin'`, אחרת לא ייפתח מסך ההגדרות לאיש;
 -- משתמש רגיל נוצר באותה פקודה עם `'user'` במקום `'admin'`.
 --
--- ⛔ **`admin_pass` הוסרה מכאן בסבב 26.** עד אז נזרעה כאן שורת
+-- ⛔ **`admin_pass` הוסרה מכאן.** עד אז נזרעה כאן שורת
 -- `('admin_pass','admin')` — סיסמת שער מסך ההגדרות, שכבת הרשאה שנייה
 -- שהייתה קיימת כאן ולא בשלוש האחיות. השכבה בוטלה כולה: ההרשאה נגזרת
 -- מ-`sl_users.role`, ומסך ההגדרות אינו מבקש סיסמה. ⛔ **אין להחזיר את
@@ -392,7 +394,7 @@ WHERE NOT EXISTS (
 -- ============================================================
 
 -- ============================================================
--- 008 — updated_at + טריגר (מיזוג ברמת רשומה, סבב 12 שלב 2)
+-- 008 — updated_at + טריגר (מיזוג ברמת רשומה שלב 2)
 -- ============================================================
 -- בלי חותמת עדכון אין מנוע מיזוג, ולכן אין עבודה אופליין. הטריגר דורס
 -- **ב-UPDATE בלבד**; ב-INSERT החותמת שהמכשיר קבע ברגע היצירה נשמרת, וזה
@@ -421,14 +423,14 @@ CREATE TRIGGER sl_students_touch
   BEFORE UPDATE ON public.sl_students
   FOR EACH ROW EXECUTE FUNCTION public.sl_touch_updated_at();
 
--- ---------- טריגר החותמת של טבלת המשתמשים (סבב 37, `migrations/013`) ----------
+-- ---------- טריגר החותמת של טבלת המשתמשים -------------------------------------
 -- ⚠️ **פונקציה נפרדת, ובכוונה:** `public.users_touch_updated_at()` היא
 --    פונקציה אחת לשתי טבלאות המשתמשים שבפרויקט המשותף — `sl_users` כאן
---    ו-`ys_users` בהנהלה — והיא זו שהמנהל יצר ב-2026-08-18
+-- ו-`ys_users` בהנהלה — והיא זו שהמנהל יצר
 --    (`users_drop_deleted_add_touch_trigger`). ⛔ אין לחווט את
---    `sl_users_touch` ל-`sl_touch_updated_at()` שלמעלה (סבב 37): שתי
+-- `sl_users_touch` ל-`sl_touch_updated_at()` שלמעלה: שתי
 --    האפליקציות חולקות פרויקט אחד, והטריגר המשותף חייב להצביע על ההגדרה
---    שקיימת במסד — אחרת נוצרת גרסה שנייה שאיש אינו יודע עליה (סבב 36).
+-- שקיימת במסד — אחרת נוצרת גרסה שנייה שאיש אינו יודע עליה.
 CREATE OR REPLACE FUNCTION public.users_touch_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

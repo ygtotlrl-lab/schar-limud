@@ -1,17 +1,17 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- 013 — `sl_users`: `active`, `updated_at` וטריגר החותמת
--- ═══════════════════════════════════════════════════════════════════════════
--- ✅ **הורצה ואומתה ב-2026-08-18** ע"י המנהל, בשתי מיגרציות רצופות:
---    `schar_013_users_active_updated_deleted` ואחריה
---    `users_drop_deleted_add_touch_trigger`. הקובץ הזה מתאר את **המצב
---    הסופי** שהשתיים הותירו, ולא את הדרך אליו.
+-- ============================================================================
+-- 013_users_active_updated.sql — `sl_users`: `active`, `updated_at` וטריגר החותמת
+-- ============================================================================
 --
--- ⛔ **`deleted` אינה כאן, ולא תחזור (סבב 37) — היא נוספה ואז הוסרה.**
+-- ⛔ **רץ במסד.** ⛔ מיגרציה שכבר רצה אינה נערכת — ⚠️ המסד החיל אותה,
+--    ועריכה שלה יוצרת מצב שבו הקובץ מתאר משהו אחר ממה שרץ; ⛔ שינוי מבני
+--    נעשה בקובץ הבא בתור.
+--
+-- ⛔ **`deleted` אינה כאן, ולא תחזור — היא נוספה ואז הוסרה.**
 --    ההצעה הראשונה של הסבב הזה כללה אותה, המנהל הריץ אותה, ואז הכריע
 --    להסיר: ההשבתה בארגון היא `active=false` (כלל קריטי 4 ב-gius), ועמודה
 --    שנייה שמתארת «המשתמש הוסר» היא מקור אמת שני. ⛔ אין להחזיר אותה
 --    לקובץ הזה, ל-`000_initial_schema.sql` או לתיעוד.
---    נמדד ב-2026-08-18: `sl_users` מחזיקה `active` · `updated_at` — ואין
+-- נבדק: `sl_users` מחזיקה `active` · `updated_at` — ואין
 --    בה `deleted`.
 --
 -- ⭐ הבעיה שנסגרה: **ל-`sl_users` לא הייתה עמודת `active` כלל** — לא
@@ -46,7 +46,7 @@ ALTER TABLE public.sl_users ALTER COLUMN updated_at SET NOT NULL;
 --    ע"י המנהל ב-`users_drop_deleted_add_touch_trigger`, ולכן היא מוגדרת
 --    כאן וב-`hanhala-ruchanit/migrations/007` באותו נוסח בדיוק.
 --    ⛔ אין לגזור ממנה שם פר-אפליקציה (`sl_touch_…`) — שתי הגדרות לאותה
---    פונקציה בפרויקט אחד הן גרסה שנייה שאיש אינו יודע עליה (סבב 36).
+-- פונקציה בפרויקט אחד הן גרסה שנייה שאיש אינו יודע עליה.
 -- ⚠️ בלי הטריגר `updated_at` נקבעת ב-INSERT ואינה מתעדכנת ב-UPDATE —
 --    כולל עריכה מלוח הבקרה של Supabase, שהיא הדרך שבה מנוהלים כאן
 --    המשתמשים; כלומר שובר-השוויון שהעמודה נועדה לתת לא היה שלם.
@@ -68,12 +68,12 @@ CREATE TRIGGER sl_users_touch
 REVOKE ALL ON public.sl_users FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.sl_users TO anon, authenticated;
 
--- ---------- אימות (נמדד ב-2026-08-18) ----------
+-- ---------- אימות ------------------------------
 -- SELECT column_name, data_type, is_nullable, column_default
 --   FROM information_schema.columns
 --  WHERE table_schema='public' AND table_name='sl_users';
 -- התקבל: active boolean NO true · updated_at timestamptz NO now()
---         · ⛔ **אין `deleted`**
+--         · ⚠️ **אין `deleted`**
 -- ומשתמש אחד בטבלה, `active = true`.
 --
 -- SELECT trigger_name, action_statement FROM information_schema.triggers

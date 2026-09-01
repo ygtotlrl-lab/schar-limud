@@ -1,9 +1,11 @@
--- ============================================================
--- schar-limud — החלפת ON DELETE CASCADE ב-RESTRICT על sl_transactions
--- שם המיגרציה: sl_transactions_fk_restrict
--- הרץ ב-Supabase SQL Editor (פרויקט kxbtskqobynewvnckaaz):
---   https://supabase.com/dashboard/project/kxbtskqobynewvnckaaz/sql/new
--- ============================================================
+-- ============================================================================
+-- 003_transactions_fk_restrict.sql — החלפת ON DELETE CASCADE ב-RESTRICT על sl_transactions
+-- ============================================================================
+--
+-- ⛔ **רץ במסד.** ⛔ מיגרציה שכבר רצה אינה נערכת — ⚠️ המסד החיל אותה,
+--    ועריכה שלה יוצרת מצב שבו הקובץ מתאר משהו אחר ממה שרץ; ⛔ שינוי מבני
+--    נעשה בקובץ הבא בתור.
+--
 -- למה: 002 העביר את מחיקת התלמידים ל-soft-delete, אבל האילוץ עצמו נשאר
 -- ON DELETE CASCADE. כלומר הקוד כבר לא מוחק פיזית — אבל DELETE ידני אחד
 -- מלוח הבקרה של Supabase, מ-SQL Editor, או מקוד עתידי שישכח את הכלל,
@@ -73,7 +75,7 @@ BEGIN
       orphans;
   END IF;
 
-  -- confdeltype: 'c' = CASCADE, 'r' = RESTRICT, 'a' = NO ACTION
+  -- ⚠️ ערכי `confdeltype` — 'c' = CASCADE · 'r' = RESTRICT · 'a' = NO ACTION
   SELECT confdeltype INTO current_action
   FROM pg_constraint
   WHERE conname = 'sl_transactions_student_id_fkey'
