@@ -772,7 +772,11 @@ function orphanModals() {
     /*  ⛔ נמדד ב-`srcRefs` ⛔ ולא ב-`code` — ⚠️ המזהה חי **בתוך מחרוזת**
      *  (`getElementById('x-modal')`), ⭐ ובגזירת הקוד המחרוזות מרוקנות:
      *  ⛔ probe שמחפש שם שם אינו יכול למצוא אותו, כלומר אינו יכול להיכשל. */
-    const shown = new RegExp("['\"]" + id + "['\"]\\s*\\)[\\s\\S]{0,80}?display\\s*=\\s*['\"](?:flex|block)['\"]");
+    /*  ⛔ שתי צורות פתיחה ולא אחת (סבב 80) — ⚠️ מיכל שנפתח ב-`display`
+     *  ומיכל שנפתח בהוספת מחלקה הם אותה יכולת בדיוק, ⛔ ו-probe שמכיר
+     *  רק את הראשונה נופל על שינוי תקין. */
+    const shown = new RegExp("['\"]" + id + "['\"]\\s*\\)[\\s\\S]{0,80}?" +
+      "(?:display\\s*=\\s*['\"](?:flex|block)['\"]|classList\\.add\\(['\"]open['\"]\\))");
     if (shown.test(srcRefs)) continue;
     out.push(id);
   }
