@@ -3025,6 +3025,20 @@ function slUsersLoad() {
 // ⛔ שער הדיסק של מראת המשתמשים (סבב 24) — עובר דרך `slUserPub` בדיוק כמו הטעינה
 //    והמשיכה. שלוש נקודות, בדיוק כמו הסרת הסוד מ-`sl_settings`.
 function slUsersSave() { return lsSet(SL_USERS_KEY, JSON.stringify((SL_USERS || []).map(slUserPub))); }
+/*  עדכון **שורה אחת** במראה בלי משיכה מלאה (סבב 79) — ⚠️ הכניסה המקוונת
+    והשלמת הטביעה מחזיקות את השורה בידן, ⛔ ובלי המסלול הזה היא הייתה
+    ממתינה למשיכה הבאה: ⭐ מכשיר שנכנס פעם אחת ואיבד רשת היה מאמת מול
+    טביעה ישנה. ⛔ והמעבר לדיסק הוא `slUserPub` כמו בשתי הנקודות האחרות —
+    ⚠️ נקודת מעבר רביעית הייתה עוקפת את רשימת-ההיתר. */
+function slUsersSaveOne(user) {
+  var pub = slUserPub(user);
+  if (!pub || !pub.username) return false;
+  SL_USERS = (SL_USERS || []).filter(function (u) {
+    return u && String(u.username) !== String(pub.username);
+  });
+  SL_USERS.push(pub);
+  return slUsersSave();
+}
 function slUserByName(username) {
   var arr = SL_USERS || [];
   for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].username) === String(username)) return arr[i];
@@ -3102,6 +3116,9 @@ async function slEnsurePassFp(u, pass) {
     var r = await withTimeout(SB.from('sl_users').update(body).eq('id', u.id));
     if (r && r.error) { console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
     u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
+    // ⛔ הטביעה החדשה יורדת למראה באותו רגע (סבב 79) — ⚠️ בלי זה כניסה
+    //    אופליין הבאה הייתה מאמתת מול הטביעה שזה עתה הוחלפה.
+    slUsersSaveOne(u);
     // ⭐ סבב 51 — `sl_users` נמשכת ב-`slPullUsers` שרצה מתוך `syncAll`,
     //    ולכן גם כתיבה אליה חייבת לקדם את החותמת. ⛔ אחרת טביעה שנוצרה
     //    כאן (סבב 51) לא הייתה מגיעה למכשיר אחר עד לשינוי נתונים אחר.
@@ -3509,6 +3526,9 @@ async function doLogin(){
       return;
     }
     var pub=slUserPub(r.data);
+    // ⛔ השורה שבידינו נכנסת למראה מיד (סבב 79) — ⚠️ המשיכה המלאה שברקע
+    //    עשויה לא להגיע כלל ברשת שנפלה, ⭐ והמראה היא מסלול הכניסה האופליין.
+    slUsersSaveOne(pub);
     sessSet(pub);
     document.getElementById('auth-spinner').style.display='none';
     enterApp();

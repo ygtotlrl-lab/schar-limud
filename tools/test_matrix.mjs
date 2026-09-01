@@ -303,6 +303,11 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
     } catch (e) { return { held: false, out }; }
     finally { console.log = lg; console.error = er; }
   };
+  /*  הסרת שורה מ-`gapRows` — ⛔ המוטציה של תא ⭕: ⚠️ המרשם הוא מה שמוציא
+   *  את השורה מהמדידה, ⭐ ובלעדיו ה-probe שלה רץ ונופל. */
+  const dropGap = (text, row) => text.replace(/(gapRows: \[)([^\]]*)\]/,
+    (m, head, list) => head + list.split(',').map((x) => x.trim())
+      .filter((x) => x && Number(x) !== row).join(', ') + ']');
   const run = async (label, files, mustFall, row) => {
     let changed = false;
     for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
@@ -316,11 +321,17 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
 
   /*  ⛔ אופק ה-tombstone — ⚠️ הערך הוא 90 יום, ⛔ והשם לבדו אינו הערך:
    *  ⭐ תא ✅ מקבל ערך קנוני אחר, ותא ❌ מקבל את הקבוע שאין לו. */
+  /*  ⛔ ותא ⭕ נשבר מצד שלישי (סבב 79) — ⚠️ שורה מנומקת אינה נמדדת
+   *  ב-probe כלל, ⛔ ולכן מוטציה על הערך אינה יכולה להפיל אותה: ⭐ מה
+   *  שנמדד הוא **המרשם** — הסרתה מ-`gapRows` מחזירה אותה למדידה, ⛔ והקוד
+   *  שאינו מקיים אותה מפיל. */
   await run('אופק ה-tombstone שאינו 90 יום',
     cellOf(ROW_TOMB).indexOf('✅') >= 0
       ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const TOMB_TTL_MS = 90 *', 'const TOMB_TTL_MS = 9 *')]]
-      : [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
-          '<script>\nvar TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;')]],
+      : cellOf(ROW_TOMB).indexOf('⭕') >= 0
+        ? [[CAP2, CLEAN_CAP, dropGap(CLEAN_CAP, ROW_TOMB)]]
+        : [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
+            '<script>\nvar TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;')]],
     true, ROW_TOMB);
   /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע **חדש** בשם שכן ובאותו ערך — ⚠️ ה-probe
    *  נעול על השם המדויק, ⛔ ואינו נגרר אחרי מי שדומה לו. */
@@ -333,7 +344,9 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   await run('סף הפינוי היזום שאינו 60%',
     cellOf(ROW_SWEEP).indexOf('✅') >= 0
       ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const LS_SWEEP_PCT = 0.60;', 'const LS_SWEEP_PCT = 0.90;')]]
-      : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('/tier2\\s*[:=]\\s*\\[\\s*\\{/', '/tier2\\s*[:=]\\s*\\[/')]],
+      : cellOf(ROW_SWEEP).indexOf('⭕') >= 0
+        ? [[CAP2, CLEAN_CAP, dropGap(CLEAN_CAP, ROW_SWEEP)]]
+        : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('/tier2\\s*[:=]\\s*\\[\\s*\\{/', '/tier2\\s*[:=]\\s*\\[/')]],
     true, ROW_SWEEP);
   /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע חדש בשם שכן — ⚠️ אותה טענה בדיוק, ⛔ ובכיוון
    *  שאסור לו להפיל. */
