@@ -51,13 +51,13 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 88, 138];
+export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 89, 140];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-session',  'adb99c2bc77f3fde'],
-  ['rules-writing',  '19cd78f2e1d4dadf'],
-  ['rules-table',    'e6d7f91c64277151'],
+  ['rules-session',  '8ecb5417a9c67efb'],
+  ['rules-writing',  '39ebc2b8c31d646b'],
+  ['rules-table',    'dcf32bbed967b27b'],
   ['rules-enforce',  '71ee46fb2c9968bc'],
 ];
 
@@ -461,6 +461,12 @@ const CANON_MANIFEST = [
   ['orientation', 'portrait'],
   ['lang',        'he'],
   ['dir',         'rtl'],
+  /*  ⛔ `id` ו-`start_url` מוצהרים (סבב 79) — ⚠️ מניפסט בלי `id` גוזר אותו
+   *  מ-`start_url`, ⛔ ושינוי של `start_url` מנתק אז את ההתקנה הקיימת
+   *  ומייצר אפליקציה שנייה. ⭐ הערך יחסי, ולכן «זהה» כאן פירושו **אותה
+   *  צורה** — ⛔ וכל אפליקציה נפתרת ל-scope שלה. */
+  ['id',          './'],
+  ['start_url',   './index.html'],
 ];
 {
   const file = 'manifest.json';

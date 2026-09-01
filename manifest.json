@@ -2,6 +2,7 @@
   "name": "שכר לימוד",
   "short_name": "שכר לימוד",
   "description": "מערכת ניהול תשלומי שכר לימוד",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
