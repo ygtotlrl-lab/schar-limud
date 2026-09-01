@@ -82,6 +82,7 @@ const APP = {
   orphanAllow: {
     guardOnline: 'קבוצת עוזרים שהוכרזה זהה בארבעתן — ⛔ ה-API של בלוק משותף אינו נגזם באפליקציה שאינה קוראת לו',
     pendResolveErr: 'מפריד כשל רשת מכשל סמכותי בהורדת סימון — ⛔ מנגנון שנכשל-סגור, ⚠️ ואין לו קורא **עד שהוא נחוץ**',
+    'check-capabilities.mjs:domEntry': 'עוזר זהה בארבעת עותקי השער — ⛔ הוא נקרא בהנהלה בלבד, ⚠️ ששם יש שכבת כניסה: ⭐ עוזר שנגזם באחת מפסיק להיות זהה',
   },
   tableProbe: {
     /*  ⛔ ערך ולא נוכחות (סבב 72) — ⚠️ כל `upsert` נושא `onConflict`,
@@ -412,6 +413,23 @@ function callSites(fn) {
 }
 
 const lineOf = (pos) => code.slice(0, pos).split('\n').length;
+
+/*  נקודת הפעלה חיה לפונקציה — ⛔ בשתי הצורות (סבב 79): `onclick` מוטבע,
+ *  ⛔ **או** `data-act` שמחווט אליה ב-`DOM_ACTIONS`. ⚠️ הנימוק המדוד:
+ *  ה-probe מדד `onclick="…f("` בלבד, ⭐ ולכן המרה לדלגציה — שהיא בדיוק
+ *  מה שהטבלה דורשת — הפילה אותו על קוד תקין. ⛔ והמדידה נשארת «ערך ולא
+ *  קיום»: הפעולה חייבת להיות **בגוף** המפה ולקרוא לפונקציה. */
+function domEntry(fn, s) {
+  const text = s === undefined ? src : s;
+  if (new RegExp('onclick="[^"]*' + fn + '\\s*\\(').test(text)) return true;
+  const i = text.indexOf('var DOM_ACTIONS');
+  if (i < 0) return false;
+  const j = text.indexOf('\ndocument.addEventListener', i);
+  const map = text.slice(i, j < 0 ? i + 8000 : j);
+  const re = new RegExp("'([\\w-]+)'\\s*:\\s*function[^\\n]*\\n?[^}]*?" + fn + '\\s*\\(');
+  const m = re.exec(map);
+  return !!(m && new RegExp('data-act=\\\\?["\']' + m[1] + '\\\\?["\']').test(text));
+}
 
 const anchors = { boot: APP.bootFn, settings: APP.settingsFn };
 const anchorRange = {};
