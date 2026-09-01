@@ -75,7 +75,7 @@ const APP = {
   passFpFillFn: 'slEnsurePassFp',
   userCreateFn: null,
   passFpMakeFn: null,
-  gapRows: [87, 89, 105, 110, 115, 117, 122, 136],
+  gapRows: [87, 89, 105, 110, 115, 117, 122, 135],
   tableProbe: {
     /*  ⛔ ערך ולא נוכחות (סבב 72) — ⚠️ כל `upsert` נושא `onConflict`,
      *  ⛔ וכל מפתח שנכתב בקוד מוכרז ומנומק ב-`APP.conflictKeys`: ⭐ מפתח
@@ -545,6 +545,12 @@ function sqlHas(re) {
  *  השורה, ⚠️ ומונה השורות של השער קופץ באחת — ⛔ בשקט, ועל קובץ אחר. */
 const CLICK_LISTENER = /addEventListener\(\s*['"]click['"]/;
 const BACKUP_TABLE = /^(?:public\.)?\w*_?backup\b/i;
+/*  ⛔ `public.kv` בלבד — ⚠️ **ולא** `kv_rishon`/`kv_ramataviv`: ⭐ שם עדיין
+ *  יושבים נתוני יומן כערך שלם, ⛔ ומחיקה מהן היא מחיקת ישות. ⚠️ ב-`public.kv`
+ *  נמדד שכל שורותיה הן שאריות של מפתחות שעברו לטבלאות מובנות, ⛔ ואין בה
+ *  ישות שאין לה בית אחר: ⭐ ולכן גריעתן היא ניקוי שארית ⛔ ולא מחיקה רכה
+ *  שנעקפה. ⛔ והגריעה עצמה נושאת שער שקילות בגוף המיגרציה. */
+const LEGACY_KV_TABLE = /^(?:public\.)?kv$/i;
 function sqlDeletesEntity() {
   const d = 'migrations';
   if (!fs.existsSync(d)) return [];
@@ -552,7 +558,7 @@ function sqlDeletesEntity() {
   for (const f of fs.readdirSync(d).filter((x) => x.endsWith('.sql'))) {
     const t = fs.readFileSync(`${d}/${f}`, 'utf8').replace(/--[^\r\n]+/g, '');
     for (const m of t.matchAll(/\bDELETE\s+FROM\s+([\w.]+)/gi))
-      if (!BACKUP_TABLE.test(m[1])) out.push(`${f}:${m[1]}`);
+      if (!BACKUP_TABLE.test(m[1]) && !LEGACY_KV_TABLE.test(m[1])) out.push(`${f}:${m[1]}`);
   }
   return out;
 }
@@ -922,7 +928,7 @@ const MATRIX = [
   { row: 52, name: 'שחזור מקומי מהענן',
     probe: () => callSites('hwRestoreMount').length > 0 },
   { row: 117, name: 'מסך שינוי סיסמה עצמי', app: true },
-  { row: 138, name: 'מטמון-CDN מראש עם ריפוי עצמי',
+  { row: 137, name: 'מטמון-CDN מראש עם ריפוי עצמי',
     probe: () => fileHas('sw.js', /CDN_ASSETS/) && fileHas('sw.js', /ensureCdnCached/) },
   { row: 51, name: 'גיבוי יומי מטבלאות מובנות',
     exempt: 'התא מצהיר שהגיבוי **קורא** מטבלאות מובנות, וזו עובדת מסד ולא ' +
@@ -1004,7 +1010,7 @@ const MATRIX = [
    *  הליבה המשותפת שנמצאה וחתימתה תואמת (`present.swcore`), ו-`SW_CFG`
    *  שמוגדר ב-`sw.js` מעליה. ⛔ ליבה בלי `SW_CFG` היא קוד שהועתק ולא
    *  מודול — הפרמטרים הם מה שמאפשר לליבה להיות זהה בית-לבית.        */
-  { row: 138, name: 'מודול ה-service worker',
+  { row: 137, name: 'מודול ה-service worker',
     probe: () => present.swcore === true && fileHas('sw.js', /var\s+SW_CFG\s*=/) },
   /*  ⭐ סבב 44 — ניסיון חוזר בתור הסנכרון. ה-probe דורש את **שני**
    *  התנאים: הליבה שנמצאה וחתימתה תואמת (`present.retry`), ו-`RTY_CFG`
@@ -1043,7 +1049,7 @@ const MATRIX = [
    *  `skipWaiting` (סבב 42ג): הבדיקה **מגלה** גרסה, והמשתמש מחליט.
    *  ⚠️ ה-probe דורש את שני חלקי המנגנון — `reg.update()` והמרווח —
    *  מפני שקריאה בלי מרווח היא בדיקה חד-פעמית בעלייה, וזה מה שהיה. */
-  { row: 137, name: 'בדיקת עדכון תקופתית ל-service worker',
+  { row: 136, name: 'בדיקת עדכון תקופתית ל-service worker',
     probe: () => hasCode(/\breg\s*\.\s*update\s*\(/) &&
                  hasCode(/setInterval\(\s*\w+\s*,\s*30\s*\*\s*60\s*\*\s*1000\s*\)/) },
   /*  ⭐ סבב 53 — שלוש שורות תשתית שהיו קיימות בארבעתן **ולא נמדדו כאן
@@ -1078,7 +1084,7 @@ const MATRIX = [
       const ns = m[1].match(/\d+/g);
       return !!ns && ns.reduce((a, b) => a * Number(b), 1) === TOMB_TTL_MS;
     } },
-  { row: 136, name: 'אוטו-אפדייט מ-raw.githubusercontent',
+  { row: 135, name: 'אוטו-אפדייט מ-raw.githubusercontent',
     probe: () => hasCode(/UPDATE_INTERVAL_MS/) && hasCode(/\bRAW_URL\b/) },
   /*  ⭐ סבב 56 — מקור הקריאה. ⚠️ **שורה תיאורית ולא ✅/❌**: היא מודדת
    *  מאיפה נקראים הנתונים, ולא אם יכולת קיימת. `APP.kvFallbackFn` מצהיר
@@ -1216,7 +1222,7 @@ const GATES = {
   41: { claim: 'COUNT_NOTE' },
   42: { manual: 'עדכון הסימון הוא התנהגות סשן שאינה בעץ — ⛔ נאכף רק בתוצאתו' },
   37: { manual: 'קריאת הטבלה לפני הכתיבה היא התנהגות סשן שאינה בעץ — ⛔ נאכפת רק בתוצאתה' },
-  139: { claim: 'CACHE_NAME' },
+  138: { claim: 'CACHE_NAME' },
   26: { manual: 'מספר בדיווח הוא התנהגות סשן שאינה בעץ — ⛔ אין קובץ שאפשר למדוד בו את הדיווח, ⚠️ ונאכף בתוצאתו בלבד' },
   28: { claim: 'drift' },
   34: { claim: 'measure-gap',
@@ -1250,7 +1256,7 @@ const GATES = {
   94: { claim: 'SHARED_SHA' },
   92: { claim: 'versionCode' },
   79: { claim: 'WebView' },
-  97: { manual: 'נפילה-חזרה ל-`kv` נסרקת ידנית; ⛔ קיום המפתחות במסד אינו נראה מהריפו' },
+  97: { manual: 'הנפילה-חזרה ביומן נסרקת ידנית; ⛔ קיום המפתחות במסד אינו נראה מהריפו' },
   100: { claim: 'migrations' },
   103: { manual: 'ההרשאות יושבות במסד ואינן נראות מהריפו — אימות הוא פעולת מנהל' },
   105: { manual: 'קיום רשומה בלי חותמת יושב במסד ואינו נראה מהריפו — ⛔ המדידה היא פעולת מנהל' },
@@ -1264,10 +1270,9 @@ const GATES = {
   124: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
   126: { claim: '⏳' },
   127: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
-  134: { manual: 'קיום טבלה או מפתח במסד אינו נראה מהריפו' },
   132: { manual: 'מצב ההרצה יושב ב-`schema_migrations` ואינו נראה מהריפו' },
   128: { manual: '«קובץ בלי קורא» דורש סריקה על ארבעת הריפו — נעשה ידנית' },
-  135: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
+  134: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
   131: { manual: 'רשימת-היתר הגיבויים יושבת במיגרציה שכבר רצה' },
   133: { manual: 'מצב הענפים המרוחקים אינו נראה מעותק העבודה' },
   76: { claim: 'CLEANUP_SHA' },
