@@ -365,14 +365,16 @@ for (const key of Object.keys(CAPS)) {
   if ((APP.skipCaps || []).indexOf(key) >= 0) { present[key] = false; continue; }
   if (!cap.block) continue;
   const got = grab(cap.block);
-  if (!got) { present[key] = false; fail(`${cap.name}: הבלוק לא נמצא (סמן פתיחה/סגירה חסר)`); continue; }
+  if (!got) { present[key] = false; fail(`${cap.name}: הבלוק לא נמצא — נמדדו 0 סמנים מתוך שניים ` +
+                                  `(פתיחה וסגירה). מוסיפים אותם סביב הבלוק`); continue; }
   present[key] = true;
   if (!got.external) ranges.push([got.at, got.at + got.text.length]);
   const sha = crypto.createHash('sha256').update(got.text).digest('hex').slice(0, 16);
   if (sha !== cap.block.sha) {
     fail(`${cap.name}: הליבה אינה זהה לחתימה הקנונית — ${sha} במקום ${cap.block.sha} ` +
          `(${got.text.split('\n').length} שורות במקום ${cap.block.lines}). ` +
-         `יכולת משותפת חייבת ליבה זהה בית-לבית בארבעת הריפו.`);
+         `מיישרים את הבלוק, או מעדכנים את החתימה — יכולת משותפת ` +
+         `חייבת ליבה זהה בית-לבית בארבעת הריפו.`);
   } else {
     pass(`${cap.name}: הליבה זהה לחתימה הקנונית (${cap.block.sha})`);
   }
@@ -415,7 +417,8 @@ const anchors = { boot: APP.bootFn, settings: APP.settingsFn };
 const anchorRange = {};
 for (const at of Object.keys(anchors)) {
   const r = fnRange(anchors[at]);
-  if (!r) fail(`פונקציית ה${at === 'boot' ? 'עלייה' : 'הגדרות'} "${anchors[at]}" לא נמצאה בקוד`);
+  if (!r) fail(`פונקציית ה${at === 'boot' ? 'עלייה' : 'הגדרות'} "${anchors[at]}" ` +
+      `לא נמצאה — נמדדו 0 הגדרות והצפוי אחת. מעדכנים את שמה בבלוק APP`);
   anchorRange[at] = r;
 }
 
@@ -427,14 +430,16 @@ for (const key of Object.keys(CAPS)) {
     if (!r) continue;
     const sites = callSites(h.fn);
     if (!sites.length) {
-      fail(`${cap.name}: ${h.fn}() אינה נקראת בשום מקום — היכולת קיימת אך אינה מחווטת`);
+      fail(`${cap.name}: ${h.fn}() — נמדדו 0 קריאות והצפוי אחת. מוסיפים ` +
+        `את הקריאה מנקודת ההפעלה: היכולת קיימת אך אינה מחווטת`);
       continue;
     }
     const stray = sites.filter((p) => p < r[0] || p >= r[1]);
     if (stray.length) {
       fail(`${cap.name}: ${h.fn}() נקראת גם מחוץ ל-${anchors[h.at]}() ` +
-           `(שורות ${stray.map(lineOf).join(', ')}) — נקודת ההפעלה חייבת להיות אחת. ` +
-           `זה בדיוק הפער שהשבית את הגיבוי ל-25 יום.`);
+           `(שורות ${stray.map(lineOf).join(", ")}) — נמדדו ${stray.length + 1} קריאות והצפוי אחת. ` +
+           `מסירים את הקריאות העודפות — זה בדיוק הפער שהשבית ` +
+        `את הגיבוי ל-25 יום.`);
     } else {
       pass(`${cap.name}: ${h.fn}() נקראת אך ורק מ-${anchors[h.at]}()`);
     }
@@ -443,7 +448,7 @@ for (const key of Object.keys(CAPS)) {
     const sites = callSites(f);
     if (sites.length) {
       fail(`${cap.name}: ${f}() נקראת מקוד האפליקציה (שורות ${sites.map(lineOf).join(', ')}) — ` +
-           `⛔ הקריאה היחידה אליה היא מתוך הבלוק המשותף`);
+           `מסירים אותן — ⛔ הקריאה היחידה אליה היא מתוך הבלוק המשותף`);
     } else {
       pass(`${cap.name}: אין קריאה ישירה ל-${f}() מקוד האפליקציה`);
     }
@@ -1395,7 +1400,8 @@ const RULE_ROW_NAMES = {
   const nums = rows.map((r) => r.n);
   const dup = nums.filter((x, i) => nums.indexOf(x) !== i);
   const gap = nums.filter((x, i) => x !== i + 1);
-  if (dup.length) fail(`טבלת התשתית: מספרי שורה כפולים — ${[...new Set(dup)].join(', ')}. ` +
+  if (dup.length) fail(`טבלת התשתית: מספרי שורה כפולים — ${[...new Set(dup)].join(', ')}, ` +
+         `והצפוי מספור ייחודי. ` +
                        'ממספרים מחדש 1..N באותו קומיט');
   else if (gap.length) fail(`טבלת התשתית: המספור אינו רציף — נמדד ${nums.length} שורות ` +
                             `והראשונה שאינה במקומה היא ${gap[0]}. ממספרים מחדש 1..N`);
@@ -1412,7 +1418,7 @@ const RULE_ROW_NAMES = {
                   r.cells[8].trim() !== '' && !COUNT_NOTE.test(r.cells[8]));
   if (noisy.length)
     fail(`טבלת התשתית: ${noisy.length} שורות ✅✅✅✅ עם הערה שאינה ריקה — ` +
-         `${noisy.map((r) => r.n).join(', ')}. הערה שסימונה ✅ מתארת מצב שכבר אינו, ` +
+         `${noisy.map((r) => r.n).join(', ')}, והצפוי אפס. הערה שסימונה ✅ מתארת מצב שכבר אינו, ` +
          'ומוחקים אותה באותו קומיט');
   else pass('טבלת התשתית — כל שורה ✅✅✅✅ נושאת הערה ריקה');
 
@@ -1425,7 +1431,8 @@ const RULE_ROW_NAMES = {
                        r.cells[8].trim() === '');
   if (openNoNote.length)
     fail(`טבלת התשתית: ${openNoNote.length} שורות ❌ בלי הערה — ` +
-         `${openNoNote.map((r) => r.n).join(', ')}. מצב פתוח נושא הערה שאומרת מה נדרש`);
+         `${openNoNote.map((r) => r.n).join(', ')}, והצפוי אפס. ` +
+         `מוסיפים הערה שאומרת מה נדרש`);
   else pass(`טבלת התשתית — כל שורה ❌ נושאת הערה (${rows.filter((r) => r.cells.length >= 9 &&
              [4, 5, 6, 7].some((k) => r.cells[k].indexOf('❌') >= 0)).length} שורות)`);
 
@@ -1433,7 +1440,8 @@ const RULE_ROW_NAMES = {
     .split('\n').filter((l) => /^#{2,3}\s*.*פערים\s*(פתוחים)?\s*$/.test(l));
   if (gapChapter.length)
     fail(`פרק פערים נפרד ב-${APP.docs}: ${gapChapter.join(' · ')} — ` +
-         'מצב פתוח נרשם ❌ בטבלה עם הערה, ומוחקים את הפרק');
+         'נמדדו פרקים שהצפוי בהם אפס. מצב פתוח נרשם ❌ בטבלה עם הערה, ' +
+       'ומוחקים את הפרק');
   else pass('אין פרק פערים נפרד — כל מצב פתוח יושב בטבלה');
 }
 
@@ -1442,18 +1450,22 @@ const RULE_ROW_NAMES = {
  *  משניהם מפילה כאן, ⛔ ולא מתגלה סבבים אחר כך. */
 {
   const nums = tableRowNumbers();
-  if (!nums.length) fail('טבלת התשתית לא נמצאה — אין מה לאכוף');
+  if (!nums.length) fail('טבלת התשתית לא נמצאה — נמדדו 0 שורות והצפוי לפחות אחת. ' +
+     'מתקנים את מבנה הטבלה');
   const enforced = new Set(MATRIX.map((m) => m.row));
   const orphan = nums.filter((n) => !enforced.has(n) && !GATES[n]);
   if (orphan.length)
     fail(`שורות בטבלה בלי שער ובלי נימוק: ${orphan.join(', ')} — ` +
-         'כל שורה נושאת probe, שער אחר, או שורת נימוק מדוע אינה ניתנת לאכיפה מכנית');
+         'והצפוי אפס. מוסיפים לכל אחת probe, הפניה לשער אחר, ' +
+       'או שורת נימוק מדוע אינה ניתנת לאכיפה מכנית');
   else pass(`כיסוי הטבלה — ${nums.length} שורות: ${enforced.size} נאכפות כאן, ` +
             `${nums.length - enforced.size} בשער אחר או עם נימוק כתוב`);
   const stale = Object.keys(GATES).map(Number).filter((n) => !nums.includes(n));
-  if (stale.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${stale.join(', ')}`);
+  if (stale.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${stale.join(', ')} — ` +
+    `נמדדו ${stale.length} והצפוי אפס. מסירים אותן מ-GATES`);
   const both = Object.keys(GATES).map(Number).filter((n) => enforced.has(n));
-  if (both.length) fail(`שורות שמוכרזות גם ב-MATRIX וגם ב-GATES: ${both.join(', ')}`);
+  if (both.length) fail(`שורות שמוכרזות גם ב-MATRIX וגם ב-GATES: ${both.join(', ')} — ` +
+    `נמדדו ${both.length} והצפוי אפס. מסירים אותן מאחת השתיים`);
 
   /*  ⛔ «נאכפת בשער אחר» היא **הצהרה** ⛔ ולא מנגנון (סבב 71) — ⚠️ הערך
    *  ב-`GATES` הוא מחרוזת, ⛔ ואיש לא אימת שהשער הזה קיים ושהוא בכלל רץ.
@@ -1474,7 +1486,7 @@ const RULE_ROW_NAMES = {
       (declared.get(Number(d)) || declared.set(Number(d), []).get(Number(d))).push(f.slice(0, -4));
   }
   if (noDecl.length) fail(`שערים בלי `+ '`export const ROWS`' + `: ${noDecl.join(', ')} — ` +
-                          'כל שער מצהיר אילו שורות בטבלה הוא אוכף, ולו רשימה ריקה');
+                          'והצפוי אפס. מוסיפים לכל אחד הצהרה — ולו רשימה ריקה');
   /*  ⭐ שורה רשאית להצביע על **כמה שערים** (סבב 72) — ⛔ ולכל אחד שם טענה
    *  משלו, ב-`claims: { שער: טענה }`. ⚠️ הנימוק נמדד: «מבחן חריג נושא נימוק
    *  בבאנר» מכסה שני מצבים שיושבים בשני שערים, ⛔ והמגבלה «שער אחד לשורה»
@@ -1501,10 +1513,15 @@ const RULE_ROW_NAMES = {
     if (miss.length)  mismatch.push(`${n}: ${miss.join(' + ')} ב-claims ואינם מצהירים עליה ב-ROWS`);
   }
   const strayRows = [...declared.keys()].filter((n) => !GATES[n] || (!GATES[n].claim && !GATES[n].claims));
-  if (unclaimed.length) fail(`שורות עם שם טענה שאף שער אינו מצהיר עליהן ב-ROWS: ${unclaimed.join(', ')}`);
+  if (unclaimed.length) fail(`שורות עם שם טענה שאף שער אינו מצהיר עליהן ב-ROWS: ` +
+    `${unclaimed.join(', ')} — נמדדו ${unclaimed.length} והצפוי אפס. ` +
+    `מוסיפים אותן ל-ROWS של השער שאוכף אותן`);
   if (mismatch.length) fail(`אי-התאמה בין ROWS ל-claims: ${mismatch.join(' · ')} — ` +
-                            'שורה שכמה שערים אוכפים אותה מונה את כולם ב-claims, ולכל אחד שם טענה');
-  if (strayRows.length) fail(`שערים שמצהירים ב-ROWS שורה שאינה שלהם ב-GATES: ${strayRows.join(', ')}`);
+                            'והצפוי אפס. מיישרים: שורה שכמה שערים אוכפים אותה מונה את ' +
+    'כולם ב-claims, ולכל אחד שם טענה');
+  if (strayRows.length) fail(`שערים שמצהירים ב-ROWS שורה שאינה שלהם ב-GATES: ` +
+    `${strayRows.join(', ')} — נמדדו ${strayRows.length} והצפוי אפס. ` +
+    `מיישרים את ROWS ל-GATES`);
   const named = [...new Set(refs.map((r) => r.gate).filter(Boolean))];
   const js = fs.readFileSync('tools/check-js.mjs', 'utf8');
   const wired = new Set([...js.matchAll(/'([a-z_-]+)\.mjs'/g)].map((m) => m[1]));
@@ -1513,9 +1530,12 @@ const RULE_ROW_NAMES = {
   wired.add('check-js');
   const absent = named.filter((g) => !fs.existsSync(`tools/${g}.mjs`));
   const idle   = named.filter((g) => !absent.includes(g) && !wired.has(g));
-  if (absent.length) fail(`שערים שמוכרזים ב-ROWS ואינם קיימים: ${absent.join(', ')}`);
+  if (absent.length) fail(`שערים שמוכרזים ב-ROWS ואינם קיימים: ${absent.join(', ')} — ` +
+    `נמדדו ${absent.length} והצפוי אפס. מוסיפים את הקובץ, או מסירים את ההצהרה`);
   if (idle.length)
-    fail(`שערים שמוכרזים ב-ROWS ואינם ב-APP.gates שב-check-js — קיימים ואינם רצים: ${idle.join(', ')}`);
+    fail(`שערים שמוכרזים ב-ROWS ואינם ב-APP.gates שב-check-js — ` +
+    `קיימים ואינם רצים: ${idle.join(', ')}; נמדדו ${idle.length} והצפוי אפס. ` +
+    `מוסיפים אותם ל-APP.gates`);
   /*  ⛔ ⭐ **והטענה עצמה נבדקת בגוף השער (סבב 71)** — ⚠️ «נאכפת בשער אחר»
    *  הייתה שם קובץ בלבד, ⛔ וארבע הפניות הצביעו על שער שאינו אוכף את
    *  השורה כלל: `manifest` הופנה לשער האייקונים שאין בו אזכור אחד שלו.
@@ -1532,7 +1552,8 @@ const RULE_ROW_NAMES = {
     for (const c of [].concat(r.claim))
       if (!body.includes(c)) blind.push(`${r.row}: «${c}» אינו בגוף ${r.gate}`);
   }
-  if (blind.length) fail(`הפניות שהטענה שלהן אינה קיימת: ${blind.join(' · ')}`);
+  if (blind.length) fail(`הפניות שהטענה שלהן אינה קיימת: ${blind.join(' · ')} — ` +
+    `נמדדו ${blind.length} והצפוי אפס. מיישרים את שם הטענה לגוף השער`);
   if (!absent.length && !idle.length && !blind.length && !noDecl.length &&
       !unclaimed.length && !mismatch.length && !strayRows.length) {
     const manual = Object.values(GATES).filter((g) => g && g.manual).length;
@@ -1546,57 +1567,68 @@ const UNMEASURED = '🔲';
 const declaredOk = (c) => c.indexOf('✅') >= 0;
 for (const m of MATRIX) {
   const row = tableRow(m.row);
-  if (row === null) { fail(`שורה ${m.row} («${m.name}») לא נמצאה בטבלת התשתית`); continue; }
+  if (row === null) { fail(`שורה ${m.row} («${m.name}») לא נמצאה בטבלת התשתית — נמדדו ` +
+    `0 שורות בשם הזה והצפוי אחת. מעדכנים את המספר ב-MATRIX`); continue; }
   const cell = row.cell, note = row.note;
   if (m.exempt) { pass(`שורה ${m.row} («${m.name}»): חריגה מנומקת — ${m.exempt}`); continue; }
   if (m.desc) {
     const want = m.desc();
     if (cell.indexOf(want) >= 0) pass(`שורה ${m.row} («${m.name}»): התא «${cell}» תואם לנמדד («${want}»)`);
-    else fail(`שורה ${m.row} («${m.name}»): התא אומר «${cell}» והקוד אומר «${want}»`);
+    else fail(`שורה ${m.row} («${m.name}»): נמדד בקוד «${want}» והתא אומר ` +
+      `«${cell}». מעדכנים את התא`);
     continue;
   }
   /*  ⛔ אין לקרוא ⭕ כ«❌ מנומס» (סבב 69) — הוא חסר **מנומק**, ולכן נאכף בשני
    *  תנאים יחד: השורה מוכרזת ב-`APP.gapRows`, ⛔ ויש לה נימוק כתוב
    *  בעמודת ההערות. ⚠️ בלי שניהם הוא מתדרדר ל«❌ בלי שאיש החליט». */
   if (cell.indexOf(UNMEASURED) >= 0) {
-    if (!note) fail(`שורה ${m.row} («${m.name}»): 🔲 בלי נימוק בעמודת ההערות`);
+    if (!note) fail(`שורה ${m.row} («${m.name}»): 🔲 בלי נימוק — נמדדה הערה ריקה ` +
+      `והצפוי נימוק. מוסיפים את מה שיימדד`);
     else pass(`שורה ${m.row} («${m.name}»): 🔲 — ${note}`);
     continue;
   }
   if ((APP.gapRows || []).indexOf(m.row) >= 0) {
     if (cell.indexOf(GAP) < 0)
-      fail(`שורה ${m.row} («${m.name}»): מוצהרת ⭕ בבלוק APP אך התא אומר «${cell}»`);
+      fail(`שורה ${m.row} («${m.name}»): מוצהרת ⭕ בבלוק APP — נמדד בתא ` +
+        `«${cell}» והצפוי ⭕. מיישרים את התא, או מסירים אותה מ-gapRows`);
     else if (!note)
-      fail(`שורה ${m.row} («${m.name}»): ⭕ בלי נימוק בעמודת ההערות`);
+      fail(`שורה ${m.row} («${m.name}»): ⭕ בלי נימוק — נמדדה הערה ריקה ` +
+        `והצפוי נימוק. מוסיפים אותו`);
     else pass(`שורה ${m.row} («${m.name}»): ⭕ כמוצהר — ${note}`);
     continue;
   }
   if (cell.indexOf(GAP) >= 0) {
     fail(`שורה ${m.row} («${m.name}»): התא אומר ⭕ אך השורה אינה ב-gapRows של APP — ` +
-         `חסר-מנומק חייב להיות החלטה רשומה, לא ברירת מחדל`);
+         `נמדד ⭕ שאינו מוכרז והצפוי אפס. מוסיפים את השורה ` +
+         `ל-gapRows — חסר-מנומק חייב להיות החלטה רשומה, לא ברירת מחדל`);
     continue;
   }
   /*  ⛔ ספירה נגזרת מוחרגת גם כאן (סבב 72) — ⚠️ שתי נקודות אכיפה לאותה
    *  טענה, ⭐ ותיקון באחת בלבד היה משאיר את השנייה סותרת אותה. */
   if (declaredOk(cell) && row.allOk && note && !/\d/.test(note)) {
     fail(`שורה ${m.row} («${m.name}»): שורה שסימונה ✅ נושאת הערה «${note}» — ` +
-         `⛔ עמודת ההערות שמורה לנימוק חריגה, למה שנדרש ולמה שיימדד`);
+         `והצפוי הערה ריקה. מוחקים אותה — ⛔ עמודת ההערות ` +
+         `שמורה לנימוק חריגה, למה שנדרש ולמה שיימדד`);
     continue;
   }
   let exists;
   try {
     exists = m.app ? !!(APP.tableProbe[m.row] && APP.tableProbe[m.row]({ code, src, hasCode, cfgBlock, fnBody, hasPath, fileHas }))
                    : !!m.probe();
-  } catch (e) { fail(`שורה ${m.row} («${m.name}»): ה-probe זרק — ${e.message}`); continue; }
+  } catch (e) { fail(`שורה ${m.row} («${m.name}»): ה-probe זרק — נמדד ` +
+    `«${e.message}» והצפוי ערך בוליאני. מתקנים את ה-probe`); continue; }
   const declared = cell.indexOf('✅') >= 0;
   const denied = cell.indexOf('❌') >= 0;
   if (!declared && !denied) {
-    fail(`שורה ${m.row} («${m.name}»): התא «${cell}» אינו ✅, ❌, ⭕ או 🔲`);
+    fail(`שורה ${m.row} («${m.name}»): נמדד תא «${cell}» והצפוי ` +
+      `✅, ❌, ⭕ או 🔲. מתקנים את הסימון`);
   } else if (declared && !exists) {
-    fail(`שורה ${m.row} («${m.name}»): מסומנת ✅ אך ה-probe אינו מוצא אותה בקוד`);
+    fail(`שורה ${m.row} («${m.name}»): מסומנת ✅ — נמדד שה-probe אינו ` +
+      `מוצא אותה בקוד והצפוי שימצא. מיישרים את הסימון לקוד`);
   } else if (denied && exists) {
     fail(`שורה ${m.row} («${m.name}»): מסומנת ❌ אך ה-probe **כן** מוצא אותה — ` +
-         `טענת-חסר שגויה שולחת סבב עתידי לבנות מחדש משהו שכבר קיים`);
+         `נמדד שהוא מוצא והצפוי שלא. מעדכנים את הסימון ל-✅ — ` +
+      `טענת-חסר שגויה שולחת סבב עתידי לבנות מחדש משהו שכבר קיים`);
   } else {
     pass(`שורה ${m.row} («${m.name}»): «${cell}» תואם לקוד`);
   }
@@ -1668,10 +1700,10 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
          'מרחיבים עמודת תקן קיימת, או מיישרים את הכותרת לשם השורה');
   if (stale.length)
     fail(`שמות ב-RULE_ROW_NAMES שאין להם סעיף כלל: ${stale.join(' · ')} — ` +
-         'הסעיף נמחק או שונה שמו. מיישרים את המפה לכותרות שבקובץ');
+         'נמדדו שמות שאין להם סעיף והצפוי אפס. מיישרים את המפה לכותרות שבקובץ');
   if (badRow.length)
     fail(`כללים שממופים לשם שורה שאינו בטבלה: ${badRow.join(' · ')} — ` +
-         'שם השורה שונה. מיישרים את המפה לשמות שבטבלה');
+         'נמדדו שמות שאינם בטבלה והצפוי אפס. מיישרים את המפה לשמות שבטבלה');
   if (!noRow.length && !stale.length && !badRow.length)
     pass(`כל כלל מיוצג בטבלה — ${heads.length} סעיפים, ` +
          `${new Set(Object.values(RULE_ROWS)).size} שורות מייצגות`);
@@ -1689,10 +1721,11 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
   const badMark = heads.filter((h) => marks[h] !== wantMark(h));
   if (openLoop.length)
     fail(`סעיפי כלל שהזוג שלהם פתוח (◇): ${openLoop.join(' · ')} — ` +
-         'מוסיפים שורה בטבלה או מרחיבים עמודת תקן קיימת, ומיישרים את הסימן');
+         'והצפוי אפס. מוסיפים שורה בטבלה או מרחיבים עמודת תקן קיימת, ' +
+      'ומיישרים את הסימן');
   else if (badMark.length)
     fail(`סימן לולאה שאינו תואם לנגזר: ${badMark.map((h) => `${h} → ${wantMark(h)}`).join(' · ')} — ` +
-         'הסימן נגזר מהשער, ומיישרים את הקובץ אליו');
+         'נמדד סימן שאינו הנגזר. הסימן נגזר מהשער, ומיישרים את הקובץ אליו');
   else pass(`סימון הלולאה — ${heads.length} סעיפים, כולם זוג סגור משני הצדדים ` +
             `(${heads.filter((h) => wantMark(h) === '⧉').length} מהם ⧉)`);
 
@@ -1714,7 +1747,7 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
   }
   if (rowMarkBad.length)
     fail(`סימן לולאה בשורות הטבלה שאינו תואם לנגזר: ${rowMarkBad.join(' · ')} — ` +
-         'הסימן נגזר מהשער, ומיישרים את הטבלה אליו');
+         'נמדד סימן שאינו הנגזר. הסימן נגזר מהשער, ומיישרים את הטבלה אליו');
   else pass(`סימון הלולאה בטבלה — ${wantRowMark.size} שורות נושאות סעיף כלל, ` +
             `${[...wantRowMark.values()].filter((v) => v === '⧉').length} מהן ⧉`);
 }

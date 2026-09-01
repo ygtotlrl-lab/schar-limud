@@ -171,11 +171,13 @@ let priv = src;
      *  להחריג מהסריקה. */
     if ((APP.skipBlocks || []).indexOf(start) >= 0) continue;
     const i0 = priv.indexOf(start);
-    if (i0 < 0) { fail(`סמן הבלוק המשותף «${start}» לא נמצא ב-${APP.file}`); continue; }
+    if (i0 < 0) { fail(`סמן הבלוק המשותף «${start}» לא נמצא ב-${APP.file} — נמדדו ` +
+        `0 מופעים והצפוי אחד. מוסיפים את הסמן, או מעדכנים את רשימת הבלוקים`); continue; }
     const open = priv.lastIndexOf('/*', i0);
     const j = priv.indexOf(end, i0);
     const k = j < 0 ? -1 : priv.indexOf('*/', j);
-    if (open < 0 || j < 0 || k < 0) { fail(`הבלוק המשותף «${start}» אינו סגור ב-${APP.file}`); continue; }
+    if (open < 0 || j < 0 || k < 0) { fail(`הבלוק המשותף «${start}» אינו סגור ב-${APP.file} — נמדד סמן ` +
+        `פתיחה בלי סוגר. מוסיפים את סמן הסיום`); continue; }
     priv = blank(priv, open, k + 2);
   }
 }
@@ -329,16 +331,19 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
       const title = lines[i + 1] || '';
       const rule  = lines[i + 2] || '';
       if (!/^ {3}\S/.test(title) || title.length > 78) {
-        fail(`שורה ${i + 2}: כותרת בלוק — שורת השם אינה תקנית (שלושה רווחים + שם, עד 78 תווים)`); bad++;
+        fail(`שורה ${i + 2}: כותרת בלוק — נמדדה שורת שם שאינה תקנית והצפוי ` +
+        `שלושה רווחים + שם, עד 78 תווים. מתקנים את השורה`); bad++;
       } else if (!HDR_RULE.test(rule) && !HDR_END.test(rule)) {
-        fail(`שורה ${i + 3}: כותרת בלוק — חסרה שורת מסגרת תחתונה ברוחב ${RULE_W}`); bad++;
+        fail(`שורה ${i + 3}: כותרת בלוק — נמדדה שורה שאינה מסגרת תחתונה ` +
+        `והצפוי מסגרת ברוחב ${RULE_W}. מוסיפים אותה`); bad++;
       } else {
         hdrs.push({ line: i + 1, title: title.trim() });
       }
       continue;
     }
     if (HDR_NEAR.test(l) && !HDR_OPEN.test(l)) {
-      fail(`שורה ${i + 1}: מסגרת כותרת ברוחב לא תקני — נדרשים בדיוק ${RULE_W} תווי ═`); bad++;
+      fail(`שורה ${i + 1}: מסגרת כותרת — נמדד רוחב אחר והצפוי בדיוק ` +
+        `${RULE_W} תווי ═. מתקנים את הרוחב`); bad++;
     }
   }
 
@@ -360,7 +365,8 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
     for (let k = 1; k < marks.length; k++) {
       const gap = nonBlank[marks[k]] - nonBlank[marks[k - 1]];
       if (gap > MAX_AREA_LINES) {
-        fail(`שורות ${marks[k - 1]}–${marks[k]}: ${gap} שורות קוד פרטי בלי כותרת בלוק (המותר ${MAX_AREA_LINES})`);
+        fail(`שורות ${marks[k - 1]}–${marks[k]}: נמדדו ${gap} שורות קוד פרטי ` +
+        `בלי כותרת בלוק והמותר ${MAX_AREA_LINES}. מוסיפים כותרת בלוק לאזור`);
         bad++;
       }
     }
@@ -386,7 +392,8 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
     const bodyStop = b.text.split('\n').filter(x => x.indexOf('⛔') >= 0 && !/[─═]{2,}/.test(x));
     const hasWhy   = / —\s/.test(b.text) || bodyStop.length === 0;
     if (!hasWhy) {
-      fail(`${name}:${b.line}: הערת ⛔ בלי סיבה אחרי « — »`);
+      fail(`${name}:${b.line}: הערת ⛔ בלי סיבה — נמדדו 0 נימוקים אחרי ` +
+        `« — » והצפוי אחד. מוסיפים את הסיבה: «⛔ אל תעשה X — הסיבה»`);
       bad++;
     }
   }
@@ -405,7 +412,8 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
       if (!PICTO.test(t)) continue;
       const ok = MARKERS.some(m => t.startsWith(m));
       if (!ok) {
-        fail(`${name}:${b.line + k}: שורת הערה נפתחת בסמל שאינו ⛔/⚠️/⭐ — «${t.slice(0, 24)}»`);
+        fail(`${name}:${b.line + k}: שורת הערה נפתחת בסמל שאינו ⛔/⚠️/⭐ — ` +
+        `נמדד «${t.slice(0, 24)}» והצפוי אחד משלושת הסימנים. מתקנים את הסמל`);
         bad++;
       }
     }
@@ -420,7 +428,8 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
     for (const t of TERMS) {
       t.bad.lastIndex = 0;
       if (t.bad.test(b.text)) {
-        fail(`${name}:${b.line}: מונח לא תקני «${String(t.bad).replace(/[/g]/g, '')}» — הכתיב התקני הוא «${t.good}»`);
+        fail(`${name}:${b.line}: מונח לא תקני — נמדד ` +
+        `«${String(t.bad).replace(/[/g]/g, '')}» והצפוי «${t.good}». מיישרים את הכתיב`);
         bad++;
       }
     }
@@ -446,7 +455,8 @@ const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
          *  מדווחת 76 על שורה שרוחבה 78. */
         const full = srcLines[b.line - 1 + k];
         if (full === undefined || full.length === BANNER_W) continue;
-        fail(`${name}:${b.line + k}: באנר «─» ברוחב ${full.length} במקום ${BANNER_W}`);
+        fail(`${name}:${b.line + k}: באנר «─» — נמדד רוחב ${full.length} במקום ` +
+        `${BANNER_W}. מתקנים את הרוחב`);
         bad++;
       }
     }
@@ -493,7 +503,8 @@ if (failures) {
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
   if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
-     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
+     + 'מתקנים את איסוף הקבצים — ⛔ הטענה שמתחת רצה על רשימה ריקה ' +
+     'ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -616,7 +627,8 @@ if (failures) {
       for (const m of code.matchAll(p.re)) {
         if (p.ok(code, m, m[1])) continue;
         vac++;
-        fail(`tools/${f}: ${p.name} — נמדדה טענה שאינה יכולה להיכשל והצפוי אפס. ${p.why}`);
+        fail(`tools/${f}: ${p.name} — נמדדה טענה שאינה יכולה להיכשל והצפוי ` +
+          `אפס. מתקנים אותה: ${p.why}`);
       }
   }
   if (vac) bad += vac;
@@ -645,7 +657,8 @@ if (failures) {
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
   if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
-     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
+     + 'מתקנים את איסוף הקבצים — ⛔ הטענה שמתחת רצה על רשימה ריקה ' +
+     'ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -679,8 +692,9 @@ if (failures) {
    מונה ובלי `pass`), ⚠️ ושני דפוסים לאותו דבר מלמדים לקרוא כל בודק
    מחדש. ⭐ ונמדד בסבב 72: 13 מ-117 קריאות `fail` נשאו ערך נמדד,
    ⛔ ו-10 בלבד אמרו מה לעשות.
-   ⚠️ תוכן ההודעה **מדווח ואינו מפיל** — ⛔ סגירתו היא סבב ייעודי;
-   ⛔ העוזרים עצמם כן מפילים.
+   ⛔ **ותוכן ההודעה מפיל אף הוא** (סבב 79) — ⚠️ עד כאן הוא דיווח בלבד,
+   ⭐ מפני שהקיימות נכתבו לפני הדרישה; ⛔ 157 ההודעות נסגרו, ⛔ והודעה
+   חדשה בלי ערך נמדד או בלי מה לעשות מפילה.
    ──────────────────────────────────────────────────────────────────────── */
 {
   const CHECKERS = ['check-js', 'check-structure', 'check-status-area',
@@ -689,12 +703,13 @@ if (failures) {
                    "const fail = (m) => { failures++; console.error('❌ ' + m); };",
                    "const pass = (m) => console.log('✅ ' + m);"];
   const VALUE  = /נמדד|במקום|הצפוי|מתוך/;
-  const ACTION = /מוסיפים|גוזמים|יש ל|מעדכנים|עדכון|מסירים|מוחקים|לקדם|מתקנים|מיישרים|בודקים/;
+  const ACTION = /מוסיפים|גוזמים|יש ל|מעדכנים|עדכון|מסירים|מוחקים|לקדם|מתקנים|מיישרים|בודקים|מעבירים|מקדמים|ממזגים|מצהירים|כותבים|מחליפים|מעתיקים|ממספרים/;
   let bad = 0, sites = 0, withValue = 0, withAction = 0;
   for (const c of CHECKERS) {
     let t = '';
     try { t = fs.readFileSync(`tools/${c}.mjs`, 'utf8'); } catch (e) {
-      fail(`tools/${c}.mjs: הבודק חסר — נמדדו ${CHECKERS.length - 1} מתוך ${CHECKERS.length}`);
+      fail(`tools/${c}.mjs: הבודק חסר — נמדדו ${CHECKERS.length - 1} מתוך ` +
+        `${CHECKERS.length}. מוסיפים אותו מריפו אחות`);
       bad++; continue;
     }
     const miss = HELPERS.filter((h) => !t.includes(h));
@@ -711,8 +726,15 @@ if (failures) {
       if (ACTION.test(m[1])) withAction++;
     }
   }
-  if (!bad) pass(`דפוס הבודקים: ${CHECKERS.length} בודקים, עוזרים זהים ` +
-                 `(⚠️ הודעת כשל: ${withValue}/${sites} עם ערך נמדד · ${withAction}/${sites} עם מה לעשות)`);
+  if (withValue < sites)
+    fail(`דפוס הבודקים: הודעת כשל בלי ערך נמדד — נמדדו ${withValue} ` +
+         `מתוך ${sites} והצפוי ${sites}. מוסיפים להודעה את מה שנמדד מול הצפוי`);
+  if (withAction < sites)
+    fail(`דפוס הבודקים: הודעת כשל בלי מה לעשות — נמדדו ${withAction} ` +
+         `מתוך ${sites} והצפוי ${sites}. מוסיפים להודעה את הפעולה המתקנת`);
+  if (!bad && withValue === sites && withAction === sites)
+    pass(`דפוס הבודקים: ${CHECKERS.length} בודקים, עוזרים זהים, ` +
+         `ו-${sites} הודעות כשל בשלושת חלקיהן`);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -732,7 +754,8 @@ if (failures) {
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => f.endsWith('.mjs')); } catch (e) {}
   if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
-     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
+     + 'מתקנים את איסוף הקבצים — ⛔ הטענה שמתחת רצה על רשימה ריקה ' +
+     'ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -771,7 +794,8 @@ if (failures) {
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => f.endsWith('.mjs')); } catch (e) {}
   if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
-     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
+     + 'מתקנים את איסוף הקבצים — ⛔ הטענה שמתחת רצה על רשימה ריקה ' +
+     'ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -817,7 +841,8 @@ if (failures) {
   let names = [];
   try { names = fs.readdirSync('tools').filter((f) => /^test_.*\.mjs$/.test(f)); } catch (e) {}
   if (!names.length) fail('רשימת השערים ריקה — נמדדו 0 קבצים והצפוי לפחות אחד. '
-     + '⛔ הטענה שמתחת רצה על רשימה ריקה ומדווחת «עבר»');
+     + 'מתקנים את איסוף הקבצים — ⛔ הטענה שמתחת רצה על רשימה ריקה ' +
+     'ומדווחת «עבר»');
   for (const f of names) {
     let t = '';
     try { t = fs.readFileSync('tools/' + f, 'utf8'); } catch (e) { continue; }
@@ -854,7 +879,8 @@ if (failures) {
   let allGates = [];
   try { allGates = fs.readdirSync('tools').filter((x) => x.endsWith('.mjs')); } catch (e) {}
   if (!allGates.length) fail('סריקת רתמות: רשימת הקבצים ריקה — נמדדו 0 קבצים ' +
-     'ב-tools/ והצפוי לפחות אחד. הטענה שמתחת רצה על רשימה ריקה');
+     'ב-tools/ והצפוי לפחות אחד. מתקנים את איסוף הקבצים: ' +
+     'הטענה שמתחת רצה על רשימה ריקה');
   for (const f of allGates) {
     let code = '';
     try { code = blankComments(fs.readFileSync('tools/' + f, 'utf8')); } catch (e) { continue; }
@@ -962,8 +988,8 @@ if (failures) {
       if (!hit) continue;
       bad++;
       fail(`${f}:${i + 1}: הכותרת «${h}» חופפת לשורה «${hit}» בטבלת התשתית — ` +
-           'נמדדה חפיפה אחת מתוך אפס מותרות. הטבלה אומרת את הכלל, ' +
-           'והקובץ מחזיק את ההוראה המעשית בלבד');
+           'נמדדה חפיפה אחת מתוך אפס מותרות. מסירים את הכותרת — ' +
+           'הטבלה אומרת את הכלל, והקובץ מחזיק את ההוראה המעשית בלבד');
     }
   }
   if (!bad) pass(`תוכן הקבצים הנלווים: ${seen} כותרות, אף אחת אינה חוזרת על שורה בטבלה`);
@@ -1006,8 +1032,8 @@ if (failures) {
       if (!/[A-Za-z]{3,}/.test(stripped)) continue;
       if (ALLOW.test(stripped)) continue;
       seen++; bad++;
-      fail(`${name}:${b.line}: בלוק הערה באנגלית — הערות בעברית, ` +
-           'מונחים טכניים ושמות מזהים באנגלית (כלל ברזל 11, סבב 67)');
+      fail(`${name}:${b.line}: בלוק הערה באנגלית — נמדד בלוק לועזי והצפוי ` +
+           'עברית. מיישרים אותו: מונחים טכניים ושמות מזהים נשארים באנגלית');
     }
   }
   if (!bad) pass('שפת ההערה: אין בלוק הערה באנגלית ב-index.html וב-sw.js');

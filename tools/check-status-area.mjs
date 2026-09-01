@@ -73,12 +73,14 @@ function grab(spec) {
 for (const key of Object.keys(CANON)) {
   const spec = CANON[key];
   const text = grab(spec);
-  if (text === null) { fail(`${spec.name}: הבלוק לא נמצא (סמן פתיחה/סגירה חסר)`); continue; }
+  if (text === null) { fail(`${spec.name}: הבלוק לא נמצא — נמדדו 0 סמנים מתוך שניים ` +
+        `(פתיחה וסגירה). מוסיפים את הסמנים החסרים סביב הבלוק`); continue; }
   const sha = crypto.createHash('sha256').update(text).digest('hex').slice(0, 16);
   if (sha !== spec.sha) {
     fail(`${spec.name}: אינו זהה לחתימה הקנונית — ${sha} במקום ${spec.sha} ` +
          `(${text.split('\n').length} שורות במקום ${spec.lines}). ` +
-         `שינוי בבלוק משותף חייב להיעשות בארבע האפליקציות ובארבעת עותקי הבדיקה.`);
+         `מיישרים את הבלוק, או מעדכנים את החתימה — שינוי בבלוק משותף ` +
+         `נכנס בארבע האפליקציות ובארבעת עותקי הבדיקה, באותו סבב.`);
   } else {
     pass(`${spec.name}: זהה לחתימה הקנונית (${spec.sha})`);
   }
@@ -114,7 +116,8 @@ function directChildren(html, containerId) {
 if (APP.mode === 'html') {
   const kids = directChildren(src, APP.settingsContainerId);
   if (!kids) {
-    fail(`מיכל ההגדרות "${APP.settingsContainerId}" לא נמצא או לא נסגר`);
+    fail(`מיכל ההגדרות "${APP.settingsContainerId}" לא נמצא או לא נסגר — ` +
+        `נמדדו 0 מיכלים תקינים והצפוי אחד. מתקנים את תגי הפתיחה והסגירה`);
   } else {
     const last2 = kids.slice(-2);
     const ok = last2.length === 2 &&
@@ -122,8 +125,9 @@ if (APP.mode === 'html') {
                last2[1].includes('id="tech-info-box"');
     if (ok) pass('אזור המצב: sync-status-box ואחריו tech-info-box הם שני האלמנטים האחרונים');
     else fail('אזור המצב: שני האלמנטים האחרונים ב-' + APP.settingsContainerId +
-              ' אינם sync-status-box ואז tech-info-box. נמצא: ' +
-              last2.map(t => t.slice(0, 60)).join(' | '));
+              ' אינם sync-status-box ואז tech-info-box. נמדד: ' +
+              last2.map(t => t.slice(0, 60)).join(' | ') +
+              ' — מעדכנים את סדר שני האלמנטים האחרונים במיכל');
   }
 } else {
   // מסך ההגדרות של gius נבנה כמחרוזת ומוחזר; הבדיקה היא על זנב הבנייה.
@@ -131,12 +135,14 @@ if (APP.mode === 'html') {
     "h \\+= '<div id=\"sync-status-box\"></div>';\\s*\\n\\s*" +
     "h \\+= '<div id=\"tech-info-box\"></div>';\\s*\\n\\s*return h;");
   if (re.test(src)) pass('אזור המצב: שני העוגנים נבנים אחרונים ב-' + APP.settingsFn);
-  else fail('אזור המצב: ' + APP.settingsFn + ' אינה מסתיימת בעוגן sync-status-box ואז tech-info-box');
+  else fail('אזור המצב: ' + APP.settingsFn + ' אינה מסתיימת בעוגן sync-status-box ' +
+              'ואז tech-info-box — נמדד סדר אחר והצפוי הסדר הזה. מעדכנים את סוף הפונקציה');
 }
 
 // העוגן הישן של מסך ה-⏳ אינו אמור להתקיים יותר — תוכנו חי בתוך אזור המצב.
 if (src.includes('id="pend-status-box"')) {
-  fail('נמצא עוגן ישן id="pend-status-box" — מסך ה-⏳ מוגש מתוך #sync-status-box');
+  fail('נמצא עוגן ישן id="pend-status-box" — נמדד עוגן אחד והצפוי אפס. ' +
+       'מסירים אותו: מסך ה-⏳ מוגש מתוך #sync-status-box');
 } else {
   pass('אין עוגן ⏳ נפרד מחוץ לאזור המצב');
 }
@@ -148,6 +154,7 @@ if (/statusAreaMount\s*\(\s*\)/.test(outside)) {
   pass('חיווט חי: statusAreaMount() נקראת מקוד האפליקציה');
 } else {
   fail('חיווט חי: statusAreaMount() אינה נקראת בשום מקום מחוץ לבלוק המשותף — ' +
+       'נמדדו 0 קריאות והצפוי אחת. מוסיפים את הקריאה למסך ההגדרות; ' +
        'הרכיב קיים אך אינו מחובר לשום מסך');
 }
 
