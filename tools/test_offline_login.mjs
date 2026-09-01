@@ -25,7 +25,7 @@
  *   חד-פעמי מול העמודה הגלויה, ⛔ ורשימת ההיתר נאכפת בשלוש נקודות.
  *  ⚠️ וביומן אין קובץ כזה כלל — ⛔ אין שם כניסה, ואין מה לאמת.
  *
- *  הרצה:  node tools/test_round24.mjs
+ *  הרצה:  node tools/test_offline_login.mjs
  */
 import fs from 'node:fs';
 import path from 'node:path';
