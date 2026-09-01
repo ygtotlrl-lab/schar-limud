@@ -57,7 +57,7 @@ export const ROWS = [1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 87, 131];
 const CANON = [
   ['rules-session',  '1f6db7eefba41aef'],
   ['rules-writing',  '8380089bf7520f76'],
-  ['rules-table',    'e0c75a4390c45ba0'],
+  ['rules-table',    '0b0989bf4da86066'],
   ['rules-enforce',  'f80a07ddc983d52a'],
 ];
 

@@ -445,6 +445,17 @@ t(n++, !base.some(x => x.kind === 'tile-ink'),
     שב-`icons/`, ⛔ ולא רק אלה שיש להם מסגרת מוצהרת. */
 t(n++, !base.some(x => x.kind === 'margin'),
   `ב(1). שוליים שווים — L=R ו-T=B בכל אחד מ-${allAssets(ROOT).length} הנכסים ${of('margin')}`);
+/*  ⛔ הסף שנמדד בו הוא הסף שהמחולל מייצר בו — ⚠️ שני קבועים נפרדים שאיש
+    אינו משווה נסחפים זה מזה בשקט: ⭐ נמדד ש-16 מ-16 הנכסים תקינים בסף 25,
+    ⛔ ושבסף 50 ארבעה מהם חורגים ובסף 10 שניים אחרים. ⚠️ כלומר מדידה בסף
+    שאינו סף הייצור מדווחת חריגה על נכס תקין, ⛔ או מפספסת חריגה אמיתית. */
+const genAlpha = (root) => {
+  const m = /^const ALPHA_MIN = (\d+);/m.exec(readFileSync(join(root, 'tools/gen-icons.mjs'), 'utf8'));
+  return m ? Number(m[1]) : null;
+};
+t(n++, genAlpha(ROOT) === ALPHA_MIN,
+  `ב(2). סף המדידה הוא סף הייצור — נמדד ${genAlpha(ROOT)} במחולל ` +
+  `והצפוי ${ALPHA_MIN}; מיישרים את שני הקבועים`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
 
@@ -728,6 +739,28 @@ mutate('הזזת התוכן בפיקסל אנכית — xxxhdpi', () => {
   out.copy(img.data);
   writeFileSync(p, encodePNG(img));
 }, ['margin']);
+
+/*  ⛔ המוטציה על **סף הייצור** ולא על נכס — ⚠️ הטענה שנופלת כאן היא «סף
+    המדידה הוא סף הייצור», ⭐ והיא היחידה שיכולה ליפול ממנה: הנכסים בעותק
+    אינם נוגעים. ⛔ ורצה על אותה פונקציה שהטענה החיה קוראת — ⚠️ מימוש שני
+    למוטציה היה מוכיח על קוד שאיש אינו מריץ. */
+{
+  const d = mkdtempSync(join(tmpdir(), 'r77a-'));
+  try {
+    mkdirSync(join(d, 'tools'), { recursive: true });
+    const gsrc = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
+    const gp = join(d, 'tools/gen-icons.mjs');
+    writeFileSync(gp, gsrc.replace(/^const ALPHA_MIN = \d+;/m, `const ALPHA_MIN = ${ALPHA_MIN + 25};`));
+    t(n++, genAlpha(d) !== ALPHA_MIN,
+      'מוטציה: סף הייצור זז — מפיל את «סף המדידה הוא סף הייצור»');
+    /*  ⭐ מוטציית-נגד — ⛔ שורת קוד שנוספה למחולל בלי לגעת בסף חייבת
+        **לעבור**: ⚠️ בלעדיה הטענה אינה מבחינה בין «הסף זז» ל«הקובץ נגע». */
+    writeFileSync(gp, gsrc.replace(/^(const ALPHA_MIN = \d+;.*)$/m,
+                                   "$1\nconst ALPHA_LABEL = 'סף התוכן';"));
+    t(n++, genAlpha(d) === ALPHA_MIN,
+      '⭐ מוטציית-נגד: שורת קוד שנוספה למחולל בלי לגעת בסף ⛔ אינה מפילה');
+  } finally { rmSync(d, { recursive: true, force: true }); }
+}
 
 /*  ⛔ המוטציה מכהה את דיו האריח בלבד (סבב 72) — ⚠️ בדיוק הסטייה שהייתה
     בעץ במשך סבבים: ⭐ החזית נשארת במקומה, ⛔ והטענה שנופלת היא זו של האריח. */
