@@ -2847,10 +2847,6 @@ function slMirrorSave(m) {
   var rows = hwDiskFilter(SL_MIRROR_PREFIX + m, MIRROR[m] || []);
   return lsSetArray(SL_MIRROR_PREFIX + m, slSanitizeRows(m, rows), slTs);
 }
-function slMirrorHasData() {
-  return (MIRROR.students || []).length > 0 || (MIRROR.transactions || []).length > 0;
-}
-
 /* ══════════════════════════════════════════════════════════════════════════
    משתמשים, סודות וכניסה — טביעת PBKDF2 והרשאה לפי תפקיד
    ══════════════════════════════════════════════════════════════════════════ */
@@ -3777,7 +3773,6 @@ async function ensureCreditMethod(){
   }catch(e){_creditSeedDone=false;console.warn('[credit]',e);}
 }
 
-function getAcadYears(){var y={};TRANSACTIONS.forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;return Object.keys(y).map(Number).sort();}
 function dashPrevYear(){DASH_YEAR--;renderDash();}function dashNextYear(){DASH_YEAR++;renderDash();}
 /* ══════════════════════════════════════════════════════════════════════════
    לוח הבקרה — תנועות בפועל לפי תאריך התנועה
