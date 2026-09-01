@@ -46,7 +46,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 21, 24, 28, 25, 42, 69, 70, 71, 76];
+export const ROWS = [17, 19, 21, 24, 29, 25, 43, 70, 71, 72, 77];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -281,13 +281,39 @@ const EXTRA = [];
  *  שהיה בשם הקובץ. ⚠️ סריקת הקובץ כולו הייתה מוצאת «סבב 12» בהערה
  *  כלשהי באמצעו והופכת את ההקלה לאוטומטית. */
 const HEADERS = {};
+/*  ⛔ בלוקי ההערה של SQL — ⚠️ רצף שורות `--` צמודות הוא בלוק אחד, ⛔ בדיוק
+ *  כמו רצף `//` ב-JS. ⭐ והמחרוזות מסוננות ⛔ ולא נסרקות: `'--'` בתוך
+ *  ערך אינו הערה, ⚠️ וסריקה גולמית הייתה קוראת אותו כשורת הערה שנפתחת
+ *  בסמל אסור. */
+function sqlBlocksOf(text) {
+  const out = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^\s*--(.*)$/.exec(lines[i]);
+    if (!m) continue;
+    const last = out[out.length - 1];
+    if (last && last.endLine === i) { last.endLine = i + 1; last.text += '\n' + m[1]; continue; }
+    out.push({ kind: 'line', own: true, line: i + 1, endLine: i + 1, text: m[1] });
+  }
+  return out;
+}
 {
   const add = (p) => { try { const t = fs.readFileSync(p, 'utf8');
     HEADERS[p] = t.split('\n').slice(0, 12).join('\n');
     EXTRA.push({ name: p, blocks: blocksOf(t), lines: t.split('\n') }); } catch (e) {} };
+  const addSql = (p) => { try { const t = fs.readFileSync(p, 'utf8');
+    EXTRA.push({ name: p, blocks: sqlBlocksOf(t), lines: t.split('\n') }); } catch (e) {} };
   add('sw.js');
   try {
     for (const f of fs.readdirSync('tools').sort()) if (f.endsWith('.mjs')) add('tools/' + f);
+  } catch (e) {}
+  /*  ⛔ תחולת התקן מגיעה גם ל-`migrations/` — ⚠️ עד כאן היא נעצרה בקוד
+   *  ובשערים, ⛔ וקובצי המיגרציה היו התיקייה היחידה שאיש אינו מודד בה
+   *  הערה: ⭐ הם רוב הפרוזה בעץ אחרי `index.html`. ⛔ **וההערה שם היא
+   *  `--` ולא `//`**, ⚠️ ולכן היא נאספת בגזירה משלה ⛔ ולא בטוקניזציית
+   *  ה-JS: ⭐ `'--'` בתוך מחרוזת SQL אינו הערה, ⛔ והגזירה מדלגת עליו. */
+  try {
+    for (const f of fs.readdirSync('migrations').sort()) if (f.endsWith('.sql')) addSql('migrations/' + f);
   } catch (e) {}
 }
 const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
@@ -955,13 +981,25 @@ if (failures) {
   const HEB = /[֐-׿]/;
   /*  ⛔ רשימת-היתר ולא רשימת-איסור (סבב 67) — רשימת היתר נשארת נכונה
    *  כשייווסף מזהה חדש; רשימת איסור הייתה צריכה לגדול איתו. */
-  const ALLOW = /^[\s*/─═|.\-]*(APP|check-[a-z-]+|sw\.js|index\.html|LOGIN|CORE|[A-Z_]{2,})[\s*/─═|.\-]*$/;
+  /*  ⛔ ושמות ארבעת הריפו נכנסים לרשימה — ⚠️ «hanhala-ruchanit» הוא שם של
+   *  דבר בעץ ⛔ ולא פרוזה, ⭐ ותרגומו היה מנתק אותו מהתיקייה שהוא מסמן. */
+  /*  ⚠️ המסגרת סביב השם רשאית לשאת מספר סידורי — ⛔ «1.» בכותרת סעיף אינו
+   *  פרוזה, ⭐ והוא מה שמפריד בין שני סעיפים באותו קובץ. */
+  const ALLOW = /^[\s*/─═|.\-0-9]*(APP|check-[a-z-]+|sw\.js|index\.html|LOGIN|CORE|[A-Z_]{2,}|[a-z][a-z_]*[a-z]|hanhala-ruchanit|schar-limud|yoman-avoda|gius)[\s*/─═|.\-0-9]*$/;
   let bad = 0, seen = 0;
+  /*  ⛔ שאילתה מוערת אינה פרוזה — ⚠️ בקובצי המיגרציה יושבות שאילתות
+   *  אימות שהוערו כדי שלא ירוצו, ⭐ והן **קוד** ולא הערה: ⛔ תרגומן לעברית
+   *  היה הופך אותן ללא-ניתנות להדבקה. ⚠️ ההיתר מזהה פתיחה במילת מפתח של
+   *  SQL ⛔ ולא «נראה כמו קוד». */
+  const SQL_KW = /^(select|insert|update|delete|create|alter|drop|grant|revoke|with|from|where|set|values|and|or|order|group|having|union|begin|commit|do|end|explain|analyze|vacuum|comment|\)|,|--)\b/i;
+  const isSqlBlock = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean)
+                             .every((x) => SQL_KW.test(x));
   for (const { name, blocks: bs } of SCOPE) {
     if (name.startsWith('tools/')) continue;   /* ⚠️ שם מזהה בלבד — ר' הרשימה */
     for (const b of bs) {
       const t = b.text;
       if (HEB.test(t)) continue;
+      if (name.startsWith('migrations/') && isSqlBlock(t)) continue;
       const stripped = t.replace(/\/\*+|\*+\/|^\s*\/\/|^\s*\*/gm, ' ').trim();
       if (!/[A-Za-z]{3,}/.test(stripped)) continue;
       if (ALLOW.test(stripped)) continue;
