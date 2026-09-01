@@ -73,8 +73,15 @@ is(!!block, 'בלוק המודול המשותף נמצא בין שני הסמנ�
 if (!block) { console.error('\n❌ אין מה לבדוק'); process.exit(1); }
 
 /* 1. המפתח ההיסטורי נעול */
-is(src.includes(`DEV_CFG = { key: '${APP.deviceKey}' }`),
-   `⛔ מפתח האחסון הוא ההיסטורי — '${APP.deviceKey}' (איחודו היה מנתק כל מכשיר בשטח מהיומן שלו)`);
+/*  ⛔ הערך נחלץ ומושווה (סבב 79) — ⚠️ בדיקת נוכחות עוברת גם כשההצהרה
+ *  מופיעה פעמיים בשני ערכים, ⭐ והמספר הוא מה שנמדד. */
+{
+  const decls = [...src.matchAll(/DEV_CFG = \{ key: '([^']*)' \}/g)].map((m) => m[1]);
+  is(decls.length === 1 && decls[0] === APP.deviceKey,
+     `⛔ מפתח האחסון הוא ההיסטורי — נמדדו ${decls.length} הצהרות ` +
+     `(${decls.join(', ') || '—'}) והצפוי אחת בערך '${APP.deviceKey}' ` +
+     `(איחודו היה מנתק כל מכשיר בשטח מהיומן שלו)`);
+}
 
 /* 2. הליבה אינה מכילה מפתח קשיח */
 is(!/lsGet\(\s*'\w+_device_id'/.test(block) && !/lsSetRaw\(\s*'\w+_device_id'/.test(block),

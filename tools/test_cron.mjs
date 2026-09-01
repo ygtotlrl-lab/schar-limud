@@ -160,18 +160,27 @@ function fixture(dailyKey) {
 /* ══════════════════════════════════════════════════════════════════════════
    1 · המודול בקוד — שכבת הלקוח שנכשלת-סגור, ⛔ ואין להסיר אותה
    ══════════════════════════════════════════════════════════════════════════ */
+/*  ⛔ מונה ולא נוכחות (סבב 79) — ⚠️ `test(SRC)` עובר גם על הצהרה כפולה
+ *  בשני ערכים וגם על שורה שיושבת בתוך הערה: ⭐ הטענה על **מספר המופעים**,
+ *  והוא מודפס. */
+const srcCount = (re) => (SRC.match(new RegExp(re.source, 'g')) || []).length;
+const once = (re, label) => {
+  const n = srcCount(re);
+  assert(n === 1, `${label} — נמדדו ${n} מופעים והצפוי 1`);
+};
+
 function t1() {
-  assert(/function _bkRetention\(c, keys\)/.test(SRC),
+  once(/function _bkRetention\(c, keys\)/,
     '1א · `_bkRetention` קיימת במודול המשותף (סבב 35ג — ⛔ אין להסיר)');
-  assert(/\.in\('key', keys\)/.test(SRC),
+  once(/\.in\('key', keys\)/,
     '1ב · הגריעה מוגבלת לרשימת-היתר של מפתחות (`in(\'key\', keys)`) ולא לקידומת');
-  assert(/if \(!c \|\| !Array\.isArray\(keys\) \|\| !keys\.length\) return 0;/.test(SRC),
+  once(/if \(!c \|\| !Array\.isArray\(keys\) \|\| !keys\.length\) return 0;/,
     '1ג · רשימה ריקה ⇒ הפונקציה יוצאת בלי למחוק דבר');
-  assert(/if \(!del \|\| del\.error \|\| !Array\.isArray\(del\.data\)\) return 0;/.test(SRC),
+  once(/if \(!del \|\| del\.error \|\| !Array\.isArray\(del\.data\)\) return 0;/,
     '1ד · נכשלת סגור — שגיאה (כולל היעדר הרשאת DELETE) מוחזרת כאפס בשקט');
-  assert(/if \(n > 0\) logAction\('retention'/.test(SRC),
+  once(/if \(n > 0\) logAction\('retention'/,
     '1ה · `retention` נרשם ליומן רק כשנמחק משהו בפועל');
-  assert(/var BK_RETENTION_DAYS = 30;/.test(SRC),
+  once(/var BK_RETENTION_DAYS = 30;/,
     '1ו · חלון השמירה הוא 30 יום');
   // מפתחות הגיבוי היומי — נגזרים מ-`BK_CFG.sources()` ומושווים לרשימה שבבלוק APP.
   const derived = bkKeysFromSrc(SRC);

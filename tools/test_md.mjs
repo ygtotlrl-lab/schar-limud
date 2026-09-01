@@ -134,10 +134,14 @@ const mutDir = () => { const d = temp('md-shared-mut-'); cpSync(baseDir, d, { re
 /* 4ב — שינוי בית אחד בתוך פסקה משותפת מפיל */
 {
   const d = mutDir(), p = join(d, 'README.md');
-  const src = fs.readFileSync(p, 'utf8');
+  /*  ⛔ שם המשתנה אינו `src` (סבב 79) — ⚠️ `src` שמור למקור האפליקציה,
+   *  ⭐ וטענה עליו נמדדת בתקן «טענה על התנהגות». */
+  const rmSrc = fs.readFileSync(p, 'utf8');
   const needle = 'שחרור קוד web אינו מצריך APK חדש.';
-  t(src.includes(needle), 'README.md: הפסקה המשותפת «readme-apk» נושאת את המשפט לפני המוטציה');
-  fs.writeFileSync(p, src.replace(needle, 'שחרור קוד web אינו מצריך APK חדש'), 'utf8');
+  const nHits = rmSrc.split(needle).length - 1;
+  t(nHits === 1, `README.md: הפסקה המשותפת «readme-apk» נושאת את המשפט לפני ` +
+                 `המוטציה — נמדדו ${nHits} מופעים והצפוי 1`);
+  fs.writeFileSync(p, rmSrc.replace(needle, 'שחרור קוד web אינו מצריך APK חדש'), 'utf8');
   const r = await run(d);
   t(r.status !== 0, '⛔ שינוי בית בפסקה משותפת מפיל את check-docs');
   t(/אינה זהה לחתימה/.test(r.stderr + r.stdout), '   והשגיאה מצביעה על החתימה');
