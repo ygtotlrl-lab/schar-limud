@@ -175,6 +175,16 @@ function checkerFails(mutatedSrc) {
   ok('12 · ⛔ והחתימה נופלת גם עליה', checkerFails(mutSrc));
 }
 
+/*  ⭐ מוטציית-נגד: **קוד שנוסף מחוץ לבלוק** ⛔ אינו מפיל — ⚠️ החתימה מודדת
+ *  את הליבה המשותפת בלבד: ⛔ שער שהיה נופל על כל שינוי בקובץ היה הופך כל
+ *  עבודה באפליקציה להפרה, ⚠️ והחתימה הייתה מפסיקה לומר משהו על השיתוף. */
+{
+  const added = SRC.replace(B.text, B.text +
+    '\nfunction _ncPing(){ return 1; }\nvar _ncSeen = _ncPing();\n');
+  ok('13 · המוטציית-נגד אכן מוסיפה קוד מחוץ לבלוק', added !== SRC && added.includes(B.text));
+  ok('14 · ⭐ קוד שנוסף מחוץ לבלוק ⛔ אינו מפיל את החתימה', !checkerFails(added));
+}
+
 console.log(failed ? `\n✗ סבב 37א (מזהים) — ${failed} טענות נכשלו`
                    : `\n✓ סבב 37א (מזהים) — ${passed} טענות עברו`);
 process.exit(failed ? 1 : 0);

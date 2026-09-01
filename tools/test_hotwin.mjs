@@ -195,6 +195,19 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
   assert(r.swept === 1,
     'מוטציה שמבטלת את הנכשל-סגור נתפסת: במוטנט ok:false כן פינה — טענת הבסיס הייתה נכשלת');
 }
+/*  ⭐ מוטציית-נגד: שם המשתנה הפנימי שהוחלף **בעקביות** — ⚠️ שינוי חי שאסור
+ *  לו להפיל: ⛔ הטענות מודדות **מה פונה ומה נשאר**, ⛔ ולא את שמות
+ *  המשתנים שבמודול. */
+{
+  const base = harness(MOD);
+  await base.ctx.hwSweep();
+  const renamed = MOD.replace(/\bpend\b/g, 'isPending');
+  assert(renamed !== MOD, 'נ1א · המוטציית-נגד אכן מחליפה את השם בעקביות');
+  const anti = harness(renamed);
+  await anti.ctx.hwSweep();
+  assert(ids(anti.state.applied) === ids(base.state.applied),
+    'נ1ב · ⭐ שם פנימי שהוחלף בעקביות ⛔ אינו מפיל — נמדד המנגנון, לא השם');
+}
 
 /* ── 3. בלוק APP — טענות ומוטציות פר-אפליקציה ──────────────────────────── */
 for (const [re, msg] of APP.checks) {

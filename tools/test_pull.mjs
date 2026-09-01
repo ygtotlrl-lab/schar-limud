@@ -304,6 +304,23 @@ for (const mu of MUTATIONS) {
   else pass('12. המוטציה «' + mu.name + '» הפילה את טענה «' + mu.hits + '», כנדרש');
 }
 
+/*  ⭐ מוטציית-נגד — **שם פנימי שהוחלף בעקביות** ⛔ אינו מפיל.
+ *  ⚠️ הטענות מודדות את הגנת הריצה הכפולה ואת סדר המשיכה, ⛔ ולא את שם
+ *  הדגל שמחזיק אותה: ⭐ שער שהיה נופל על שינוי שם היה חוסם כל ניקוי,
+ *  ⛔ ומי שנתקל בו היה מחזיר את השם הישן בתום לב. */
+{
+  const renamed = block.replace(/_plBusy\b/g, '_plRunning');
+  if (renamed === block) fail('12. מוטציית-הנגד לא מצאה את דגל הריצה בליבה');
+  else {
+    let res;
+    try { res = await scenarios(renamed); } catch (e) { res = [{ name: 'שגיאה: ' + e.message, ok: false }]; }
+    const broke = res.filter((r) => !r.ok);
+    if (!broke.length) pass('נ1 · ⭐ מוטציית-נגד: שם פנימי שהוחלף בעקביות ⛔ אינו מפיל');
+    else fail('נ1 · ⛔ שם פנימי שהוחלף בעקביות הפיל ' + broke.length +
+              ' טענות והצפוי אפס — הראשונה «' + broke[0].name + '»');
+  }
+}
+
 /*  ⭐ מוטציה שישית — סטטית: פולינג תקופתי שחוזר חייב להפיל את טענה 10. */
 {
   const mutant = codeOutside + '\nsetInterval(function () { ' + APP.syncFn + '(); }, 3000);\n';

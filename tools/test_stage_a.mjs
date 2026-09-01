@@ -561,6 +561,27 @@ async function t14() {
     eq(env.backups.length, 1,
       '14ו · מוטציה שמנפחת את החלון נתפסת: במוטנט העותק בן ה-31 שרד — טענת 12ב הייתה נכשלת');
   }
+  /*  ⭐ מוטציית-נגד: שם המשתנה הפנימי שהוחלף **בעקביות** — ⚠️ שינוי חי
+   *  שאסור לו להפיל: ⛔ הטענות מודדות **מה נכתב לגיבוי ומה נגרע**, ⛔ ולא
+   *  את שמות המשתנים שבמודול. */
+  {
+    const mk = (src) => {
+      const e = makeEnv({ src, kv: { k1: 'A', k2: 'B' },
+        backups: [{ key: 'k1', created_at: OLD31 }] });
+      e.sb.BK_CFG = cfgKv(e);
+      return e;
+    };
+    const base = mk(MODULE_SRC);
+    newDay(base);
+    await base.sb.bkMaybeDaily();
+    const renamed = MODULE_SRC.replace(/\b_bkRunning\b/g, '_bkBusy');
+    eq(renamed !== MODULE_SRC, true, 'נ1א · המוטציית-נגד אכן מחליפה את השם בעקביות');
+    const anti = mk(renamed);
+    newDay(anti);
+    await anti.sb.bkMaybeDaily();
+    eq(anti.backups.length, base.backups.length,
+      'נ1ב · ⭐ שם פנימי שהוחלף בעקביות ⛔ אינו מפיל — נמדד המנגנון, לא השם');
+  }
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */

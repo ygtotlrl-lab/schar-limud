@@ -86,11 +86,20 @@ function sweepBody(sql) {
 
 const PROTECTED = (k) => /^PRE_/.test(k) || /^ORPHAN_/.test(k) || /^pre-delete-/.test(k);
 
+/*  שם משתנה רשימת-ההיתר — ⛔ נגזר מההצהרה ⛔ ואינו מוקלד (סבב 79):
+ *  ⚠️ הרתמה שקידדה `v_keys` בקשיחות מדדה את **השם** ולא את המנגנון,
+ *  ⛔ ושם שהוחלף בעקביות היה מפיל אותה בזמן שהקוד תקין. */
+function arrVar(body) {
+  const m = /(\w+)\s+text\[\]\s*:=\s*public\.bk_retention_keys\(\)/.exec(body);
+  return m ? m[1] : 'v_keys';
+}
+
 /* הרצה מדומה. זורקת מחרוזת `refuse:*` כשהפונקציה מסרבת לרוץ. */
 function simulateSweep(sql, rows, days, nowMs) {
   const keys = sqlKeys(sql) || [];
   const body = sweepBody(sql);
-  const gEmpty = /cardinality\(v_keys\)\s*=\s*0[\s\S]{0,200}?raise exception/.test(body);
+  const av = arrVar(body);
+  const gEmpty = new RegExp('cardinality\\(' + av + '\\)\\s*=\\s*0[\\s\\S]{0,200}?raise exception').test(body);
   const gProt = /PRE\\_%[\s\S]{0,300}?raise exception/.test(body);
   const gDays = /p_days\s*<\s*7[\s\S]{0,200}?raise exception/.test(body);
   if (gEmpty && keys.length === 0) throw 'refuse:empty';
@@ -100,7 +109,7 @@ function simulateSweep(sql, rows, days, nowMs) {
   const del = /delete\s+from\s+public\.kv_backup([\s\S]*?);/.exec(body);
   const where = del ? del[1] : '';
   let match;
-  if (/key\s*=\s*any\s*\(\s*v_keys\s*\)/.test(where)) match = (r) => keys.indexOf(r.key) !== -1;
+  if (new RegExp('key\\s*=\\s*any\\s*\\(\\s*' + av + '\\s*\\)').test(where)) match = (r) => keys.indexOf(r.key) !== -1;
   else {
     const lk = /key\s+like\s+'([^']*)%'/.exec(where);
     match = lk ? (r) => r.key.indexOf(lk[1].replace(/\\/g, '')) === 0 : () => true;
@@ -293,6 +302,17 @@ function t4(sql) {
     const r = simulateSweep(mut, fixture(daily), 30, Date.now());
     assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) === -1 || r.left.indexOf('zar_lo_barshima') === -1,
       '4ז · DELETE בלי רשימת-ההיתר מוחק מפתחות מוגנים/זרים — טענות 3ג–3ה היו נכשלות');
+  }
+  /*  ⭐ מוטציית-נגד: שם משתנה ה-PL/pgSQL שהוחלף **בעקביות** — ⚠️ שינוי חי
+   *  שאסור לו להפיל: ⛔ הטענות מודדות את המנגנון — רשימת-היתר, תקרה
+   *  והגנות — ⛔ ולא את שמות המשתנים שבתוכו. */
+  {
+    const renamed = sql.replace(/\bv_keys\b/g, 'v_allow');
+    assert(renamed !== sql, 'נ1א · המוטציית-נגד אכן מחליפה את שם המשתנה בעקביות');
+    const r = simulateSweep(renamed, fixture(daily), 30, Date.now());
+    assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) !== -1 &&
+           r.left.indexOf('zar_lo_barshima') !== -1,
+      'נ1ב · ⭐ שם משתנה שהוחלף בעקביות ⛔ אינו מפיל — נמדד המנגנון, לא השם');
   }
 }
 
