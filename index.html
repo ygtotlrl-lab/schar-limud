@@ -1204,9 +1204,9 @@ function lsStatusHTML() {
   }
 
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-       '<button type="button" onclick="window.lsSweepNow()">🧹 פנה מקום עכשיו</button>' +
-       '<button type="button" onclick="window.lsRefreshStatus()">↻ רענן</button>';
-  if (hz.length) h += '<button type="button" onclick="window.lsRestoreAll()">☁️ טען הכל מחדש מהענן</button>';
+       '<button type="button" data-act="ls-sweep-now">🧹 פנה מקום עכשיו</button>' +
+       '<button type="button" data-act="ls-refresh-status">↻ רענן</button>';
+  if (hz.length) h += '<button type="button" data-act="ls-restore-all">☁️ טען הכל מחדש מהענן</button>';
   h += '</div></div>';
   return h;
 }
@@ -1321,7 +1321,7 @@ function syncLineHTML() {
     '<div>מצב חיבור: <b>' + (navigator.onLine ? 'מחובר' : 'מנותק') + '</b></div>' +
     '<div>סנכרון אחרון: <b>' + (t ? esc(syncFmtTime(t)) : '— טרם הסתנכרן —') + '</b></div>' +
     '<div class="sync-act"><button type="button"' + (_syncNowBusy ? ' disabled' : '') +
-    ' onclick="window.syncNowFromStatus&&window.syncNowFromStatus()">' +
+    ' data-act="sync-now-status">' +
     (_syncNowBusy ? 'מסנכרן…' : '🔄 סנכרן עכשיו') + '</button></div>' +
     '</div>';
 }
@@ -2554,7 +2554,7 @@ async function hwPastLoad(key, filter) {
 var _hwRestoreArmed = 0;
 function hwRestoreHTML() {
   return '<div class="sync-line hw-restore-line"><button type="button" ' +
-    'onclick="window.hwRestoreClick&&window.hwRestoreClick(this)">' +
+    'data-act="hw-restore">' +
     '☁️ שחזר הכול מהענן</button></div>';
 }
 function hwRestoreMount() {
@@ -4059,6 +4059,11 @@ var DOM_ACTIONS = {
   'tuition-save':            function () { saveDefaultTuition(); },
   'login':                   function () { doLogin(); },
   'logout':                  function () { doLogout(); },
+  'ls-sweep-now':      function () { lsSweepNow(); },
+  'ls-refresh-status': function () { lsRefreshStatus(); },
+  'ls-restore-all':    function () { lsRestoreAll(); },
+  'sync-now-status':   function () { syncNowFromStatus(); },
+  'hw-restore':        function (el) { hwRestoreClick(el); },
 };
 document.addEventListener('click', function (ev) {
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;

@@ -71,7 +71,7 @@ const ei = lines.findIndex(l => l.includes(END));
 assert(si >= 0 && ei > si, 'מודול החלון החם קיים ב-index.html');
 const MOD = lines.slice(si, ei + 1).join('\n');
 const sha = crypto.createHash('sha256').update(MOD).digest('hex').slice(0, 16);
-assert(sha === 'b1caa1637737862f', 'חתימת המודול תואמת (' + sha + ')');
+assert(sha === '9fc74d037262999f', 'חתימת המודול תואמת (' + sha + ')');
 
 /* רתמה: מריצה את המודול בהקשר נקי עם ספק-פיקסטורה. */
 function harness(modSrc, opts) {

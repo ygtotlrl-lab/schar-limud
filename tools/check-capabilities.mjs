@@ -137,7 +137,7 @@ export const ROWS = [36, 40, 41, 42, 39, 50, 65, 45];
 const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
-    block: { sha: 'eb8d0aeb14cf48fa', lines: 679,
+    block: { sha: '86ba47774c426890', lines: 679,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -151,7 +151,7 @@ const CAPS = {
   },
   status: {
     name: 'אזור המצב',
-    block: { sha: 'c3e019d63fcb4024', lines: 45,
+    block: { sha: 'b81819c149bb6da3', lines: 45,
              start: '/* ═══ אזור מצב — בלוק "☁️ סנכרון"',
              end:   '/* ═══ סוף בלוק "☁️ סנכרון"' },
     hooks: [{ fn: 'statusAreaMount', at: 'settings' }],
@@ -166,7 +166,7 @@ const CAPS = {
   },
   hotwin: {
     name: 'מודול החלון החם והשחזור המקומי',
-    block: { sha: 'b1caa1637737862f', lines: 194,
+    block: { sha: '9fc74d037262999f', lines: 194,
              start: '/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35)',
              end:   '/* ═══════════════ סוף מודול החלון החם' },
     hooks: [{ fn: 'hwBoot', at: 'boot' }, { fn: 'hwRestoreMount', at: 'settings' }],
