@@ -730,7 +730,7 @@ function cfgKeyGaps() {
   for (const d of declared) if (asked.indexOf(d) < 0) out.push('מוצהר ואין לו קורא: ' + d);
   /*  ⛔ `single` על מפתח יחיד — ⚠️ שורה שאינה קיימת מסומנת שם כשגיאה,
    *  ⭐ ו-`maybeSingle` מחזיר `data:null` נקי. */
-  const single = (code.match(/\.eq\(\s*'key'[\s\S]{0,80}?\.single\(\)/g) || []).length;
+  const single = (srcRefs.match(/\.eq\(\s*'key'[\s\S]{0,80}?\.single\(\)/g) || []).length;
   if (single) out.push('single על מפתח יחיד: ' + single);
   return out;
 }
