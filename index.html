@@ -601,8 +601,6 @@ var LS_CFG = {
   pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
   syncedThrough: function () { try { return parseInt(lsGet('sl_synced_at', '0'), 10) || 0; } catch (e) { return 0; } }
 };
-// מתאם הטוסט — החתימה כאן היא toast(msg, dur).
-function lsToast(msg, dur) { try { toast(msg, dur || 5000); } catch (e) {} }
 
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
@@ -3450,11 +3448,6 @@ function releaseCid(slot){ delete _pendingCid[slot]; }
 var _heColl = null;
 try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
 var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
-function esc(s){
-  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
 // ⛔ `slMaybeDailyBackup()` הוסרה (סבב 30, השלמה) — היא הייתה מעטפת דקה
 //    מעל `bkMaybeDaily`, וקיומה אפשר לקרוא למודול מכל מקום. נקודת ההפעלה
 //    היחידה היא `bkBoot()` מ-`slBoot()`, ומעטפת שרק מסתירה אותה מחזירה
@@ -3523,16 +3516,32 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 // לפי **מפתח המיזוג** ולא לפי `id`: פריט שנוצר במכשיר עדיין אין לו id.
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
-/* ══════════════════════════════════════════════════════════════════════════
-   שכבת המודאל — מיכל אחד ו-`openModal(title, body, foot)` (סבב 68)
-   ══════════════════════════════════════════════════════════════════════════
-   ⛔ פתיחת מודאל עוברת דרך `openModal` בחתימה אחידה, ⛔ וסגירה במסלול אחד
-   (סבב 68, כלל ברזל 27). ⚠️ **עד הסבב הזה ישבה כאן `openModal(id)`** —
-   ⛔ אותו שם שנושאת בגיוס פונקציה אחרת לגמרי, ומי שהעתיק קריאה משם לכאן
-   קיבל קוד שמתקמפל ואינו עובד. ⭐ החתימה מעכשיו זהה בשלושתן.
-   ⚠️ הטופס נבנה כמחרוזת ⛔ ומזהי השדות לא נגעו — הקוראים שלהם
-   (`saveNewStudent`) ממשיכים לקרוא את אותם `id`.
-   ══════════════════════════════════════════════════════════════════════════ */
+/* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
+/*  ⛔ הארגומנט השני של `toast` נבדל בין הריפו — ⚠️ בשלוש הוא **משך** בזמן,
+ *  ⛔ ובגיוס הוא **שם מחלקה**: ⭐ ולכן הערך יושב כאן, ⛔ וגוף `lsToast` זהה
+ *  בית-לבית בארבעתן. */
+var LS_TOAST = { arg: function (dur) { return dur || 5000; } };
+/* ═══ שכבת המודאל ועוזרי הממשק — מודול משותף (סבב 86) ═════════════════════
+   ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
+      ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
+      ⛔ ובאחת מהן נעדרה נעילת הגלילה לגמרי; ו-`lsToast` לשתיים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ מיכל אחד ומסלול סגירה יחיד — ⚠️ מסלול נפרד לכל דיאלוג הוא בדיוק מה
+      שנשבר בשקט; ⭐ והכותרת ב-`textContent` ⛔ ולא ב-HTML, מפני שהיא מגיעה
+      גם משם שהמשתמש הקליד. ⛔ וגוף `ask` ב-`textContent` אף הוא — ⚠️ דיאלוג
+      שדורש HTML עובר ב-`openModal`.
+   ⛔ ו-`locked` על ה-`body` אינה קישוט — ⚠️ בלעדיה הדף שמאחורי המודאל נגלל
+      מתחתיו, ⭐ והמשתמש מאבד את מקומו ברשימה שממנה פתח אותו; ⛔ וההסרה
+      מותנית בכך שהדיאלוג השני סגור — ⚠️ אחרת סגירת אחד משחררת את השני.
+   ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית,
+      וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM.
+   ═══════════════════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
 function openModal(title, body, foot) {
   var ttl = document.getElementById('modal-title');
   if (!ttl) return;
@@ -3550,8 +3559,6 @@ function closeModal() {
   document.getElementById('modal-foot').innerHTML = '';
   if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
 }
-/*  ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית
- *  (סבב 68), וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM. */
 var askResolve = null;
 function ask(title, text, yesLabel) {
   document.getElementById('ask-title').textContent = title || '';
@@ -3566,6 +3573,8 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
+function lsToast(msg, dur) { try { toast(msg, LS_TOAST.arg(dur)); } catch (e) {} }
+/* ═══════════════ סוף מודול שכבת המודאל ועוזרי הממשק ══════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
