@@ -867,6 +867,21 @@ function orphanFns() {
  *  במסד ואינה נראית מהריפו, ⛔ ומה שנמדד כאן הוא ההצהרה בלבד. ⭐ עמודה
  *  שנוספה ב-`alter table` נספרת, ⛔ ועמודה שנגרעה יורדת: ⚠️ סריקת
  *  ה-`create table` לבדה הייתה מדווחת על עמודה שכבר אינה קיימת. */
+/*  ⛔ פיצול הצהרות העמודה בפסיק שבעומק אפס — ⚠️ הסוגריים הם מה שקובע,
+ *  ⭐ ולא השורות: ⛔ שתי עמודות באותה שורה הן שתי הצהרות, ⛔ ו-`check (…, …)`
+ *  הוא הצהרה אחת. */
+function splitCols(body) {
+  const out = [];
+  let d = 0, cur = '';
+  for (const ch of body) {
+    if (ch === '(') d++;
+    else if (ch === ')') d--;
+    if (ch === ',' && d === 0) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim()).filter(Boolean);
+}
 function declaredTables() {
   const tabs = new Map();
   for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
@@ -875,10 +890,12 @@ function declaredTables() {
     const sql = fs.readFileSync('migrations/' + f, 'utf8').replace(/--[^\n]*/g, ' ');
     for (const m of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_0-9]+)\s*\(([\s\S]*?)\n?\s*\)\s*;/gi)) {
       const cols = tabs.get(m[1]) || new Map();
-      /*  ⛔ שורה-שורה ⛔ ולא פיצול בפסיק — ⚠️ `check (x in ('א', 'ב'))` מכיל
-          פסיקים, ⛔ והפיצול בהם קרע הצהרות עמודה לשניים: ⭐ העמודה שאחריהן
-          נעלמה מהמדידה בשקט. */
-      for (const part of m[2].split('\n')) {
+      /*  ⛔ הפיצול הוא בפסיק **בעומק אפס** ⛔ ולא שורה-שורה ולא בכל פסיק —
+          ⚠️ `check (x in ('א', 'ב'))` מכיל פסיקים בתוך סוגריים, ⛔ ופיצול בכל
+          פסיק קרע הצהרות עמודה לשניים; ⭐ ופיצול שורה-שורה החמיץ עמודה
+          שנייה באותה שורה: ⛔ `client_id` שישב אחרי `updated_at` נעלם
+          מהמדידה בשקט, ⚠️ והטבלה נראתה «מחיקה רכה בלי מזהה מכשיר». */
+      for (const part of splitCols(m[2])) {
         const c = /^\s*([a-z_0-9]+)\s+([a-z][a-z0-9 ]*)/i.exec(part);
         if (c && !/^(primary|unique|foreign|constraint|check)$/i.test(c[1]))
           cols.set(c[1].toLowerCase(), c[2].trim().toLowerCase());
