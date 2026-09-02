@@ -3033,10 +3033,11 @@ function slDropLegacyPassHash() {
    וההשהיה של 100k היא מה שהופך ניחוש-בכוח על העותק שבדיסק ליקר גם מול
    סיסמה בת שש ספרות (סבב 19).
 
-   ⚠️ **`password` בענן נשאר טקסט גלוי — במכוון** (כלל ברזל 9). אין כאן
-   מסך ניהול משתמשים, והמנהל מנהל סיסמאות מלוח הבקרה של Supabase.
-   הטביעה **נוספת לצידה** ואינה מחליפה אותה. ⛔ אין לגזור מכאן שהמסד עבר
-   להצפנה.
+   ⭐ **ועמודת הטקסט הגלוי ירדה בהחלטת המנהל (צעד ב).** הטביעה אינה
+   «נוספת לצידה» עוד — היא **הדבר היחיד** שיש. ⛔ ואין כאן מסך ניהול
+   משתמשים: המנהל יוצר משתמש ב-`INSERT` ידני, ⚠️ ולכן הוא חייב לגזור
+   `pass_salt`/`pass_fp` בעצמו לפני שהוא מדביק אותם — ⛔ משתמש שנוצר
+   בלעדיהם אינו יכול להיכנס, והמסך אומר לו זאת במפורש.
 
    ⛔ **`password` לעולם לא יורד למכשיר — וההגנה היא במבנה ולא בזהירות.**
    מראת המשתמשים נבנית מ**רשימת עמודות מותרות** (`SL_USER_COLS`), לא
@@ -3270,13 +3271,10 @@ var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת �
 // ⭐ שתי הודעות חדשות (סבב 40) — מאז שהאימות המקוון עובר דרך הטביעה, שני
 // מצבי הכישלון האלה קיימים גם **עם** רשת. ⛔ אין לאחד אותם עם
 // `MSG_BAD_LOGIN` (סבב 40) — «אין למשתמש סיסמה מוגדרת» אינו «סיסמה שגויה».
-var MSG_NO_FP_ONLINE  = '❌ למשתמש הזה אין סיסמה מוגדרת במערכת — יש לקבוע לו סיסמה חדשה ב-SQL Editor של Supabase';
-/* ⛔ אתחול חד-פעמי מהסיסמה הגלויה (סבב 40) — ר' ההערה ב-`doLogin`. כאן אין
-   מסך ניהול משתמשים, והמנהל יוצר משתמש ב-`INSERT` ידני; בלי המסלול הזה
-   משתמש חדש לא היה יכול להיכנס לעולם, מפני שהטביעה נוצרת רק **אחרי**
-   כניסה מוצלחת. ⛔ הוא רץ אך ורק כשאין למשתמש טביעה כלל, וכיבויו הוא
-   הצעד שאחרי בניית מסלול יצירת-משתמש שגוזר טביעה בעצמו. */
-var SL_PLAINTEXT_BOOTSTRAP = true;
+/* ⛔ ההודעה נוקבת בשדות ולא ב«סיסמה» (צעד ב) — ⚠️ אין עוד עמודת טקסט גלוי
+   שאפשר לכתוב אליה סיסמה, ⭐ ומה שנקבע ב-SQL Editor הוא **הטביעה**:
+   ⛔ הודעה שאומרת «קבע סיסמה» הייתה שולחת את המנהל לעמודה שאינה קיימת. */
+var MSG_NO_FP_ONLINE  = '❌ למשתמש הזה אין טביעת סיסמה במערכת — יש לקבוע לו `pass_salt` ו-`pass_fp` ב-SQL Editor של Supabase';
 var MSG_NO_CRYPTO     = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
 
 // מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
@@ -3299,7 +3297,7 @@ async function slVerifyOffline(u, pass) {
 // שהייתה ב-syncAll. כל 11 הקוראים של STUDENTS מקבלים אותה אוטומטית.
 function slApplyMirror() {
   STUDENTS = (MIRROR.students || []).filter(function (s) { return !s.deleted; })
-    .sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || ''), 'he'); });
+    .sort(function (a, b) { return HE.compare(a.name || '', b.name || ''); });
   TRANSACTIONS = (MIRROR.transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   SETTINGS = {};
@@ -3308,7 +3306,7 @@ function slApplyMirror() {
   // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
   // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
   (MIRROR.lists || []).filter(function (r) { return r && !r.deleted; })
-    .slice().sort(function (a, b) { return String(a.value || '').localeCompare(String(b.value || ''), 'he'); })
+    .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ key: slKey(r), id: r.id, value: r.value }); });
 }
 
@@ -3444,6 +3442,14 @@ function releaseCid(slot){ delete _pendingCid[slot]; }
 // נכנס ל-innerHTML גולמי בכל הקובץ. שם עם גרש שובר מחרוזות ושם עם מרכאה
 // כפולה שובר מאפיינים — בדיוק סוג הבאג שהשבית את בחירת התלמיד. **כל הזרקה
 // של ערך כזה ל-HTML חייבת לעבור כאן.**
+/*  ⛔ משווה אחד ברמת המודול (סבב 85) — ⚠️ `localeCompare` בונה משווה חדש
+ *  בכל קריאה, ⛔ ובתוך `.sort()` זה קורה O(n log n) פעמים: ⭐ אובייקט יקר
+ *  נבנה **פעם אחת**, ⛔ ולא בגוף פונקציה שנקראת יותר מפעם אחת.
+ *  ⚠️ ובדפדפן שאין בו `Intl.Collator` — נפילה-חזרה ל-`localeCompare` עם
+ *  אותו `he` מפורש, ⛔ שהיא בדיוק ההתנהגות שהייתה כאן עד היום. */
+var _heColl = null;
+try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
+var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -3617,19 +3623,12 @@ async function doLogin(){
       // אינו «סיסמה שגויה», והודעה מאוחדת שולחת אותו להקליד שוב ושוב
       // סיסמה נכונה במקום לומר לו את הדבר היחיד שיפתור.
       if(vOn==='no-crypto'){ showAuthErr(MSG_NO_CRYPTO); return; }
-      if(vOn==='no-fp'){
-        // ⭐ אתחול חד-פעמי, ו⛔ **רק** למשתמש שאין לו טביעה כלל (סבב 40).
-        // ⚠️ בלי המסלול הזה הסבב היה נועל בחוץ כל משתמש חדש: כאן אין מסך
-        // ניהול משתמשים — המנהל יוצר משתמש ב-`INSERT` ידני ב-SQL Editor,
-        // ואינו יכול לחשב PBKDF2 בעצמו. הטביעה נוצרה מאז ומתמיד בכניסה
-        // המקוונת הראשונה (`slEnsurePassFp`), וזה מה שנשמר כאן.
-        // ⛔ **וזו ההשוואה היחידה שנותרה מול הטקסט הגלוי** — היא רצה
-        // פעם אחת בחיי המשתמש, ומיד אחריה `slEnsurePassFp` כותבת טביעה
-        // וכל כניסה הבאה מאמתת מולה בלבד.
-        if(!SL_PLAINTEXT_BOOTSTRAP){ showAuthErr(MSG_NO_FP_ONLINE); return; }
-        var boot=await SB.from('sl_users').select('id').eq('username',u).eq('password',p).maybeSingle();
-        if(boot.error||!boot.data){ showAuthErr(MSG_BAD_LOGIN); return; }
-      }
+      // ⛔ **צעד ב — האתחול החד-פעמי מהטקסט הגלוי ירד** ⚠️ ואין להחזירו:
+      // הוא היה ההשוואה האחרונה מול `sl_users.password`, והעמודה ירדה
+      // בהחלטת המנהל. ⭐ ומה שהחליף אותו: משתמש חדש נולד עם טביעה — המנהל
+      // גוזר `pass_salt`/`pass_fp` ומדביק אותם ב-`INSERT` (הנוסח בבאנר
+      // המיגרציה). ⛔ ומשתמש בלי טביעה מקבל הודעה משלו ⛔ ולא «סיסמה שגויה».
+      if(vOn==='no-fp'){ showAuthErr(MSG_NO_FP_ONLINE); return; }
       else if(vOn!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
     }
     if(!r.data){
