@@ -228,7 +228,7 @@ const CAPS = {
    *  נאכפת ב-`test_pendflush.mjs`, שיודע גם מהו המשפך בכל אפליקציה. */
   retry: {
     name: 'מודול הניסיון החוזר בסנכרון',
-    block: { sha: '7afbe0d58ffa8c8e', lines: 66,
+    block: { sha: 'c34d134167700192', lines: 68,
              start: '/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44)',
              end:   '/* ═══════════════ סוף מודול הניסיון החוזר' },
     hooks: [{ fn: 'rtyBoot', at: 'boot' }],

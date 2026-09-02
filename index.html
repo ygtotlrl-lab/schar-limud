@@ -600,81 +600,6 @@ function lsFmtBytes(n) {
   if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
   return (n / (1024 * 1024)).toFixed(2) + ' MB';
 }
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-/* ══ קוד מיושן מול סכימה שהשתנתה ═══════════════════════════════════════ */
-/*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
- *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
- *  **אינן שגיאת רשת**, ⛔ וניסיון חוזר עליהן אינו יכול להצליח לעולם.
- *  ⚠️ הנימוק המדוד, מהשטח: המשתמש ראה **איטיות בלבד** — הלולאה ניסתה
- *  שוב ושוב, ⛔ בלי הודעה ובלי סימן. ⭐ ולכן הבאנר עולה **מיד**,
- *  ⛔ והניסיון החוזר נעצר.
- *  ⛔ **והדגל נדלק פעם אחת ואינו נכבה** — ⚠️ הקוד שרץ עכשיו אינו הופך
- *  לעדכני בלי טעינה מחדש, ⭐ וניסיון שני היה מדליק את הבאנר שוב. */
-var _staleSchema = false;
-function isStaleSchema(e) {
-  if (!e) return false;
-  var m = ((e.message || e.details || '') + '').toLowerCase();
-  var c = ((e.code || '') + '');
-  var s = Number(e.status || e.statusCode || 0);
-  return c === '42P01' || c === '42703' || s === 404 ||
-         m.indexOf('does not exist') !== -1;
-}
-/*  ⛔ נקודת הפעלה אחת לבאנר — ⚠️ המימוש פרטי לכל אפליקציה, ⭐ והשם
- *  שמתפרסם זהה: ⛔ קורא שמכיר שני שמות הוא שני מסלולים.
- *  ⛔ **ומי שלא הצליח מנסה שוב ב-`load`** — ⚠️ נמדד שהשגיאה מגיעה בזמן
- *  העלייה, ⭐ לפני שהמפרסם הספיק לרוץ: ⛔ הבאנר נבלע והמשתמש ראה טוסט
- *  בלבד. */
-function _staleBanner() {
-  try { if (window.showAppUpdateBanner) { window.showAppUpdateBanner(); return true; } } catch (x) {}
-  return false;
-}
-function staleSchemaHalt(e) {
-  if (!isStaleSchema(e)) return false;
-  if (!_staleSchema) {
-    _staleSchema = true;
-    if (!_staleBanner()) {
-      try { window.addEventListener('load', _staleBanner); } catch (x) {}
-    }
-    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
-  }
-  return true;
-}
-/*  ⛔ **נקודת המעבר האחת של תשובות המסד** — ⚠️ `staleSchemaHalt` בכל אתר
- *  שגיאה בנפרד היה מתגעגע לאתר שנוסף, ⭐ ונמדד שרק 19%–59% מהקריאות
- *  עוברות ב-`withTimeout`: ⛔ ולכן ההאזנה יושבת על הלקוח עצמו, ⚠️ והיא
- *  רואה כל שאילתה בלי תלות בקורא.
- *  ⛔ **העטיפה על פעלי השאילתה ולא על `from`** — ⚠️ `from()` מחזיר בונה
- *  שאינו thenable, ⭐ וה-thenable נולד רק ב-`select`/`insert`/`update`/
- *  `upsert`/`delete`. ⛔ והדגל מונע עטיפה כפולה. */
-function sbWatch(c) {
-  if (!c || c._staleWatch || typeof c.from !== 'function') return c;
-  c._staleWatch = true;
-  var from0 = c.from.bind(c);
-  c.from = function (t) {
-    var qb = from0(t);
-    /*  ⛔ הרשימה יושבת כאן ⛔ ולא כמשתנה מודול — ⚠️ שתיים מהאפליקציות
-     *  יוצרות את הלקוח **מעל** הבלוק הזה, ⭐ ומשתנה מודול היה `undefined`
-     *  ברגע העטיפה: ⛔ תלות בסדר הטעינה שנשברת בשקט. */
-    ['select', 'insert', 'update', 'upsert', 'delete'].forEach(function (v) {
-      if (!qb || typeof qb[v] !== 'function') return;
-      var f0 = qb[v].bind(qb);
-      qb[v] = function () {
-        var b = f0.apply(null, arguments);
-        if (b && typeof b.then === 'function' && !b._staleWatch) {
-          b._staleWatch = true;
-          var t0 = b.then.bind(b);
-          b.then = function (ok, no) {
-            return t0(function (r) { if (r && r.error) staleSchemaHalt(r.error); return ok ? ok(r) : r; }, no);
-          };
-        }
-        return b;
-      };
-    });
-    return qb;
-  };
-  return c;
-}
-/* ══ סוף קוד מיושן ═════════════════════════════════════════════════════ */
 function lsAppOf(key) {
   var k = String(key == null ? '' : key);
   for (var i = 0; i < LS_APPS.length; i++) {
@@ -1321,6 +1246,84 @@ window.lsGuardToast = lsGuardToast;
 window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
+
+var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
+/* ══════════════════════════════════════════════════════════════════════════
+   קוד מיושן מול סכימה שהשתנתה
+   ══════════════════════════════════════════════════════════════════════════ */
+/*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
+ *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
+ *  **אינן שגיאת רשת**, ⛔ וניסיון חוזר עליהן אינו יכול להצליח לעולם.
+ *  ⚠️ הנימוק המדוד, מהשטח: המשתמש ראה **איטיות בלבד** — הלולאה ניסתה
+ *  שוב ושוב, ⛔ בלי הודעה ובלי סימן. ⭐ ולכן הבאנר עולה **מיד**,
+ *  ⛔ והניסיון החוזר נעצר.
+ *  ⛔ **והדגל נדלק פעם אחת ואינו נכבה** — ⚠️ הקוד שרץ עכשיו אינו הופך
+ *  לעדכני בלי טעינה מחדש, ⭐ וניסיון שני היה מדליק את הבאנר שוב. */
+var _staleSchema = false;
+function isStaleSchema(e) {
+  if (!e) return false;
+  var m = ((e.message || e.details || '') + '').toLowerCase();
+  var c = ((e.code || '') + '');
+  var s = Number(e.status || e.statusCode || 0);
+  return c === '42P01' || c === '42703' || s === 404 ||
+         m.indexOf('does not exist') !== -1;
+}
+/*  ⛔ נקודת הפעלה אחת לבאנר — ⚠️ המימוש פרטי לכל אפליקציה, ⭐ והשם
+ *  שמתפרסם זהה: ⛔ קורא שמכיר שני שמות הוא שני מסלולים.
+ *  ⛔ **ומי שלא הצליח מנסה שוב ב-`load`** — ⚠️ נמדד שהשגיאה מגיעה בזמן
+ *  העלייה, ⭐ לפני שהמפרסם הספיק לרוץ: ⛔ הבאנר נבלע והמשתמש ראה טוסט
+ *  בלבד. */
+function _staleBanner() {
+  try { if (window.showAppUpdateBanner) { window.showAppUpdateBanner(); return true; } } catch (x) {}
+  return false;
+}
+function staleSchemaHalt(e) {
+  if (!isStaleSchema(e)) return false;
+  if (!_staleSchema) {
+    _staleSchema = true;
+    if (!_staleBanner()) {
+      try { window.addEventListener('load', _staleBanner); } catch (x) {}
+    }
+    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
+  }
+  return true;
+}
+/*  ⛔ **נקודת המעבר האחת של תשובות המסד** — ⚠️ `staleSchemaHalt` בכל אתר
+ *  שגיאה בנפרד היה מתגעגע לאתר שנוסף, ⭐ ונמדד שרק 19%–59% מהקריאות
+ *  עוברות ב-`withTimeout`: ⛔ ולכן ההאזנה יושבת על הלקוח עצמו, ⚠️ והיא
+ *  רואה כל שאילתה בלי תלות בקורא.
+ *  ⛔ **העטיפה על פעלי השאילתה ולא על `from`** — ⚠️ `from()` מחזיר בונה
+ *  שאינו thenable, ⭐ וה-thenable נולד רק ב-`select`/`insert`/`update`/
+ *  `upsert`/`delete`. ⛔ והדגל מונע עטיפה כפולה. */
+function sbWatch(c) {
+  if (!c || c._staleWatch || typeof c.from !== 'function') return c;
+  c._staleWatch = true;
+  var from0 = c.from.bind(c);
+  c.from = function (t) {
+    var qb = from0(t);
+    /*  ⛔ הרשימה יושבת כאן ⛔ ולא כמשתנה מודול — ⚠️ שתיים מהאפליקציות
+     *  יוצרות את הלקוח **מעל** הבלוק הזה, ⭐ ומשתנה מודול היה `undefined`
+     *  ברגע העטיפה: ⛔ תלות בסדר הטעינה שנשברת בשקט. */
+    ['select', 'insert', 'update', 'upsert', 'delete'].forEach(function (v) {
+      if (!qb || typeof qb[v] !== 'function') return;
+      var f0 = qb[v].bind(qb);
+      qb[v] = function () {
+        var b = f0.apply(null, arguments);
+        if (b && typeof b.then === 'function' && !b._staleWatch) {
+          b._staleWatch = true;
+          var t0 = b.then.bind(b);
+          b.then = function (ok, no) {
+            return t0(function (r) { if (r && r.error) staleSchemaHalt(r.error); return ok ? ok(r) : r; }, no);
+          };
+        }
+        return b;
+      };
+    });
+    return qb;
+  };
+  return c;
+}
+/* ══ סוף קוד מיושן ═════════════════════════════════════════════════════ */
 
 /* ═══ "מידע טכני" — קיפול מסכי האחסון (תצוגה בלבד, סבב 15) ═══════════════
    המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
