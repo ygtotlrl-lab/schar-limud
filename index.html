@@ -3297,7 +3297,7 @@ async function slVerifyOffline(u, pass) {
 // שהייתה ב-syncAll. כל 11 הקוראים של STUDENTS מקבלים אותה אוטומטית.
 function slApplyMirror() {
   STUDENTS = (MIRROR.students || []).filter(function (s) { return !s.deleted; })
-    .sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || ''), 'he'); });
+    .sort(function (a, b) { return HE.compare(a.name || '', b.name || ''); });
   TRANSACTIONS = (MIRROR.transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   SETTINGS = {};
@@ -3306,7 +3306,7 @@ function slApplyMirror() {
   // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
   // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
   (MIRROR.lists || []).filter(function (r) { return r && !r.deleted; })
-    .slice().sort(function (a, b) { return String(a.value || '').localeCompare(String(b.value || ''), 'he'); })
+    .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ key: slKey(r), id: r.id, value: r.value }); });
 }
 
@@ -3442,6 +3442,14 @@ function releaseCid(slot){ delete _pendingCid[slot]; }
 // נכנס ל-innerHTML גולמי בכל הקובץ. שם עם גרש שובר מחרוזות ושם עם מרכאה
 // כפולה שובר מאפיינים — בדיוק סוג הבאג שהשבית את בחירת התלמיד. **כל הזרקה
 // של ערך כזה ל-HTML חייבת לעבור כאן.**
+/*  ⛔ משווה אחד ברמת המודול (סבב 85) — ⚠️ `localeCompare` בונה משווה חדש
+ *  בכל קריאה, ⛔ ובתוך `.sort()` זה קורה O(n log n) פעמים: ⭐ אובייקט יקר
+ *  נבנה **פעם אחת**, ⛔ ולא בגוף פונקציה שנקראת יותר מפעם אחת.
+ *  ⚠️ ובדפדפן שאין בו `Intl.Collator` — נפילה-חזרה ל-`localeCompare` עם
+ *  אותו `he` מפורש, ⛔ שהיא בדיוק ההתנהגות שהייתה כאן עד היום. */
+var _heColl = null;
+try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
+var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
