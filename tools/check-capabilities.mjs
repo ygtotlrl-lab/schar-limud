@@ -43,6 +43,10 @@ const { audit: iconAudit } = await import('./test_iconlayer.mjs');
 /*  ⭐ ושורת שכבת הקלט נמדדת ע"י `audit` של שער סבב 67 — ⛔ אותו נימוק בדיוק:
  *  מדידה שנייה של אותה שכבה הייתה נסחפת מהראשונה. */
 const { audit: inputAudit } = await import('./test_inputlayer.mjs');
+/*  ⭐ ושני כיווני החיווט נמדדים ע"י `wiringHere` של שער סבב 82 — ⛔ אותו
+ *  נימוק: ⚠️ מדידה שנייה של אותם שמות הייתה נסחפת מהראשונה, ⭐ ומדווחת ✅
+ *  על בדיוק מה שהשער מפיל. */
+const { wiringHere } = await import('./test_wiring.mjs');
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -800,9 +804,39 @@ function orphanModals() {
 /*  ⛔ המדד הוא **הפער** ⛔ ולא המספר — ⚠️ שם שאין לו קורא ואינו מוכרז
  *  מפיל, ⛔ ושם שמוכרז ויש לו קורא מפיל אף הוא: ⭐ רשימת-היתר שהתיישנה
  *  היא בעצמה שארית, וזו בדיוק השורה על רשימות-ההיתר. */
+/*  ⛔ השוואת מזהה רשומה ב-`===` — ⚠️ הנימוק נמדד: מזהה שעבר דרך מאפיין HTML
+ *  חוזר כ**מחרוזת**, ⛔ ו-`===` מול מספר שנשמר במסד אינו מתאים: ⭐ הכפתור
+ *  אינו זורק ואינו מגיב, והרשומה «אינה נמצאת». ⛔ ולכן ההשוואה עוברת
+ *  ב-`idEq`, שממירה את שני הצדדים למחרוזת.
+ *  ⛔ שתי קטגוריות מוחרגות **בשמן ובנימוקן**, ⛔ ולא בשתיקה:
+ *  ⚠️ (א) הצד הימני הוא **ליטרל מחרוזת** או `undefined`/`null` — ⭐ מזהה
+ *  DOM (`e.target.id === 'modal'`) או בדיקת קיום, ⛔ ולא מזהה רשומה;
+ *  ⚠️ (ב) שם שמאלי מוצהר — ⭐ `AUTH.user` הוא המשתמש המחובר בזיכרון,
+ *  `AUTH.MODULES[i]` ו-`LS_CFG.app` הם קבועים פנימיים שאינם עוברים ב-DOM. */
+const ID_CMP_LEFT = [/AUTH\s*\.\s*user\s*\.\s*id$/, /AUTH\s*\.\s*MODULES\s*\[[^\]]*\]\s*\.\s*id$/];
+const ID_CMP_RIGHT = [/^'[^']*'$/, /^"[^"]*"$/, /^undefined$/, /^null$/,
+                      /^LS_CFG\s*\.\s*app$/];
+function idCmpSites(text = src) {
+  const out = [];
+  const re = /([A-Za-z_$][\w$]*(?:\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]\n]*\]))*\.\s*id)\s*===\s*([^;)&|,?\n]{1,40})/g;
+  for (const m of text.matchAll(re)) {
+    const left = m[1].replace(/\s+/g, ''), right = m[2].trim();
+    if (ID_CMP_LEFT.some((r) => r.test(left))) continue;
+    if (ID_CMP_RIGHT.some((r) => r.test(right))) continue;
+    out.push(left + ' === ' + right);
+  }
+  return out;
+}
+
+/*  ⛔ וגם ההפך (סבב 82) — ⚠️ «בלי קוראים» ו«קורא בלי הגדרה» הם אותו חצי-חיווט
+ *  משני צדדיו, ⭐ ושורה שמודדת צד אחד בלבד מאשרת את השני. ⛔ המדידה נשענת
+ *  על `wiringHere` של שער החיווט ⛔ ואינה מימוש שני. */
 function orphanGaps() {
+  const w = wiringHere(src);
   const found = orphanFns().concat(orphanGateFns(),
-                                   orphanModals().map((i) => 'modal:' + i));
+                                   orphanModals().map((i) => 'modal:' + i),
+                                   w.missing.map((x) => 'קורא בלי הגדרה: window.' + x),
+                                   w.noProducer.map((x) => 'מטפל בלי כפתור: ' + x));
   const allow = Object.keys(APP.orphanAllow || {});
   return found.filter((n) => allow.indexOf(n) < 0).map((n) => 'בלי קורא ואינו מוכרז: ' + n)
     .concat(allow.filter((n) => found.indexOf(n) < 0).map((n) => 'מוכרז ואינו בלי-קורא: ' + n));
@@ -833,6 +867,21 @@ function orphanFns() {
  *  במסד ואינה נראית מהריפו, ⛔ ומה שנמדד כאן הוא ההצהרה בלבד. ⭐ עמודה
  *  שנוספה ב-`alter table` נספרת, ⛔ ועמודה שנגרעה יורדת: ⚠️ סריקת
  *  ה-`create table` לבדה הייתה מדווחת על עמודה שכבר אינה קיימת. */
+/*  ⛔ פיצול הצהרות העמודה בפסיק שבעומק אפס — ⚠️ הסוגריים הם מה שקובע,
+ *  ⭐ ולא השורות: ⛔ שתי עמודות באותה שורה הן שתי הצהרות, ⛔ ו-`check (…, …)`
+ *  הוא הצהרה אחת. */
+function splitCols(body) {
+  const out = [];
+  let d = 0, cur = '';
+  for (const ch of body) {
+    if (ch === '(') d++;
+    else if (ch === ')') d--;
+    if (ch === ',' && d === 0) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim()).filter(Boolean);
+}
 function declaredTables() {
   const tabs = new Map();
   for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
@@ -841,10 +890,12 @@ function declaredTables() {
     const sql = fs.readFileSync('migrations/' + f, 'utf8').replace(/--[^\n]*/g, ' ');
     for (const m of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_0-9]+)\s*\(([\s\S]*?)\n?\s*\)\s*;/gi)) {
       const cols = tabs.get(m[1]) || new Map();
-      /*  ⛔ שורה-שורה ⛔ ולא פיצול בפסיק — ⚠️ `check (x in ('א', 'ב'))` מכיל
-          פסיקים, ⛔ והפיצול בהם קרע הצהרות עמודה לשניים: ⭐ העמודה שאחריהן
-          נעלמה מהמדידה בשקט. */
-      for (const part of m[2].split('\n')) {
+      /*  ⛔ הפיצול הוא בפסיק **בעומק אפס** ⛔ ולא שורה-שורה ולא בכל פסיק —
+          ⚠️ `check (x in ('א', 'ב'))` מכיל פסיקים בתוך סוגריים, ⛔ ופיצול בכל
+          פסיק קרע הצהרות עמודה לשניים; ⭐ ופיצול שורה-שורה החמיץ עמודה
+          שנייה באותה שורה: ⛔ `client_id` שישב אחרי `updated_at` נעלם
+          מהמדידה בשקט, ⚠️ והטבלה נראתה «מחיקה רכה בלי מזהה מכשיר». */
+      for (const part of splitCols(m[2])) {
         const c = /^\s*([a-z_0-9]+)\s+([a-z][a-z0-9 ]*)/i.exec(part);
         if (c && !/^(primary|unique|foreign|constraint|check)$/i.test(c[1]))
           cols.set(c[1].toLowerCase(), c[2].trim().toLowerCase());
@@ -1264,11 +1315,16 @@ const MATRIX = [
    *  בועת האלמנט, ולכן ההמרה מבטלת את ההגנה **בשקט**: הכפתור ממשיך
    *  לעבוד, והשורה העוטפת נפתחת יחד איתו. ⛔ אתר כזה הוא חריגה מנומקת
    *  קבועה ואינו מומר. */
+  /*  ⛔ ומסבב 82 נוספה טענה חמישית — **ההשוואה עצמה** — ⚠️ `data-id`
+   *  ודלגציה לבדם השאירו את הצד הקולט בלי כלל: ⭐ המזהה חוזר מהמאפיין
+   *  כמחרוזת, ⛔ ו-`===` מול הערך שבזיכרון אינו מתאים. ⚠️ הנימוק נמדד:
+   *  20 אתרים בארבעתם, ⛔ ושניים מהם נכתבו **בסבב שלפני** — הדפוס חוזר. */
   { row: 62, name: 'העברת מזהה ל-DOM',
     probe: () => idSites().bare === 0 &&
                  /data-act="/.test(src) &&
                  /getAttribute\('data-id'\)|dataset\.id\b/.test(src) &&
                  /addEventListener\('click'/.test(src) &&
+                 idCmpSites().length === 0 &&
                  delegatedStopSites() === 0 },
   /*  ⭐ סבב 66 — שכבת האייקונים. ⛔ ה-probe אינו בודק שעשרת הקבצים
    *  **קיימים** אלא שהם עומדים בארבעת הממדים שכלל ברזל 25 קובע: כמות,
@@ -1367,7 +1423,11 @@ const GATES = {
   45: { claim: 'אין פרק פערים נפרד' },
   76: { manual: '«סטייה מדפוס» היא קריאת משמעות — ⛔ נסרקת ידנית בכל סבב שנוגע' },
   49: { manual: 'מחזור העבודה ב-git הוא התנהגות סשן שאינה בעץ — ⛔ נאכף רק בתוצאתו' },
-  47: { claim: 'מזהה שנמחק ונשאר לו קורא' },
+  /*  ⛔ שני שערים לשורה אחת, ולכל אחד שם טענה משלו — ⚠️ שער ההסרות מודד
+   *  מה שנמחק מול הקומיט הקודם, ⛔ ושער החיווט מודד את המצב **עכשיו**:
+   *  ⭐ קורא שאיבד את הגדרתו לפני שני סבבים אינו נראה בהשוואת קומיטים. */
+  47: { claims: { test_removals: 'מזהה שנמחק ונשאר לו קורא',
+                  test_wiring: 'W.missing' } },
   88: { claim: 'tile-bg' },
   19: { claim: 'const SHARED' },
   20: { claims: { test_filesets: 'testsOnly', 'check-comments': 'מכריז היעדר' } },
@@ -1461,6 +1521,7 @@ const RULE_ROW_NAMES = {
   '⛔ תקציב הקבצים, ותקרה שהיא מספר עגול': '`CLAUDE.md` — כמות',
   '⛔ ההערה — מתי נכתבת, צורתה ותוכנה': 'תוכן ההערות — אחידות',
   '⛔ דפוסי כתיבת ממשק': 'העברת מזהה ל-DOM',
+  '⛔ השוואת מזהה עוברת ב-`idEq`': 'העברת מזהה ל-DOM',
   '⛔ ערך שקיים בקוד או במסד אינו מוצהר בתיעוד': 'מספר בבאנר',
   '⛔ שרשרת היכולת החדשה': 'שלוש דרכי אכיפה',
 };

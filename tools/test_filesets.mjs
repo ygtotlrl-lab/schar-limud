@@ -125,6 +125,7 @@ const SHARED = [
   'tools/test_sources.mjs',
   'tools/test_stage_a.mjs',
   'tools/test_swcore.mjs',
+  'tools/test_wiring.mjs',
 ];
 
 /*  ⛔ קטגוריות פטורות — ⚠️ כל אחת עם הנימוק שלה, ⛔ ולא דפוס שקט.

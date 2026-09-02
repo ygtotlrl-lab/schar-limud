@@ -81,7 +81,7 @@ const APP = {
           'test_swcore.mjs',
           'test_build.mjs',
           'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs', 'test_orphans.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
+          'test_md.mjs', 'test_orphans.mjs', 'test_removals.mjs', 'test_wiring.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_offline_login.mjs', 'test_roles.mjs',
           'test_stage_a.mjs', 'test_hotwin.mjs', 'test_cron.mjs',
           'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs'],
@@ -217,9 +217,37 @@ const BUDGET_EXEMPT = {
    *  שניות לבדו: ⭐ חוצה את התקרה ביומן, ⛔ ובהנהלה עוצר 330 מ״ש מתחתיה.
    *  ⚠️ וההבהוב אינו תיאורטי — ⛔ בארבעתם הוא חוצה **בבריכה**, ⭐ ורק המדידה
    *  הבודדת הצילה שלושה מהם: ⛔ מדידה אחת אינה מוכיחה שער מתחת לתקרה. */
-  'test_rulesdocs.mjs': 'מריץ 29 מוטציות, ⛔ וכל אחת שער אמיתי בתהליך נפרד; ' +
-                        'נמדד 6.0–12.3 שניות לבדו',
+  'test_rulesdocs.mjs': 'מריץ 37 קריאות רתמה — 21 ריצות פנימיות · 12 ' +
+                        'check-comments · 4 check-capabilities, ⛔ כל אחת שער ' +
+                        'אמיתי בתהליך נפרד; נמדד 6.6–8.8 שניות לבדו',
 };
+
+/*  ⛔ מספר החריגות מושווה למספר שההערה בטבלה מצהירה — ⚠️ הנימוק המדוד:
+ *  ההערה אמרה «3 חריגות מוכרזות» בעוד שבקוד היו ארבע, ⭐ והקורא שסמך עליה
+ *  חיפש שלוש ומצא שלוש. ⛔ **ושם השורה הוא המפתח ⛔ ולא מספרה** — ⚠️ מספר
+ *  מוקלד נסחף בכל מספור מחדש. */
+{
+  const BUDGET_ROW = 'תקציב זמן לשער';
+  const docLines = readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8').split('\n');
+  const row = docLines.find((l) => /^\|\s*\d+\s*\|/.test(l) &&
+    (l.split('|')[2] || '').replace(/\s*[◆◇⧉]\s*$/, '').trim() === BUDGET_ROW);
+  const have = Object.keys(BUDGET_EXEMPT).length;
+  const said = row && /(\d+)\s+חריגות מוכרזות/.exec(row);
+  if (!row)
+    fail(`CLAUDE.md: שורת «${BUDGET_ROW}» לא נמצאה בטבלה — נמדדו 0 שורות בשם ` +
+         'הזה והצפוי אחת. מיישרים את שם השורה');
+  else if (!said)
+    fail(`CLAUDE.md: שורת «${BUDGET_ROW}» אינה מצהירה כמה חריגות — נמדדו 0 ` +
+         `הצהרות «<מספר> חריגות מוכרזות» והצפוי אחת, בעוד שב-BUDGET_EXEMPT ${have}. ` +
+         'מוסיפים את המספר לעמודת ההערות');
+  else if (Number(said[1]) !== have)
+    fail(`CLAUDE.md: שורת «${BUDGET_ROW}» מצהירה ${said[1]} חריגות ` +
+         `ו-BUDGET_EXEMPT מונה ${have} — נמדד פער של ${Math.abs(Number(said[1]) - have)} ` +
+         'והצפוי אפס. מעדכנים את ההערה, או את הרשימה');
+  else
+    pass(`חריגות התקציב — ${have} ב-BUDGET_EXEMPT, וההערה בשורת «${BUDGET_ROW}» ` +
+         'מצהירה את אותו מספר');
+}
 
 const JOBS = Math.max(1, Number(process.env.CHECKJS_JOBS) || Math.min(4, cpus().length));
 

@@ -3943,7 +3943,7 @@ function closeDashMonth(){document.getElementById('dash-month-card').style.displ
 // בבריכה עם הכסף האמיתי. הסכומים זהים לחלוטין לפריסת-הבריכה הקודמת
 // (paid = cash + cred), רק מסווגים.
 function calcDistribution(sid,year){
-  var s=STUDENTS.find(function(x){return x.id===sid;});if(!s)return{};
+  var s=STUDENTS.find(function(x){return idEq(x.id, sid);});if(!s)return{};
   var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var txns=TRANSACTIONS.filter(function(t){return t.student_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
@@ -4003,7 +4003,7 @@ function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return t.student_id===fid;});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return s.id===t.student_id;});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.id, t.student_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
@@ -4089,7 +4089,7 @@ function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getE
    כרטיס התלמיד — פריסה שנתית, טווח פעילות ויתרת זכות
    ══════════════════════════════════════════════════════════════════════════ */
 function renderStudentCard(){
-  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+  var s=STUDENTS.find(function(x){return idEq(x.id, SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{};
   document.getElementById('sc-name').textContent=s.name;
   var meta=[];if(cs.section)meta.push(cs.section);meta.push(s.active?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
@@ -4111,7 +4111,7 @@ function renderScYearTabs(){
 function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
 function renderScAnnual(){
   if(!SC_STUDENT_ID||!SC_YEAR)return;
-  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+  var s=STUDENTS.find(function(x){return idEq(x.id, SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var dist=calcDistribution(SC_STUDENT_ID,SC_YEAR),rows='',tR=0,tP=0;
   // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
@@ -4151,7 +4151,7 @@ async function scPastShow(){
   box.innerHTML='<div style="font-size:.78rem;color:var(--text3);padding:4px">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
     r.rows.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date||'')+'</span><span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
 }
-function toggleStudentActive(){var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s)return;
+function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.id, SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000);return;}
   pendMark(pendStuKey(row));refreshUI();
@@ -4170,7 +4170,7 @@ function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
-  var s=STUDENTS.find(function(x){return x.id===SC_STUDENT_ID;});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  var s=STUDENTS.find(function(x){return idEq(x.id, SC_STUDENT_ID);});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
   var cs=Object.assign({},s.card_settings||{});
   // ⛔ אימות מפורש ולא הסתמכות על הדפדפן (סבב 67) — `type=number` החזיר
   // מחרוזת ריקה על קלט פגום ולכן התנאי דילג עליו; בשדה טקסט אותו קלט

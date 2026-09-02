@@ -52,6 +52,11 @@ const APP = {
       ⭐ ו-`null` מצהיר «אין מאסטר רסטרי» ⛔ ואינו נשמט: שדה חסר
       נקרא «לא נשאל», וריק נקרא «נמדד ואין». */
   shiftPad: [252, 253, 252],
+  /*  ⛔ תיבת התוכן של המאסטר — L · T · R · B בפיקסלים, כפי שנמדדה בסף
+      שהמחולל גוזר בו — ⚠️ הנימוק המדוד: שלושה סבבים דיווחו שלוש תוצאות
+      על אותו קובץ (164/168 · 168/171 · 170/170), ⭐ מפני שכל אחד מדד
+      בסף אחר; ⛔ `null` מצהיר «אין מאסטר רסטרי» ⛔ ואינו נשמט. */
+  masterBox: [164, 178, 168, 226],
   fgDriftMax: 8,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -499,6 +504,51 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
         את תיבת התוכן של אף נכס, ⚠️ והנכסים שנגזרים מהמסכה החתוכה **בלבד**
         יוצאים זהים בית-לבית. */
     const masterRel = 'design/icon-master.png';
+    /*  ⛔ תיבת התוכן של המאסטר נמדדת **בסף שהמחולל גוזר בו** ⛔ ולא באלפא —
+        ⚠️ המאסטר אטום לגמרי (אלפא 255 בכל פיקסל), ⭐ ומדידת אלפא בו מחזירה
+        את הקנבס כולו: ⛔ ולכן הסף הוא מרחק-מרקע מ-`bgKey`, ⚠️ והוא נקרא
+        מהמחולל ⛔ ואינו נכתב כאן פעם שנייה. ⭐ הנימוק המדוד: שלושה סבבים
+        דיווחו שלוש תיבות שונות על אותו קובץ — ⛔ כל אחד מדד בסף אחר. */
+    if (!existsSync(join(ROOT, masterRel))) {
+      t(n++, APP.masterBox === null,
+        `ו. ⛔ אין מאסטר רסטרי כאן, ולכן \`APP.masterBox\` מוצהר \`null\` — ` +
+        `נמדד ${JSON.stringify(APP.masterBox)} והצפוי null. מיישרים את ההצהרה`);
+    } else {
+      const gen = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
+      const kk = /bgKey:\s*\[(\d+),\s*(\d+),\s*(\d+)\]/.exec(gen);
+      const kt = /keyTol:\s*(\d+)/.exec(gen);
+      const th = (kk && kt) ? Number(kt[1]) * ALPHA_MIN / 255 : null;
+      const imM = decodePNG(readFileSync(join(ROOT, masterRel)));
+      const boxAt = (thv) => {
+        let x0 = imM.w, y0 = imM.h, x1 = -1, y1 = -1;
+        for (let y = 0; y < imM.h; y++) for (let x = 0; x < imM.w; x++) {
+          const o = (y * imM.w + x) * 4;
+          const d = Math.max(Math.abs(imM.data[o] - Number(kk[1])),
+                             Math.abs(imM.data[o + 1] - Number(kk[2])),
+                             Math.abs(imM.data[o + 2] - Number(kk[3])));
+          if (d >= thv) { if (x < x0) x0 = x; if (x > x1) x1 = x;
+                          if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        return [x0, y0, imM.w - 1 - x1, imM.h - 1 - y1].join('/');
+      };
+      const want = Array.isArray(APP.masterBox) ? APP.masterBox.join('/') : 'null';
+      const got = th === null ? '—' : boxAt(th);
+      t(n++, th !== null && got === want,
+        `ו. ⛔ תיבת התוכן של המאסטר בסף ${th === null ? '—' : th.toFixed(2)} — ` +
+        `נמדדה L/T/R/B ${got} והצפוי ${want}. ` +
+        `מעדכנים את \`APP.masterBox\`, או מחזירים את המאסטר`);
+      /*  ⛔ המוטציה על **הסף** ⛔ ולא על הקובץ — ⚠️ הטענה היא שהסף הוא מה
+          שקובע את התיבה, ⭐ ולכן סף אחר חייב להזיז אותה: ⛔ בלי זה הטענה
+          הייתה עוברת גם אם הסף מדוד בשגגה. */
+      if (th !== null) {
+        const other = boxAt(60);
+        t(n++, other !== got,
+          `ו. ⛔ מוטציה: סף 60 במקום ${th.toFixed(2)} מזיז את התיבה ל-${other} — ` +
+          `נמדד שינוי והצפוי שינוי; טענת «תיבת התוכן של המאסטר» הייתה נכשלת`);
+        t(n++, boxAt(th) === got,
+          `ו. ⭐ מוטציית-נגד: אותו סף בדיוק ⛔ אינו מזיז — נמדד ${boxAt(th)} והצפוי ${got}`);
+      }
+    }
     if (existsSync(join(ROOT, masterRel))) {
       const s = mkdtempSync(join(tmpdir(), 'iconshift-'));
       for (const d of ['tools', 'icons', 'design', 'android'])
