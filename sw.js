@@ -5,7 +5,7 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בארבע האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v59';
+var CACHE_NAME = 'schar-limud-v60';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -52,7 +52,7 @@ var SW_OFFLINE_HTML =
  *  כאן היא התנהגות **שנמדדה** ברתמת קו-הבסיס, ⛔ ולא ברירת מחדל שנפלה
  *  מאליה: שינוי שלה מפיל את `tools/test_sw.mjs`, וזה הרצוי. */
 var SW_CFG = {
-  prefix: 'schar-limud-',
+  prefix: 'schar-limud-v1',
   skipHosts: [],
   cdnHosts: [],
   scoped: false,
