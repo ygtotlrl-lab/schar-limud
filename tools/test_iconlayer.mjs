@@ -495,8 +495,9 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
         אינו מודד היא בדיוק מה שסבב עתידי «מתקן» בתום לב: ⛔ יישור המאסטר
         «כדי שהנכסים יצאו ממורכזים» הוא שינוי שאין לו תוצאה.
         ⚠️ הנימוק המבני: המסכה **נחתכת לתיבת התוכן** מיד אחרי הגזירה,
-        ⭐ והמסגרת ממרכזת את התיבה מחדש — ⛔ ולכן הזזה של המאסטר יוצאת
-        בנכסים זהים בית-לבית. */
+        ⭐ והמסגרת ממרכזת את התיבה מחדש — ⛔ ולכן הזזה של המאסטר אינה מזיזה
+        את תיבת התוכן של אף נכס, ⚠️ והנכסים שנגזרים מהמסכה החתוכה **בלבד**
+        יוצאים זהים בית-לבית. */
     const masterRel = 'design/icon-master.png';
     if (existsSync(join(ROOT, masterRel))) {
       const s = mkdtempSync(join(tmpdir(), 'iconshift-'));
@@ -542,6 +543,21 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
       t(n++, moved.length === 0,
         `ו. ⛔ ומיקום המאסטר אינו מזיז את תיבת התוכן של אף אחד מ-${assets.length} הנכסים — ` +
         `נמדדו ${moved.length} שזזו והצפוי אפס ${moved.join(' · ')}`);
+      /*  ⛔ וזהות הבייטים נדרשת **היכן שהיא נכונה** — ⚠️ נכס החזית נגזר
+          מהמסכה החתוכה בלבד, ⭐ ולכן הזזת המאסטר אינה משנה בו בית: זו
+          ההוכחה הישירה שהחיתוך קודם למרכוז. ⛔ האריח אינו כאן — מרקם
+          הנייר שלו נדגם מקואורדינטות מוחלטות במאסטר, ⚠️ ודרישת זהות ממנו
+          הייתה טענה שנמדדה כשגויה. */
+      const cropOnly = assets.filter((rel) => rel.endsWith('ic_launcher_foreground.png'));
+      const cropDiff = cropOnly.filter((rel) =>
+        !readFileSync(join(ROOT, rel)).equals(readFileSync(join(s, rel))));
+      const tileDiff = assets.length - cropOnly.length - assets
+        .filter((rel) => !cropOnly.includes(rel))
+        .filter((rel) => readFileSync(join(ROOT, rel)).equals(readFileSync(join(s, rel)))).length;
+      t(n++, cropOnly.length > 0 && cropDiff.length === 0,
+        `ו. ⛔ ו-${cropOnly.length} נכסי החזית — שהמסכה החתוכה היא כל מקורם — זהים ` +
+        `בית-לבית אחרי ההזזה; נמדדו ${cropDiff.length} שנבדלו והצפוי אפס ` +
+        `${cropDiff.join(' · ')} (⚠️ ומהאריחים נבדלו ${tileDiff})`);
       rmSync(s, { recursive: true, force: true });
     } else {
       /*  ⛔ אין מאסטר רסטרי כאן — ⚠️ הסמל מצויר בצורות, ⭐ ואין קנבס שאפשר
