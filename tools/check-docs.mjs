@@ -525,7 +525,7 @@ const CANON_APP_ID = [
       const idVals = CANON_APP_ID.map(([, v]) => v);
       if (new Set(idVals).size !== CANON_APP_ID.length)
         fail(`CANON_APP_ID: נמדדו ${new Set(idVals).size} מזהים שונים והצפוי ` +
-             `${CANON_APP_ID.length}. נותנים לכל אפליקציה ערך משלה — מזהה ` +
+             `${CANON_APP_ID.length}. מעדכנים את הרישום כך שלכל אפליקציה ערך משלה — מזהה ` +
              'משותף מאחד את ארבעתן לאפליקציה אחת בדפדפן');
       else pass(`CANON_APP_ID — ${CANON_APP_ID.length} מזהים, וכולם שונים זה מזה`);
       const wantId = (CANON_APP_ID.find(([a]) => a === APP.app) || [])[1];
