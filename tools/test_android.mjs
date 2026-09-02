@@ -48,7 +48,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [80];
+export const ROWS = [80, 81];
 
 const ROOT     = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = 'android/app/src/main/AndroidManifest.xml';
@@ -168,6 +168,22 @@ else if (ccFound[1] !== CONFIG_CHANGES) {
   fail(`configChanges הוא «${ccFound[1]}» ולא הסופרסט הקנוני «${CONFIG_CHANGES}» — ` +
        'זו בדיוק האסימטריה שסבב 45 יישר');
 } else pass('configChanges הוא הסופרסט הקנוני');
+
+/*  ⛔ ערכת הנושא של המעטפת זהה בארבעתם (סבב 80) — ⚠️ **בלי מסך מלא**:
+ *  ⭐ שורת האנדרואיד נשארת גלויה, ⛔ ומעטפת שתעבור ל-`Fullscreen` תסתיר
+ *  את שעון המכשיר ואת חיווי הרשת — ⚠️ שני הדברים שהמשתמש בודק כשסנכרון
+ *  אינו מתקדם. ⛔ והטענה היא על **הערך** ולא על נוכחות המאפיין. */
+const THEME = '@android:style/Theme.Material.Light.NoActionBar';
+{
+  const m = /android:theme="([^"]*)"/.exec(fs.readFileSync(MANIFEST, "utf8"));
+  if (!m) fail(`android:theme חסר מ-${MANIFEST} — נמדדו 0 מופעים והצפוי אחד. מוסיפים «${THEME}»`);
+  else if (m[1] !== THEME)
+    fail(`android:theme הוא «${m[1]}» ולא «${THEME}» — מיישרים את הערך; ` +
+         'ערכת נושא שנבדלת בין הריפו היא מעטפת שנראית אחרת באותו מכשיר');
+  else if (/Fullscreen|NoTitleBar\.Fullscreen/.test(m[1]))
+    fail(`android:theme הוא מסך מלא — שורת האנדרואיד נעלמת. מחזירים ל-«${THEME}»`);
+  else pass('android:theme הוא ' + THEME + ' — ⛔ ובלי מסך מלא');
+}
 
 /*  ⛔ מספר סבב בהערת `build.gradle` — היסטוריית גרסאות (סבב 68, כלל ברזל 21).
  *  ⚠️ נמדד: 6 · 4 · 4 · 6 אזכורים בארבעתן, ⛔ ובלוק ההערות ביומן מנה עד
