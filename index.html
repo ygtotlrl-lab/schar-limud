@@ -519,12 +519,50 @@ var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזו
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 // סבב 17: נוסח אחיד לארבע האפליקציות (כאן היה נוסח משלה, שהוחלף).
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
-// ===== מצב רשת: עוזרים משותפים לשלושת הפרויקטים (סבב 8) =====
-// אותם שמות ואותה התנהגות ב-hanhala-ruchanit, schar-limud ו-yoman-avoda:
-// isNetErr / withTimeout / guardOnline / errMsg. אין לתת להם קידומת פרויקט.
-function isNetErr(e){ if(!navigator.onLine) return true; var m=((e&&(e.message||e.details||''))+'').toLowerCase(); return m.indexOf('fetch')!==-1||m.indexOf('network')!==-1||m.indexOf('failed to')!==-1||m.indexOf('timeout')!==-1; }
-function guardOnline(){ if(!navigator.onLine){ toast(MSG_OFFLINE,3000); return false; } return true; }
-function errMsg(e){ return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: '+((e&&(e.message||e.code))||e)); }
+/* ═══ עוזרי הרשת — מודול משותף (סבב 84) ═══════════════════════════════════
+   ⛔ שלוש הפונקציות ישבו **בין** בלוקים חתומים, ⚠️ ולכן אף `sha256` לא מדד
+      אותן — ⭐ והן נסחפו בשקט בעוד שהטבלה מצהירה עליהן «זהה בית-לבית»:
+      `isNetErr` נכתב בשורה אחת באחת ובשש בשלוש, ריווח `withTimeout` נבדל
+      בשתיים, ו-`errMsg` בשורה אחת בשתיים.
+   ⛔ אין לתת להן קידומת פרויקט — ⚠️ השם הזהה הוא מה שמאפשר להשוות ביניהן
+      בין ארבעת הריפו, ⛔ ושם עם קידומת מחזיר אותן למצב שאיש אינו מודד בו.
+   ⛔ **ו-`MSG_OFFLINE` נקרא מבחוץ** — ⚠️ נוסחו נבדל בגיוס בהחלטה, ⭐ והבלוק
+      מפנה אליו ⛔ ואינו מכיל אותו.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+var NET_TIMEOUT_MS = 8000;
+function isNetErr(e) {
+  if (!navigator.onLine) return true;
+  var m = ((e && (e.message || e.details || '')) + '').toLowerCase();
+  return m.indexOf('fetch') !== -1 || m.indexOf('network') !== -1 ||
+         m.indexOf('failed to') !== -1 || m.indexOf('timeout') !== -1;
+}
+function withTimeout(p, ms) {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise(function(_, reject) {
+      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
+    })
+  ]);
+}
+function errMsg(e) {
+  return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: ' + ((e && (e.message || e.code)) || e));
+}
+/* ═══════════════ סוף מודול עוזרי הרשת ══════════════════════════════════ */
+/* ═══ שער מצב הרשת — מודול משותף (סבב 84) ═════════════════════════════════
+   ⛔ מודול נפרד ⛔ ולא חלק מעוזרי הרשת — ⚠️ הוא חי בשלוש אפליקציות ואינו
+      קיים בגיוס, ⭐ ובלוק אחד לשתי רמות קיום הוא בלוק שאינו זהה.
+   ⛔ **ובגיוס הוא מוצהר חסר ומנומק** — ⚠️ שם ארבעה אתרים שומרים על מצב
+      הרשת בהודעה **ייעודית** לכתיבת משתמש, ⛔ והודעה כללית במקומה הייתה
+      מוחקת בדיוק את מה שהמשתמש צריך לדעת.
+   ⛔ שינוי כאן — שלוש האפליקציות **ושלושת עותקי השער**, באותו סבב.
+   ═══════════════════════════════════════════════════════════════════════ */
+function guardOnline() {
+  if (!navigator.onLine) { toast(MSG_OFFLINE, 3000); return false; }
+  return true;
+}
+/* ═══════════════ סוף מודול שער מצב הרשת ════════════════════════════════ */
 // ═══ עמידות אחסון מקומי (סבב 11) ═══
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין ארבע האפליקציות; המודול שמתחתיה זהה בכולן.
@@ -3397,17 +3435,6 @@ function pendingCid(slot, fp){
   return p.id;
 }
 function releaseCid(slot){ delete _pendingCid[slot]; }
-// supabase-js לא מטיל timeout משלו: ברשת "חצי מחוברת" ה-fetch לא מצליח ולא
-// נכשל, והממתין נתקע לנצח. עוטפים בו פעולות שהמשתמש ממתין להן.
-var NET_TIMEOUT_MS = 8000;
-function withTimeout(p, ms){
-  return Promise.race([
-    Promise.resolve(p),
-    new Promise(function(_, reject){
-      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
-    })
-  ]);
-}
 // ===== נעילה אוטומטית אחרי 5 דקות ללא פעילות =====
 // ⭐ המנגנון עבר לליבה המשותפת (סבב 52) — עד אז הוא היה כאן בלי חלון
 //    אזהרה מקדים, כלומר אותו ערך והתנהגות אחרת מזו של ההנהלה.
