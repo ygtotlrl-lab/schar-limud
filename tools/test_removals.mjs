@@ -3,7 +3,7 @@
  *
  *  **מה נאכף:** מזהה — פונקציה או קבוע — שהוגדר בקומיט הקודם ואינו מוגדר
  *  בזה, ⛔ ואין לו אף קורא שנשאר חי בעץ. ⛔ ההשוואה מזהה כל צורת הגדרה:
- *  `function` · חץ · `async` · ומתודה.
+ *  `function X` · `window.X = function` · `const X =` · `X: function`.
  *
  *  **הנימוק המדוד:** יכולת הוואטסאפ הוסרה, ⛔ וכפתור השיתוף של אחד
  *  המוסדות ירד יחד איתה מפני שהוא ישב באותו מסלול. ⭐ הסשן אף רשם זאת
@@ -39,9 +39,13 @@ const git = (...a) => execFileSync('git', ['-C', ROOT, ...a], { encoding: 'utf8'
 /*  ⛔ המזהים נשלפים מהתוכן ⛔ ולא משורות הדיף (סבב 72) — ⚠️ שורה שהשתנתה
     מופיעה גם כמחיקה וגם כהוספה, ⭐ והשוואת **הגדרות** היא מה שמבדיל בין
     «נמחק» ל«נערך». */
+/*  ⛔ והשמה למאפיין `window` היא צורת הגדרה אף היא (סבב 82) — ⚠️ הנימוק
+    נמדד: שער ההסרות **אישר** מחיקה של `window.X = function` שנשאר לה
+    קורא, ⭐ מפני שזיהה `function X(` ו-`const X =` בלבד. */
 const DEF = [/\b(?:async\s+)?function\s+([A-Za-z_$][\w$]{3,})\s*\(/g,
              /\b(?:const|let|var)\s+([A-Za-z_$][\w$]{3,})\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)/g,
-             /^[ \t]*(?:async\s+)?([A-Za-z_$][\w$]{3,})\s*\([^()]*\)\s*\{/gm];
+             /^[ \t]*(?:async\s+)?([A-Za-z_$][\w$]{3,})\s*\([^()]*\)\s*\{/gm,
+             /\bwindow\s*\.\s*([A-Za-z_$][\w$]{3,})\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)/g];
 /*  ⛔ מילת שפה אינה הגדרה (סבב 72) — ⚠️ תבנית המתודה תופסת גם `while (x) {`,
     ⛔ ומזהה כזה שנעלם משורה אחת נראה כמחיקה של פונקציה. */
 const KW = new Set(['case', 'catch', 'class', 'const', 'delete', 'else', 'export',
@@ -125,6 +129,17 @@ if (!prev) {
   t(asDefs('  callersOf(id) { return id; }').has('callersOf'), '⛔ וכך גם מתודה');
   t(asDefs('  while (id) { return id; }').size === 0,
     '⭐ מוטציית-נגד: `while (x) {` אינו מזהה — ⛔ מילת שפה אינה הגדרה');
+  /*  ⛔ הצורה שהשער היה עיוור לה (סבב 82) — ⚠️ היא הצורה שבה כתובה כמעט כל
+      פונקציה שנקראת מ-`data-act`, ⭐ ומחיקתה עברה את השער בלי סימן. */
+  t(asDefs('window.callersOf = function (id) { return id; };').has('callersOf'),
+    '⛔ ו-`window.X = function` אף הוא — הצורה שהשער היה עיוור לה');
+  t(orphans(asDefs('window.callersOf = function (id) { return id; };'),
+            new Map(), fake).length === 1,
+    '⛔ מוטציה: מחיקת `window.X = function` שיש לה קורא — מפילה');
+  t(orphans(asDefs('window.callersOf = function (id) { return id; };'),
+            asDefs('window.callersOf = async function (id) { return id; };'),
+            fake).length === 0,
+    '⭐ מוטציית-נגד: הוספת `async` ל-`window.X = function` ⛔ אינה מפילה');
   t(orphans(plain, asyn, fake).length === 0,
     '⭐ מוטציית-נגד: הפיכת `const f = (x) =>` ל-`async` ⛔ אינה מפילה');
   t(orphans(plain, new Map(), fake).length === 1,
