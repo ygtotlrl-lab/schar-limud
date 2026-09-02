@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-/*  test_passwords.mjs — מעבר הסיסמאות לגיבוב.
+/*  test_passwords.mjs — מעבר הסיסמאות לגיבוב, וצעד ב שסגר את העמודה.
  *
  *  **מה נאכף:** (א) ⛔ אף מסלול אינו משווה עוד מול הטקסט הגלוי; (ב) כל
  *  מסלול אימות עובר דרך פונקציית הטביעה של האפליקציה; (ג) ההשלמה
  *  החד-פעמית שגזרה טביעה מהסיסמה הוסרה — ⚠️ היא הייתה הקורא האחרון של
- *  העמודה; (ד) כל כתיבה לעמודה נמצאת מאחורי דגל נתיב-החזרה; (ה) המיגרציה
- *  קיימת, צעד א פעיל, צעד ב מוער, ⛔ והבאנר מפריד ביניהם.
+ *  העמודה; (ד) ⛔ **אפס אתרי כתיבה ואפס אתרי קריאה** לעמודה, ⛔ ואין דגל
+ *  נתיב-חזרה שמחזיק אותה; (ה) שתי המיגרציות קיימות — צעד א שרץ, וצעד ב
+ *  שמוחק את העמודה ⛔ ומצהיר בבאנר שנכתב ולא רץ.
  *
  *  **הנימוק המדוד:** שלוש האפליקציות שיש בהן משתמשים החזיקו את הסיסמה
  *  ב**טקסט גלוי** בענן, ומסלולי הכניסה השוו מולה מחרוזות ישירות —
@@ -15,8 +16,8 @@
  *  וה-RLS פתוח בכוונה מתועדת — ⚠️ הסיסמה הגלויה אינה «סוד חלש» אלא
  *  **המפתח שפותח את הכניסה**, ⛔ קריא לכל מי שפתח את קוד המקור.
  *
- *  **מה אינו נאכף כאן:** ⛔ מחיקת העמודה עצמה — ⚠️ היא צעד ב של המיגרציה,
- *  ⭐ והרצתו היא פעולת מנהל. ⛔ וגם החלפת הסיסמאות הקיימות אינה כאן:
+ *  **מה אינו נאכף כאן:** ⛔ הרצת צעד ב עצמה — ⚠️ היא פעולת מנהל, ⭐ ומצב
+ *  העמודה במסד אינו נראה מהריפו. ⛔ וגם החלפת הסיסמאות הקיימות אינה כאן:
  *  ⚠️ מי שהחזיק את המפתח ראה אותן, ⭐ והטיפול היחיד הוא החלפתן במסד.
  *
  *  זהה בית-לבית בארבעת הריפו פרט לבלוק APP.
@@ -34,18 +35,14 @@ const APP = {
   app: 'schar-limud',
   usersTable: 'sl_users',
   plainCol: 'password',
-  /* ⚠️ השוואה **אחת** מותרת ובכוונה — אין כאן מסך ניהול משתמשים, והמנהל
-     יוצר משתמש ב-`INSERT` ידני ב-SQL Editor. הטביעה נוצרת רק בכניסה
-     המקוונת הראשונה, ולכן בלי אתחול חד-פעמי כל משתמש חדש היה ננעל בחוץ.
-     ⛔ היא רצה פעם אחת בחיי המשתמש, ורק כשאין לו טביעה כלל. */
-  allowedPlainEq: 1,
-  bootstrapFlag: 'SL_PLAINTEXT_BOOTSTRAP',
   verifyFn: 'slVerifyOffline',
   backfillFn: 'slBackfillPassFp',
-  /* ⛔ אין דגל כתיבה — האפליקציה **אינה** יוצרת משתמשים כלל. */
-  legacyWriteFlag: null,
+  /*  ⛔ מסלול אימות אחד בלבד — ⚠️ אין כאן מסך ניהול משתמשים ואין מעבר
+      משתמש: ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר
+      לו טביעה בעצמו (הנוסח בבאנר המיגרציה). */
   authPaths: [['async function doLogin', 'הכניסה המקוונת']],
-  migration: '015_users_drop_plaintext_password.sql',
+  migrationA: '015_users_drop_plaintext_password.sql',
+  migrationB: '016_drop_sl_users_password.sql',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -95,7 +92,20 @@ const ok = (m) => console.log(`  ok   ${++n} · ${m}`);
 const no = (m) => { bad++; console.error(`  FAIL ${++n} · ${m}`); };
 const is = (c, m) => (c ? ok(m) : no(m));
 
-console.log(`\n─────────────── ${APP.app}: מעבר הסיסמאות לגיבוב (סבב 40) ──`);
+console.log(`\n─────────────── ${APP.app}: הסיסמאות, וצעד ב שסגר את העמודה ──`);
+
+/*  ⛔ דגל נתיב-החזרה של הטקסט הגלוי נמדד בארבעתן ⛔ ולא בשלוש (צעד ב) —
+ *  ⚠️ אפליקציה בלי משתמשים היא בדיוק המקום שבו דגל כזה יצמח בשקט, ⭐ ומה
+ *  שנמדד הוא **ההיעדר**: שם דגל שנוצר מחדש מחזיר את הכתיבה בלי שאיש
+ *  ישים לב, מפני שהעמודה עצמה כבר לא נמצאת בשום שער אחר. */
+const PLAIN_FLAG = /\b(?:const|let|var)\s+([A-Za-z_]*PLAINTEXT[A-Za-z_]*)\s*=/g;
+const flags = [...code.matchAll(PLAIN_FLAG)].map((m) => m[1]);
+is(flags.length === 0,
+   `⛔ אין דגל נתיב-חזרה לטקסט הגלוי — נמדדו ${flags.length} והצפוי אפס` +
+   (flags.length ? ` (${flags.join(', ')})` : ''));
+is([...stripComments(js + '\nvar XX_PLAINTEXT_LEGACY_WRITE = true;\n')
+      .matchAll(PLAIN_FLAG)].length === 1,
+   '⛔ מוטציה: החזרת דגל נתיב-חזרה — הטענה שמעל הייתה נכשלת');
 
 /*  ⚠️ אפליקציה בלי משתמשים אינה «פטורה בשקט» (סבב 40) — היא נבדקת
  *  בכיוון ההפוך: שלא צמח לה בשקט מודל משתמשים או עמודת סיסמה. זה בדיוק
@@ -115,30 +125,26 @@ if (!APP.usersTable) {
        stripComments(js + "\n// שריד תיעודי: כאן ישבה פעם password\n")),
      '⭐ מוטציית-נגד: הערה שמזכירה `password` ⛔ אינה נספרת כשדה סיסמה');
   console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
-                  : `\n✓ סבב 40 (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
+                  : `\n✓ צעד ב (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
   process.exit(bad ? 1 : 0);
 }
 
 const COL = APP.plainCol;
 const EQ_PLAIN = new RegExp(`\\.eq\\(\\s*['"]${COL}['"]`, 'g');
+/*  ⛔ אתר כתיבה הוא השמה או שדה באובייקט ⛔ ולא אזכור השם — ⚠️ `.eq(`,
+ *  `select(` והשוואה אינם כתיבה, ⭐ ושורת `strip: ['password']` היא
+ *  ההפך הגמור ממנה. */
+const writeSites = (t) => [...t.matchAll(new RegExp(`[^\\n]*(?:\\.${COL}\\s*=|\\b${COL}\\s*:)[^\\n]*`, 'g'))]
+  .map((m) => m[0])
+  .filter((l) => !/\.eq\(/.test(l) && !/select\(/.test(l) && !/!==|===/.test(l));
 
 /* ── א. אין השוואה מול הטקסט הגלוי ─────────────────────────────────────── */
 const hits = code.match(EQ_PLAIN) || [];
-is(hits.length === APP.allowedPlainEq,
-   `⛔ מספר ההשוואות מול \`${COL}\` הוא ${APP.allowedPlainEq} כמתוכנן (נמצאו ${hits.length})` +
-   (APP.allowedPlainEq ? ' — האתחול החד-פעמי בלבד' : ''));
+is(hits.length === 0,
+   `⛔ אפס השוואות מול \`${COL}\` — נמדדו ${hits.length}`);
 
 const strCmp = new RegExp(`String\\(\\s*\\w+\\.${COL}\\s*\\)\\s*!==`);
 is(!strCmp.test(code), '⛔ ואין השוואת מחרוזות ישירה מול השדה');
-
-/*  ⚠️ האתחול החד-פעמי, כשהוא קיים, חייב לשבת מאחורי דגל משלו — אחרת
- *  הוא אינו «חלון» אלא מסלול קבוע שאיש לא יסגור.                     */
-if (APP.bootstrapFlag) {
-  is(new RegExp(`var\\s+${APP.bootstrapFlag}\\s*=`).test(code),
-     `⭐ האתחול החד-פעמי מוכרז בדגל \`${APP.bootstrapFlag}\` — וכיבויו הוא צעד מדוד`);
-  is(new RegExp(`if\\s*\\(\\s*!${APP.bootstrapFlag}\\s*\\)`).test(code),
-     '⛔ והדגל **נבדק** לפני האתחול, לא רק מוכרז');
-}
 
 /* ── ב. מסלולי האימות עוברים דרך הטביעה ────────────────────────────────── */
 for (const [needle, label] of APP.authPaths) {
@@ -153,78 +159,75 @@ is(!new RegExp(`function\\s+${APP.backfillFn}`).test(code),
    `⛔ \`${APP.backfillFn}\` הוסרה — היא הייתה הקורא האחרון של הסיסמה הגלויה`);
 is(!new RegExp(`${APP.backfillFn}\\s*\\(`).test(code), '⛔ ואין לה אף אתר קריאה');
 
-/* ── ד. הכתיבות מאחורי דגל נתיב-החזרה ──────────────────────────────────── */
-if (APP.legacyWriteFlag) {
-  is(new RegExp(`var\\s+${APP.legacyWriteFlag}\\s*=\\s*true\\s*;`).test(code),
-     `דגל נתיב-החזרה \`${APP.legacyWriteFlag}\` קיים ופתוח`);
-  const writes = [...code.matchAll(new RegExp(`[^\\n]*(?:\\.${COL}\\s*=|\\b${COL}\\s*:)[^\\n]*`, 'g'))]
-                   .map((m) => m[0])
-                   .filter((l) => !/\.eq\(/.test(l) && !/select\(/.test(l) && !/!==|===/.test(l));
-  is(writes.length > 0, `נמצאו ${writes.length} אתרי כתיבה ל-\`${COL}\``);
-  const guarded = writes.filter((l) => l.includes(APP.legacyWriteFlag));
-  is(guarded.length === writes.length,
-     `⛔ כל אתרי הכתיבה מאחורי הדגל (${guarded.length}/${writes.length}) — העמודה \`NOT NULL\`, ` +
-     'ולכן הפסקת כתיבה לפני המיגרציה הייתה מפילה כל יצירת משתמש');
-} else {
-  const writes = [...code.matchAll(new RegExp(`[^\\n]*(?:\\.${COL}\\s*=|\\b${COL}\\s*:)[^\\n]*`, 'g'))]
-                   .map((m) => m[0])
-                   .filter((l) => !/\.eq\(/.test(l) && !/select\(/.test(l) && !/!==|===/.test(l));
-  is(writes.length === 0,
-     `⛔ אין כאן אף מסלול שכותב \`${COL}\` — המשתמשים נוצרים ידנית ב-SQL Editor`);
-}
+/* ── ד. צעד ב — אפס כתיבה ואפס קריאה ───────────────────────────────────── */
+const writes = writeSites(code);
+is(writes.length === 0,
+   `⛔ אפס אתרי כתיבה ל-\`${COL}\` — נמדדו ${writes.length}` +
+   (writes.length ? `: ${writes[0].trim().slice(0, 60)}` : ''));
+/*  ⛔ והקריאה נמדדת אף היא — ⚠️ שאילתה ששולפת את העמודה כדי להציגה היא
+ *  קורא לכל דבר, ⭐ והיא זו שתישבר ברגע שהעמודה תיפול. */
+const selects = [...code.matchAll(/select\(\s*(['"])([^'"]*)\1/g)]
+                  .filter((m) => new RegExp(`\\b${COL}\\b`).test(m[2]));
+is(selects.length === 0,
+   `⛔ ואפס שאילתות ששולפות אותה — נמדדו ${selects.length}`);
 
-/* ── ה. המיגרציה ───────────────────────────────────────────────────────── */
-const MIG = join(ROOT, 'migrations', APP.migration);
-is(fs.existsSync(MIG), `\`migrations/${APP.migration}\` קיימת`);
-if (fs.existsSync(MIG)) {
-  const sql = fs.readFileSync(MIG, 'utf8');
-  const live = sql.split('\n').filter((l) => l.trim() && !l.trim().startsWith('--'));
+/* ── ה. שתי המיגרציות ──────────────────────────────────────────────────── */
+const liveOf = (f) => fs.readFileSync(f, 'utf8').split('\n')
+                        .filter((l) => l.trim() && !l.trim().startsWith('--'));
+const MIG_A = join(ROOT, 'migrations', APP.migrationA);
+is(fs.existsSync(MIG_A), `\`migrations/${APP.migrationA}\` (צעד א) קיימת`);
+if (fs.existsSync(MIG_A)) {
+  const live = liveOf(MIG_A);
   is(live.some((l) => /drop\s+not\s+null/i.test(l)),
-     'צעד א (הסרת `NOT NULL`) פעיל — בטוח להרצה מיידית');
+     'צעד א — הסרת `NOT NULL` — פעיל בקובץ שכבר רץ');
+  /*  ⛔ הקובץ שכבר רץ אינו נערך (סבב 85) — ⚠️ צעד ב יושב בקובץ **חדש**,
+   *  ⭐ ולכן `drop column` פעיל כאן הוא סימן שמישהו ערך מיגרציה שרצה. */
   is(!live.some((l) => /drop\s+column/i.test(l)),
-     '⛔ צעד ב (מחיקת העמודה) **מוער** — מותנה בכיבוי הדגל ובפריסה');
-  /*  ⛔ הצורה נגזרת ממה שרץ בפועל ⛔ ולא מניסוח חופשי — ⚠️ נמדד מול המסד:
-      צעד א הוחל והעמודה מותרת ב-NULL, ⛔ וצעד ב לא. ⭐ באנר שאומר «נכתב
-      ולא רץ» על **שניהם** הוא הצהרה שסותרת את הסכימה החיה, ⚠️ והסבב הבא
-      בונה עליה. */
-  is(/⛔ \*\*צעד א רץ במסד ⛔ וצעד ב נכתב ולא רץ\.\*\*/.test(sql),
-     '⛔ הבאנר מפריד בין צעד א שרץ לצעד ב שלא — «נכתב» אינו «רץ»');
+     '⛔ ואין בו `drop column` פעיל — מיגרציה שרצה אינה נערכת');
+}
+const MIG_B = join(ROOT, 'migrations', APP.migrationB);
+is(fs.existsSync(MIG_B), `\`migrations/${APP.migrationB}\` (צעד ב) קיימת`);
+if (fs.existsSync(MIG_B)) {
+  const raw = fs.readFileSync(MIG_B, 'utf8');
+  const live = liveOf(MIG_B);
+  const dropped = live.filter((l) => new RegExp(`drop\\s+column\\s+if\\s+exists\\s+${COL}\\b`, 'i').test(l));
+  is(dropped.length === 1,
+     `⛔ צעד ב מוחק את \`${COL}\` במשפט אחד — נמדדו ${dropped.length}`);
+  /*  ⛔ הצורה נגזרת ממה שרץ בפועל ⛔ ולא מניסוח חופשי — ⚠️ באנר שאומר «רץ»
+   *  על קובץ שלא רץ הוא הצהרה שסותרת את הסכימה החיה, ⭐ והסבב הבא בונה
+   *  עליה. ⛔ ההרצה עצמה היא פעולת מנהל. */
+  is(/⛔ \*\*נכתב ולא רץ\.\*\*/.test(raw),
+     '⛔ והבאנר מצהיר «נכתב ולא רץ» — ההרצה היא פעולת מנהל');
 }
 
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 const m1 = code.replace(/\.eq\(\s*'username'/, `.eq('${COL}', pass).eq('username'`);
-is((m1.match(EQ_PLAIN) || []).length > APP.allowedPlainEq,
+is((m1.match(EQ_PLAIN) || []).length > 0,
    '⛔ מוטציה: החזרת השוואה מול הטקסט הגלוי — טענה 1 הייתה נכשלת');
 
 const m2 = code.replace(new RegExp(`${APP.verifyFn}\\s*\\(`, 'g'), 'noopVerify(');
 is(!new RegExp(`${APP.verifyFn}\\s*\\(`).test(m2),
    '⛔ מוטציה: ניתוק האימות מהטביעה — טענות המסלולים היו נכשלות');
 
-if (APP.legacyWriteFlag) {
-  /*  ⚠️ המוטציה מכוונת לשורת **כתיבה** ולא לשומר הראשון שנמצא בקובץ
-   *  (סבב 40) — הדגל שומר גם על אזורים שאינם כתיבה (הצגת הסיסמה
-   *  הנוכחית במסך הניהול), והסרתו שם אינה מייצרת כתיבה לא-מוגנת.    */
-  const target = code.split('\n').find((l) =>
-    l.includes(APP.legacyWriteFlag) &&
-    new RegExp(`\\.${COL}\\s*=|\\b${COL}\\s*:`).test(l));
-  const m3 = target
-    ? code.replace(target, target.replace(new RegExp(`if \\(${APP.legacyWriteFlag}\\)\\s*`), ''))
-    : code;
-  const w3 = [...m3.matchAll(new RegExp(`[^\\n]*(?:\\.${COL}\\s*=|\\b${COL}\\s*:)[^\\n]*`, 'g'))]
-               .map((x) => x[0])
-               .filter((l) => !/\.eq\(/.test(l) && !/select\(/.test(l) && !/!==|===/.test(l));
-  is(w3.some((l) => !l.includes(APP.legacyWriteFlag)),
-     '⛔ מוטציה: כתיבה שיצאה מאחורי הדגל — טענת «כל אתרי הכתיבה» הייתה נכשלת');
-}
+/*  ⛔ המוטציה מחזירה **כתיבה** ולא אזכור (סבב 85) — ⚠️ שורת `strip` או
+ *  הערה שמזכירה את השם אינן כתיבה, ⭐ וההשמה היא מה שנמדד. */
+const m3 = code + `\nfunction reintroduce(o, pass) { o.${COL} = pass; }\n`;
+is(writeSites(m3).length === 1,
+   '⛔ מוטציה: החזרת כתיבה לעמודה — טענת «אפס אתרי כתיבה» הייתה נכשלת');
 
-/*  ⭐ מוטציית-נגד — ⛔ בלעדיה שלוש המוטציות שלמעלה אינן מבחינות בין
+const m4 = code.replace(/select\(\s*'/, `select('${COL},`);
+is([...m4.matchAll(/select\(\s*(['"])([^'"]*)\1/g)]
+     .filter((m) => new RegExp(`\\b${COL}\\b`).test(m[2])).length > 0,
+   '⛔ מוטציה: החזרת שליפה של העמודה — טענת «אפס שאילתות» הייתה נכשלת');
+
+/*  ⭐ מוטציית-נגד — ⛔ בלעדיה המוטציות שלמעלה אינן מבחינות בין
  *  «מסלול חי» ל«טקסט בהערה» (סבב 68). ⚠️ זה נמדד בסבב 40: שורת הערה
  *  שציטטה השוואה מול העמודה נספרה כהשוואה חיה. */
-const anti = stripComments(js + `\n// שריד תיעודי: כאן ישב .eq('${COL}', pass)\n`);
-is((anti.match(EQ_PLAIN) || []).length === APP.allowedPlainEq,
-   '⭐ מוטציית-נגד: הערה שמצטטת השוואה מול העמודה ⛔ אינה נספרת כמסלול חי');
+const anti = stripComments(js + `\n// שריד תיעודי: כאן ישב .eq('${COL}', pass) והשמה o.${COL} = pass\n`);
+is((anti.match(EQ_PLAIN) || []).length === 0 && writeSites(anti).length === 0,
+   '⭐ מוטציית-נגד: הערה שמצטטת השוואה והשמה ⛔ אינה נספרת כמסלול חי');
 
 console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
-                : `\n✓ סבב 40 (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
+                : `\n✓ צעד ב (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);
