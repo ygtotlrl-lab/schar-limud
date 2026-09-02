@@ -57,7 +57,7 @@ export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 93, 146];
 const CANON = [
   ['rules-session',  '8ecb5417a9c67efb'],
   ['rules-writing',  '9c763b583b4c7824'],
-  ['rules-table',    '702f642dccb8eb91'],
+  ['rules-table',    '44a9435442788d92'],
   ['rules-enforce',  'f070126475ca7938'],
 ];
 
@@ -472,22 +472,28 @@ function scanShared(file) {
    ⚠️ **וזה אותו לקח של סבב 39 בציר אחר** — שם הושוו **שמות** הכותרות
    ולא תוכנן, וכאן הושווה **קיום** הקובץ ולא ערכיו.
    ⛔ מה שנשאר פרטי בכוונה, ואין להוסיף אותו לרשימה: `name` ·
-   `short_name` · `description` · `start_url` · `scope` · `icons` ·
-   `theme_color` · `background_color` — זהות חזותית פר-אפליקציה.
-   ⚠️ `start_url` פרטי **גם מטעם שני**: ב-gius הוא `./` ובשלוש
-   `./index.html`, וה-id המשתמע נגזר ממנו; יישור שלו היה הופך אפליקציה
-   **מותקנת** לאפליקציה זרה (סבב 39). */
+   `short_name` · `description` · `icons` · `theme_color` ·
+   `background_color` — זהות חזותית פר-אפליקציה. */
 const CANON_MANIFEST = [
   ['display',     'standalone'],
   ['orientation', 'portrait'],
   ['lang',        'he'],
   ['dir',         'rtl'],
-  /*  ⛔ `id` ו-`start_url` מוצהרים (סבב 79) — ⚠️ מניפסט בלי `id` גוזר אותו
-   *  מ-`start_url`, ⛔ ושינוי של `start_url` מנתק אז את ההתקנה הקיימת
-   *  ומייצר אפליקציה שנייה. ⭐ הערך יחסי, ולכן «זהה» כאן פירושו **אותה
-   *  צורה** — ⛔ וכל אפליקציה נפתרת ל-scope שלה. */
-  ['id',          './'],
+  /*  ⛔ `start_url` יחסי ⛔ ונפתר מול ה-`scope` של כל אפליקציה — ⚠️ ולכן
+   *  «זהה» כאן פירושו **אותה צורה**, ⭐ וכל אפליקציה נפתרת לעצמה. */
   ['start_url',   './index.html'],
+];
+
+/*  ⛔ `id` ו-`scope` **ייחודיים** לכל אפליקציה ⛔ ואינם שדות משותפים —
+ *  ⚠️ ערך יחסי כמו `./` נפתר לכתובת מוחלטת, ⭐ ובארבעתן זה אותו origin
+ *  בדיוק: הדפדפן ראה בהן אפליקציה **אחת**, והתקנה של אחת החליפה את
+ *  האחרת במסך הבית. ⛔ והרישום מחזיק את ארבעתן ⛔ ולא את המקומית בלבד —
+ *  ⚠️ שער שרואה ערך אחד אינו יכול למדוד ייחודיות. */
+const CANON_APP_ID = [
+  ['yoman-avoda',      '/yoman-avoda/'],
+  ['hanhala-ruchanit', '/hanhala-ruchanit/'],
+  ['schar-limud',      '/schar-limud/'],
+  ['gius',             '/gius/'],
 ];
 {
   const file = 'manifest.json';
@@ -514,6 +520,25 @@ const CANON_MANIFEST = [
         }
       }
       if (ok) pass(`manifest.json — ${CANON_MANIFEST.length} ערכי המפתחות המשותפים תואמים`);
+      /*  ⛔ הייחודיות נמדדת ⛔ ולא ההתאמה בלבד — ⚠️ רישום שכל ערכיו זהים
+       *  היה עובר את ההתאמה, ⭐ והוא בדיוק הכשל שנמדד: ארבעה `"./"`. */
+      const idVals = CANON_APP_ID.map(([, v]) => v);
+      if (new Set(idVals).size !== CANON_APP_ID.length)
+        fail(`CANON_APP_ID: נמדדו ${new Set(idVals).size} מזהים שונים והצפוי ` +
+             `${CANON_APP_ID.length}. נותנים לכל אפליקציה ערך משלה — מזהה ` +
+             'משותף מאחד את ארבעתן לאפליקציה אחת בדפדפן');
+      else pass(`CANON_APP_ID — ${CANON_APP_ID.length} מזהים, וכולם שונים זה מזה`);
+      const wantId = (CANON_APP_ID.find(([a]) => a === APP.app) || [])[1];
+      if (!wantId)
+        fail(`CANON_APP_ID: «${APP.app}» אינו ברישום — נמדד היעדר והצפוי ערך. ` +
+             'מוסיפים לו שורה ברישום, בארבעת עותקי הבודק');
+      else for (const key of ['id', 'scope']) {
+        if (mf[key] !== wantId)
+          fail(`manifest.json: "${key}" הוא «${mf[key]}» במקום «${wantId}». ` +
+               'מיישרים אותו לערך שברישום — ערך שאינו ייחודי מאחד את ' +
+               'ההתקנות לאפליקציה אחת');
+        else pass(`manifest.json: "${key}" = «${wantId}» — ייחודי ל-${APP.app}`);
+      }
       /*  ⭐ שכבת האייקונים במניפסט (כלל ברזל 25, סבב 67) — ⛔ שלושה
        *  אייקונים מוצהרים, ⛔ ואייקון מלא אינו נושא `maskable`.
        *  ⚠️ **נמדד ולא הוצהר:** ביומן שני האייקונים המלאים הוכרזו

@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /*  test_manifest.mjs — תוכן ה-`manifest.json` ושם האפליקציה.
  *
- *  **מה נאכף:** (א) ששת השדות המשותפים נושאים **ערך זהה** בארבעתם, ⛔ ובודק
+ *  **מה נאכף:** (א) חמשת השדות המשותפים נושאים **ערך זהה** בארבעתם, ⛔ ובודק
  *  התיעוד נופל על שינוי של כל אחד מהם ⛔ ואינו נופל על שינוי ערך פרטי;
- *  (ב) שם האפליקציה זהה בחמישה מקומות — ⚠️ העוגן הוא `short_name`.
+ *  (ב) `id` ו-`scope` **ייחודיים**, ⛔ וארבעת הערכים שברישום שונים זה מזה;
+ *  (ג) שם האפליקציה זהה בחמישה מקומות — ⚠️ העוגן הוא `short_name`.
  *
- *  **הנימוק המדוד:** הבודק אכף את **קיומו** של הקובץ ותו לא, ⛔ ולכן שני
- *  הבדלי ערך שרדו בו בשקט; ⛔ ושם אחת האפליקציות נמדד בן ארבע מילים
- *  ב-`name` וב-`<title>` מול מילה אחת ב-`short_name`.
+ *  **הנימוק המדוד:** הבודק אכף **נוכחות** ו**התאמה לערך יחיד**, ⛔ ולכן
+ *  ארבעת ה-`id` נשאו `"./"` ועברו בשקט; ⛔ ושם אחת האפליקציות נמדד בן
+ *  ארבע מילים ב-`name` וב-`<title>` מול מילה אחת ב-`short_name`.
  *
- *  **מה יישבר בלעדיו:** ⛔ מניפסט בלי `id` גוזר אותו מ-`start_url`, ⚠️ ושינוי
- *  של `start_url` מנתק אז את ההתקנה הקיימת ⛔ ומייצר אפליקציה שנייה
- *  במסך הבית; ⚠️ ושם שנבדל באחד המקומות מוצג למשתמש בשניים.
+ *  **מה יישבר בלעדיו:** ⛔ `id` יחסי נפתר לכתובת מוחלטת, ⚠️ ובארבעתן זה
+ *  אותו origin: הדפדפן רואה בהן אפליקציה **אחת**, ⛔ והתקנה של אחת
+ *  מחליפה את האחרת במסך הבית; ⚠️ ושם שנבדל באחד המקומות מוצג בשניים.
  *
  *  **מה אינו נאכף כאן:** ⛔ הערכים הפרטיים — ⚠️ צבע, תיאור ורשימת האייקונים
  *  הם זהות חזותית פר-אפליקציה, ⛔ ויישורם היה שובר אותה.
@@ -38,16 +39,25 @@ const bad = (n, m) => { fail++; console.log(`  FAIL ${n} · ${m}`); };
 const t = (n, cond, m) => cond ? ok(n, m) : bad(n, m);
 
 /* ── הערכים הקנוניים, כפי שהם רשומים ב-check-docs ──────────────────────── */
-/*  ⛔ ששת השדות הזהים — ⚠️ `id` ו-`start_url` נכנסו לכאן (סבב 79):
-    ⭐ מניפסט בלי `id` גוזר אותו מ-`start_url`, ⛔ ואז שינוי של
-    `start_url` מנתק את ההתקנה הקיימת ⛔ ומייצר אפליקציה שנייה. */
+/*  ⛔ חמשת השדות הזהים — ⚠️ `start_url` יחסי ⛔ ונפתר מול ה-`scope` של כל
+    אפליקציה, ⭐ ולכן «זהה» כאן פירושו **אותה צורה**. */
 const SHARED = { display: 'standalone', orientation: 'portrait', lang: 'he', dir: 'rtl',
-                 id: './', start_url: './index.html' };
+                 start_url: './index.html' };
+/*  ⛔⛔ `id` ו-`scope` **ייחודיים** — ⚠️ הרישום מחזיק את ארבעת האפליקציות,
+    ⭐ מפני ששער שרואה ערך אחד אינו יכול למדוד ייחודיות: ⛔ ארבעת הערכים
+    היו `"./"`, שנפתר לאותה כתובת מוחלטת בארבעתן. */
+const APP_ID = [
+  ['yoman-avoda',      '/yoman-avoda/'],
+  ['hanhala-ruchanit', '/hanhala-ruchanit/'],
+  ['schar-limud',      '/schar-limud/'],
+  ['gius',             '/gius/'],
+];
 /* ⛔ אלה נשארים פרטיים ואין לאכוף את ערכם (סבב 44) — זהות חזותית
    פר-אפליקציה. */
 const PRIVATE = ['name', 'short_name', 'description',
-                 'scope', 'icons', 'theme_color', 'background_color'];
+                 'icons', 'theme_color', 'background_color'];
 
+const rd = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const mfPath = path.join(ROOT, 'manifest.json');
 t(1, fs.existsSync(mfPath), 'manifest.json קיים');
 const raw = fs.readFileSync(mfPath, 'utf8');
@@ -59,7 +69,27 @@ let n = 3;
 for (const [k, v] of Object.entries(SHARED)) {
   t(n++, mf && mf[k] === v, `"${k}" = «${v}» — הערך הקנוני`);
 }
-t(n++, PRIVATE.every(k => k in mf), 'כל שמונת המפתחות הפרטיים קיימים');
+t(n++, PRIVATE.every(k => k in mf), `כל ${PRIVATE.length} המפתחות הפרטיים קיימים`);
+
+/* ── `id` ו-`scope` — ייחודיות, ⛔ ולא נוכחות ───────────────────────────── */
+/*  ⛔ **הנימוק המדוד:** השורה הצהירה «`id` זהה בארבעתן» וה-probe בדק
+ *  שהשדה **קיים** ושערכו הוא הערך המוצהר — ⚠️ ארבעתן נשאו `"./"`, שנפתר
+ *  לאותה כתובת מוחלטת, ⛔ וכרום ראה בהן אפליקציה אחת. ⭐ הטענה כאן היא
+ *  על **ייחודיות בין ארבעת הערכים**, ⛔ ולא על ערך יחיד.
+ *  ⛔ והעוגן לזהות האפליקציה הוא `SW_CFG.prefix` שב-`sw.js` — ⚠️ הוא בעץ
+ *  ואינו נגזר מהמניפסט עצמו: ⭐ גזירה מהמניפסט הייתה מאשרת את עצמה. */
+const swApp = (/prefix:\s*'([^']+)-'/.exec(rd('sw.js')) || [])[1];
+t(n++, APP_ID.some(([a]) => a === swApp),
+  `זהות האפליקציה נגזרת מ-SW_CFG.prefix — נמדד «${swApp}» והצפוי אחד מ-${APP_ID.length} שברישום`);
+const idVals = APP_ID.map(([, v]) => v);
+t(n++, new Set(idVals).size === APP_ID.length,
+  `⭐ ארבעת המזהים שונים זה מזה — נמדדו ${new Set(idVals).size} ערכים שונים והצפוי ${APP_ID.length}`);
+const wantId = (APP_ID.find(([a]) => a === swApp) || [])[1];
+for (const key of ['id', 'scope'])
+  t(n++, mf && mf[key] === wantId,
+    `manifest.json "${key}" — נמדד «${mf && mf[key]}» והצפוי «${wantId}», ייחודי ל-${swApp}`);
+/*  ⛔ והרישום קיים ב-check-docs עצמו — ⚠️ probe שמחזיק רישום שאין לו
+ *  אכיפה מודד את עצמו. */
 
 /* ── check-docs אוכף את הערכים האלה, ולא רק את קיום הקובץ ──────────────── */
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
@@ -68,6 +98,14 @@ for (const [k, v] of Object.entries(SHARED)) {
   t(n++, new RegExp(`\\['${k}',\\s*'${v}'\\]`).test(docs),
     `⭐ והזוג ["${k}", "${v}"] רשום בו — אכיפת **ערך**, לא קיום`);
 }
+t(n++, /CANON_APP_ID/.test(docs), 'check-docs מחזיק את הרישום CANON_APP_ID');
+for (const [a, v] of APP_ID)
+  t(n++, new RegExp(`\\['${a}',\\s*'${v.replace(/\//g, '\\/')}'\\]`).test(docs),
+    `⭐ והזוג ["${a}", "${v}"] רשום בו — המזהה הייחודי נאכף ב-check-docs`);
+t(n++, /new Set\(idVals\)\.size !== CANON_APP_ID\.length/.test(docs),
+  '⛔ ו-check-docs מודד **ייחודיות** ולא התאמה בלבד — נמדדה בדיקת ה-Set בגופו');
+t(n++, /APP\.app/.test(docs) && /for \(const key of \['id', 'scope'\]\)/.test(docs),
+  '⛔ ושני השדות — `id` ו-`scope` — נמדדים מול הרישום לפי APP.app');
 t(n++, !PRIVATE.some(k => new RegExp(`\\['${k}',`).test(docs)),
   '⛔ ואף מפתח פרטי אינו ברשימה — יישור שלו היה שובר זהות חזותית');
 
@@ -78,7 +116,6 @@ t(n++, !PRIVATE.some(k => new RegExp(`\\['${k}',`).test(docs)),
  *  ⛔ **והעוגן הוא `short_name`** — ⚠️ הוא הקצר מכולם, ⭐ והוא מה שמופיע
  *  תחת האייקון במסך הבית. */
 const NAME = mf && mf.short_name;
-const rd = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const html = rd('index.html');
 /*  ⛔ הראשון בקובץ ⛔ ולא כל התאמה — ⚠️ יש קוד שבונה `<title>` למסמך
     שהוא מייצא, ⭐ והוא אינו כותרת האפליקציה. */
@@ -132,10 +169,15 @@ const mutMissing = { ...mf }; delete mutMissing.display;
 t(n++, runDocsOn(mutMissing) === false,
   '⛔ מוטציה: מפתח משותף שנמחק כליל **מפיל** — היעדר אינו פטור');
 
-/*  ⛔ `id` הוא שדה זהה מסבב 79 — ⚠️ שינויו מנתק את ההתקנה הקיימת. */
-const mutId = { ...mf, id: './app' };
+/*  ⛔⛔ המוטציה שנועדה לתפוס את הכשל שנמדד — ⚠️ מזהה של אפליקציה **אחרת**
+ *  הוא ערך תקין בצורתו, ⭐ ורק מדידת הייחודיות פוסלת אותו. */
+const otherId = APP_ID.find(([a]) => a !== swApp)[1];
+const mutId = { ...mf, id: otherId };
 t(n++, runDocsOn(mutId) === false,
-  '⛔ מוטציה: שינוי `id` **מפיל** — שדות זהים ב-manifest');
+  `⛔ מוטציה: \`id\` של אפליקציה אחרת («${otherId}») **מפיל** — מזהה ייחודי`);
+const mutScope = { ...mf, scope: './' };
+t(n++, runDocsOn(mutScope) === false,
+  '⛔ מוטציה: החזרת `scope` ל-`./` **מפילה** — הערך שאיחד את ארבעתן');
 const mutStart = { ...mf, start_url: './' };
 t(n++, runDocsOn(mutStart) === false,
   '⛔ מוטציה: שינוי `start_url` **מפיל** — שדות זהים ב-manifest');
