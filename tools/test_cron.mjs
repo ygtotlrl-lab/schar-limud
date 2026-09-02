@@ -36,7 +36,7 @@ const APP = {
   legacyKeys: [],
   sisterKeys: [],
   migration: null,
-  migrationDoc: 'hanhala-ruchanit/migrations/021_soft_delete_ys_cls_years.sql',
+  migrationDoc: 'hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql',
   /*  ⛔ המסלול שדורש את השדות האלה אינו רץ באפליקציה הזו (סבב 72) —
       ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
       וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
