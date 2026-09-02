@@ -667,9 +667,19 @@ function renderWaitSites() {
     const ih = body.search(/\.innerHTML\s*=/);
     if (ih < 0) continue;
     const aw = body.search(/\bawait\b/);
-    if (aw >= 0 && aw < ih) out.push(name);
+    if (aw >= 0 && aw < firstPaintAt(body, ih)) out.push(name);
   }
   return out;
+}
+/*  ⛔ `openModal(title, body, foot)` **הוא** ציור — ⚠️ הוא כותב את הגוף
+ *  ל-`modal-body`: ⭐ פונקציה שפותחת מודאל עם «טוען…» ורק אז ממתינה אינה
+ *  ממתינה לפני הציור הראשון, ⛔ ומדידה שספרה `.innerHTML=` בלבד דיווחה
+ *  עליה כהפרה — ⚠️ ושער שנופל על קוד תקין נקרא כרעש. ⛔ והמועמדוּת עצמה
+ *  נשארת `.innerHTML=` — ⚠️ פונקציה שכל «ציורה» הוא דיאלוג שנפתח אחרי
+ *  עבודת רשת אינה מסלול רינדור, ⛔ ואין למדוד אותה כאן. */
+function firstPaintAt(body, ih) {
+  const b = body.search(/\bopenModal\s*\(/);
+  return b < 0 ? ih : Math.min(ih, b);
 }
 
 function legacyFlagsOn() {
