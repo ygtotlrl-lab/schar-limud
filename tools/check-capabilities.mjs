@@ -655,15 +655,29 @@ function checkerMissions() {
  *  מסלולים שבהם היעדר ערך הוא תשובה תקפה ואין מה לרשום; ⛔ מה שנמדד הוא
  *  `catch` ריק ש**גוף ה-try שלו כותב** — מקומית או לענן. ⛔ ו-`reg.update()`
  *  אינו כתיבה — ⚠️ הוא רענון ה-service worker, ⛔ ואין לו נתון שיאבד. */
-const WRITE_CALL = /lsSet\s*\(|localStorage\s*\.\s*setItem|\.upsert\s*\(|\.insert\s*\(|sbSet\s*\(|ysCfgSet\s*\(|\bSB\b[\s\S]{0,80}?\.update\s*\(/;
+const WRITE_CALL = /lsSet\s*\(|localStorage\s*\.\s*setItem|sessionStorage\s*\.\s*setItem|\.upsert\s*\(|\.insert\s*\(|sbSet\s*\(|ysCfgSet\s*\(|\bSB\b[\s\S]{0,80}?\.update\s*\(/;
+/*  ⛔ גוף ה-`try` נמצא בהתאמת סוגריים ⛔ ולא בחלון של 700 תווים (סבב 80) —
+ *  ⚠️ חלון קבוע מפספס `try` ארוך ממנו, ⭐ וכשל שקט בגוף ארוך הוא בדיוק
+ *  הכשל שקשה יותר למצוא בעין. ⛔ והמדידה עוצרת כשלפני הסוגר אין `try`:
+ *  ⚠️ `}` שאינו של `try` הוא בלוק אחר, ⛔ וסריקה לאחור בלעדיו הייתה
+ *  סופרת קוד שכלל אינו במסלול הזה. */
 function silentWriteCatches() {
   const out = [];
   const re = /catch\s*\([^)]*\)\s*\{\s*\}/g;
   let m;
   while ((m = re.exec(src)) !== null) {
-    const back = src.slice(Math.max(0, m.index - 700), m.index);
-    const t = back.lastIndexOf('try');
-    const body = t >= 0 ? back.slice(t) : back;
+    let i = m.index - 1;
+    while (i > 0 && /\s/.test(src[i])) i--;
+    if (src[i] !== '}') continue;
+    let depth = 0, j = i;
+    for (; j >= 0; j--) {
+      if (src[j] === '}') depth++;
+      else if (src[j] === '{') { depth--; if (depth === 0) break; }
+    }
+    if (j < 0 || !/try\s*$/.test(src.slice(Math.max(0, j - 12), j))) continue;
+    const body = src.slice(j, i + 1);
+    /*  ⛔ `reg.update()` אינו כתיבת נתון — ⚠️ הוא רענון רישום ה-service
+     *  worker, ⭐ וכישלונו אינו מאבד דבר: הבדיקה הבאה תרוץ בעוד 30 דקות. */
     if (/reg\s*\.\s*update\s*\(/.test(body)) continue;
     if (WRITE_CALL.test(body)) out.push(src.slice(0, m.index).split('\n').length);
   }
@@ -1407,7 +1421,7 @@ const GATES = {
   128: { claim: '⏳' },
   129: { manual: 'התאמת הערה למציאות אינה ניתנת לאכיפה מכנית' },
   134: { manual: 'מצב ההרצה יושב ב-`schema_migrations` ואינו נראה מהריפו' },
-  130: { manual: '«קובץ בלי קורא» דורש סריקה על ארבעת הריפו — נעשה ידנית' },
+  130: { claim: 'כל קובץ בעץ מוזכר במקום אחר' },
   136: { manual: 'קיום מפתח במסד אינו נראה מהריפו' },
   133: { manual: 'רשימת-היתר הגיבויים יושבת במיגרציה שכבר רצה' },
   135: { manual: 'מצב הענפים המרוחקים אינו נראה מעותק העבודה' },
