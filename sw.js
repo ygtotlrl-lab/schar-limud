@@ -52,7 +52,7 @@ var SW_OFFLINE_HTML =
  *  כאן היא התנהגות **שנמדדה** ברתמת קו-הבסיס, ⛔ ולא ברירת מחדל שנפלה
  *  מאליה: שינוי שלה מפיל את `tools/test_sw.mjs`, וזה הרצוי. */
 var SW_CFG = {
-  prefix: 'schar-limud-v1',
+  prefix: 'schar-limud-',
   skipHosts: [],
   cdnHosts: [],
   scoped: false,
