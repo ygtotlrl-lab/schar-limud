@@ -62,6 +62,7 @@ const APP = {
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
   gates: ['test_rulesdocs.mjs',
+          'test_sharedsync.mjs',
           'test_filesets.mjs',
           'test_inputlayer.mjs',
           'test_iconlayer.mjs',
