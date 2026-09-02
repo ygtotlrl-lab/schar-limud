@@ -48,6 +48,10 @@ const APP = {
   tileFlat: true,
   /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
      האפליקציה הזו (כלל ברזל 24) — ⚠️ נמדד 0 — ⛔ בתוך הסף המשותף, ולכן אין כאן היתר. */
+  /*  ⛔ צבע הריפוד בהזזת המאסטר — ⚠️ הוא צבע הרקע של המאסטר עצמו,
+      ⭐ ו-`null` מצהיר «אין מאסטר רסטרי» ⛔ ואינו נשמט: שדה חסר
+      נקרא «לא נשאל», וריק נקרא «נמדד ואין». */
+  shiftPad: [252, 253, 252],
   fgDriftMax: 8,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -55,7 +59,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [83, 85, 86, 88];
+export const ROWS = [84, 85, 87, 88, 90];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
@@ -486,6 +490,66 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
     t(n++, diff.length === 0,
       `ו. ⛔ והרצתו אינה משנה אף אחד מ-${assets.length} נכסי האייקון ${diff.join(' · ')}`);
 
+    /*  ⛔ **מיקום הצורה בקנבס המאסטר אינו משפיע על אף נכס** (נמדד בסבב 79,
+        ⛔ ונאכף מסבב 80) — ⚠️ עד כאן זו הייתה הערה בלבד, ⭐ והערה שאיש
+        אינו מודד היא בדיוק מה שסבב עתידי «מתקן» בתום לב: ⛔ יישור המאסטר
+        «כדי שהנכסים יצאו ממורכזים» הוא שינוי שאין לו תוצאה.
+        ⚠️ הנימוק המבני: המסכה **נחתכת לתיבת התוכן** מיד אחרי הגזירה,
+        ⭐ והמסגרת ממרכזת את התיבה מחדש — ⛔ ולכן הזזה של המאסטר יוצאת
+        בנכסים זהים בית-לבית. */
+    const masterRel = 'design/icon-master.png';
+    if (existsSync(join(ROOT, masterRel))) {
+      const s = mkdtempSync(join(tmpdir(), 'iconshift-'));
+      for (const d of ['tools', 'icons', 'design', 'android'])
+        if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(s, d), { recursive: true });
+      const im = decodePNG(readFileSync(join(ROOT, masterRel)));
+      /*  ⛔ ההזזה מרפדת בצבע הרקע ⛔ ואינה גולשת מסביב — ⚠️ גלישה הייתה
+          מכניסה דיו מהקצה הנגדי, ⭐ כלומר משנה את הציור ולא את מיקומו. */
+      const [br, bg2, bb] = APP.shiftPad;
+      const dx = 7, dy = 5, out = Buffer.alloc(im.w * im.h * 4);
+      for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) {
+        const o = (y * im.w + x) * 4, sx = x - dx, sy = y - dy;
+        if (sx >= 0 && sy >= 0 && sx < im.w && sy < im.h) {
+          im.data.copy(out, o, (sy * im.w + sx) * 4, (sy * im.w + sx) * 4 + 4);
+        } else { out[o] = br; out[o+1] = bg2; out[o+2] = bb; out[o+3] = 255; }
+      }
+      writeFileSync(join(s, masterRel), encodePNG({ w: im.w, h: im.h, data: out }));
+      const shifted = readFileSync(join(s, masterRel));
+      t(n++, !shifted.equals(readFileSync(join(ROOT, masterRel))),
+        `ו. ⭐ מוטציית המאסטר אכן הזיזה אותו ב-${dx}/${dy} פיקסלים`);
+      const r2 = spawnSync(process.execPath, [join(s, 'tools', 'gen-icons.mjs')],
+                           { cwd: s, encoding: 'utf8' });
+      t(n++, r2.status === 0, `ו. המחולל רץ על המאסטר המוזז ${(r2.stderr || '').split('\n')[0] || ''}`);
+      /*  ⛔ הנמדד הוא **תיבת התוכן** ⛔ ולא בייטים (נמדד בסבב 80) — ⚠️ הזזת
+          המאסטר **כן** משנה פיקסלים: מרקם הנייר של האריח נדגם מקואורדינטות
+          מוחלטות במאסטר, ⭐ ונמדדו 11 מ-16 הנכסים שונים בבייט. ⛔ מה שאינו
+          זז הוא המיקום — ⚠️ המסכה נחתכת לתיבת התוכן והמסגרת ממרכזת אותה
+          מחדש, ⭐ וזו בדיוק הטענה שמגינה מפני «יישור המאסטר כדי למרכז». */
+      const boxOf = (p) => {
+        const im2 = decodePNG(readFileSync(p));
+        let x0 = im2.w, y0 = im2.h, x1 = -1, y1 = -1;
+        for (let y = 0; y < im2.h; y++) for (let x = 0; x < im2.w; x++)
+          if (im2.data[(y * im2.w + x) * 4 + 3] >= ALPHA_MIN) {
+            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+          }
+        return x0 + '/' + (im2.w - 1 - x1) + '/' + y0 + '/' + (im2.h - 1 - y1);
+      };
+      const moved = assets.filter((rel) => {
+        const A = join(ROOT, rel), B = join(s, rel);
+        if (!existsSync(B)) return true;
+        return boxOf(A) !== boxOf(B);
+      });
+      t(n++, moved.length === 0,
+        `ו. ⛔ ומיקום המאסטר אינו מזיז את תיבת התוכן של אף אחד מ-${assets.length} הנכסים — ` +
+        `נמדדו ${moved.length} שזזו והצפוי אפס ${moved.join(' · ')}`);
+      rmSync(s, { recursive: true, force: true });
+    } else {
+      /*  ⛔ אין מאסטר רסטרי כאן — ⚠️ הסמל מצויר בצורות, ⭐ ואין קנבס שאפשר
+          להזיז בו דבר: ⛔ מוצהר ואינו מדולג בשתיקה. */
+      t(n++, APP.shiftPad === null,
+        'ו. ⭐ אין מאסטר רסטרי — ⛔ מיקום על קנבס אינו קיים כאן, והדילוג מוצהר');
+    }
+
     /*  ⛔ המוטציה על **המחולל** ולא על הנכס (סבב 72) — ⚠️ האיפוס הוא שורה
         אחת בו, ⭐ ומוטציה שמסירה אותה מחזירה את הרעש לאריח: זו הדרך היחידה
         להוכיח שהטענה מודדת את המנגנון ⛔ ולא את הקובץ שבעץ. */
@@ -598,7 +662,10 @@ function encodePNG(img) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
                         chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
-let CRC = null;
+/*  ⛔ `var` ולא `let` (סבב 80) — ⚠️ טבלת ה-CRC מוגדרת בתחתית הקובץ,
+    ⭐ ו-`let` יוצר אזור מת זמני: ⛔ קורא שרץ מעליה נופל על
+    «Cannot access before initialization» במקום לעבוד. */
+var CRC = null;
 function crc32(buf) {
   if (!CRC) { CRC = new Int32Array(256);
     for (let i = 0; i < 256; i++) { let c = i;

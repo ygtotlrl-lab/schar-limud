@@ -1094,15 +1094,11 @@ if (failures) {
    *  אימות שהוערו כדי שלא ירוצו, ⭐ והן **קוד** ולא הערה: ⛔ תרגומן לעברית
    *  היה הופך אותן ללא-ניתנות להדבקה. ⚠️ ההיתר מזהה פתיחה במילת מפתח של
    *  SQL ⛔ ולא «נראה כמו קוד». */
-  const SQL_KW = /^(select|insert|update|delete|create|alter|drop|grant|revoke|with|from|where|set|values|and|or|order|group|having|union|begin|commit|do|end|explain|analyze|vacuum|comment|\)|,|--)\b/i;
-  const isSqlBlock = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean)
-                             .every((x) => SQL_KW.test(x));
   for (const { name, blocks: bs } of SCOPE) {
     if (name.startsWith('tools/')) continue;   /* ⚠️ שם מזהה בלבד — ר' הרשימה */
     for (const b of bs) {
       const t = b.text;
       if (HEB.test(t)) continue;
-      if (name.startsWith('migrations/') && isSqlBlock(t)) continue;
       const stripped = t.replace(/\/\*+|\*+\/|^\s*\/\/|^\s*\*/gm, ' ').trim();
       if (!/[A-Za-z]{3,}/.test(stripped)) continue;
       if (ALLOW.test(stripped)) continue;

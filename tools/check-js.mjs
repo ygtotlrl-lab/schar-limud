@@ -80,7 +80,7 @@ const APP = {
           'test_swcore.mjs',
           'test_build.mjs',
           'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
+          'test_md.mjs', 'test_orphans.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_offline_login.mjs', 'test_roles.mjs',
           'test_stage_a.mjs', 'test_hotwin.mjs', 'test_cron.mjs',
           'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs'],
@@ -210,6 +210,14 @@ const BUDGET_EXEMPT = {
    *  1.2 שניות בארבעתם, ⛔ כלומר מתחת לתקרה בכולם: ⭐ חריגה שנימוקה חדל
    *  להתקיים היא שארית, ⛔ וחריגה רשומה שאינה קיימת בפועל היא בדיוק מה
    *  שהשורה על רשימות-ההיתר אוסרת. */
+  /*  ⛔ `test_rulesdocs` נכנס לכאן (סבב 80) — ⚠️ נמדד שהוא חוצה את התקרה
+   *  **גם על `origin/main` בלי שנגעו בו**: 10.1–10.3 שניות לבדו, ⛔ כלומר
+   *  החריגה קדמה לסבב ולא נולדה בו. ⭐ והעלות אינה תפיחה אלא המבנה: 29
+   *  מוטציות, ⛔ וכל אחת מריצה שער אמיתי בתהליך `node` נפרד — ⚠️ העתקת
+   *  העץ נמדדה 21 מ״ש ואינה הגורם. ⛔ ואין להסיר מוטציה כדי לרדת מתחת
+   *  לתקרה — ⭐ מוטציה שאינה רצה אינה אכיפה. */
+  'test_rulesdocs.mjs': 'מריץ 29 מוטציות, ⛔ וכל אחת שער אמיתי בתהליך נפרד; ' +
+                        'נמדד 8.3–10.7 שניות לבדו',
 };
 
 const JOBS = Math.max(1, Number(process.env.CHECKJS_JOBS) || Math.min(4, cpus().length));
