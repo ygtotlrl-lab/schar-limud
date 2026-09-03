@@ -1539,10 +1539,17 @@ var BK_CFG = {
   //    נכתבת לא לדיסק ולא ל-`kv_backup`. הלקח: `admin_pass` שרד בגיבויים
   //    אחרי שנמחק מהמקור, ונוקה ידנית ע"י המנהל (17.8).
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
+  /*  ⛔ עמודת סדר לכל מקור (סבב 87ג) — ⚠️ שליפה בעמודים חייבת סדר יציב:
+   *  ⭐ בלי `ORDER BY` פוסטגרס אינו מבטיח אותו, ⛔ ועמוד שני שמסודר אחרת
+   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⚠️ ל-`sl_settings` אין `id`,
+   *  ⛔ והמפתח שלה הוא `key`. */
   sources: function () {
-    return ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'].map(function (t) {
-      return { kind: 'table', name: t };
-    });
+    return [
+      { kind: 'table', name: 'sl_students',     order: 'id',  ts: 'updated_at' },
+      { kind: 'table', name: 'sl_transactions', order: 'id',  ts: 'updated_at' },
+      { kind: 'table', name: 'sl_settings',     order: 'key', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_lists',        order: 'id',  ts: 'updated_at' }
+    ];
   }
 };
 
@@ -1653,6 +1660,73 @@ async function logFlush() {
   return sent;
 }
 
+/*  ⛔⛔ שלוש שכבות הגיבוי (סבב 87ג) — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
+ *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הקיים**
+ *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
+ *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
+ *  אותה יכולת שחזור בשבריר. */
+var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
+var BK_ANCHOR_PREFIX = 'ANCHOR:';
+var BK_DIFF_PREFIX = 'DIFF:';
+/*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
+ *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
+function _bkMarkKey(bkey) { return 'bk_wm_' + bkey; }
+function _bkSetMark(bkey, v) {
+  if (v == null) return;
+  lsSet(_bkMarkKey(bkey), String(v));
+  lsSet('bk_anch_' + bkey, String(Date.now()));
+}
+/*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
+ *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
+ *  היה נשבר בהשוואת מחרוזות. */
+function _bkMaxTs(rows, col) {
+  var mx = null;
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i] ? rows[i][col] : null;
+    if (v == null) continue;
+    if (mx === null) { mx = v; continue; }
+    if (typeof v === 'number' ? v > mx : String(v) > String(mx)) mx = v;
+  }
+  return mx;
+}
+/*  ⛔ איזו שכבה רצה היום — ⚠️ עוגן כשאין חותמת מים, כשאין חותמת עוגן,
+ *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
+function _bkLayer(bkey, s) {
+  var wm = lsGet(_bkMarkKey(bkey), '');
+  var at = parseInt(lsGet('bk_anch_' + bkey, '0'), 10) || 0;
+  if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
+    return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
+  return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
+           win: { col: s.ts, from: wm } };
+}
+/*  ⛔⛔ הקריאה בעימוד, ⛔ ואימות מול מונה השרת — ⚠️ תשובה שנחתכה נראית
+ *  בדיוק כמו תשובה שלמה, ⭐ והדרך היחידה לדעת היא לשאול את השרת כמה שורות
+ *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
+async function _bkReadRows(c, s, win) {
+  var sel = s.cols || '*';
+  var rows = await _ysRowsPaged(function () {
+    var q = c.from(s.name).select(sel);
+    if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+    return q;
+  }, s.order || null, win);
+  if (!rows) return null;
+  try {
+    var cq = c.from(s.name).select(sel, { count: 'exact', head: true });
+    if (s.eq) cq = cq.eq(s.eq[0], s.eq[1]);
+    if (win && win.col) {
+      if (win.from) cq = cq.gte(win.col, win.from);
+      if (win.to) cq = cq.lte(win.col, win.to);
+    }
+    var cr = await withTimeout(cq);
+    if (!cr || cr.error || typeof cr.count !== 'number') return null;
+    if (cr.count !== rows.length) {
+      console.error('[bk] הגיבוי נחתך — ' + s.name + ': נמדדו ' + rows.length +
+                    ' שורות והשרת מדווח ' + cr.count);
+      return null;
+    }
+  } catch (e) { return null; }
+  return rows;
+}
 /* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
 // מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
 async function bkMaybeDaily() {
@@ -1680,6 +1754,13 @@ async function bkMaybeDaily() {
       //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
       var bkey = pre + (s.key || s.name);
       dailyKeys.push(bkey);
+      /*  ⛔ שתי השכבות נכנסות לרשימת-ההיתר של הגריעה (סבב 87ג) — ⚠️ מפתח
+       *  שאינו שם אינו מתפנה לעולם, ⭐ ו-`ANCHOR:`/`DIFF:` הם מפתחות
+       *  חדשים: ⛔ בלעדיהם הם היו נצברים בלי גבול. */
+      if (s.kind !== 'kv') {
+        dailyKeys.push(BK_ANCHOR_PREFIX + bkey);
+        dailyKeys.push(BK_DIFF_PREFIX + bkey);
+      }
       /* ⭐ דגל-יום פר-מקור (סבב 62) — מקור שכבר גובה היום מדולג, גם
          כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל החזיק את כל
          השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
@@ -1693,24 +1774,26 @@ async function bkMaybeDaily() {
         if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
-        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
-        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
-        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var q = c.from(s.name).select(s.cols || '*');
-        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
-        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
-        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
-        if (s.order) q = q.order(s.order);
-        var rt = await q;
-        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; failed.push(bkey); continue; }
-        var rows = rt.data;
+        /*  ⛔⛔ שכבת הגיבוי — עוגן שבועי מלא, ודיפרנציאלי בכל שאר הימים
+         *  (סבב 87ג): ⚠️ הנימוק המדוד — הקריאה הייתה בקשה **אחת** בלי
+         *  עימוד, ⛔ ו-Supabase מחזיר 1,000 שורות כברירת מחדל **בלי
+         *  שגיאה**: ⭐ `ys_marks_rows` גובתה 1,000 מתוך 18,085, ⛔ כלומר
+         *  94.5% ממנה מעולם לא גובו — ⚠️ והכשל היה שקט לחלוטין. */
+        var layer = _bkLayer(bkey, s);
+        var rows = await _bkReadRows(c, s, layer.win);
+        if (rows === null) { ok = false; failed.push(bkey); continue; }
+        bkey = layer.prefix + bkey;
         // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
         //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
         //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
         if (secrets.length) rows = rows.filter(function (r) {
           return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
         });
+        /*  ⛔ דיפרנציאלי ריק אינו נכתב ⛔ ואינו כישלון — ⚠️ יום שלא השתנה
+         *  בו דבר הוא המצב הרגיל, ⭐ ועותק ריק בכל לילה מציף את הפינוי. */
+        if (layer.diff && !rows.length) { same++; continue; }
         val = JSON.stringify(rows);
+        if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;

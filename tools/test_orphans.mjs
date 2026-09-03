@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 80) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [141];
+export const ROWS = [143];
 
 const ROOT = process.env.ORPHANS_ROOT ||
              path.join(path.dirname(fileURLToPath(import.meta.url)), '..');

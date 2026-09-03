@@ -67,6 +67,14 @@ const MODULE_SRC = (() => {
   return SRC.slice(i, k + 2);
 })();
 
+/*  ⛔ המודול המשותף שהגיבוי נשען עליו (סבב 87ג) — ⚠️ העימוד עבר לשם. */
+const PAGED_SRC = (() => {
+  const a = SRC.indexOf('/* ═══ משיכה מסוננת בשרת — מודול משותף');
+  const b = SRC.indexOf('/* ═══════════════ סוף מודול משיכה מסוננת בשרת', a);
+  if (a < 0 || b < 0) throw new Error('מודול המשיכה המסוננת לא נמצא ב-' + APP.file);
+  return SRC.slice(a, b);
+})();
+
 /* ── הרתמה ─────────────────────────────────────────────────────────────── */
 /* ⭐ יום חדש (סבב 62) — ⛔ מחיקת הדגל הגלובלי לבדה כבר אינה מספיקה:
    מסבב 62 לכל מקור יש **דגל-יום משלו** (`bk_day_<מפתח>`), וזה מה שמונע
@@ -96,8 +104,19 @@ function makeEnv(opts = {}) {
     from(table) {
       const q = { table, cols: '*', key: null };
       const api = {
-        select(cols) { q.cols = cols === undefined ? '*' : cols; return api; },
-        eq(col, val) { if (col === 'key') q.key = val; return api; },
+        /*  ⛔ העימוד וספירת השרת נכנסו לרתמה (סבב 87ג) — ⚠️ הגיבוי קורא
+         *  מעכשיו ב-`_ysRowsPaged` ומאמת מול `count`, ⭐ ורתמה שאינה תומכת
+         *  בהם מודדת מסלול שאינו רץ. */
+        select(cols, opts) {
+          q.cols = cols === undefined ? '*' : cols;
+          if (opts && opts.head && opts.count === 'exact') q.head = true;
+          return api;
+        },
+        order() { return api; },
+        gte(col, val) { q.gteCol = col; q.gteVal = val; return api; },
+        lte(col, val) { q.lteCol = col; q.lteVal = val; return api; },
+        range(a, b) { q.from = a; q.to = b; return api; },
+        eq(col, val) { if (col === 'key') q.key = val; else { q.eqCol = col; q.eqVal = val; } return api; },
         maybeSingle() {
           env.calls.push({ op: 'select', table: q.table, cols: q.cols, key: q.key });
           if (!env.net) return Promise.resolve({ data: null, error: { message: 'net' } });
@@ -117,10 +136,14 @@ function makeEnv(opts = {}) {
             return Promise.resolve({ data: gone.map((r) => ({ id: r.key + '@' + r.created_at })), error: null }).then(res, rej);
           }
           env.calls.push({ op: 'select', table: q.table, cols: q.cols, key: null });
-          const out = env.net
-            ? { data: env.tables[q.table] || [], error: null }
-            : { data: null, error: { message: 'net' } };
-          return Promise.resolve(out).then(res, rej);
+          if (!env.net) return Promise.resolve({ data: null, error: { message: 'net' } }).then(res, rej);
+          let rows = (env.tables[q.table] || []).slice();
+          if (q.gteCol) rows = rows.filter((r) => String(r[q.gteCol]) >= String(q.gteVal));
+          if (q.lteCol) rows = rows.filter((r) => String(r[q.lteCol]) <= String(q.lteVal));
+          /*  ⛔ ספירת השרת מוחזרת בלי גוף — ⚠️ בדיוק כמו `head: true`. */
+          if (q.head) return Promise.resolve({ data: null, count: rows.length, error: null }).then(res, rej);
+          const page = (q.from === undefined) ? rows : rows.slice(q.from, q.to + 1);
+          return Promise.resolve({ data: page, error: null }).then(res, rej);
         },
         insert(row) {
           env.calls.push({ op: 'insert', table: q.table, row });
@@ -151,10 +174,17 @@ function makeEnv(opts = {}) {
     syncFmtTime: (t) => 'T' + t,
     lsGet: (k, d) => (k in env.store ? env.store[k] : (d === undefined ? null : d)),
     lsSet: (k, v) => { if (env.lsBlocked) return false; env.store[k] = String(v); return true; },
+    /*  ⛔ פסק הזמן מוחלף בזהות (סבב 87ג) — ⚠️ הרתמה אינה מודדת רשת,
+     *  ⭐ והמנגנון שנמדד הוא העימוד והספירה. */
+    withTimeout: (p2) => Promise.resolve(p2),
     BK_CFG: null,
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  /*  ⛔ שכבת המשיכה המעומדת נטענת לפני המודול — ⚠️ היא יושבת מחוץ לבלוק
+   *  הגיבוי, ⭐ ובלעדיה `_bkReadRows` זורקת: ⛔ רתמה בלעדיה מודדת קוד
+   *  שאינו רץ. */
+  vm.runInContext(PAGED_SRC, sandbox, { filename: 'rows-paged.js' });
   vm.runInContext(opts.src || MODULE_SRC, sandbox, { filename: 'bk-module.js' });
   env.sb = sandbox;
   return env;
@@ -508,7 +538,9 @@ async function t13() {
   eq(await env.sb.bkMaybeDaily(), true, '13א · הגיבוי מצליח');
   ok(!env.inserted.kv_backup.some((x) => x.key === 'secret_k'),
     '13ב · ⛔ מפתח-סוד נחסם מכתיבה לגיבוי');
-  const tset = env.inserted.kv_backup.find((x) => x.key === 't_set');
+  /*  ⛔ מקור-טבלה נכתב מעכשיו תחת מפתח העוגן (סבב 87ג) — ⚠️ העותק הראשון
+   *  הוא תמיד עוגן מלא, ⭐ והדיפים באים אחריו. */
+  const tset = env.inserted.kv_backup.find((x) => x.key === 'ANCHOR:t_set');
   ok(tset && tset.value.indexOf('admin_pass') === -1 && tset.value.indexOf('SODI') === -1,
     '13ג · ⛔ שורת שדה-סוד סוננה לפני הסריאליזציה');
   ok(env.inserted.kv_backup.some((x) => x.key === 'k1'), '13ד · והמקורות הרגילים גובו כרגיל');
@@ -584,8 +616,73 @@ async function t14() {
   }
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   15 · ⭐ הגיבוי שלם ומעומד — עוגן, דיפרנציאלי, ואי-חיתוך
+   ══════════════════════════════════════════════════════════════════════════ */
+async function t15() {
+  /*  ⛔ טבלה גדולה מעמוד אחד — ⚠️ הרתמה חותכת ב-`range` בדיוק כמו
+   *  PostgREST, ⭐ ולכן «כל השורות חוזרות» נמדד ⛔ ואינו מוצהר. */
+  const big = [];
+  for (let i = 0; i < 2350; i++) big.push({ id: i, updated_at: 1000 + i });
+  const env = makeEnv({ tables: { t_big: big } });
+  env.sb.BK_CFG = cfgKv(env, {
+    sources: () => [{ kind: 'table', name: 't_big', order: 'id', ts: 'updated_at' }],
+  });
+  eq(await env.sb.bkMaybeDaily(), true, '15א · הגיבוי מצליח');
+  const anch = env.inserted.kv_backup.find((x) => x.key === 'ANCHOR:t_big');
+  ok(!!anch, '15ב · ⭐ העותק הראשון הוא עוגן מלא');
+  eq(JSON.parse(anch.value).length, big.length,
+    '15ג · ⛔ כל השורות בעוגן — נמדד ' + JSON.parse(anch.value).length + ' מתוך ' + big.length);
+  eq(env.store['bk_wm_t_big'], String(1000 + big.length - 1),
+    '15ד · וחותמת המים היא המקסימום שנמדד');
+  /*  ⛔ ביום שאחריו — דיפרנציאלי, ורק מה שחדש מחותמת העוגן. */
+  newDay(env);
+  env.tables.t_big = big.concat([{ id: 9001, updated_at: 99999 }]);
+  eq(await env.sb.bkMaybeDaily(), true, '15ה · היום השני מצליח');
+  const diff = env.inserted.kv_backup.find((x) => x.key === 'DIFF:t_big');
+  ok(!!diff, '15ו · ⭐ והעותק השני הוא דיפרנציאלי');
+  /*  ⚠️ שתיים ולא אחת — ⛔ החלון הוא `gte` על חותמת המים, ⭐ ולכן שורת
+   *  הגבול נקראת שוב: ⛔ קבוצת-על מכוונת, ⚠️ ו-`gt` היה מפספס שורה
+   *  שנכתבה באותה מילי-שנייה בדיוק. */
+  eq(JSON.parse(diff.value).length, 2,
+    '15ז · ⛔ ובו שורת הגבול והחדשה בלבד — נמדד ' + JSON.parse(diff.value).length);
+  /*  ⛔ יום שלא השתנה בו דבר אינו כותב עותק — ⚠️ החתימה זהה. */
+  newDay(env);
+  const before = env.inserted.kv_backup.length;
+  await env.sb.bkMaybeDaily();
+  eq(env.inserted.kv_backup.length, before,
+    '15ח · ⛔ דיפרנציאלי ריק אינו נכתב — אחרת כל לילה מציף את הפינוי');
+  /*  ⛔⛔ ומוטציה: קריאה בלי עימוד מחזירה עמוד אחד — ⚠️ אימות מול מונה
+   *  השרת מפיל אותה, ⭐ ואינו שומר חצי גיבוי. */
+  {
+    const bad = MODULE_SRC.replace(
+      'var rows = await _ysRowsPaged(function () {',
+      'var rows = await (function () {');
+    eq(bad !== MODULE_SRC, true, '15ט · המוטציה אכן הוחלה');
+    const e2 = makeEnv({ src: bad, tables: { t_big: big } });
+    e2.sb.BK_CFG = cfgKv(e2, {
+      sources: () => [{ kind: 'table', name: 't_big', order: 'id', ts: 'updated_at' }],
+    });
+    let threw = false;
+    try { await e2.sb.bkMaybeDaily(); } catch (e) { threw = true; }
+    ok(threw || !e2.inserted.kv_backup.some((x) => x.key === 'ANCHOR:t_big'),
+      '15י · ⛔ מוטציה: קריאה בלי עימוד אינה נשמרת כגיבוי — טענה 15ג הייתה נכשלת');
+  }
+  /*  ⭐ ומוטציית-נגד: מקור נוסף לרשימה ⛔ אינו מפיל — נמדד המנגנון. */
+  {
+    const env3 = makeEnv({ tables: { t_big: big, t_small: [{ id: 1, updated_at: 5 }] } });
+    env3.sb.BK_CFG = cfgKv(env3, {
+      sources: () => [{ kind: 'table', name: 't_big', order: 'id', ts: 'updated_at' },
+                      { kind: 'table', name: 't_small', order: 'id', ts: 'updated_at' }],
+    });
+    eq(await env3.sb.bkMaybeDaily(), true,
+      'נ2 · ⭐ מוטציית-נגד: מקור נוסף ⛔ אינו מפיל — נמדד המנגנון, לא מספר המקורות');
+  }
+}
+
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14];
+const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15];
 for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }
