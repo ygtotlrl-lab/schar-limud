@@ -494,10 +494,16 @@ var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני
  *  ⚠️ הערך במקרה זהה ל-`LS_SUCCESS_MUTE_MS`, ⛔ אך הוא מושג אחר
  *  לגמרי (משך תצוגה מול חלון השתקה), ⛔ ואין לאחד ביניהם. */
 var TOAST_DEFAULT_MS = 2400;
-function toast(msg,dur){
+/*  ⛔ חתימה אחת בארבע האפליקציות — `toast(msg, dur, kind)` — ⚠️ הנימוק
+ *  המדוד: עד כאן הארגומנט השני היה **משך** בשלוש ו**שם מחלקה** בגיוס,
+ *  ⛔ ואותה שורה משותפת בדיוק — `toast(MSG_STALE_CODE, 6000)` — פעלה
+ *  בשלוש ⭐ ובגיוס ייצרה `class="toast 6000"`: ⚠️ בלי מחלקת צבע, ובלי
+ *  ששת השניות. ⛔ `kind` הוא שם מחלקה ⛔ ולא משך — ⚠️ ומי שאין לו ערך
+ *  מוסר `null`. */
+function toast(msg,dur,kind){
   // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
   if(typeof lsGuardToast==='function'&&!lsGuardToast(msg))return;
-  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||TOAST_DEFAULT_MS);}
+  var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(kind?' '+kind:'');clearTimeout(t._tid);t._tid=setTimeout(function(){t.className='';},dur||TOAST_DEFAULT_MS);}
 /* ══════════════════════════════════════════════════════════════════════════
    הודעות ועוזרי רשת — נוסח משותף לארבע האפליקציות
    ══════════════════════════════════════════════════════════════════════════
@@ -3558,10 +3564,10 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
 /* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/*  ⛔ הארגומנט השני של `toast` נבדל בין הריפו — ⚠️ בשלוש הוא **משך** בזמן,
- *  ⛔ ובגיוס הוא **שם מחלקה**: ⭐ ולכן הערך יושב כאן, ⛔ וגוף `lsToast` זהה
- *  בית-לבית בארבעתן. */
-var LS_TOAST = { arg: function (dur) { return dur || 5000; } };
+/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ ומה שנשאר
+ *  נבדל הוא **שם המחלקה** בלבד: ⭐ המשך הוא ערך משותף שיושב בבלוק, ⛔ ולכן
+ *  גוף `lsToast` זהה בית-לבית בארבעתן. */
+var LS_TOAST = { kind: '' };
 /* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
    ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
       ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
@@ -3614,7 +3620,10 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
-function lsToast(msg, dur) { try { toast(msg, LS_TOAST.arg(dur)); } catch (e) {} }
+/*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
+   כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
+var LS_TOAST_MS = 5000;
+function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
