@@ -58,6 +58,9 @@ const APP = {
   matrixCol: 3,
   /*  ⚠️ אין כאן יכולת משותפת שנעדרת (סבב 52). */
   skipCaps: [],
+  /*  ⛔ קבועי מסך הצפייה (סבב 90ג) — ⭐ ריק כאן, ⛔ ואינו נשמט: ⚠️ מסך
+   *  «טבלת התשתית» קיים ביומן בלבד, ⭐ ושדה חסר נקרא «לא נשאל». */
+  viewOnlyConsts: [],
   offlineLoginFn: 'slVerifyOffline',
   schemaFile: 'migrations/000_initial_schema.sql',
   // ⚠️ שורת אימות הפינוי «לא רלוונטי» — אין כאן פינוי כלל, ולכן אין מה לאמת.
@@ -2309,6 +2312,24 @@ const RULE_ROW_NAMES = {};
     'או מסירים הכרזה שאין לה קורא; וקריאת מפתח יחיד עוברת ל-maybeSingle');
   else pass(`מפתחות הגדרה — ${(APP.cfgKeys || []).length} מוצהרים, כולם נדרשים בקוד, ` +
             'ואפס קריאות single על מפתח יחיד');
+}
+
+/*  ⛔ קבועי מסך הצפייה — ⚠️ ההצהרה נמדדת משני צדדיה: ⭐ שם שמוצהר וקיים
+ *  בקוד, ⛔ ושם משלוש האחרות שמוצהר ריק ואינו קיים בהן. ⚠️ הכרזה שאין לה
+ *  אתר בפועל מפילה אף היא, ⛔ והצהרה ריקה שיש לה אתר — כך גם. */
+{
+  const want = APP.viewOnlyConsts || [];
+  const ALL = ['RAW_BASE', 'YS_INF_MD', 'YS_INF_GATE'];
+  const has = (n) => new RegExp('(?<![\\w$])' + n + '(?![\\w$])').test(code);
+  const missing = want.filter((n) => !has(n));
+  const stray = ALL.filter((n) => want.indexOf(n) < 0 && has(n));
+  if (missing.length || stray.length)
+    fail(`קבועי מסך הצפייה: ${missing.map((n) => 'מוצהר ואינו בקוד: ' + n)
+      .concat(stray.map((n) => 'בקוד ואינו מוצהר: ' + n)).join(' · ')} — ` +
+      `נמדדו ${missing.length + stray.length} והצפוי אפס. ` +
+      'מיישרים את APP.viewOnlyConsts לקוד — ⛔ המסך קיים ביומן בלבד');
+  else pass(`קבועי מסך הצפייה — ${want.length} מוצהרים וקיימים, ` +
+            `${ALL.length - want.length} מוצהרים כריקים ואינם בקוד`);
 }
 
 /*  ⛔ אין שורה בלי כיסוי (סבב 69) — כל שורה נמצאת ב-MATRIX (נאכפת כאן) או ב-GATES
