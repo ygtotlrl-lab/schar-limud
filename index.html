@@ -3680,35 +3680,63 @@ function esc(s) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+/*  ⛔ מיכל שאינו ב-DOM ⟵ **זעקה**, ⛔ ולא יציאה בשקט — ⚠️ הנימוק המדוד:
+ *  המיכל ישב באחת מהן **בתוך מסך אחד מתוך שבעה** ⛔ ונמחק יחד איתו,
+ *  ⭐ ו-`openModal` יצאה ב-`return` בלי שגיאה ובלי הודעה: ⛔ הכפתור «לא
+ *  עשה כלום», ⚠️ ושלושה סבבים חיפשו בדלגציה ובמטפל. ⛔ ו-`locked` מוסרת
+ *  גם במסלול הכשל — ⚠️ מחלקה ששרדה פתיחה קודמת חוסמת את גלילת הדף,
+ *  ⭐ והמשתמש קורא לזה «המסך איטי» ⛔ ולא «המודאל תקוע». */
+function uiNoDialog(where, id) {
+  try { console.error('[ui] ' + where + ': #' + id + ' אינו ב-DOM'); } catch (e) {}
+  try { document.body.classList.remove('locked'); } catch (e) {}
+  try { toast('שגיאה: הדיאלוג אינו זמין (#' + id + ')', null, 'bad'); } catch (e) {}
+}
 function openModal(title, body, foot) {
+  var m = document.getElementById('modal');
   var ttl = document.getElementById('modal-title');
-  if (!ttl) return;
+  var bd = document.getElementById('modal-body');
+  var ft = document.getElementById('modal-foot');
+  if (!m || !ttl || !bd || !ft) { uiNoDialog('openModal', 'modal'); return; }
   ttl.textContent = title || '';
-  document.getElementById('modal-body').innerHTML = body || '';
-  document.getElementById('modal-foot').innerHTML = foot || '';
-  document.getElementById('modal').classList.add('open');
+  bd.innerHTML = body || '';
+  ft.innerHTML = foot || '';
+  m.classList.add('open');
   document.body.classList.add('locked');
 }
 function closeModal() {
   var m = document.getElementById('modal');
-  if (!m) return;
+  if (!m) { uiNoDialog('closeModal', 'modal'); return; }
   m.classList.remove('open');
-  document.getElementById('modal-body').innerHTML = '';
-  document.getElementById('modal-foot').innerHTML = '';
-  if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
+  var bd = document.getElementById('modal-body');
+  var ft = document.getElementById('modal-foot');
+  if (bd) bd.innerHTML = '';
+  if (ft) ft.innerHTML = '';
+  var a = document.getElementById('ask');
+  if (!a || !a.classList.contains('open')) document.body.classList.remove('locked');
 }
 var askResolve = null;
+/*  ⛔ דיאלוג אישור שמיכלו חסר נענה **«לא»** — ⚠️ הבטחה שלא נפתרת משאירה
+ *  את הקורא תלוי לנצח, ⭐ ו-`true` היה מבצע את הפעולה ההרסנית בלי שאיש
+ *  אישר: ⛔ נכשל-סגור, ⛔ ובקול. */
 function ask(title, text, yesLabel) {
-  document.getElementById('ask-title').textContent = title || '';
-  document.getElementById('ask-body').textContent = text || '';
-  document.getElementById('ask-yes').textContent = yesLabel || 'אישור';
-  document.getElementById('ask').classList.add('open');
+  var a = document.getElementById('ask');
+  var ttl = document.getElementById('ask-title');
+  var bd = document.getElementById('ask-body');
+  var yes = document.getElementById('ask-yes');
+  if (!a || !ttl || !bd || !yes) { uiNoDialog('ask', 'ask'); return Promise.resolve(false); }
+  ttl.textContent = title || '';
+  bd.textContent = text || '';
+  yes.textContent = yesLabel || 'אישור';
+  a.classList.add('open');
   document.body.classList.add('locked');
   return new Promise(function (res) { askResolve = res; });
 }
 function closeAsk(v) {
-  document.getElementById('ask').classList.remove('open');
-  if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
+  var a = document.getElementById('ask');
+  if (!a) uiNoDialog('closeAsk', 'ask');
+  else a.classList.remove('open');
+  var m = document.getElementById('modal');
+  if (!m || !m.classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
 /*  ⛔ `div` לכל הודעה, ⛔ ולא אלמנט קבוע אחד — ⚠️ הנימוק המדוד: בשלוש
@@ -3720,7 +3748,10 @@ function toast(msg, dur, kind) {
   // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
   if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
   var box = document.getElementById('toasts');
-  if (!box) return;
+  /*  ⛔ מיכל הטוסטים חסר ⟵ קונסולה, ⛔ ולא שתיקה — ⚠️ זהו משפך ההודעות
+   *  היחיד, ⭐ ובלעדיו **כל** הודעה שהאפליקציה מנסה להציג נעלמת: ⛔ דיווח
+   *  דרך טוסט היה חוזר לכאן, ⚠️ ולכן הוא בקונסולה בלבד. */
+  if (!box) { try { console.error('[ui] toast: #toasts אינו ב-DOM — ' + msg); } catch (e) {} return; }
   var el = document.createElement('div');
   el.className = 'toast' + (kind ? ' ' + kind : '');
   el.textContent = msg;
