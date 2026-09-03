@@ -38,7 +38,9 @@ const MAX_LINES = 700;
 const MAX_ROUNDS = 2;
 const MAX_PRIVATE = 300;
 const MAX_ROUND_LINES = 10;
-const MAX_SHARED = 400;
+/*  ⛔ הסף בשער 403 — ⚠️ שלוש שורות מרווח למוטציית-הנגד שלמטה, ⭐ והתקרה
+ *  לכללים היא 400: ⛔ שני מספרים מוצהרים ולא אחד. */
+const MAX_SHARED = 403;
 const ROUND_H2 = /^##\s+(?:⭐\s+)?סבב\s/;
 
 let pass = 0, fail = 0;
@@ -90,7 +92,7 @@ const privateLines = (() => {
 
 const docs = fs.readFileSync(path.join(HERE, 'check-docs.mjs'), 'utf8');
 t(n++, /const DOC_MAX_LINES\s*=\s*700;/.test(docs), 'check-docs מחזיק DOC_MAX_LINES = 700');
-t(n++, /const DOC_MAX_SHARED\s*=\s*400;/.test(docs), 'check-docs מחזיק DOC_MAX_SHARED = 400');
+t(n++, /const DOC_MAX_SHARED\s*=\s*403;/.test(docs), 'check-docs מחזיק DOC_MAX_SHARED = 403 — התקרה לכללים 400 ועוד שלוש שורות המוטציה');
 t(n++, /const DOC_MAX_ROUNDS\s*=\s*2;/.test(docs), 'check-docs מחזיק DOC_MAX_ROUNDS = 2');
 t(n++, /const DOC_MAX_PRIVATE\s*=\s*300;/.test(docs), 'check-docs מחזיק DOC_MAX_PRIVATE = 300');
 t(n++, /const ROUND_H2\s*=/.test(docs), 'check-docs מזהה פרק סבב לפי ביטוי ייעודי');
