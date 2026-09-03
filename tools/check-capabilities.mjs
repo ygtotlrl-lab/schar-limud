@@ -325,6 +325,17 @@ const CAPS = {
   },
 };
 
+/*  ⛔ הסדר הקנוני של הבלוקים החתומים (סבב 87) — ⚠️ כל בלוק **אחרי מה שהוא
+ *  תלוי בו**, ⭐ והרשימה זהה בית-לבית בארבעת עותקי השער: ⛔ בלוק שאינו
+ *  קיים בריפו הזה מדולג ⛔ ואינו מפיל, ⚠️ אבל בלוק שקיים ויושב במקום אחר
+ *  **מפיל**. ⛔ הנימוק המדוד: `uihelp` ישב במקום הרביעי בהנהלה ובאחרון
+ *  בשלוש האחרות, ⛔ ו-`devid` לפני `merge` בשלוש ואחריו באחת — ⚠️ ואיש
+ *  לא מדד, ⭐ מפני שכל ריפו לבדו נראה עקבי. */
+const BLOCK_ORDER = ['neterr', 'rowswin', 'guardonline', 'storage', 'status', 'backup',
+                     'pending', 'ids', 'retry', 'lock', 'sess', 'pull', 'hotwin',
+                     'devid', 'mergecore', 'uihelp'];
+
+
 const src = fs.readFileSync(APP.file, 'utf8');
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
@@ -448,6 +459,29 @@ for (const key of Object.keys(CAPS)) {
   } else {
     pass(`${cap.name}: הליבה זהה לחתימה הקנונית (${cap.block.sha})`);
   }
+}
+
+/* ── א2. סדר הבלוקים הקנוני ────────────────────────────────────────────── */
+/*  ⛔ הסדר נמדד ⛔ ואינו מוצהר בתיעוד — ⚠️ בלוק שקיים בריפו הזה חייב לשבת
+ *  אחרי כל מי שקדם לו ברשימה: ⭐ בלוק חסר מדולג (יומן בלי כניסה), ⛔ ובלוק
+ *  שקיים במקום הלא-נכון מפיל. */
+{
+  const seen = [];
+  for (const key of BLOCK_ORDER) {
+    const cap = CAPS[key];
+    if (!cap || !cap.block || cap.block.file) continue;
+    const at = src.indexOf(cap.block.start);
+    if (at < 0) continue;
+    seen.push([key, at, cap.name]);
+  }
+  const bad = [];
+  for (let i = 1; i < seen.length; i++)
+    if (seen[i][1] < seen[i - 1][1]) bad.push(`${seen[i][2]} לפני ${seen[i - 1][2]}`);
+  if (bad.length)
+    fail(`סדר הבלוקים אינו הסדר הקנוני — נמדד ${bad.join(' · ')} והצפוי הסדר ` +
+         `שב-BLOCK_ORDER. מזיזים את הבלוק למקומו, או מעדכנים את הסדר בארבעת עותקי השער`);
+  else
+    pass(`סדר הבלוקים תואם לסדר הקנוני (${seen.length} בלוקים בקובץ)`);
 }
 
 const inShared = (pos) => ranges.some(([a, b]) => pos >= a && pos < b);

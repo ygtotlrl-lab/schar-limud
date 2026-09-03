@@ -2898,6 +2898,26 @@ function slTs(r) {
 // יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
 // שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
 // "היעדר רשומה אינו מחיקה" — ספק ⇐ שומרים את מה שהמשתמש כתב.)
+/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
+   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _deviceIdMem = null;
+function getDeviceId() {
+  var id = lsGet(DEV_CFG.key, null);
+  if (!id) {
+    id = _deviceIdMem || _randDeviceId();
+    lsSetRaw(DEV_CFG.key, id);
+  }
+  _deviceIdMem = id;
+  return id;
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 /* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -3427,26 +3447,6 @@ function slDirtyRows(m, remoteByKey, isPending) {
 /* ── DEV_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var DEV_CFG = { key: 'sl_device_id' };
 
-/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _deviceIdMem = null;
-function getDeviceId() {
-  var id = lsGet(DEV_CFG.key, null);
-  if (!id) {
-    id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(DEV_CFG.key, id);
-  }
-  _deviceIdMem = id;
-  return id;
-}
-function _randDeviceId() {
-  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
-  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
-  return id;
-}
-/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 
 // ===== client_id — מפתח זהות שנוצר במכשיר (שלב א' לאופליין, migrations/006) =====
 // `sl_transactions.id` ו-`sl_students.id` הם SERIAL: המסד מקצה אותם, לא המכשיר.
