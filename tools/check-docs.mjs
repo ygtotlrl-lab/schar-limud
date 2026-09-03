@@ -56,9 +56,9 @@ export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 96, 150];
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['rules-session',  '8ecb5417a9c67efb'],
-  ['rules-writing',  'fffeb0d20f581ff7'],
-  ['rules-table',    '09af4c56fba17d57'],
-  ['rules-enforce',  'f070126475ca7938'],
+  ['rules-writing',  '52aac02670497561'],
+  ['rules-table',    'b80f7f4d21ed081e'],
+  ['rules-enforce',  '31c00e2c84f1369c'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
