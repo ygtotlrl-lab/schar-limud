@@ -1520,7 +1520,12 @@ function actGateWrapped() {
     if (b.indexOf(APP.actMap) < 0) continue;
     /*  ⛔ שער הכניסה-החוזרת נמדד בצורתו ⛔ ולא בשמו — ⚠️ דגל על האלמנט שיוצא
      *  מוקדם: ⭐ שינוי שם עקבי הוא שינוי חי ⛔ ואסור לו להפיל. */
-    return /if \(el\.[A-Za-z_$][\w$]*\)\s*return;/.test(b) && ACT_RESPOND.test(b) && /\.then\(/.test(b);
+    /*  ⛔ הביטויים נבנים ב-`new RegExp` ⛔ ולא כליטרל — ⚠️ הנימוק המדוד:
+     *  ליטרל שנשא `;` לפני הסוגר הפיל את סורק ההערות של השער השני
+     *  ⭐ והזיז את מספרי השורות שלו באחת, ⛔ בשקט. */
+    const REENTER = new RegExp('if \\(el\\.[A-Za-z_$][\\w$]*\\)\\s*return');
+    const AWAITED = new RegExp('\\.then\\(');
+    return REENTER.test(b) && ACT_RESPOND.test(b) && AWAITED.test(b);
   }
   return false;
 }
@@ -1528,8 +1533,11 @@ function actGateWrapped() {
  *  שנמדדו מוגדרים `window.X = async function`, ⭐ וסריקה שחיפשה
  *  `async function X` החזירה **אפס** ⛔ ואישרה אותם. */
 function asyncBody(name) {
-  const re = new RegExp('(?:async\\s+function\\s+' + name + '\\s*\\(' +
-    '|(?:window\\.|var\\s+|let\\s+|const\\s+)?' + name + '\\s*[:=]\\s*async\\s+function\\s*\\()');
+  /*  ⛔ גבול מזהה בשני הצדדים ⛔ ולא רק בסוף — ⚠️ הנימוק המדוד: בלעדיו
+   *  משתנה מקומי בשם `f` נפתר להגדרה של שם אחר שנגמר ב-`f`, ⭐ והמטפל
+   *  נמדד כמסלול שממתין ⛔ בלי שיש לו יעד כזה בכלל. */
+  const re = new RegExp('(?:^|[^A-Za-z0-9_$.])(?:async\\s+function\\s+' + name + '\\s*\\(' +
+    '|(?:window\\.)?' + name + '\\s*[:=]\\s*async\\s+function\\s*\\()');
   const m = re.exec(code);
   if (!m) return '';
   const o = code.indexOf('{', m.index + m[0].length - 1);
@@ -1541,7 +1549,7 @@ function actNoFeedback() {
   if (!r) return ['אין מפת ' + APP.actMap];
   /*  ⛔ ההערות נחתכות מהגוף — ⚠️ שם פונקציה שמוזכר בהערה אינו קריאה,
    *  ⭐ והוא היה נמדד כיעד. */
-  const map = src.slice(r[0], r[1]).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  const map = src.slice(r[0], r[1]).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
   const wrapped = actGateWrapped();
   const bad = [];
   for (const e of map.matchAll(/'([^'\n]*)'\s*:\s*(async\s+)?function\s*\([^)]*\)\s*\{([\s\S]*?)\}\s*,/g)) {
@@ -1549,7 +1557,10 @@ function actNoFeedback() {
     const names = [...new Set([...body.matchAll(/([A-Za-z0-9_$]+)\s*\(/g)].map((m) => m[1]))];
     const targets = names.filter((n) => asyncBody(n));
     if (!isAsync && !targets.length) continue;      // ⛔ מסלול סינכרוני — אין המתנה שצריך לחוות עליה
-    if (wrapped) continue;
+    /*  ⛔ העוטף מכסה מטפל שמחזיר את ההבטחה ⛔ ולא כל מטפל (סבב 89) — ⚠️ הנימוק
+     *  המדוד: עשרים ושלושה מטפלים קראו לפונקציה אסינכרונית **בלי `return`**,
+     *  ⭐ והענף שבניתוב לא רץ באף אחד מהם: ⛔ החיווי היה קוד מת שהשער אישר. */
+    if (wrapped && (isAsync || /\breturn\b/.test(body))) continue;
     /*  ⛔ התגובה נמדדת בגוף היעד לפני ה-`await` הראשון, ⚠️ ולא בגוף הרשומה
      *  — ⭐ הרשומה היא שורת קריאה אחת. */
     const ok = targets.some((n) => {
