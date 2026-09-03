@@ -56,8 +56,8 @@ export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 99, 155];
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
   ['rules-session',  '8ecb5417a9c67efb'],
-  ['rules-writing',  '9e12a0db8ca0877d'],
-  ['rules-table',    'c204f070222a666e'],
+  ['rules-writing',  '98cd94127ded9241'],
+  ['rules-table',    'e97c15033cd14cdb'],
   ['rules-enforce',  '9b67a44673cfb168'],
 ];
 
