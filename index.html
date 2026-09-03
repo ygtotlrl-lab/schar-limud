@@ -3586,10 +3586,6 @@ function releaseCid(slot){ delete _pendingCid[slot]; }
 var _heColl = null;
 try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
 var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
-// ⛔ `slMaybeDailyBackup()` הוסרה (סבב 30, השלמה) — היא הייתה מעטפת דקה
-//    מעל `bkMaybeDaily`, וקיומה אפשר לקרוא למודול מכל מקום. נקודת ההפעלה
-//    היחידה היא `bkBoot()` מ-`slBoot()`, ומעטפת שרק מסתירה אותה מחזירה
-//    בדיוק את הפיזור שהסבב הזה בא לסלק.
 function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
