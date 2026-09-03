@@ -18,7 +18,11 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:rtl;min-height:100vh;font-size:14px}
-:root{--navy:#1a1a1a;--navy2:#2d2d2d;--navy3:#111111;--accent:#9fe870;--green:#2e7d32;--greenl:#e8f5e9;--yellow:#b45309;--yellowl:#fef3c7;--red:#c62828;--redl:#ffebee;--border:#e0e0e0;--bgsec:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
+:root{
+  /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
+   *  סרגל לשוניות תחתון קבוע. */
+  --toast-bottom:26px;
+--navy:#1a1a1a;--navy2:#2d2d2d;--navy3:#111111;--accent:#9fe870;--green:#2e7d32;--greenl:#e8f5e9;--yellow:#b45309;--yellowl:#fef3c7;--red:#c62828;--redl:#ffebee;--border:#e0e0e0;--bgsec:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
 #app{max-width:800px;margin:0 auto;padding-bottom:80px}
 #auth-screen{position:fixed;inset:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;z-index:9999}
 #auth-screen.hidden{display:none}
@@ -40,6 +44,8 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .nav-user{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:8px}
 .nav-logout{background:#f5f5f5;border:1.5px solid var(--border);color:#555;border-radius:999px;padding:4px 12px;font-family:Heebo;font-size:.75rem;cursor:pointer;transition:background .15s}
 .nav-logout:hover{background:#e0e0e0}
+/*  ⛔ מעל סרגל הלשוניות — ⚠️ טוסט שיושב מתחתיו אינו נראה. */
+:root{--toast-bottom:80px}
 #tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100}
 .tab-btn{flex:1;background:none;border:none;padding:10px 4px 8px;font-family:Heebo;font-size:10px;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s}
 .tab-btn .ti{font-size:1.3rem;line-height:1}
@@ -116,8 +122,6 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .st-name{font-size:.9rem;color:#1a1a1a}
 .st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
-#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:999px;font-size:.84rem;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68, כלל ברזל 27) ══════════════════════ */
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
@@ -170,6 +174,20 @@ body.locked{overflow:hidden}
 .empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:#f5f5f5;color:#555;border:1px solid var(--border)}
 @media(max-width:480px){.txn-row{grid-template-columns:65px 1fr auto auto}.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}.st-row{grid-template-columns:1fr auto}.st-total{display:none}}
+/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
+   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
+   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+   ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
+      אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
+      ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
+   ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
+      תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
+.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+.toast.bad{background:#b91c1c;color:#fff}
+.toast.good{background:#15803d;color:#fff}
+@keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
    הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים לא נשענים על
@@ -472,7 +490,7 @@ body.locked{overflow:hidden}
   </div>
 </div>
 
-<div id="toast"></div>﻿<script>
+<div id="toasts"></div>﻿<script>
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -494,10 +512,6 @@ var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני
  *  ⚠️ הערך במקרה זהה ל-`LS_SUCCESS_MUTE_MS`, ⛔ אך הוא מושג אחר
  *  לגמרי (משך תצוגה מול חלון השתקה), ⛔ ואין לאחד ביניהם. */
 var TOAST_DEFAULT_MS = 2400;
-function toast(msg,dur){
-  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
-  if(typeof lsGuardToast==='function'&&!lsGuardToast(msg))return;
-  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(function(){t.classList.remove('show');},dur||TOAST_DEFAULT_MS);}
 /* ══════════════════════════════════════════════════════════════════════════
    הודעות ועוזרי רשת — נוסח משותף לארבע האפליקציות
    ══════════════════════════════════════════════════════════════════════════
@@ -550,6 +564,47 @@ function errMsg(e) {
   return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: ' + ((e && (e.message || e.code)) || e));
 }
 /* ═══════════════ סוף מודול עוזרי הרשת ══════════════════════════════════ */
+/* ═══ משיכה מסוננת בשרת — מודול משותף (סבב 87) ════════════════════════════
+   ⛔ מסך מושך **רק את החלון שהוא מציג** — ⚠️ הנימוק המדוד: מסך ההשגחה מציג
+      חודש עברי אחד ⛔ ומשך **18,085 סימונים** בכל כניסה אליו, ⭐ ואת כולם
+      סינן בדפדפן. ⛔ סינון שרץ אחרי ההורדה אינו חוסך דבר — ⚠️ הרשת כבר
+      שילמה, ⭐ והמסך ממתין לה.
+   ⛔ שלושה מסלולים מושכים **מלא**, ⛔ ואין לצמצם אותם — ⚠️ הסנכרון והמיזוג,
+      שמנוע ההכרעה שלו חייב את כל הרשומות ⛔ אחרת «אין אצלי» נקרא «נמחקה» ·
+      הגיבוי היומי, ⛔ שמגבה טבלה ולא חלון · והחלון החם, ⚠️ שהוא מנגנון
+      פינוי נפרד. ⭐ ולכן `win` הוא פרמטר **אופציונלי** — ⛔ מי שאינו מעביר
+      אותו מקבל בדיוק את ההתנהגות הקודמת.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ `mkQuery` היא פונקציה ⛔ ולא בונה מוכן — ⚠️ בונה PostgREST נצרך בשליחה,
+      ⭐ וכל עמוד חייב אחד טרי משלו.
+   ⛔ שליפה בעמודים ולא בבקשה אחת — ⚠️ גוף תשובה שגדל עם הנתונים נחתך,
+      ⛔ ו-PostgREST יודע להגביל את מספר השורות (`db-max-rows`): ⭐ ביום
+      שיוגדר, התשובה תיחתך **בשקט**. ⛔ ותשובה חלקית שנראית שלמה גרועה
+      מ«אין ראיה» — ⚠️ ולכן עמוד שנכשל מחזיר `null` ⛔ ולא את מה שהספיק.
+   ⛔ ותקרת בטיחות ללולאה שתלויה בגודל התשובה — ⚠️ מסד שמחזיר עמוד מלא
+      לנצח תולה את הדף.
+   ═══════════════════════════════════════════════════════════════════════ */
+var YS_ROWS_PAGE = 1000;
+var YS_ROWS_CAP = 500000;
+async function _ysRowsPaged(mkQuery, order, win) {
+  var out = [], from = 0;
+  for (;;) {
+    var q = mkQuery();
+    if (win && win.col) {
+      if (win.from) q = q.gte(win.col, win.from);
+      if (win.to) q = q.lte(win.col, win.to);
+    }
+    if (order) q = q.order(order, { ascending: true });
+    var res = await withTimeout(q.range(from, from + YS_ROWS_PAGE - 1));
+    if (!res || res.error || !Array.isArray(res.data)) return null;
+    out = out.concat(res.data);
+    if (res.data.length < YS_ROWS_PAGE) return out;
+    from += YS_ROWS_PAGE;
+    if (from > YS_ROWS_CAP) return out;
+  }
+}
+/* ═══════════════ סוף מודול משיכה מסוננת בשרת ═══════════════════════════ */
 /* ═══ שער מצב הרשת — מודול משותף (סבב 84) ═════════════════════════════════
    ⛔ מודול נפרד ⛔ ולא חלק מעוזרי הרשת — ⚠️ הוא חי בשלוש אפליקציות ואינו
       קיים בגיוס, ⭐ ובלוק אחד לשתי רמות קיום הוא בלוק שאינו זהה.
@@ -1484,10 +1539,17 @@ var BK_CFG = {
   //    נכתבת לא לדיסק ולא ל-`kv_backup`. הלקח: `admin_pass` שרד בגיבויים
   //    אחרי שנמחק מהמקור, ונוקה ידנית ע"י המנהל (17.8).
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
+  /*  ⛔ עמודת סדר לכל מקור (סבב 87ג) — ⚠️ שליפה בעמודים חייבת סדר יציב:
+   *  ⭐ בלי `ORDER BY` פוסטגרס אינו מבטיח אותו, ⛔ ועמוד שני שמסודר אחרת
+   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⚠️ ל-`sl_settings` אין `id`,
+   *  ⛔ והמפתח שלה הוא `key`. */
   sources: function () {
-    return ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'].map(function (t) {
-      return { kind: 'table', name: t };
-    });
+    return [
+      { kind: 'table', name: 'sl_students',     order: 'id',  ts: 'updated_at' },
+      { kind: 'table', name: 'sl_transactions', order: 'id',  ts: 'updated_at' },
+      { kind: 'table', name: 'sl_settings',     order: 'key', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_lists',        order: 'id',  ts: 'updated_at' }
+    ];
   }
 };
 
@@ -1598,6 +1660,73 @@ async function logFlush() {
   return sent;
 }
 
+/*  ⛔⛔ שלוש שכבות הגיבוי (סבב 87ג) — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
+ *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הקיים**
+ *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
+ *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
+ *  אותה יכולת שחזור בשבריר. */
+var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
+var BK_ANCHOR_PREFIX = 'ANCHOR:';
+var BK_DIFF_PREFIX = 'DIFF:';
+/*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
+ *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
+function _bkMarkKey(bkey) { return 'bk_wm_' + bkey; }
+function _bkSetMark(bkey, v) {
+  if (v == null) return;
+  lsSet(_bkMarkKey(bkey), String(v));
+  lsSet('bk_anch_' + bkey, String(Date.now()));
+}
+/*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
+ *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
+ *  היה נשבר בהשוואת מחרוזות. */
+function _bkMaxTs(rows, col) {
+  var mx = null;
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i] ? rows[i][col] : null;
+    if (v == null) continue;
+    if (mx === null) { mx = v; continue; }
+    if (typeof v === 'number' ? v > mx : String(v) > String(mx)) mx = v;
+  }
+  return mx;
+}
+/*  ⛔ איזו שכבה רצה היום — ⚠️ עוגן כשאין חותמת מים, כשאין חותמת עוגן,
+ *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
+function _bkLayer(bkey, s) {
+  var wm = lsGet(_bkMarkKey(bkey), '');
+  var at = parseInt(lsGet('bk_anch_' + bkey, '0'), 10) || 0;
+  if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
+    return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
+  return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
+           win: { col: s.ts, from: wm } };
+}
+/*  ⛔⛔ הקריאה בעימוד, ⛔ ואימות מול מונה השרת — ⚠️ תשובה שנחתכה נראית
+ *  בדיוק כמו תשובה שלמה, ⭐ והדרך היחידה לדעת היא לשאול את השרת כמה שורות
+ *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
+async function _bkReadRows(c, s, win) {
+  var sel = s.cols || '*';
+  var rows = await _ysRowsPaged(function () {
+    var q = c.from(s.name).select(sel);
+    if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+    return q;
+  }, s.order || null, win);
+  if (!rows) return null;
+  try {
+    var cq = c.from(s.name).select(sel, { count: 'exact', head: true });
+    if (s.eq) cq = cq.eq(s.eq[0], s.eq[1]);
+    if (win && win.col) {
+      if (win.from) cq = cq.gte(win.col, win.from);
+      if (win.to) cq = cq.lte(win.col, win.to);
+    }
+    var cr = await withTimeout(cq);
+    if (!cr || cr.error || typeof cr.count !== 'number') return null;
+    if (cr.count !== rows.length) {
+      console.error('[bk] הגיבוי נחתך — ' + s.name + ': נמדדו ' + rows.length +
+                    ' שורות והשרת מדווח ' + cr.count);
+      return null;
+    }
+  } catch (e) { return null; }
+  return rows;
+}
 /* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
 // מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
 async function bkMaybeDaily() {
@@ -1625,6 +1754,13 @@ async function bkMaybeDaily() {
       //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
       var bkey = pre + (s.key || s.name);
       dailyKeys.push(bkey);
+      /*  ⛔ שתי השכבות נכנסות לרשימת-ההיתר של הגריעה (סבב 87ג) — ⚠️ מפתח
+       *  שאינו שם אינו מתפנה לעולם, ⭐ ו-`ANCHOR:`/`DIFF:` הם מפתחות
+       *  חדשים: ⛔ בלעדיהם הם היו נצברים בלי גבול. */
+      if (s.kind !== 'kv') {
+        dailyKeys.push(BK_ANCHOR_PREFIX + bkey);
+        dailyKeys.push(BK_DIFF_PREFIX + bkey);
+      }
       /* ⭐ דגל-יום פר-מקור (סבב 62) — מקור שכבר גובה היום מדולג, גם
          כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל החזיק את כל
          השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
@@ -1638,24 +1774,26 @@ async function bkMaybeDaily() {
         if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
-        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
-        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
-        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var q = c.from(s.name).select(s.cols || '*');
-        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
-        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
-        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
-        if (s.order) q = q.order(s.order);
-        var rt = await q;
-        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; failed.push(bkey); continue; }
-        var rows = rt.data;
+        /*  ⛔⛔ שכבת הגיבוי — עוגן שבועי מלא, ודיפרנציאלי בכל שאר הימים
+         *  (סבב 87ג): ⚠️ הנימוק המדוד — הקריאה הייתה בקשה **אחת** בלי
+         *  עימוד, ⛔ ו-Supabase מחזיר 1,000 שורות כברירת מחדל **בלי
+         *  שגיאה**: ⭐ `ys_marks_rows` גובתה 1,000 מתוך 18,085, ⛔ כלומר
+         *  94.5% ממנה מעולם לא גובו — ⚠️ והכשל היה שקט לחלוטין. */
+        var layer = _bkLayer(bkey, s);
+        var rows = await _bkReadRows(c, s, layer.win);
+        if (rows === null) { ok = false; failed.push(bkey); continue; }
+        bkey = layer.prefix + bkey;
         // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
         //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
         //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
         if (secrets.length) rows = rows.filter(function (r) {
           return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
         });
+        /*  ⛔ דיפרנציאלי ריק אינו נכתב ⛔ ואינו כישלון — ⚠️ יום שלא השתנה
+         *  בו דבר הוא המצב הרגיל, ⭐ ועותק ריק בכל לילה מציף את הפינוי. */
+        if (layer.diff && !rows.length) { same++; continue; }
         val = JSON.stringify(rows);
+        if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
@@ -2851,6 +2989,26 @@ function slTs(r) {
 // יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
 // שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
 // "היעדר רשומה אינו מחיקה" — ספק ⇐ שומרים את מה שהמשתמש כתב.)
+/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
+   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _deviceIdMem = null;
+function getDeviceId() {
+  var id = lsGet(DEV_CFG.key, null);
+  if (!id) {
+    id = _deviceIdMem || _randDeviceId();
+    lsSetRaw(DEV_CFG.key, id);
+  }
+  _deviceIdMem = id;
+  return id;
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 /* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -3380,26 +3538,6 @@ function slDirtyRows(m, remoteByKey, isPending) {
 /* ── DEV_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var DEV_CFG = { key: 'sl_device_id' };
 
-/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _deviceIdMem = null;
-function getDeviceId() {
-  var id = lsGet(DEV_CFG.key, null);
-  if (!id) {
-    id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(DEV_CFG.key, id);
-  }
-  _deviceIdMem = id;
-  return id;
-}
-function _randDeviceId() {
-  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
-  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
-  return id;
-}
-/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 
 // ===== client_id — מפתח זהות שנוצר במכשיר (שלב א' לאופליין, migrations/006) =====
 // `sl_transactions.id` ו-`sl_students.id` הם SERIAL: המסד מקצה אותם, לא המכשיר.
@@ -3517,10 +3655,10 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
 /* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/*  ⛔ הארגומנט השני של `toast` נבדל בין הריפו — ⚠️ בשלוש הוא **משך** בזמן,
- *  ⛔ ובגיוס הוא **שם מחלקה**: ⭐ ולכן הערך יושב כאן, ⛔ וגוף `lsToast` זהה
- *  בית-לבית בארבעתן. */
-var LS_TOAST = { arg: function (dur) { return dur || 5000; } };
+/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ ומה שנשאר
+ *  נבדל הוא **שם המחלקה** בלבד: ⭐ המשך הוא ערך משותף שיושב בבלוק, ⛔ ולכן
+ *  גוף `lsToast` זהה בית-לבית בארבעתן. */
+var LS_TOAST = { kind: '' };
 /* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
    ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
       ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
@@ -3573,7 +3711,29 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
-function lsToast(msg, dur) { try { toast(msg, LS_TOAST.arg(dur)); } catch (e) {} }
+/*  ⛔ `div` לכל הודעה, ⛔ ולא אלמנט קבוע אחד — ⚠️ הנימוק המדוד: בשלוש
+ *  מהן הטוסט היה אלמנט יחיד, ⭐ והודעה שנייה דרסה את הראשונה: ⛔ «נשמר»
+ *  ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד, ⚠️ ומי שקרא את המסך לא ידע
+ *  שהייתה שנייה. ⛔ `kind` הוא שם מחלקה ⛔ ולא משך — ⚠️ ומי שאין לו ערך
+ *  מוסר `null`; ⭐ והמשך יושב ב-`TOAST_DEFAULT_MS`, ⛔ הערך היחיד שנבדל. */
+function toast(msg, dur, kind) {
+  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
+  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
+  var box = document.getElementById('toasts');
+  if (!box) return;
+  var el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' ' + kind : '');
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(function () {
+    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 260);
+  }, dur || TOAST_DEFAULT_MS);
+}
+/*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
+   כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
+var LS_TOAST_MS = 5000;
+function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
@@ -3736,6 +3896,22 @@ function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
 // מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
 var _syncBusy=false,_syncWarned=false,_lastSyncOk=false;
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
+/*  ⛔ ארבע הקטגוריות ועמודת הסדר של כל אחת — ⚠️ שליפה בעמודים חייבת סדר
+ *  יציב, ⛔ ובלי `ORDER BY` פוסטגרס אינו מבטיח אותו: ⭐ עמוד שני שמסודר
+ *  אחרת מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⛔ ו-`sl_settings` ממוינת
+ *  ב-`key` ⛔ ולא ב-`id` — ⚠️ אין לה עמודה כזו. */
+var SYNC_TABLES=[['sl_students','id'],['sl_transactions','id'],['sl_settings','key'],['sl_lists','id']];
+/*  ⛔ הסנכרון מושך **מלא** ⛔ ואין לו חלון — ⚠️ מנוע ההכרעה חייב את כל
+ *  הרשומות: ⭐ רשומה שלא נמשכה נקראת «אין אצלי», ⛔ והמיזוג מבין «נמחקה».
+ *  ⚠️ מה שכן נוסף כאן הוא **העימוד** — ⛔ עד כאן `select('*')` הביא את
+ *  הטבלה בבקשה אחת, ⭐ וביום שבו `db-max-rows` יוגדר היא הייתה נחתכת
+ *  **בשקט** ונקראת כתמונה שלמה. */
+function slPullAll(){
+  return Promise.all(SYNC_TABLES.map(function(e){
+    return _ysRowsPaged(function(){ return SB.from(e[0]).select('*'); }, e[1], null)
+      .then(function(rows){ return rows ? {data:rows,error:null} : {data:null,error:{message:'rows:'+e[0]}}; });
+  }));
+}
 /* ══════════════════════════════════════════════════════════════════════════
    סנכרון — משיכה ← מיזוג ← דחיפת-מצב
    ══════════════════════════════════════════════════════════════════════════
@@ -3749,7 +3925,7 @@ async function syncAll(){
   _syncBusy=true;
   var _t0=Date.now();   // ראה pendSyncScan
   try{
-    var rs=await Promise.all([SB.from('sl_students').select('*'),SB.from('sl_transactions').select('*'),SB.from('sl_settings').select('*'),SB.from('sl_lists').select('*')]);
+    var rs=await slPullAll();
     // supabase-js לא זורק בכשל — הוא מחזיר {data:null,error:{...}}. לכן ה-catch
     // כאן היה קוד מת, ושאילתה שנכשלה השאירה נתונים ישנים על המסך בלי משוב.
     var errs=[];
