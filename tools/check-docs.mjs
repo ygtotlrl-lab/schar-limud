@@ -58,7 +58,7 @@ const CANON = [
   ['rules-session',  '8ecb5417a9c67efb'],
   ['rules-writing',  '9e12a0db8ca0877d'],
   ['rules-table',    '94b50910b8a182a2'],
-  ['rules-enforce',  '31c00e2c84f1369c'],
+  ['rules-enforce',  '9b67a44673cfb168'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
