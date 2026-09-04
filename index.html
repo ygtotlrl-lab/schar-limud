@@ -4789,7 +4789,7 @@ if ('serviceWorker' in navigator) {
     }
 
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      console.log('SW registered:', reg.scope);
+      console.log('[sw] registered:', reg.scope);
 
       if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
 
@@ -4809,7 +4809,7 @@ if ('serviceWorker' in navigator) {
       checkForUpdate();
       setInterval(checkForUpdate, 30 * 60 * 1000);
     }).catch(function(err) {
-      console.log('SW registration failed:', err);
+      console.warn('[sw] registration failed:', err);
     });
   });
 }
