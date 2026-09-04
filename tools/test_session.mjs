@@ -45,6 +45,11 @@ const APP = {
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const BLOCK = {
   sha: '3ecf220b7c519c8f',
   lines: 51,
@@ -283,11 +288,14 @@ mustBreak(++mn, '`sessClear()` שאינה מרוקנת',
   'function sessClear() { }',
   (h) => { h.ctx.sessSet({ id: 1 }); h.ctx.sessClear(); return h.ctx.sessGet() === null; });
 
+if (RUN_MUT) {
 /* ── מוטציית-נגד: שינוי בית בליבה **חייב** להזיז את החתימה ─────────────── */
 const cn = crypto.createHash('sha256').update(block.replace('_sessUser', '_sessUserX'))
   .digest('hex').slice(0, 16);
 if (cn !== BLOCK.sha) pass(++mn + '. מוטציית-נגד: שינוי בית בליבה מזיז את החתימה');
 else fail(++mn + '. מוטציית-נגד: שינוי בית בליבה **אינו** מזיז את החתימה');
+
+}
 
 console.log(failures ? `\n✗ סבב 53 (מודל הסשן) — ${failures} נכשלו`
                      : `\n✓ סבב 53 (מודל הסשן) — ${mn} טענות עברו, 0 נכשלו`);

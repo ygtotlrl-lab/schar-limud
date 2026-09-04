@@ -35,6 +35,11 @@ const APP = {
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = fs.readFileSync(join(ROOT, 'index.html'), 'utf8');
 
@@ -118,6 +123,7 @@ const ids = new Set();
 for (let i = 0; i < 400; i++) ids.add(run(block, APP.deviceKey, {}).__get());
 is(ids.size > 390, `400 «מכשירים» ייצרו ${ids.size} מזהים שונים — אין התנגשות שיטתית`);
 
+if (RUN_MUT) {
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 
@@ -149,6 +155,8 @@ const aKeep = { [APP.deviceKey]: 'zzzz9999' };
 is(run(anti, APP.deviceKey, aKeep).__get() === 'zzzz9999'
    && /^[a-z0-9]{8}$/.test(run(anti, APP.deviceKey, {}).__get()),
    '⭐ מוטציית-נגד: רווחים והצהרה חיה ⛔ אינם משנים התנהגות — הרתמה עוברת');
+
+}
 
 console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ סבב 40 (מזהה מכשיר) — ${n} טענות עברו, 0 נכשלו`);

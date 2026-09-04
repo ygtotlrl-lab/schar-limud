@@ -29,7 +29,12 @@ import { fileURLToPath } from 'node:url';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 80) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [152];
+export const ROWS = [154];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = process.env.ORPHANS_ROOT ||
              path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -106,6 +111,7 @@ assert(R.out.length === 0,
     `3 · כל תיקייה מוחרגת קיימת בעץ — נמדדו ${dirs.length} מוכרזות וריקות והצפוי אפס`);
 }
 
+if (RUN_MUT) {
 /* ── מוטציות — עותק אחד לשער, ולא עותק לכל מוטציה ──────────────────────── */
 if (!INNER) {
   const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'orphans-'));
@@ -143,6 +149,8 @@ if (!INNER) {
   const m3 = orphans(WORK);
   assert(m3.out.length === 0,
     `נ2 · ⛔ והעץ חוזר לקדמותו אחרי המוטציות — נמדדו ${m3.out.length} והצפוי אפס`);
+}
+
 }
 
 console.log(failed ? `\n✗ סבב 80 (קבצים בלי קוראים) — ${failed} טענות נכשלו`

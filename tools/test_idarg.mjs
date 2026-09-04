@@ -43,6 +43,11 @@ const APP = {
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const root = path.resolve(process.argv[2] || path.join(import.meta.dirname, '..'));
 let pass = 0, fail = 0;
 const ok  = (m) => { pass++; console.log('  ok   ' + m); };
@@ -182,6 +187,7 @@ else {
   if (good) ok('3 · ⛔ `idArg` מצטט תמיד, ומסנן ברשימת-היתר — גם על ניסיון הזרקה');
 }
 
+if (RUN_MUT) {
 /* ── ד. מוטציות ────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 
@@ -229,6 +235,8 @@ else bad('9 · ⛔ עטיפת ליטרל מספרי לא נתפסה');
 const wrapId = src.replace('</script>', "var _z = f('(' + idArg(rowId) + ')');\n</script>");
 if (badWraps(wrapId).length === wrongly.length) ok('10 · ⭐ מוטציית-נגד: `idArg` על מזהה (`rowId`) אינו מפיל');
 else bad('10 · ⛔ עטיפת מזהה תקין נתפסה כהפרה — השער מדווח שקר');
+
+}
 
 console.log(`${fail ? '✗' : '✓'} סבב 64 (העברת מזהה ל-DOM) — ${pass} טענות עברו, ${fail} נכשלו\n`);
 process.exit(fail ? 1 : 0);

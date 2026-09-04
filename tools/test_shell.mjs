@@ -49,6 +49,11 @@ const APP = {
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 let failures = 0;
@@ -212,6 +217,13 @@ if (!APP.shareBridge && APP.shellSha !== SHELL_SHA_NO_BRIDGE) {
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער המעטפת`
                      : `\n✅ ${APP.app}: שער המעטפת עבר`);
+/*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
+ *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
+ *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_shell: המוטציות רצות ברמה המלאה (--full)');
+  process.exit(failures ? 1 : 0);
+}
 /*  ⛔ היציאה עברה לסוף (סבב 67) — המוטציות רצות אחרי הטענות. */
 /* ───────────────────────────────────────────────────────────────────────────
    ⛔ מוטציה ומוטציית-נגד — סבב 67
@@ -235,6 +247,8 @@ if (!process.env.RD67_MUT) {
     { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
 
   const _mut = (label, file, edit, expectFail) => {
+    /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שניים** בהרצה
+        אחת, ⭐ אחד לכל מוטציה: ⛔ כל אחת מריצה שער אמיתי על ליבה שהשתנתה. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = _p.join(d, file);

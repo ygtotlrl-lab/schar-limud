@@ -100,6 +100,11 @@ const APP = {
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 /*  ⭐ החתימה, מספר השורות והסמנים — זהים בארבעת הריפו. */
 const CORE_SHA = '47d92417774b3b96';
 const CORE_LINES = 253;
@@ -458,12 +463,15 @@ is(/return first\.then\(function \(hit\) \{ return hit \|\| swOfflinePage\(\); \
 is(/text\/html; charset=utf-8/.test(SRC),
    'דף האופליין מוגש עם Content-Type מפורש — בארבעתן, גם ב-schar');
 
+if (RUN_MUT) {
 /* ── ה. שלוש המוטציות ההתנהגותיות ──────────────────────────────────────── */
 /*  ⚠️ כל מוטציה רצה על עותק בתיקייה זמנית, ומריצה את **רתמת קו-הבסיס
  *  האמיתית**. הצלחה = הרתמה נכשלה. ⛔ מוטציה שהרתמה עוברת עליה היא תיקון
  *  שאינו נאכף — וזו בדיוק הנקודה. */
 function harnessFails(label, from, to) {
   if (!SRC.includes(from)) { is(false, `${label} — עוגן המוטציה לא נמצא ב-sw.js`); return; }
+  /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **ארבעה** בהרצה
+      אחת, ⭐ ושתי הרתמות מריצות שער אמיתי על עץ שסט הקבצים שלו שונה. */
   const dir = fs.mkdtempSync(join(os.tmpdir(), 'sw42c-'));
   try {
     fs.mkdirSync(join(dir, 'tools'));
@@ -520,6 +528,8 @@ harnessFails(
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
 }
 
 console.log(`\n${bad ? '✗' : '✓'} סבב 72 (ליבת ה-service worker וקו הבסיס) — ${n - bad} טענות עברו, ${bad} נכשלו`);

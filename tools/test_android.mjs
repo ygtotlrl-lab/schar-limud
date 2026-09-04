@@ -48,7 +48,12 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [93, 94];
+export const ROWS = [94, 95];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT     = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = 'android/app/src/main/AndroidManifest.xml';
@@ -258,6 +263,7 @@ const bareG = normGradle(stripBridgeGradle(gradleSrc));
 bare('חתימת המניפסט',     bareM, MANIFEST_SHA_NO_BRIDGE);
 bare('חתימת קובץ הבנייה', bareG, GRADLE_SHA_NO_BRIDGE);
 
+if (RUN_MUT) {
 /* ── ד. מוטציות ─────────────────────────────────────────────────────────────
  *  ⛔ רצות על עותק **בזיכרון** ולא על העץ (הלקח של סבב 42ג) — מוטציה
  *  שנכתבת לקובץ האמיתי ומוחזרת ב-`finally` מותירה את הריפו שבור אם
@@ -314,6 +320,9 @@ mut('בלוק dependencies שנוסף ⛔ אינו מזיז את החתימה ח
 const RUN_MUT = process.env.R45_NO_MUT !== '1';
 if (!RUN_MUT) skip('מוטציות שער ה-versionCode מדולגות (R45_NO_MUT=1)');
 else {
+  /*  ⛔ עותק לכל רתמה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
+      אחת, ⭐ ושתי הרתמות בונות סט קבצים שונה תחת `android/`: ⛔ שחזור סט
+      קבצים הוא בעצמו העתקת עץ. */
   const tmp = fs.mkdtempSync(join(os.tmpdir(), 'r45gate-'));
   const g = (args, cwd) => execFileSync('git', ['-C', cwd, ...args],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
@@ -409,6 +418,8 @@ else {
   assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורת «אין נכסים מוטבעים»', 'index.html', true);
   assetMut('⭐ מוטציית-נגד: קובץ אחר תחת `assets/` ⛔ אינו מפיל — נמדד מה מוטבע',
            'fonts.txt', false);
+}
+
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`

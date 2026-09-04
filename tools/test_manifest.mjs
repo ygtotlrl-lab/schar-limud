@@ -29,7 +29,12 @@ import { execFileSync } from 'child_process';
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
-export const ROWS = [3, 105];
+export const ROWS = [3, 106];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
@@ -136,21 +141,30 @@ t(n++, ((/^#\s+(.+?)\s*$/m.exec(
     rd('README.md').replace(/^# .+$/m, '#   ' + NAME + '  ')) || [])[1]) === NAME,
   '⭐ מוטציית-נגד: רווחים סביב הכותרת ב-README ⛔ אינם מפילים — נמדד השם, לא הריווח');
 
+if (RUN_MUT) {
 /* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
+/*  ⛔ עותק אחד לשער, ⛔ ולא עותק לכל מוטציה (סבב 92) — ⚠️ נמדד שהשער פתח
+    **שמונה** עותקי עץ בהרצה אחת: ⭐ כל מוטציה כאן כותבת `manifest.json`
+    בלבד, ⛔ ולכן שחזורו מהעץ האמיתי מחזיר את העותק למצבו הנקי. */
+const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'r44mf-'));
+for (const f of fs.readdirSync(ROOT)) {
+  if (f === '.git' || f === 'node_modules') continue;
+  fs.cpSync(path.join(ROOT, f), path.join(WORK, f), { recursive: true });
+}
+
 function runDocsOn(mutManifest) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r44mf-'));
   try {
-    for (const f of fs.readdirSync(ROOT)) {
-      if (f === '.git' || f === 'node_modules') continue;
-      fs.cpSync(path.join(ROOT, f), path.join(tmp, f), { recursive: true });
-    }
-    fs.writeFileSync(path.join(tmp, 'manifest.json'), JSON.stringify(mutManifest, null, 2));
+    fs.writeFileSync(path.join(WORK, 'manifest.json'), JSON.stringify(mutManifest, null, 2));
     try {
-      execFileSync(process.execPath, [path.join(tmp, 'tools', 'check-docs.mjs')],
-                   { cwd: tmp, stdio: 'pipe' });
+      execFileSync(process.execPath, [path.join(WORK, 'tools', 'check-docs.mjs')],
+                   { cwd: WORK, stdio: 'pipe' });
       return true;                       // עבר
     } catch (e) { return false; }        // נפל
-  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  } finally {
+    /*  ⛔ השחזור בכל מסלול יציאה — ⚠️ מוטציה שנפלה באמצע משאירה את העותק
+        מלוכלך, ⛔ והמוטציה הבאה נמדדת על עץ שאינו נקי. */
+    fs.cpSync(path.join(ROOT, 'manifest.json'), path.join(WORK, 'manifest.json'));
+  }
 }
 
 const mutShared  = { ...mf, display: 'fullscreen' };
@@ -184,6 +198,9 @@ t(n++, runDocsOn(mutStart) === false,
 const mutDesc = { ...mf, description: mf.description + '.' };
 t(n++, runDocsOn(mutDesc) === true,
   '⭐ מוטציית-נגד: שינוי `description` ⛔ **אינו** מפיל — הוא פרטי');
+
+fs.rmSync(WORK, { recursive: true, force: true });
+}
 
 console.log(`\n${fail ? '❌' : '✓'} סבב 44 (manifest) — ${pass} טענות עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

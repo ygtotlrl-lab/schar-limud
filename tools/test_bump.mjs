@@ -44,7 +44,12 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [110];
+export const ROWS = [111];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = join(dirname(SELF), '..');
@@ -318,6 +323,7 @@ try {
 }
 if (!done) fail('הרתמה נקטעה לפני סופה');
 
+if (RUN_MUT) {
 /* ── ח. מוטציות על העץ האמיתי, בעותק זמני ──────────────────────────────── */
 /*  ⛔ המוטציה רצה על **עותק** ולא על העץ (סבב 42ג) — ⚠️ מדידה שנפלה
  *  באמצע הייתה משאירה את העץ שגוי לתמיד. */
@@ -326,6 +332,9 @@ if (!done) fail('הרתמה נקטעה לפני סופה');
     { cwd: dir, encoding: 'utf8', env: { ...process.env, BUMP_GATE_ONLY: '1' } }).status;
 
   const mut = (label, file, edit, expectFail) => {
+    /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה**
+        בהרצה אחת, ⭐ ואחד מהם הוא עותק העבודה הקבוע: ⛔ המוטציות מריצות
+        שער אמיתי על עץ שהיסטוריית ה-git שלו שונה, ⚠️ ואין מה לשחזר. */
     const d = mkdtempSync(join(tmpdir(), 'rd67-'));
     cpSync(resolve(ROOT), d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = join(d, file);
@@ -340,6 +349,8 @@ if (!done) fail('הרתמה נקטעה לפני סופה');
       (s) => s.replace(/versionCode\s+(\d+)/, (m, n) => 'versionCode ' + Math.max(1, +n - 1)), true);
   mut('⭐ מוטציית-נגד: שדה בנייה אמיתי שנוסף ל-build.gradle ⛔ אינו מפיל', GRADLE,
       (s) => s.replace(/versionName\s+"([^"]+)"/, 'versionName "$1"\n        multiDexEnabled false'), false);
+}
+
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`
