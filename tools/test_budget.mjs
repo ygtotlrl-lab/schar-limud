@@ -137,23 +137,35 @@ function resign(docsSrc, mdSrc) {
   return s;
 }
 
+/*  ⛔ עותק אחד לשער, ⛔ ולא עותק לכל מוטציה (סבב 92) — ⚠️ נמדד שהשער
+    פתח **אחד-עשר** עותקי עץ בהרצה אחת, ⭐ אחד לכל קריאה: ⛔ הזמן גדל עם
+    מספר המוטציות ולא עם גודל הקוד. ⚠️ והמוטציות כאן נוגעות ב**תוכן**
+    שני קבצים בלבד — ⭐ ולכן שחזורם מהמקור מחזיר את העותק למצבו הנקי,
+    ⛔ ואין צורך בעץ חדש. */
+const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'r49bg-'));
+for (const f of fs.readdirSync(ROOT)) {
+  if (f === '.git' || f === 'node_modules') continue;
+  fs.cpSync(path.join(ROOT, f), path.join(WORK, f), { recursive: true });
+}
+const WORK_DOC = path.join(WORK, 'CLAUDE.md');
+const WORK_CHK = path.join(WORK, 'tools', 'check-docs.mjs');
+const CLEAN_CHK = fs.readFileSync(WORK_CHK, 'utf8');
+
 function runDocsOn(mutate) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r49bg-'));
   try {
-    for (const f of fs.readdirSync(ROOT)) {
-      if (f === '.git' || f === 'node_modules') continue;
-      fs.cpSync(path.join(ROOT, f), path.join(tmp, f), { recursive: true });
-    }
     const md = mutate(raw);
-    fs.writeFileSync(path.join(tmp, 'CLAUDE.md'), md);
-    const dp = path.join(tmp, 'tools', 'check-docs.mjs');
-    fs.writeFileSync(dp, resign(fs.readFileSync(dp, 'utf8'), md));
+    fs.writeFileSync(WORK_DOC, md);
+    fs.writeFileSync(WORK_CHK, resign(CLEAN_CHK, md));
     try {
-      execFileSync(process.execPath, [path.join(tmp, 'tools', 'check-docs.mjs')],
-                   { cwd: tmp, stdio: 'pipe' });
+      execFileSync(process.execPath, [WORK_CHK], { cwd: WORK, stdio: 'pipe' });
       return true;                       // עבר
     } catch (e) { return false; }        // נפל
-  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  } finally {
+    /*  ⛔ השחזור בכל מסלול יציאה — ⚠️ מוטציה שנפלה באמצע משאירה את העותק
+        מלוכלך, ⛔ והמוטציה הבאה נמדדת על עץ שאינו נקי. */
+    fs.writeFileSync(WORK_DOC, raw);
+    fs.writeFileSync(WORK_CHK, CLEAN_CHK);
+  }
 }
 
 t(n++, runDocsOn(s => s) === true, '⭐ קו הבסיס — check-docs עובר על הקובץ כפי שהוא');
@@ -281,4 +293,5 @@ t(n++, runDocsOn(s => s.replace('<!-- SHARED:end -->',
 
 console.log(fail ? `\n✗ סבב 49 (תקציב תיעוד) — ${fail} נכשלו, ${pass} עברו`
                  : `\n✓ סבב 49 (תקציב תיעוד) — ${pass} טענות עברו`);
+fs.rmSync(WORK, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

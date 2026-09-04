@@ -470,6 +470,8 @@ if (RUN_MUT) {
  *  שאינו נאכף — וזו בדיוק הנקודה. */
 function harnessFails(label, from, to) {
   if (!SRC.includes(from)) { is(false, `${label} — עוגן המוטציה לא נמצא ב-sw.js`); return; }
+  /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **ארבעה** בהרצה
+      אחת, ⭐ ושתי הרתמות מריצות שער אמיתי על עץ שסט הקבצים שלו שונה. */
   const dir = fs.mkdtempSync(join(os.tmpdir(), 'sw42c-'));
   try {
     fs.mkdirSync(join(dir, 'tools'));

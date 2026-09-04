@@ -332,6 +332,9 @@ if (RUN_MUT) {
     { cwd: dir, encoding: 'utf8', env: { ...process.env, BUMP_GATE_ONLY: '1' } }).status;
 
   const mut = (label, file, edit, expectFail) => {
+    /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה**
+        בהרצה אחת, ⭐ ואחד מהם הוא עותק העבודה הקבוע: ⛔ המוטציות מריצות
+        שער אמיתי על עץ שהיסטוריית ה-git שלו שונה, ⚠️ ואין מה לשחזר. */
     const d = mkdtempSync(join(tmpdir(), 'rd67-'));
     cpSync(resolve(ROOT), d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = join(d, file);

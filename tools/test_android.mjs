@@ -320,6 +320,9 @@ mut('בלוק dependencies שנוסף ⛔ אינו מזיז את החתימה ח
 const RUN_MUT = process.env.R45_NO_MUT !== '1';
 if (!RUN_MUT) skip('מוטציות שער ה-versionCode מדולגות (R45_NO_MUT=1)');
 else {
+  /*  ⛔ עותק לכל רתמה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
+      אחת, ⭐ ושתי הרתמות בונות סט קבצים שונה תחת `android/`: ⛔ שחזור סט
+      קבצים הוא בעצמו העתקת עץ. */
   const tmp = fs.mkdtempSync(join(os.tmpdir(), 'r45gate-'));
   const g = (args, cwd) => execFileSync('git', ['-C', cwd, ...args],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });

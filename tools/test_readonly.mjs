@@ -60,6 +60,9 @@ const t = (n, cond, m) => { if (cond) { pass++; console.log(`  ok   ${n} · ${m}
 
 const SKIP = new Set(['.git', 'node_modules']);
 function copyRepo() {
+  /*  ⛔ עותק לכל תרחיש, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שישה** בהרצה
+      אחת: ⭐ הטענה כאן היא ש**העץ אינו משתנה**, ⛔ ועותק שמשוחזר בין
+      תרחישים היה מודד את השחזור ולא את השער. */
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), 'r70-ro-'));
   fs.cpSync(ROOT, dst, {
     recursive: true,

@@ -135,6 +135,9 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
 if (RUN_MUT) {
 /* ── 3 · מוטציות ───────────────────────────────────────────────────────── */
 function copyRepo() {
+  /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
+      אחת: ⭐ המוטציה עורכת את `index.html` **ומריצה עליו שער אמיתי**,
+      ⛔ ושתי מוטציות על אותו עותק היו נמדדות זו על גבי זו. */
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37a-'));
   fs.cpSync(ROOT, dst, {
     recursive: true,

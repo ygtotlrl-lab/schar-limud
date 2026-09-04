@@ -107,10 +107,32 @@ cpSync(join(ROOT, 'android'), join(baseDir, 'android'), { recursive: true });
 cpSync(join(ROOT, 'tools'), join(baseDir, 'tools'), { recursive: true });
 t((await run(baseDir)).status === 0, 'check-docs עובר על עותק נקי של העץ');
 
+const NEW_SHARED = [
+  ['android/README.md', 'android-smali-scope'],
+  ['android/README.md', 'android-cache-apk'],
+  ['android/README.md', 'android-origin-switch'],
+  ['android/README.md', 'android-icons'],
+];
+
+/*  ⛔ עותק אחד לשער, ⛔ ולא עותק לכל מוטציה (סבב 92) — ⚠️ נמדד שהשער פתח
+ *  **תשעה-עשר** עותקי עץ בהרצה אחת, ⭐ אחד לכל מוטציה: ⛔ הזמן גדל עם
+ *  מספר המוטציות ולא עם גודל הקוד. ⚠️ וכל מוטציה כאן נוגעת ב**תוכן**
+ *  אחד מקובצי התיעוד — ⭐ ולכן שחזורם מהעץ האמיתי מחזיר את העותק למצבו
+ *  הנקי, ⛔ ואין צורך בעץ חדש: ⚠️ ועותק אחד הוא **אחד**, ⛔ ולא עותק
+ *  נקי לצד עותק עבודה. */
+/*  ⛔ הרשימה נגזרת ואינה מוקלדת — ⚠️ כל קובץ שמוטציה כותבת אליו חייב
+ *  להשתחזר, ⛔ ושם שנשמט ממנה משאיר מוטציה קודמת בעץ: ⭐ המוטציה הבאה
+ *  נמדדת אז על עותק מלוכלך, ⚠️ והיא «עוברת» מסיבה שאינה שלה. */
+const MUT_FILES = [...new Set([...CASES.map(([f]) => f), ...NEW_SHARED.map(([f]) => f),
+                               'CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json'])];
+const mutDir = () => {
+  for (const f of MUT_FILES) cpSync(join(ROOT, f), join(baseDir, f));
+  return baseDir;
+};
+
 /* 3 — מוטציה: מחיקת פרק נדרש מכל אחד משלושת הקבצים מפילה את השער */
 for (const [f, re, name] of CASES) {
-  const dir = temp('md-skel-mut-');
-  cpSync(baseDir, dir, { recursive: true });
+  const dir = mutDir();
   const p = join(dir, f);
   const src = fs.readFileSync(p, 'utf8');
   t(re.test(src), `${f}: הפרק «${name}» קיים לפני המוטציה`);
@@ -129,7 +151,6 @@ for (const [f, re, name] of CASES) {
  *  ברזל 8 סעיף 4 בהיפוך.                                                 */
 console.log('· סבב 41 — תוכן הפסקאות המשותפות');
 
-const mutDir = () => { const d = temp('md-shared-mut-'); cpSync(baseDir, d, { recursive: true }); return d; };
 
 /* 4א — מחיקת פסקה משותפת שלמה (עם הסימונים) מפילה */
 {
@@ -180,12 +201,6 @@ const mutDir = () => { const d = temp('md-shared-mut-'); cpSync(baseDir, d, { re
  *  — נשאר פרטי, והמוטציה השנייה מודדת שהשער אינו נופל עליו.               */
 console.log('· סבב 42ב — הפרקים המשותפים של תיעוד האנדרואיד');
 
-const NEW_SHARED = [
-  ['android/README.md', 'android-smali-scope'],
-  ['android/README.md', 'android-cache-apk'],
-  ['android/README.md', 'android-origin-switch'],
-  ['android/README.md', 'android-icons'],
-];
 
 for (const [f, id] of NEW_SHARED) {
   const START = `<!-- SHARED:start id="${id}" -->`;
