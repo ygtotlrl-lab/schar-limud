@@ -198,7 +198,9 @@ const ACTIVE = activeLines.join('\n');
 {
   const b = /<!--\s*SHARED:start\s+id="rules-table"\s*-->([\s\S]*?)<!--\s*SHARED:end\s*-->/.exec(DOC);
   const body = b ? b[1] : '';
-  const row = /^\|\s*\d+\s*\|\s*עמודת «מה זה» כהוראה\s*\|([^|]*)\|/m.exec(body);
+  /*  ⛔ שם השורה נושא את סימון הלולאה (סבב 92) — ⚠️ ה-◆ נגזר מהזיווג
+   *  לכלל, ⛔ והתאמה לשם עירום הייתה מפילה על שורה שקיבלה זוג. */
+  const row = /^\|\s*\d+\s*\|\s*עמודת «מה זה» כהוראה\s*[◆◇⧉]?\s*\|([^|]*)\|/m.exec(body);
   t(!!row, '31א · שורת «עמודת «מה זה» כהוראה» יושבת בתוך `rules-table`');
   const std = row ? row[1] : '';
   t(/הטבלה היא מקור ההוראה, ⛔ ולא תיאור/.test(std) &&
