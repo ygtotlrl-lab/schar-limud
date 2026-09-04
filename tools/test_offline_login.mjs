@@ -38,7 +38,7 @@ import { webcrypto, pbkdf2Sync } from 'node:crypto';
 export const ROWS = [];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
- *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -249,7 +249,7 @@ async function main() {
     ok('⭐ slUserPub מפיל עמודה זרה שנוספה לטבלה', !('secret_note' in pub));
     eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,role,username');
     /* ⛔ שורה בלי `active` אינה מושלמת עוד (סבב 63) — העמודה קיימת בטבלה
-       (`not null default true`, נמדד 27.8), ולכן «חסר» הוא חוסר-ידיעה
+       (`not null default true`), ולכן «חסר» הוא חוסר-ידיעה
        ולא «ישן», וההכרעה נכשלת-סגור. */
     eq('⛔ עמודה חסרה אינה מושלמת — נכשל-סגור', pub.active, undefined);
     eq('   וערך מפורש false נשמר כמו שהוא',
