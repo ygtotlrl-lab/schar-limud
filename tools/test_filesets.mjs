@@ -124,6 +124,7 @@ const SHARED = [
   'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
   'tools/test_rulesdocs.mjs',
+  'tools/test_dbfacts.mjs',
   'tools/test_session.mjs',
   'tools/test_sharedsync.mjs',
   'tools/test_signedshared.mjs',
