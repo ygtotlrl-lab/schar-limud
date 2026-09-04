@@ -448,6 +448,39 @@ const BLOCK_ORDER = ['neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'te
                      'devid', 'mergecore', 'uihelp'];
 
 
+/*  ⛔ מזכר חוצה-ייבוא לגזירות היקרות (סבב 92) — ⚠️ `test_matrix` מייבא את
+ *  הקובץ הזה **97 פעם** בתהליך אחד עם `?flip=N`, ⛔ וכל ייבוא גזר מחדש את
+ *  אותו קוד בדיוק: ⭐ נמדד שהלבנת המקור ופענוח ה-PNG לבדם הם כרבע מזמן
+ *  הריצה. ⛔ **והמפתח הוא חתימת התוכן ⛔ ולא נתיב או חותמת-זמן** — ⚠️ מזכר
+ *  שנשען על `mtime` מחזיר גזירה ישנה כשמוטציה נכתבה באותה מילישנייה,
+ *  ⭐ וזה בדיוק «probe שאינו יכול להיכשל»: ⛔ הקריאה מהדיסק נשארת, ⚠️ ורק
+ *  העיבוד שמעליה נחסך. */
+const _MEMO = (globalThis.__capMemo ||= new Map());
+/*  ⛔ חתימת נכסי האייקון — ⚠️ שם הקובץ **וגם** תוכנו: ⭐ נכס שהוחלף בנכס
+ *  אחר באותו גודל היה עובר על חתימה שסופרת גדלים בלבד, ⛔ ונכס שנוסף או
+ *  שירד משנה את הרשימה. */
+function ICON_SIG() {
+  const out = [];
+  const walk = (d) => {
+    let ents = [];
+    try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const e of ents.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const f = d + '/' + e.name;
+      if (e.isDirectory()) walk(f);
+      else if (e.name.endsWith('.png')) out.push(f + ':' + fs.readFileSync(f).toString('base64'));
+    }
+  };
+  walk('icons'); walk('android');
+  return out.join('\n');
+}
+function memoByHash(ns, text, fn) {
+  const k = ns + ':' + crypto.createHash('sha256').update(text).digest('hex');
+  if (_MEMO.has(k)) return _MEMO.get(k);
+  const v = fn();
+  _MEMO.set(k, v);
+  return v;
+}
+
 const src = fs.readFileSync(APP.file, 'utf8');
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
@@ -544,7 +577,7 @@ function scanJs(text, from, to, out) {
   }
 }
 
-const code = blankNonCode(src);
+const code = memoByHash('code', src, () => blankNonCode(src));
 
 /* ── א. ליבה — חתימת הבלוק המשותף ──────────────────────────────────────── */
 const ranges = [];             // טווחי הבלוקים המשותפים, להחרגה מסריקת החיווט
@@ -2425,7 +2458,7 @@ const MATRIX = [
   { row: 70, name: 'ייצוא — שני דפוסים מוצהרים',
     probe: () => exportMarkupSites().length === 0 },
   { row: 100, name: 'שכבת אייקונים',
-    probe: () => iconAudit('.').length === 0 },
+    probe: () => memoByHash('icons', ICON_SIG(), () => iconAudit('.')).length === 0 },
   { row: 138, name: 'שכבת קלט אחידה',
     probe: () => inputAudit('.').length === 0 },
   /*  ⛔ ❌ מנומק (סבב 67) — אין כאן מסך ניהול משתמשים, ואין לא
