@@ -43,7 +43,7 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, APP.file), 'utf8');
-const START = '/* ═══ גיבוי יומי ויומן פעולות';
+const START = '/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30)';
 const END = 'סוף מודול הגיבוי היומי';
 
 let passN = 0, failN = 0;
