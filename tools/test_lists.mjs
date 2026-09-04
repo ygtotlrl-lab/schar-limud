@@ -36,13 +36,13 @@ export const ROWS = [];
 const CAPS_FILE = 'tools/check-capabilities.mjs';
 const CMT_FILE  = 'tools/check-comments.mjs';
 
-/*  ⛔ שני ההבדלים המותרים — ורק הם (סבב 45ב).
+/*  ⛔ ההבדל היחיד המותר — ורק הוא (סבב 91).
  *  `swcore` יושב ב-`sw.js`, ו-`check-comments.mjs` סורק את ה-JS המוטבע
  *  שב-`index.html` בלבד; הוא מזוהה ב-`block.file` ומנוכה **בגזירה** ולא
  *  ברשימת חריגים — כלומר בלוק חיצוני עתידי ינוכה מאליו.
- *  «מידע טכני» אינו יכולת במטריצה ואין לו `hooks`; הוא נאכף בחתימה
- *  ב-`check-status-area.mjs`, ולכן אין לו מקום ב-`CAPS`. */
-const CMT_ONLY = ['סוף רכיב "מידע טכני"'];
+ *  ⚠️ «מידע טכני» ישב כאן עד סבב 91 — ⛔ ומאז יש לו בלוק חתום ב-`CAPS`,
+ *  ⭐ ולכן הרשימה ריקה: החרגה שאין לה מקרה בפועל מפילה. */
+const CMT_ONLY = [];
 
 let failures = 0, checks = 0;
 const pass = (m) => { checks++; console.log('  ✅ ' + m); };
