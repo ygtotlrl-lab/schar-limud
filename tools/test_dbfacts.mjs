@@ -33,7 +33,7 @@ import { dirname, join } from 'node:path';
 export const ROWS = [125, 135, 136, 157];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
- *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה.
  *  ⛔ **וכאן זה חל על השער כולו** — ⚠️ הוא היחיד שיוצא לרשת, ⭐ ורמת
  *  העבודה נשארת קוראת-קבצים בלבד. */
@@ -51,7 +51,7 @@ const APP = {
   backupTable: 'kv_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
    *  בריפו של האפליקציה הראשונה בפרויקט, ⭐ ועותק שני היה מקור אמת שני. */
-  allowlistDoc: ''
+  allowlistFn: ''
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -100,7 +100,10 @@ async function q(path, init) {
   try {
     const r = await fetch(BASE + path, {
       signal: ac.signal,
-      headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, ...(init || {}).headers },
+      method: (init || {}).method || 'GET',
+      body: (init || {}).body,
+      headers: { apikey: KEY, Authorization: 'Bearer ' + KEY,
+                 'Content-Type': 'application/json', ...(init || {}).headers },
     });
     const text = await r.text();
     return { status: r.status, text };
@@ -179,13 +182,15 @@ async function claimCfgKeys() {
 }
 
 async function claimAllowlist() {
-  if (!APP.allowlistDoc) { ok('ד. רשימת-היתר — הפינוי אינו בבעלות הריפו הזה'); return; }
-  let doc = '';
-  try { doc = readFileSync(join(ROOT, APP.allowlistDoc), 'utf8'); }
-  catch (e) { bad(`ד. רשימת-היתר — \`${APP.allowlistDoc}\` מוצהר ואינו קיים. נמדד «אין קובץ» מול הצפוי «קיים». מיישרים את \`APP.allowlistDoc\` לקובץ שמגדיר את הרשימה`); return; }
-  const body = /returns text\[\][\s\S]*?array\[([\s\S]*?)\]/i.exec(doc.replace(/^\s*--.*$/gm, ''));
-  if (!body) { bad('ד. רשימת-היתר — לא נגזרה רשימה מהמיגרציה. נמדד «אין `array[...]`» מול הצפוי «רשימה». מיישרים את \`APP.allowlistDoc\` למיגרציה האחרונה שמגדירה את הרשימה'); return; }
-  const allow = new Set([...body[1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
+  if (!APP.allowlistFn) { ok('ד. רשימת-היתר — הפינוי אינו בבעלות הריפו הזה'); return; }
+  /*  ⛔⛔ הרשימה נקראת **מהמסד** ⛔ ולא מקובץ המיגרציה (סבב 94) — ⚠️ קריאה
+   *  מהקובץ מודדת את מה ש**הוצהר** ולא את מה ש**רץ**: ⭐ מיגרציה שנכתבה
+   *  ולא רצה הייתה עוברת בשקט, ⛔ וזו בדיוק הסחיפה שהשורה באה לתפוס. */
+  const ra = await q(`/rpc/${APP.allowlistFn}`, { method: 'POST', body: '{}' });
+  if (ra.status !== 200) throw new Error(`rpc/${APP.allowlistFn} → ${ra.status} ${ra.text.slice(0, 120)}`);
+  const parsed = JSON.parse(ra.text);
+  const allow = new Set(Array.isArray(parsed) ? parsed : []);
+  if (!allow.size) { bad(`ד. רשימת-היתר — \`${APP.allowlistFn}()\` החזירה רשימה ריקה. נמדד 0 מפתחות מול הצפוי לפחות אחד. מריצים את המיגרציה שמגדירה את הרשימה`); return; }
   const r = await q(`/${APP.backupTable}?select=key`);
   if (r.status !== 200) throw new Error(`${APP.backupTable} → ${r.status} ${r.text.slice(0, 120)}`);
   const liveKeys = [...new Set(JSON.parse(r.text).map((x) => x.key))];
@@ -198,7 +203,7 @@ async function claimAllowlist() {
   const orphan = daily.filter((k) => !allow.has(k));
   if (orphan.length)
     bad(`ד. רשימת-היתר — מפתחות חיים ב-\`${APP.backupTable}\` שאינם ברשימה ולכן אינם מתפנים לעולם: ${orphan.slice(0, 6).join(', ')}. נמדד ${orphan.length} מול הצפוי 0. מוסיפים אותם במיגרציה חדשה שמגדירה את הרשימה מחדש`);
-  else ok(`ד. רשימת-היתר — ${allow.size} מפתחות ברשימה, ${daily.length} מפתחות חיים, וכולם ברשימה`);
+  else ok(`ד. רשימת-היתר — ${allow.size} מפתחות ברשימה שבמסד, ${daily.length} מפתחות חיים, וכולם ברשימה`);
   /*  ⛔ הכיוון ההפוך **מדווח ואינו מפיל** — ⚠️ הנימוק המדוד: גריעת שם
    *  מהרשימה אינה מוחקת את שורותיו אלא **מקפיאה אותן לנצח**, ⭐ ומפתח
    *  שהתרוקן בגריעה תקינה הוא מצב תקין: ⛔ הפלה עליו הייתה דוחפת להסיר
@@ -244,14 +249,7 @@ if (RUN_MUT && !SELFTEST) {
 
   const cfgWant = [...new Set([...SRC.matchAll(
     new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
-  let allowFirst = '';
-  if (APP.allowlistDoc) {
-    try {
-      const d = readFileSync(join(ROOT, APP.allowlistDoc), 'utf8').replace(/^\s*--.*$/gm, '');
-      const b = /returns text\[\][\s\S]*?array\[([\s\S]*?)\]/i.exec(d);
-      if (b) allowFirst = (/'([^']+)'/.exec(b[1]) || [])[1] || '';
-    } catch (e) { /* היעדר הקובץ נתפס בטענה ד עצמה, ואין כאן מה להוסיף */ }
-  }
+  const allowFirst = 'bk_key_in_the_stub_allowlist';
 
   /*  ⛔ התשובות נגזרות **מצורת הבקשה** ⛔ ולא משמות טבלה מוקלדים — ⚠️ ארבעת
    *  הריפו שולחים שמות אחרים, ⭐ ושרת ששומע שם אחד אינו רתמה לשלושה. */
@@ -261,10 +259,12 @@ if (RUN_MUT && !SELFTEST) {
         ? [400, '{"code":"42703","message":"column x does not exist"}'] : [200, '[]'];
     if (/updated_at/.test(url))
       return scen === 'stamp' ? [200, '[{"updated_at":0}]'] : [200, '[]'];
+    if (APP.allowlistFn && url.includes('/rpc/' + APP.allowlistFn))
+      return [200, JSON.stringify([allowFirst])];
     if (APP.backupTable && url.includes('/' + APP.backupTable + '?'))
       return [200, JSON.stringify(
         (scen === 'orphan' ? [{ key: 'ys_orphan_key_that_is_not_listed' }] : [])
-          .concat(allowFirst ? [{ key: allowFirst }] : []))];
+          .concat([{ key: allowFirst }]))];
     const keys = scen === 'cfg' ? cfgWant.slice(1) : cfgWant;
     return [200, JSON.stringify(keys.map((k) => ({ key: k })))];
   };
@@ -306,7 +306,7 @@ if (RUN_MUT && !SELFTEST) {
   if (cfgWant.length)
     await mut('⛔ מוטציה: מפתח הגדרה שנעדר מהטבלה מפיל את «כל מפתח שהקוד מבקש»', 'cfg', false);
   else ok('⛔ אין מוטציית מפתח הגדרה — הריפו הזה אינו קורא הגדרה, ⚠️ ואין מה למוטט');
-  if (APP.allowlistDoc)
+  if (APP.allowlistFn)
     await mut('⛔ מוטציה: מפתח גיבוי חי שאינו ברשימה מפיל את «רשימת-היתר»', 'orphan', false);
   else ok('⛔ אין מוטציית רשימת-היתר — הפינוי אינו בבעלות הריפו הזה, ⚠️ ואין רשימה למוטט');
 
