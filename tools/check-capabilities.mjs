@@ -929,6 +929,70 @@ function fnBody(name) {
   return r ? code.slice(r[0], r[1]) : '';
 }
 const hasCode = (re) => re.test(code);
+
+/*  ⛔ שכבת המודאל נמדדת בכמות (סבב 92) — ⚠️ ה-probe הקודם בדק **קיום שם**:
+ *  חתימת `openModal`, `id="modal"`, `id="ask"` ו-`closeAsk` — ⛔ והוא היה
+ *  עובר על מסך שיש בו **שני** מיכלים או **שני** מסלולי סגירה, ⚠️ שהם בדיוק
+ *  מה שהשורה אוסרת. ⭐ ומה שנמדד מעכשיו: מיכל אחד לכל דיאלוג · פותח אחד
+ *  וסוגר אחד לכל מיכל · ⛔ ואף מסלול אחר שנוגע במיכל · ⚠️ וגוף ה-`ask`
+ *  ב-`textContent`, ⛔ שדיאלוג «כן/לא» אינו מקבל HTML. */
+/*  ⛔ הגוף נלקח מ-`src` ולא מ-`code` — ⚠️ `blankNonCode` מלבין את **תוכן**
+ *  המחרוזות, ⭐ ו-`'open'` הופך שם לרווחים: ⛔ regex שמחפש את שם המחלקה
+ *  היה מוצא אפס על קוד תקין. ⚠️ והטווחים חופפים, ⭐ שההלבנה שומרת על
+ *  אורך הטקסט. */
+const fnBodyRaw = (name) => { const r = fnRange(name); return r ? src.slice(r[0], r[1]) : ''; };
+
+function modalGaps() {
+  const out = [];
+  for (const id of ['modal', 'ask']) {
+    const n = (src.match(new RegExp('id="' + id + '"', 'g')) || []).length;
+    if (n !== 1) out.push(`מיכל «${id}» — נמדדו ${n} והצפוי 1`);
+  }
+  /*  ⛔ מחלקת המעטפת נגזרת מהמיכל ⛔ ואינה מוקלדת — ⚠️ היא נבדלת בין
+   *  הארבע (`modal-overlay` מול `veil`), ⭐ ומה שמשותף הוא ש**שני**
+   *  המיכלים נושאים את **אותה** מחלקה: ⛔ שם מוקלד היה מפיל שלוש מהן. */
+  const cls = (id) => {
+    const m = new RegExp('<div[^>]*id="' + id + '"[^>]*>').exec(src);
+    const c = m && /class="([^"]+)"/.exec(m[0]);
+    return c ? c[1].trim() : null;
+  };
+  const cm = cls('modal'), ca = cls('ask');
+  if (!cm || !ca) out.push(`מחלקת המעטפת — נמדדו «${cm}»/«${ca}» והצפוי שם לשניהם`);
+  else if (cm !== ca) out.push(`מחלקת המעטפת נבדלת בין המיכלים — «${cm}» מול «${ca}»`);
+  else {
+    const n = (src.match(new RegExp('class="' + cm + '"', 'g')) || []).length;
+    if (n !== 2) out.push(`מיכלי «${cm}» — נמדדו ${n} והצפוי 2`);
+  }
+  const PAIRS = [['openModal', 'add'], ['closeModal', 'remove'],
+                 ['ask', 'add'], ['closeAsk', 'remove']];
+  let inside = 0;
+  for (const [fn, op] of PAIRS) {
+    const b = fnBodyRaw(fn);
+    if (!b) { out.push(`הפונקציה «${fn}» אינה קיימת`); continue; }
+    const n = (b.match(new RegExp("classList\\." + op + "\\('open'\\)", 'g')) || []).length;
+    if (n !== 1) out.push(`«${fn}» — נמדדו ${n} קריאות classList.${op}('open') והצפוי 1`);
+  }
+  /*  ⛔ ואף מסלול אחר אינו **משנה** את מחלקת המיכלים — ⚠️ קריאה שמודדת
+   *  אם המיכל פתוח היא שאילתה ⛔ ולא מסלול, ⭐ ולכן הנמדד הוא `classList`
+   *  ⛔ ולא עצם האיתור: ⚠️ ספירת אתרי `getElementById` הייתה מפילה את
+   *  מסלול ה-`Escape`, שקורא את המצב ומנתב לאותן ארבע. */
+  let stray = 0;
+  for (const b of src.split(/\nfunction /)) {
+    if (/^(?:openModal|closeModal|ask|closeAsk)\s*\(/.test(b)) continue;
+    if (!/getElementById\('(?:modal|ask)'\)/.test(b)) continue;
+    stray += (b.match(/classList\.(?:add|remove)\('open'\)/g) || []).length;
+  }
+  if (stray) out.push(`מסלולי פתיחה/סגירה נוספים למיכלים — נמדדו ${stray} והצפוי 0`);
+  if (!/function openModal\s*\(\s*title\s*,\s*body\s*,\s*foot\s*\)/.test(code))
+    out.push('חתימת `openModal(title, body, foot)` אינה כמוצהר');
+  const askB = fnBodyRaw('ask');
+  if (askB && !/\.textContent\s*=\s*text\b/.test(askB))
+    out.push('גוף ה-`ask` אינו ב-textContent');
+  if (askB && /\.innerHTML\s*=/.test(askB))
+    out.push('גוף ה-`ask` נכתב ב-innerHTML — דיאלוג «כן/לא» אינו מקבל HTML');
+  return out;
+}
+
 /*  ⛔ מספר הארגומנטים של קריאה בשם (סבב 87) — ⚠️ הספירה היא של פסיקים
  *  **ברמה העליונה** ⛔ ולא של תווי `,` בטקסט: ⭐ הארגומנט הראשון של שכבת
  *  השורות הוא פונקציה, ⛔ והפסיקים שבתוכה אינם מפרידי ארגומנט. ⚠️ וקריאה
@@ -2373,9 +2437,7 @@ const MATRIX = [
    *  המיכל הקבוע ומסלול הסגירה היחיד — ⚠️ דיאלוג שמפספס את `Escape` נראה
    *  תקין עד שמישהו לוחץ עליו. */
   { row: 70, name: 'שכבת המודאל',
-    probe: () => /function openModal\s*\(\s*title\s*,\s*body\s*,\s*foot\s*\)/.test(code) &&
-                 /id="modal"/.test(src) && /id="ask"/.test(src) &&
-                 /function closeAsk/.test(code) },
+    probe: () => modalGaps().length === 0 },
   { row: 142, name: 'שכבת כניסה מלאה',
     probe: () => false },
 ];
