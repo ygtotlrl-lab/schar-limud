@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -207,7 +207,7 @@ body.locked{overflow:hidden}
 .ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
 </style>
 </head>
-<body>﻿<div id="auth-screen">
+<body><div id="auth-screen">
   <div class="auth-box">
     <div class="auth-title">שכר לימוד</div>
     <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
@@ -490,7 +490,7 @@ body.locked{overflow:hidden}
   </div>
 </div>
 
-<div id="toasts"></div>﻿<script>
+<div id="toasts"></div><script>
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -1339,9 +1339,7 @@ window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
 var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-/* ══════════════════════════════════════════════════════════════════════════
-   קוד מיושן מול סכימה שהשתנתה
-   ══════════════════════════════════════════════════════════════════════════ */
+/* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
  *  **אינן שגיאת רשת**, ⛔ וניסיון חוזר עליהן אינו יכול להצליח לעולם.
@@ -1414,9 +1412,9 @@ function sbWatch(c) {
   };
   return c;
 }
-/* ══ סוף קוד מיושן ═════════════════════════════════════════════════════ */
+/* ═══════════════ סוף מודול האזנת הסכימה ════════════════════════════════ */
 
-/* ═══ "מידע טכני" — קיפול מסכי האחסון (תצוגה בלבד, סבב 15) ═══════════════
+/* ═══ מידע טכני — מודול משותף (סבב 91) ════════════════════════════════════
    המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
    בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
    הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
@@ -1465,7 +1463,7 @@ function techInfoMount() {
 }
 window.techInfoToggle = techInfoToggle;
 window.techInfoMount = techInfoMount;
-/* ═══ סוף רכיב "מידע טכני" ═══════════════════════════════════════════════ */
+/* ═══════════════ סוף מודול מידע טכני ═══════════════════════════════════ */
 /* ── SYNC_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var SYNC_CFG = {
   // `_slLastPullOk` נכתב רק כשכל ארבע הקטגוריות נמשכו בהצלחה — ר' syncAll.
@@ -4789,7 +4787,7 @@ if ('serviceWorker' in navigator) {
     }
 
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      console.log('SW registered:', reg.scope);
+      console.log('[sw] registered:', reg.scope);
 
       if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
 
@@ -4809,7 +4807,7 @@ if ('serviceWorker' in navigator) {
       checkForUpdate();
       setInterval(checkForUpdate, 30 * 60 * 1000);
     }).catch(function(err) {
-      console.log('SW registration failed:', err);
+      console.warn('[sw] registration failed:', err);
     });
   });
 }
