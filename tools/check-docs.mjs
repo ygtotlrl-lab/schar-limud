@@ -51,13 +51,13 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 103, 160];
+export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 104, 161];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['rules-session',  '2b3cd34326d7a636'],
-  ['rules-writing',  '6ca8bc07a1a9e2e3'],
-  ['rules-table',    '997d15a5ec8256b2'],
+  ['rules-session',  'd11f73f09aff39c3'],
+  ['rules-writing',  'dec71f866f619fe4'],
+  ['rules-table',    'cc3e0e866901e83f'],
   ['rules-enforce',  '5f935ad63aa2bb52'],
 ];
 
