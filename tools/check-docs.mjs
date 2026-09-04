@@ -57,8 +57,8 @@ export const ROWS = [1, 2, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 105, 163];
 const CANON = [
   ['rules-session',  '45ea4905d6ac8f9e'],
   ['rules-writing',  '99b88bbb34636c16'],
-  ['rules-table',    '4560015ec0796a43'],
-  ['rules-enforce',  'f4e4c09eb8f3898b'],
+  ['rules-table',    '10c133f78c9026f9'],
+  ['rules-enforce',  'a3f2882f777c1469'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
