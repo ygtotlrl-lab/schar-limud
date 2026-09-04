@@ -38,6 +38,11 @@ const APP = { app: 'schar-limud', wired: true };
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 if (process.env.R33_INNER || process.env.R37_INNER) {
   console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
@@ -127,6 +132,7 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
     wired === APP.wired);
 }
 
+if (RUN_MUT) {
 /* ── 3 · מוטציות ───────────────────────────────────────────────────────── */
 function copyRepo() {
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37a-'));
@@ -183,6 +189,8 @@ function checkerFails(mutatedSrc) {
     '\nfunction _ncPing(){ return 1; }\nvar _ncSeen = _ncPing();\n');
   ok('13 · המוטציית-נגד אכן מוסיפה קוד מחוץ לבלוק', added !== SRC && added.includes(B.text));
   ok('14 · ⭐ קוד שנוסף מחוץ לבלוק ⛔ אינו מפיל את החתימה', !checkerFails(added));
+}
+
 }
 
 console.log(failed ? `\n✗ סבב 37א (מזהים) — ${failed} טענות נכשלו`

@@ -29,6 +29,11 @@ import { dirname, join } from 'node:path';
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [118];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'schar-limud',
@@ -160,6 +165,7 @@ ok(deadGate.length === 0,
 console.log('  ⓘ פעילים: ' + (live.map((s) => s.name).join(', ') || '—') +
             ' · מגודרים: ' + (gated.map((s) => s.name + '@' + s.gate).join(', ') || '—'));
 
+if (RUN_MUT) {
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 
@@ -207,6 +213,8 @@ const activeMissing = (text) => {
   const f = tableSources(txt) || [];
   ok(activeMissing(txt).length === 0 && f.length === found.length,
      '9 · ⭐ מוטציית-נגד: מקור `kv` אינו מפיל דבר ואינו נספר');
+}
+
 }
 
 console.log((fail ? '✗' : '✓') + ' סבב 62 (מקורות הגיבוי) — ' + pass + ' טענות עברו, ' + fail + ' נכשלו\n');

@@ -29,6 +29,11 @@ const APP = { app: 'schar-limud' };
 
 export const ROWS = [47];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0, n = 0;
 const t = (cond, msg) => { n++; if (cond) console.log('  ok   ' + n + ' · ' + msg);
@@ -104,6 +109,13 @@ if (!prev) {
     (orph.length ? ': ' + orph.map((o) => `${o.id} ⟵ ${o.hits.slice(0, 2).join(' · ')}`).join(' | ') : ''));
 }
 
+/*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
+ *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
+ *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_removals: המוטציות רצות ברמה המלאה (--full)');
+  process.exit(failures ? 1 : 0);
+}
 /*  ⛔ המוטציה על **מודל** ולא על הריפו (סבב 72) — ⚠️ מחיקת פונקציה אמיתית
     כדי לבדוק שער היא בדיוק מה שהשער בא למנוע. */
 {

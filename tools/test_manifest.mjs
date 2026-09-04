@@ -30,6 +30,11 @@ import { execFileSync } from 'child_process';
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [3, 105];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
@@ -136,6 +141,7 @@ t(n++, ((/^#\s+(.+?)\s*$/m.exec(
     rd('README.md').replace(/^# .+$/m, '#   ' + NAME + '  ')) || [])[1]) === NAME,
   '⭐ מוטציית-נגד: רווחים סביב הכותרת ב-README ⛔ אינם מפילים — נמדד השם, לא הריווח');
 
+if (RUN_MUT) {
 /* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */
 function runDocsOn(mutManifest) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'r44mf-'));
@@ -184,6 +190,8 @@ t(n++, runDocsOn(mutStart) === false,
 const mutDesc = { ...mf, description: mf.description + '.' };
 t(n++, runDocsOn(mutDesc) === true,
   '⭐ מוטציית-נגד: שינוי `description` ⛔ **אינו** מפיל — הוא פרטי');
+
+}
 
 console.log(`\n${fail ? '❌' : '✓'} סבב 44 (manifest) — ${pass} טענות עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

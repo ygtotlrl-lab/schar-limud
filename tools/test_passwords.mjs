@@ -51,6 +51,11 @@ const APP = {
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [144];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(join(ROOT, 'index.html'), 'utf8');
 
@@ -204,6 +209,7 @@ if (fs.existsSync(MIG_B)) {
      '⛔ והבאנר מצהיר את מצב ההרצה — «נכתב ולא רץ» או «רץ במסד»');
 }
 
+if (RUN_MUT) {
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 const m1 = code.replace(/\.eq\(\s*'username'/, `.eq('${COL}', pass).eq('username'`);
@@ -231,6 +237,8 @@ is([...m4.matchAll(/select\(\s*(['"])([^'"]*)\1/g)]
 const anti = stripComments(js + `\n// שריד תיעודי: כאן ישב .eq('${COL}', pass) והשמה o.${COL} = pass\n`);
 is((anti.match(EQ_PLAIN) || []).length === 0 && writeSites(anti).length === 0,
    '⭐ מוטציית-נגד: הערה שמצטטת השוואה והשמה ⛔ אינה נספרת כמסלול חי');
+
+}
 
 console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ צעד ב (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);

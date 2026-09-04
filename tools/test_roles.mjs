@@ -30,6 +30,11 @@ import { webcrypto } from 'node:crypto';
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const SQL000 = fs.readFileSync(path.join(ROOT, 'migrations', '000_initial_schema.sql'), 'utf8');
@@ -519,6 +524,11 @@ if (!process.env.RD67_MUT) {
     _m.rmSync(d, { recursive: true, force: true });
   };
 
+  /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
+  if (!RUN_MUT) {
+    console.log('\n⏭ test_roles: המוטציות רצות ברמה המלאה (--full)');
+    process.exit(fail ? 1 : 0);
+  }
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי ערכי ה-role מפיל את שער ההרשאות', 'index.html',
        (s) => s.replace(/'admin'/g, "'administrator'"), true);

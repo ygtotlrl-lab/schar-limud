@@ -46,6 +46,11 @@ const APP = {
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [110];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = join(dirname(SELF), '..');
 const GRADLE = 'android/app/build.gradle';
@@ -318,6 +323,7 @@ try {
 }
 if (!done) fail('הרתמה נקטעה לפני סופה');
 
+if (RUN_MUT) {
 /* ── ח. מוטציות על העץ האמיתי, בעותק זמני ──────────────────────────────── */
 /*  ⛔ המוטציה רצה על **עותק** ולא על העץ (סבב 42ג) — ⚠️ מדידה שנפלה
  *  באמצע הייתה משאירה את העץ שגוי לתמיד. */
@@ -340,6 +346,8 @@ if (!done) fail('הרתמה נקטעה לפני סופה');
       (s) => s.replace(/versionCode\s+(\d+)/, (m, n) => 'versionCode ' + Math.max(1, +n - 1)), true);
   mut('⭐ מוטציית-נגד: שדה בנייה אמיתי שנוסף ל-build.gradle ⛔ אינו מפיל', GRADLE,
       (s) => s.replace(/versionName\s+"([^"]+)"/, 'versionName "$1"\n        multiDexEnabled false'), false);
+}
+
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`

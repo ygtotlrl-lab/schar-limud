@@ -53,6 +53,11 @@ const APP = {
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [108, 88, 112];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT  = join(dirname(fileURLToPath(import.meta.url)), '..');
 const YML   = '.github/workflows/build-apk.yml';
 const SH    = 'signing/sign-apk.sh';
@@ -150,6 +155,13 @@ try {
   else fail(`signing/sign-apk.sh במצב ${mode} ולא 100755 — ה-workflow קורא לו ישירות`);
 } catch (_) { console.log('⏭️  אין git — בדיקת הרשאת ההרצה מדולגת'); }
 
+/*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
+ *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
+ *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_build: המוטציות רצות ברמה המלאה (--full)');
+  process.exit(failures ? 1 : 0);
+}
 /* ── מוטציות — כל אחת חייבת להפיל טענה שהריצה האמיתית מעבירה ───────────── */
 const base = assertions(ymlSrc, shSrc, 'count');
 if (base !== 0) fail(`קו-הבסיס אינו נקי (${base} כשלים) — המוטציות אינן משמעותיות`);

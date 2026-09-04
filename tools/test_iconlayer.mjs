@@ -66,6 +66,11 @@ const APP = {
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [97, 98, 100, 101, 103];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RES = 'android/app/src/main/res';
 const DENS = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
@@ -550,6 +555,11 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
       }
     }
     if (existsSync(join(ROOT, masterRel))) {
+      /*  ⛔ הזזת המאסטר היא מוטציה שרצה על עותק (סבב 92) — ⚠️ ולכן היא
+          רצה ברמה המלאה בלבד, ⛔ כמו כל מוטציה אחרת; ⭐ וההצהרה «אין
+          מאסטר» שבענף השני נשארת נמדדת בשתי הרמות. */
+      if (!RUN_MUT) t(n++, true, 'ו. ⏭ הזזת המאסטר — מוטציה שרצה ברמה המלאה (--full)');
+      else {
       const s = mkdtempSync(join(tmpdir(), 'iconshift-'));
       for (const d of ['tools', 'icons', 'design', 'android'])
         if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(s, d), { recursive: true });
@@ -609,6 +619,7 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
         `בית-לבית אחרי ההזזה; נמדדו ${cropDiff.length} שנבדלו והצפוי אפס ` +
         `${cropDiff.join(' · ')} (⚠️ ומהאריחים נבדלו ${tileDiff})`);
       rmSync(s, { recursive: true, force: true });
+      }
     } else {
       /*  ⛔ אין מאסטר רסטרי כאן — ⚠️ הסמל מצויר בצורות, ⭐ ואין קנבס שאפשר
           להזיז בו דבר: ⛔ מוצהר ואינו מדולג בשתיקה. */
@@ -742,6 +753,13 @@ function crc32(buf) {
   return c ^ -1;
 }
 
+/*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
+ *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
+ *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_iconlayer: המוטציות רצות ברמה המלאה (--full)');
+  process.exit(fail ? 1 : 0);
+}
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
 const tmp = mkdtempSync(join(tmpdir(), 'r66-'));
 cpSync(join(ROOT, RES), join(tmp, RES), { recursive: true });

@@ -50,6 +50,11 @@ const APP = {
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [93, 94];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT     = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = 'android/app/src/main/AndroidManifest.xml';
 const GRADLE   = 'android/app/build.gradle';
@@ -258,6 +263,7 @@ const bareG = normGradle(stripBridgeGradle(gradleSrc));
 bare('חתימת המניפסט',     bareM, MANIFEST_SHA_NO_BRIDGE);
 bare('חתימת קובץ הבנייה', bareG, GRADLE_SHA_NO_BRIDGE);
 
+if (RUN_MUT) {
 /* ── ד. מוטציות ─────────────────────────────────────────────────────────────
  *  ⛔ רצות על עותק **בזיכרון** ולא על העץ (הלקח של סבב 42ג) — מוטציה
  *  שנכתבת לקובץ האמיתי ומוחזרת ב-`finally` מותירה את הריפו שבור אם
@@ -409,6 +415,8 @@ else {
   assetMut('⛔ מוטציה: `index.html` תחת `assets/` מפיל את שורת «אין נכסים מוטבעים»', 'index.html', true);
   assetMut('⭐ מוטציית-נגד: קובץ אחר תחת `assets/` ⛔ אינו מפיל — נמדד מה מוטבע',
            'fonts.txt', false);
+}
+
 }
 
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`

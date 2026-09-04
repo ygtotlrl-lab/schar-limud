@@ -30,6 +30,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let n = 0, bad = 0;
 const ok = (m) => { n++; console.log(`  ok   ${m}`); };
@@ -79,6 +84,14 @@ const run = async (cwd) => {
 /*  ⛔ כל תיקייה זמנית נרשמת ונמחקת בסוף (סבב 72) — ⚠️ נמדד: הרתמה
  *  יצרה כ-30 תיקיות בכל הרצה ולא מחקה אחת, ⛔ ואלפי עותקי עץ מילאו את
  *  הדיסק עד ENOSPC באמצע הרצת שער. */
+/*  ⛔ כל גופו של השער הזה הוא רתמה על עותקי עץ (סבב 92) — ⚠️ הבקרה
+ *  החיובית והמוטציות כאחת, ⛔ ולכן הוא כולו רץ ברמה המלאה בלבד: ⭐ קריאת
+ *  רתמה מעל הסוגר רצה בכל הרצה, וזה בדיוק מה שהועבר. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_md: הרתמה והמוטציות רצות ברמה המלאה (--full)');
+  process.exit(bad ? 1 : 0);
+}
+
 const TEMPS = [];
 const temp = (tag) => { const d = mkdtempSync(join(tmpdir(), tag)); TEMPS.push(d); return d; };
 const baseDir = temp('md-skel-');
