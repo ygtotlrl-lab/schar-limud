@@ -1382,36 +1382,64 @@ function exportMarkupSites() {
   return out;
 }
 
-/*  ⛔ עומק מיכל המודאל (סבב 88) — ⚠️ הטענה היא על **העץ** ⛔ ולא על השורה:
- *  ⭐ שורה שנראית צמודה ל-`<body>` יכולה לשבת בתוך שבעה `div` שנפתחו מאות
- *  שורות מעליה, ⛔ ולכן הפירוק הוא מחסנית תגים ⛔ ולא ביטוי רגולרי.
- *  ⚠️ `script` · `style` וההערות מולבנים — ⭐ מחרוזת HTML בתוך JS אינה תג
- *  בעץ, ⛔ והיא הייתה פותחת אלמנטים שאיש אינו סוגר. */
+/*  ⛔ מיקום מיכל המודאל (סבב 91) — ⚠️ **שתי מדידות ולא אחת**: ⭐ העומק
+ *  **בעץ** שהפרסר בונה, ⛔ ו**המקום במקור** מול `</body>`: ⚠️ הדפדפן מעביר
+ *  אלמנט שאחרי `</body>` בחזרה לתוך `body` — ⭐ ולכן עץ תקין לבדו אינו
+ *  ראיה שהמקור תקין, ⛔ והוא בדיוק מה שהסתיר את הבאג.
+ *  ⛔ **והעץ נבנה בכללי הסגירה המשתמעת** ⛔ ולא בספירת תגיות — ⚠️ `p` · `li`
+ *  · `td` · `option` נסגרים מאליהם, ⭐ ומחסנית שאינה יודעת זאת סופרת אב
+ *  שהפרסר כבר סגר: ⛔ עומק מנופח על מקור תקין, ⚠️ או אב אמיתי שנבלע.
+ *  ⛔ **ותוכן raw-text מולבן** — `script` · `style` · `textarea` · `title`:
+ *  ⚠️ מחרוזת HTML בתוך JS אינה תג בעץ. */
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
                            'link', 'meta', 'param', 'source', 'track', 'wbr']);
-function modalDepth(html) {
-  const blank = (m) => ' '.repeat(m.length);
+/*  ⛔ תג פתיחה שסוגר מאליו את מה שפתוח — ⚠️ הרשימה היא כללי הסגירה
+ *  המשתמעת של התקן, ⭐ ולא נוחות: ⛔ בלעדיה `<li>` שלא נסגר הוא אב. */
+const AUTO_CLOSE = {
+  li: ['li'], dt: ['dt', 'dd'], dd: ['dt', 'dd'],
+  option: ['option'], optgroup: ['option', 'optgroup'],
+  tr: ['td', 'th', 'tr'], td: ['td', 'th'], th: ['td', 'th'],
+  tbody: ['td', 'th', 'tr', 'thead', 'tbody', 'tfoot'],
+  tfoot: ['td', 'th', 'tr', 'thead', 'tbody', 'tfoot'],
+  thead: ['td', 'th', 'tr', 'thead', 'tbody', 'tfoot'],
+};
+/*  ⛔ תג בלוק סוגר `p` פתוח — ⚠️ הרשימה מהתקן, ⭐ ו-`p` הוא היחיד שנסגר כך. */
+const CLOSES_P = new Set(['address', 'article', 'aside', 'blockquote', 'details', 'div',
+  'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4',
+  'h5', 'h6', 'header', 'hr', 'main', 'menu', 'nav', 'ol', 'p', 'pre', 'section',
+  'table', 'ul']);
+function modalPlacement(html) {
+  const blank = (m) => m.replace(/[^\n]/g, ' ');
   const t = html.replace(/<script[\s\S]*?<\/script>/gi, blank)
                 .replace(/<style[\s\S]*?<\/style>/gi, blank)
+                .replace(/<textarea[\s\S]*?<\/textarea>/gi, blank)
+                .replace(/<title[\s\S]*?<\/title>/gi, blank)
                 .replace(/<!--[\s\S]*?-->/g, blank);
   const re = /<(\/?)([A-Za-z][\w-]*)((?:"[^"]*"|'[^']*'|[^>])*?)(\/?)>/g;
   const stack = [];
-  let inBody = false, m;
+  let inBody = false, bodyClosed = false, m;
+  const popTo = (tag) => {
+    for (let i = stack.length - 1; i >= 0; i--)
+      if (stack[i] === tag) { stack.length = i; return true; }
+    return false;                       /* ⛔ תג סוגר בלי פתיחה — התקן מתעלם */
+  };
   while ((m = re.exec(t)) !== null) {
     const close = m[1] === '/', tag = m[2].toLowerCase(), attrs = m[3], self = m[4] === '/';
     if (close) {
-      if (tag === 'body') break;
-      for (let i = stack.length - 1; i >= 0; i--) if (stack[i] === tag) { stack.length = i; break; }
+      if (tag === 'body' || tag === 'html') { bodyClosed = true; continue; }
+      popTo(tag);
       continue;
     }
     if (tag === 'body') { inBody = true; stack.length = 0; continue; }
+    /*  ⛔ הסגירה המשתמעת קודמת למדידה — ⚠️ אחרת האב שנספר כבר נסגר. */
+    if (AUTO_CLOSE[tag]) while (stack.length && AUTO_CLOSE[tag].indexOf(stack[stack.length - 1]) >= 0) stack.pop();
+    if (CLOSES_P.has(tag) && stack.indexOf('p') >= 0) popTo('p');
+    if (/\bid\s*=\s*["']modal["']/.test(attrs))
+      return { found: true, depth: inBody ? stack.length + 1 : 0, afterBodyClose: bodyClosed };
     if (VOID_TAGS.has(tag) || self) continue;
-    /*  ⛔ המיכל שמחוץ ל-`body` מוחזר כ-0 — ⚠️ הדפדפן מעביר אותו פנימה
-     *  בעצמו, ⭐ וזו התנהגות תיקון ⛔ ולא כוונה. */
-    if (/\bid\s*=\s*["']modal["']/.test(attrs)) return inBody ? stack.length + 1 : 0;
     stack.push(tag);
   }
-  return -1;                   // אינו קיים כלל
+  return { found: false, depth: -1, afterBodyClose: bodyClosed };
 }
 
 /*  ⛔ נטישה בשקט בבלוק משותף (סבב 88) — ⚠️ הטענה אינה «יש `console.error`»
@@ -1596,12 +1624,14 @@ function actNoFeedback() {
   return bad;
 }
 const MATRIX = [
-  /*  ⛔ מיכל המודאל ילד ישיר של `body` (סבב 88) — ⚠️ הטענה אינה «`#modal`
+  /*  ⛔ מיכל המודאל ילד ישיר של `body` (סבב 91) — ⚠️ הטענה אינה «`#modal`
    *  קיים» אלא **היכן הוא יושב**: ⭐ מיכל שיושב בתוך מסך נמחק יחד איתו,
-   *  ⛔ ו-`openModal` יצאה בשקט; ⚠️ ומיכל שמחוץ ל-`body` נראה תקין רק
-   *  מפני שהדפדפן מעביר אותו פנימה בעצמו. ⛔ עומק 1 בדיוק. */
+   *  ⛔ ו-`openModal` יצאה בשקט. ⛔ **ושתי המדידות נדרשות יחד** — ⚠️ עומק 1
+   *  **בעץ** ⛔ ומקום במקור שלפני `</body>`: ⭐ הדפדפן מחזיר פנימה אלמנט
+   *  שאחרי הסוגר, ⛔ ולכן עומק 1 לבדו אינו מעיד שהמקור תקין. */
   { row: 70, name: 'מיכל המודאל ילד ישיר של `body`',
-    probe: () => modalDepth(src) === 1 },
+    probe: () => { const p = modalPlacement(src);
+                   return p.found && p.depth === 1 && !p.afterBodyClose; } },
   /*  ⛔ פונקציה משותפת אינה יוצאת בשקט (סבב 88) — ⚠️ הטענה היא **היעדר**
    *  שער DOM שנוטש בלי לדווח, ⭐ ורשימת ההיתר נמדדת משני צדדיה. */
   { row: 85, name: 'פונקציה משותפת אינה יוצאת בשקט',
