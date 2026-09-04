@@ -62,6 +62,9 @@ const APP = {
    *  «טבלת התשתית» קיים ביומן בלבד, ⭐ ושדה חסר נקרא «לא נשאל». */
   viewOnlyConsts: [],
   offlineLoginFn: 'slVerifyOffline',
+  /*  ⛔ חתימת ה-keystore — ⚠️ היא מה שהופך «מפתח קבוע» למדיד:
+   *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ וחתימה שונה מפילה. */
+  keystoreSha: '9b6680d217decb43',
   schemaFile: 'migrations/000_initial_schema.sql',
   // ⚠️ שורת אימות הפינוי «לא רלוונטי» — אין כאן פינוי כלל, ולכן אין מה לאמת.
   /*  ⭐ שם משפך ה-`kv` (סבב 56) — `null` כשאין כאן `kv` כלל. */
@@ -1707,6 +1710,64 @@ function exportWayGaps() {
   if (fb && live.indexOf(fb) < 0) gaps.push('נפילה-חזרה מוצהרת «' + fb + '» ואינה בקוד');
   return gaps;
 }
+/*  ⛔ המעטפת היא `WebView` ⛔ ולא TWA (סבב 91) — ⚠️ ה-probe מדד **קיום
+ *  קובץ** בלבד: ⭐ הוא עבר על מעטפת TWA, על מניפסט ריק, ועל כל תוכן שהוא.
+ *  ⛔ **ומה שנמדד עכשיו הוא ערך** — ⚠️ שהמניפסט מכריז את הפעילות המשגרת,
+ *  ⛔ שהיא יורשת את `ShellActivity`, ⛔ שהמעטפת בונה `WebView` בפועל,
+ *  ⚠️ **ושאין בעץ סימן TWA**: ⭐ שלושת התנאים יחד, ⛔ ולא אחד מהם. */
+function shellIsWebView() {
+  const man = 'android/app/src/main/AndroidManifest.xml';
+  if (!hasPath(man)) return false;
+  const xml = fs.readFileSync(man, 'utf8');
+  if (!/android:name="\.MainActivity"/.test(xml)) return false;
+  if (!/android\.intent\.category\.LAUNCHER/.test(xml)) return false;
+  let main = '', shell = '';
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    const p = d + '/' + e.name;
+    if (e.isDirectory()) walk(p);
+    else if (e.name === 'MainActivity.java')  main  = fs.readFileSync(p, 'utf8');
+    else if (e.name === 'ShellActivity.java') shell = fs.readFileSync(p, 'utf8'); } };
+  try { walk('android/app/src/main/java'); } catch (e) { return false; }
+  if (!/extends\s+ShellActivity/.test(main)) return false;
+  if (!/\bnew\s+WebView\s*\(/.test(shell) && !/\bWebView\b/.test(shell)) return false;
+  /*  ⛔ סימני TWA — ⚠️ מעטפת שמכריזה אחד מהם אינה `WebView` מקורי. */
+  const twa = /TrustedWebActivity|androidbrowserhelper|LauncherActivity/i;
+  return !twa.test(xml) && !twa.test(main) && !twa.test(shell);
+}
+
+/*  ⛔ מפתח החתימה קבוע (סבב 91) — ⚠️ ה-probe מדד ש**קיים** קובץ `.keystore`:
+ *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ והשורה אומרת «לעולם לא חדש».
+ *  ⛔ **ולכן נמדדת זהותו** — ⚠️ חתימת התוכן מול הערך המוצהר ב-`APP.keystoreSha`. */
+function keystoreFixed() {
+  if (!hasPath('signing')) return false;
+  const ks = fs.readdirSync('signing').filter((f) => f.endsWith('.keystore'));
+  if (ks.length !== 1) return false;
+  const sha = crypto.createHash('sha256')
+                .update(fs.readFileSync('signing/' + ks[0])).digest('hex').slice(0, 16);
+  return sha === APP.keystoreSha;
+}
+
+/*  ⛔ קובץ הסכימה — ⚠️ שתי שורות נשענו על **אותה** בדיקת קיום, ⭐ ואף אחת
+ *  מהן לא מדדה את טענתה: ⛔ «מקור אחד» ו«התקנה מלאה» אינם «הקובץ קיים».
+ *  ⛔ **וההערות נחתכות לפני המדידה** — ⚠️ המילים `create table` מופיעות
+ *  בהערות הסבר, ⭐ וספירה גולמית מדווחת פער על קובץ תקין. */
+function schemaSql() {
+  if (!hasPath(APP.schemaFile)) return null;
+  return fs.readFileSync(APP.schemaFile, 'utf8').replace(/--[^\n]*/g, '');
+}
+function schemaSingleSource() {
+  const sql = schemaSql();
+  if (!sql || !/create\s+table/i.test(sql)) return false;
+  /*  ⛔ ואין עותק מוטבע — ⚠️ סכימה שנייה בקוד הלקוח מתיישנת בכל מיגרציה. */
+  return !/create\s+table/i.test(src);
+}
+function schemaIdempotent() {
+  const sql = schemaSql();
+  if (!sql) return false;
+  const all  = (sql.match(/create\s+table/gi) || []).length;
+  const idem = (sql.match(/create\s+table\s+if\s+not\s+exists/gi) || []).length;
+  return all > 0 && all === idem;
+}
 const MATRIX = [
   /*  ⛔ ספרייה חיצונית — גרסה מוצהרת (סבב 91) — ⚠️ קישור בלי גרסה, תג בלי
    *  הצהרה, והצהרה בלי תג — ⭐ שלושתם אותה טענה משני צדדיה. */
@@ -1895,7 +1956,7 @@ const MATRIX = [
   { row: 106, name: 'שיתוף קבצים',
     probe: () => hasCode(/_androidShareImage|navigator\s*\.\s*share\b/) },
   { row: 91, name: 'מעטפת APK (WebView)',
-    probe: () => hasPath('android/app/src/main/AndroidManifest.xml') },
+    probe: () => shellIsWebView() },
   /*  ⭐ אין נכסים מוטבעים (סבב 72) — ⛔ ה-probe מאמת **ערך**: שאין
    *  `index.html` ואין `sw.js` תחת `assets/`. ⚠️ עותק מוטבע יושב
    *  ב-origin אחסון אחר (`file://`), ⛔ ורישום שנכתב אליו אינו נראה
@@ -1905,10 +1966,9 @@ const MATRIX = [
     probe: () => !hasPath('android/app/src/main/assets/index.html') &&
                  !hasPath('android/app/src/main/assets/sw.js') },
   { row: 110, name: 'מפתח חתימה קבוע בריפו',
-    probe: () => hasPath('signing') &&
-                 fs.readdirSync('signing').some((f) => f.endsWith('.keystore')) },
-  { row: 115, name: 'מקור אמת יחיד לסכימה', probe: () => hasPath(APP.schemaFile) },
-  { row: 116, name: 'קובץ התקנה מלא',       probe: () => hasPath(APP.schemaFile) },
+    probe: () => keystoreFixed() },
+  { row: 115, name: 'מקור אמת יחיד לסכימה', probe: () => schemaSingleSource() },
+  { row: 116, name: 'קובץ התקנה מלא',       probe: () => schemaIdempotent() },
   { row: 52, name: 'גיבוי יומי אוטומטי',   probe: () => present.backup === true },
   { row: 52, name: 'יומן פעולות',          probe: () => present.log === true },
   { row: 113, name: 'נתונים בטבלאות מובנות', app: true },
