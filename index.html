@@ -3079,6 +3079,72 @@ function mergeCore(local, remote, opts) {
 }
 /* ═══════════════ סוף מודול המיזוג ══════════════════════════════════════ */
 
+/* ═══ גריעת tombstones — מודול משותף (סבב 93) ════════════════════════════
+   ⛔ שינוי כאן (סבב 93) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+// כל רשומה שנמחקה משאירה tombstone לנצח. הם נשמרים במכשיר **ונדחפים לענן
+// בכל שמירה**, ואיש כבר אינו קורא אותם.
+//
+// שלושה כללים, כולם קריטיים:
+// 1. **רק tombstones.** רשומה חיה אינה נגרעת לעולם, בלי קשר לגיל.
+// 2. **רק עם חותמת מספרית.** tombstone בלי חותמת — אי אפשר לדעת מתי נמחק,
+//    ולכן הוא **נשאר**: חותמת חסרה נקראת 0, וגריעה לפיה הייתה מוחקת דווקא
+//    את הישנים ביותר בלי שום ראיה לגילם.
+// 3. **`TOMBSTONE_TTL_MS`.** ⛔ הסף ארוך בהרבה מכל היעדרות סבירה.
+//
+// ⚠️ המחיר המודע: מכשיר שהיה מנותק מעבר לסף ולא קיבל את ה-tombstone עדיין
+// מחזיק את הרשומה כחיה, וכשיסתנכרן היא תחזור **פעם אחת**. מחיקה חוזרת
+// יוצרת tombstone חדש ומתוארך. ⛔ והסף עצמו הוא מדיניות נתונים ⛔ ולכן
+// החלטת המנהל.
+var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+// דגל חד-פעמי: הטעינה מרימה אותו, והמיזוג הראשון שאחריה צורך אותו.
+// ⛔ גריעה מקומית בלבד חסרת משמעות — מנוע המיזוג מחזיר כל רשומה שקיימת
+// בענן ואין לה מקבילה מקומית, ולכן ה-tombstones היו חוזרים תוך שניות
+// והעותק הענני לעולם לא היה מצטמצם. ⚠️ הגריעה **אינה** רצה בפולינג
+// ואינה נוגעת במנוע המיזוג — היא מופעלת על התוצאה, פעם אחת לעלייה.
+var _tombPrunePending = false;
+
+// ⛔ שתי צורות החותמת נקראות כאן — ⚠️ `updatedAt` ו-`updated_at` חיות שתיהן
+//    בארגון, ⭐ ופונקציה שמכירה אחת מהן אינה מודול משותף: ⛔ היא הייתה
+//    מחזירה «בלי חותמת» לכל רשומה בשתי אפליקציות, ומשאירה כל tombstone.
+function tombStamp(r) {
+  if (!r || typeof r !== 'object') return null;
+  if (typeof r.updatedAt === 'number') return r.updatedAt;
+  if (typeof r.updated_at === 'number') return r.updated_at;
+  return null;
+}
+
+function prunePastTombstones(arr, nowTs) {
+  if (!Array.isArray(arr)) return [];
+  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
+  return arr.filter(function (r) {
+    if (!r || typeof r !== 'object') return false;
+    if (!r.deleted) return true;                 // חי — לא נוגעים
+    var t = tombStamp(r);
+    if (t === null) return true;                 // בלי חותמת — משאירים
+    return t >= cutoff;                          // tombstone טרי — משאירים
+  });
+}
+
+// ⛔ נקודת ההפעלה האחת — ⚠️ המיזוג של אוסף רשומות מעביר כאן את תוצאתו,
+//    ⭐ והגריעה רצה בפעם הראשונה שאחרי הטעינה ותו לא: ⛔ עוטף שני היה
+//    מאפשר לכל מקום בקוד לגרוע, ⚠️ ובכל פולינג.
+function tombPruneMerged(arr) {
+  if (!_tombPrunePending) return arr;
+  _tombPrunePending = false;
+  var before = Array.isArray(arr) ? arr.length : 0;
+  var out = prunePastTombstones(arr);
+  if (before !== out.length) console.log('[tomb] נגרעו ' + (before - out.length) + ' tombstones מעבר לסף');
+  return out;
+}
+// ⛔ נקודת ההפעלה היחידה של המודול — ⚠️ העלייה מרימה את הדגל **פעם אחת**,
+//    ⭐ והמיזוג הראשון שאחריה צורך אותו: ⛔ הרמה בכל פולינג הייתה גורעת
+//    בכל שלוש שניות, ⚠️ וזה בדיוק מה שהדגל בא למנוע.
+function tombBoot() { _tombPrunePending = true; }
+/* ═══════════════ סוף מודול גריעת ה-tombstones ══════════════════════════ */
+
 // חיבור שכר לימוד לליבה המשותפת (סבב 38). ⛔ החתימה לא השתנתה.
 // ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף** (סבב 38):
 //    שתי שורות עם אותו מפתח באותו מערך נשארות שתיהן, בדיוק כפי שהיה.
@@ -3091,11 +3157,11 @@ function mergeCore(local, remote, opts) {
 //    הופכת למפתח תקף שכל חסרי-הזהות מתנגשים בו.
 function slMerge(local, remote, isPending, keyOf) {
   var kf = keyOf || slKey;
-  return mergeCore(local, remote, {
+  return tombPruneMerged(mergeCore(local, remote, {
     getKey: function (r) { return kf(r) || null; },
     ts: slTs, isPending: isPending, keepUnversionedLocal: true,
     dedupe: false, keyless: 'keep-remote', localPick: 'last'
-  });
+  }));
 }
 
 function slMirrorLoad() {
@@ -4694,6 +4760,7 @@ async function slBoot(){
   // סימוני "ממתין לסנכרון" (סבב 12) — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  try { tombBoot(); } catch (e) { console.warn('[tomb] tombBoot', e); }
   // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
   // ⭐ כאן ולא ב-`enterApp` (סבב 30, השלמה): הגיבוי אינו תלוי בכניסה, וכך
   //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
