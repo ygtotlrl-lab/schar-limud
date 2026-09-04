@@ -31,8 +31,8 @@ import vm from 'node:vm';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
-  names: ['slTs', 'slKey', '_mergePick', 'mergeCore', 'slMerge'],
-  vars: [],
+  names: ['slTs', 'slKey', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'slMerge'],
+  vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
   globals: {},
   offlineFn: 'slVerifyOffline',
   // ⭐ סבב 38 — כלל ההכרעה עבר לליבה המשותפת, ולכן גם המוטציה מכוונת
@@ -50,7 +50,8 @@ const APP = {
    *  מאלה שמעליהם, ⛔ ולכן הם יושבים בקבוצה משלהם ואינם מתמזגים בהם. */
   core: {
     app: 'schar-limud',
-    names: ['slTs', 'slKey', '_mergePick', 'mergeCore', 'slMerge'],
+    names: ['slTs', 'slKey', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'slMerge'],
+    vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
     globals: {},
     wrapFn: 'slMerge',
     // ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף** (סבב 38):
@@ -251,6 +252,11 @@ function coreBuild(src) {
   const ctx = Object.assign({ console, Number, String, Array, Object, isFinite, Date, JSON, Math },
                             C.globals || {});
   vm.createContext(ctx);
+  /*  ⛔ ההצהרות קודמות לפונקציות (סבב 93) — ⚠️ מודול גריעת ה-tombstones
+   *  נשען על דגל ברמת הקובץ, ⭐ ופונקציה שנחתכת בלעדיו זורקת
+   *  `ReferenceError` בתוך הרתמה: ⛔ הכשל נראה כשבירה של מנוע המיזוג
+   *  ⚠️ ואינו כזה. */
+  for (const v of (C.vars || [])) vm.runInContext(cutVar(v, src), ctx);
   vm.runInContext(C.names.map((x) => cut(x, src)).join('\n'), ctx);
   return ctx;
 }
