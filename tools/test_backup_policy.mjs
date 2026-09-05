@@ -59,7 +59,7 @@ const assert = (c, m) => (c ? ok(m) : bad(m));
 /* ── חילוץ שלושת הערכים משורת «גיבוי במסד» שבטבלת התשתית ───────────────── */
 function ruleBlock(doc) {
   const m = doc.match(
-    /<!--\s*SHARED:start\s+id="rules-table"\s*-->([\s\S]*?)<!--\s*SHARED:end\s*-->/);
+    /<!--\s*SHARED:start\s+id="table"\s*-->([\s\S]*?)<!--\s*SHARED:end\s*-->/);
   return m ? m[1] : null;
 }
 /* ⚠️ הערכים נקראים משורת **טבלה** ולא מפרוזה (סבב 61) — ⛔ פרוזה אינה ניתנת

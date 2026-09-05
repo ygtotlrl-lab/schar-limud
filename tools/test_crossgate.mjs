@@ -34,7 +34,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [36];
+export const ROWS = [26];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -75,7 +75,6 @@ function audit(root) {
   const caps   = rd(root, 'tools/check-capabilities.mjs');
   const matrix = rd(root, 'tools/test_matrix.mjs');
   const cmts   = rd(root, 'tools/check-comments.mjs');
-  const rules  = rd(root, 'tools/test_rulesdocs.mjs');
   const md     = rd(root, 'CLAUDE.md');
 
   /* א. הקבועים המוצהרים — check-docs מול test_budget */
@@ -138,18 +137,18 @@ function audit(root) {
   /* ה. רוחב המפרידים — check-comments מול הכלל הכתוב */
   const ruleW = num(cmts, /const RULE_W\s*=\s*(\d+)/);
   const bannerW = num(cmts, /const BANNER_W\s*=\s*(\d+)/);
-  const docRuleW = num(md, /מסגרת של\s+\*\*(\d+)\*\*\s+תווי/);
-  const docBannerW = num(md, /באנר\s+`──`\s+באורך \*\*(\d+)\*\*/);
+  /*  ⛔ שני הרוחבים נקראים מ**שורות הטבלה** (סבב 96) — ⚠️ עד כאן הם נקראו
+      מפרוזת הכללים, ⛔ והיא ירדה: ⭐ הטבלה היא ההוראה, ⛔ ומספר שאין לו
+      צד שני בקובץ הוא מספר שאיש אינו משווה. */
+  const docRuleW = num(md, /מפרידי\s+`═`\s+ברוחב\s+(\d+)/);
+  const docBannerW = num(md, /באנר\s+`──`\s+ברוחב\s+(\d+)/);
   if (ruleW !== docRuleW) v.push({ kind: 'width-gap', msg: `מפריד הבלוק — check-comments ${ruleW} ≠ הכלל ${docRuleW}` });
   if (bannerW !== docBannerW) v.push({ kind: 'width-gap', msg: `באנר ה-tools — check-comments ${bannerW} ≠ הכלל ${docBannerW}` });
 
-  /* ו. מזהי הבלוקים המשותפים — check-docs מול test_rulesdocs */
-  const canon = [...(/const CANON = \[([\s\S]*?)\];/.exec(docs)?.[1] ?? '')
-    .matchAll(/'([a-z-]+)',\s*'[0-9a-f]{16}'/g)].map((m) => m[1]);
-  const want = [...(/const WANT = \[([^\]]*)\]/.exec(rules)?.[1] ?? '')
-    .matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
-  if (!canon.length || canon.join(',') !== want.join(','))
-    v.push({ kind: 'canon-gap', msg: `check-docs [${canon}] ≠ test_rulesdocs [${want}]` });
+  /*  ⛔ **הצלבת מזהי הבלוקים ירדה** (סבב 96) — ⚠️ עד כאן היא השוותה את
+      `CANON` שב-`check-docs` ל-`WANT` שב-`test_rulesdocs`, ⭐ ואחרי מחיקת
+      בלוקי הכללים יש **מזהה אחד** שמוצהר במקום אחד: ⛔ הצלבה שצד אחד
+      שלה ריק אינה מודדת דבר, ⚠️ והמזהה נמדד מול הקובץ ב-`check-docs`. */
 
   return v;
 }
@@ -168,7 +167,6 @@ t(n++, !base.some((x) => x.kind.startsWith('measure')), `ב. וארבעת המס
 t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נגזר מ-GATES ${of('rows-gap')}${of('rows-missing')}`);
 t(n++, !base.some((x) => x.kind === 'probe-gap'), `ד. כל שורת \`app: true\` נושאת מפתח ב-tableProbe ${of('probe-gap')}`);
 t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידים זהים בשער ובכלל הכתוב ${of('width-gap')}`);
-t(n++, !base.some((x) => x.kind === 'canon-gap'), `ו. מזהי הבלוקים המשותפים זהים בשני השערים ${of('canon-gap')}`);
 
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
 const tmp = mkdtempSync(join(tmpdir(), 'r71x-'));
