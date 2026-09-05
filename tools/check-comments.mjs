@@ -46,7 +46,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [18, 20, 21, 22, 25, 30, 26, 46, 83, 84, 85, 90];
+export const ROWS = [16, 20, 18, 19, 30, 23, 34, 43, 81, 82, 83, 88];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -1165,7 +1165,7 @@ if (failures) {
    *  והטבלה אינה שם: קריאה ממנו החזירה רשימת שמות **ריקה**, ⛔ והשער
    *  עבר על כל חפיפה. ⭐ שער שקורא קובץ רשאי לנקוב בשמו. */
   const docLines = fs.readFileSync('CLAUDE.md', 'utf8').split('\n');
-  const a = docLines.findIndex((l) => /^<!--\s*SHARED:start\s+id="rules-table"/.test(l));
+  const a = docLines.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
   const b = docLines.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
   const norm = (t) => t.replace(/[`*⛔⚠️⭐#|]/g, ' ').replace(/\s+/g, ' ').trim();
   const rowNames = [];

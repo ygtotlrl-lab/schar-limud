@@ -38,7 +38,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [52];
+export const ROWS = [49];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -189,11 +189,11 @@ edit(B, DOC, (s) => s.replace(/^(\| \d+ \| טיפול באירועים )\|/m, '$
 {
   const got = audit(pair).map((x) => x.kind);
   t(n++, got.includes('block-drift'),
-    `מ1 · מוטציה: בית שנשתנה בגוף rules-table מפיל את טענה א — נתפסה כ-[${got.join(',') || 'כלום'}]`);
+    `מ1 · מוטציה: בית שנשתנה בגוף table מפיל את טענה א — נתפסה כ-[${got.join(',') || 'כלום'}]`);
 }
 restore();
 
-edit(B, DOCGATE, (s) => s.replace(/(\['rules-table',\s*')[0-9a-f]{16}/, '$1' + '0'.repeat(16)));
+edit(B, DOCGATE, (s) => s.replace(/(\['table',\s*')[0-9a-f]{16}/, '$1' + '0'.repeat(16)));
 {
   const got = audit(pair).map((x) => x.kind);
   t(n++, got.includes('canon-drift'),
@@ -206,7 +206,7 @@ restore();
  *  ל«אוסרות לגעת בבלוק». */
 for (const r of [A, B]) {
   edit(r, DOC, (s) => s.replace('| 64 | טיפול באירועים |', '| 64 | טיפול באירועים  |'));
-  edit(r, DOCGATE, (s) => s.replace(/(\['rules-table',\s*')[0-9a-f]{16}/, '$1' + '1'.repeat(16)));
+  edit(r, DOCGATE, (s) => s.replace(/(\['table',\s*')[0-9a-f]{16}/, '$1' + '1'.repeat(16)));
 }
 {
   const got = audit(pair).map((x) => x.kind);
