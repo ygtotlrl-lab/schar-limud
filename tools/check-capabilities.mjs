@@ -226,7 +226,7 @@ const CAPS = {
   },
   storage: {
     name: 'מודול עמידות האחסון',
-    block: { sha: 'd79f5b8a9b4d20b1', lines: 678,
+    block: { sha: '6de36d692853c3eb', lines: 682,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -1075,7 +1075,7 @@ const hasSrc = (re) => re.test(src);
 const policyBlock = () => cfgBlock('LS_CFG') + fnBody('lsRebuildPolicy');
 /*  ⛔ שלב א מפנה בפועל — ⚠️ `tier1: []` הוא הצהרה שאין מה לפנות, ⛔ ו-getter
  *  נמדד לפי מה שהוא שואל: ⭐ רק getter שנשען על עֵד הדחיפה פר-מפתח מוחק
- *  מפתח שלם, ⚠️ ששלב א נסרק **בלי** מחסום `pending()`. */
+ *  מפתח שלם, ⚠️ ש«התור ריק» הוא ראיה על התור ⛔ ולא על המפתח. */
 const tier1Evicts = () => {
   const pb = policyBlock();
   if (/tier1\s*:\s*\[\s*\]/.test(pb)) return false;

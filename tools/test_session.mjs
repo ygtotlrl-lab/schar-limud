@@ -51,7 +51,7 @@ export const ROWS = [];
 const RUN_MUT = process.env.GATE_MUT === '1';
 
 const BLOCK = {
-  sha: '3ecf220b7c519c8f',
+  sha: '4ab395fd78fa83f8',
   lines: 51,
   start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
   end:   '/* ═══════════════ סוף מודול הסשן',
