@@ -226,7 +226,7 @@ const CAPS = {
   },
   storage: {
     name: 'מודול עמידות האחסון',
-    block: { sha: 'd79f5b8a9b4d20b1', lines: 678,
+    block: { sha: '6de36d692853c3eb', lines: 682,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -253,7 +253,7 @@ const CAPS = {
   },
   pending: {
     name: 'מודול "ממתין לסנכרון"',
-    block: { sha: '8b02444de454f54d', lines: 303,
+    block: { sha: '43b95fc7165f0cff', lines: 303,
              start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
              end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"' },
     hooks: [{ fn: 'pendBoot', at: 'boot' }],
@@ -388,7 +388,7 @@ const CAPS = {
    *  בטבלה כ-⭕ מנומק, בדיוק כמו `lock`.                    */
   sess: {
     name: 'מודל הסשן',
-    block: { sha: '3ecf220b7c519c8f', lines: 51,
+    block: { sha: '4ab395fd78fa83f8', lines: 51,
              start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
              end:   '/* ═══════════════ סוף מודול הסשן' },
     hooks: [{ fn: 'sessBoot', at: 'boot' }],
@@ -1075,7 +1075,7 @@ const hasSrc = (re) => re.test(src);
 const policyBlock = () => cfgBlock('LS_CFG') + fnBody('lsRebuildPolicy');
 /*  ⛔ שלב א מפנה בפועל — ⚠️ `tier1: []` הוא הצהרה שאין מה לפנות, ⛔ ו-getter
  *  נמדד לפי מה שהוא שואל: ⭐ רק getter שנשען על עֵד הדחיפה פר-מפתח מוחק
- *  מפתח שלם, ⚠️ ששלב א נסרק **בלי** מחסום `pending()`. */
+ *  מפתח שלם, ⚠️ ש«התור ריק» הוא ראיה על התור ⛔ ולא על המפתח. */
 const tier1Evicts = () => {
   const pb = policyBlock();
   if (/tier1\s*:\s*\[\s*\]/.test(pb)) return false;
