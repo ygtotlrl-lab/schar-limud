@@ -191,11 +191,15 @@ let priv = src;
 /* ── טוקניזציה: איסוף ההערות בלבד ──────────────────────────────────────── */
 /* ⛔ אין להחליף את זה בביטוי רגולרי על `//` ו-`/*` (סבב 28) — מחרוזת שמכילה `//`
    (כל URL) הייתה נקראת כהערה, ו-regex שמכיל `*` היה פותח בלוק שלא נסגר. */
+/*  ⛔ מילות המפתח שאחריהן `/` פותח ביטוי רגולרי ⛔ ולא חילוק — ⚠️ הרשימה
+ *  זהה לזו שב-`check-capabilities`: ⭐ שני סורקים לאותה שאלה שנבדלים
+ *  בתשובה הם בדיוק הכשל השקט. */
+const RE_KW_BEFORE = /^(?:return|typeof|instanceof|case|in|of|new|delete|void|do|else|yield|await)$/;
 function collectComments(text) {
   const out = [];
   const n = text.length;
   let i = 0, line = 1;
-  let prevSignificant = '';
+  let prevSignificant = '', prevWord = '';
   const bump = (s) => { for (let k = 0; k < s.length; k++) if (s[k] === '\n') line++; };
 
   while (i < n) {
@@ -223,34 +227,45 @@ function collectComments(text) {
     if (c === '"' || c === "'" || c === '`') {
       const q = c; i++;
       while (i < n) {
-        if (text[i] === '\\') { if (text[i] === '\n') line++; i += 2; continue; }
-        if (text[i] === '\n') { line++; if (q !== '`') break; }
+        if (text[i] === '\\') { if (text[i + 1] === '\n') line++; i += 2; continue; }
+        /*  ⛔ שורה חדשה נספרת פעם אחת (סבב 96) — ⚠️ עד כאן היא נספרה כאן
+         *  **וגם** בלולאה החיצונית שאליה `break` מחזיר: ⭐ כל מחרוזת
+         *  שלא נסגרה הזיזה את מספרי השורות של כל ההערות שאחריה, ⛔ והשער
+         *  דיווח כשל על שורה שאינה זו שנמדדה. */
+        if (text[i] === '\n') { if (q !== '`') break; line++; }
         if (text[i] === q) { i++; break; }
         i++;
       }
-      prevSignificant = q;
+      prevSignificant = q; prevWord = '';
       continue;
     }
     if (c === '/') {
-      /* regex או חילוק — מוכרע לפי הטוקן המשמעותי הקודם */
-      if (/[({[,;:=!&|?+\-*%~^<>]/.test(prevSignificant) || prevSignificant === '') {
+      /*  regex או חילוק — מוכרע לפי הטוקן המשמעותי הקודם.
+       *  ⛔ **ומילת מפתח היא טוקן** (סבב 96) — ⚠️ `return /re/.test(x)`
+       *  נקרא כחילוק מפני שהתו הקודם הוא `n`, ⭐ והסריקה שאחריו יצאה
+       *  מסנכרון: ⛔ מספרי השורות של כל ההערות שאחרי הביטוי זזו. */
+      if (/[({[,;:=!&|?+\-*%~^<>]/.test(prevSignificant) || prevSignificant === '' ||
+          RE_KW_BEFORE.test(prevWord)) {
         i++;
         let cls = false;
         while (i < n) {
           const d = text[i];
           if (d === '\\') { i += 2; continue; }
-          if (d === '\n') { line++; break; }
+          if (d === '\n') break;      /* ⛔ בלי `line++` — הלולאה החיצונית סופרת */
           if (d === '[') cls = true;
           else if (d === ']') cls = false;
           else if (d === '/' && !cls) { i++; break; }
           i++;
         }
-        prevSignificant = '/';
+        prevSignificant = '/'; prevWord = '';
         continue;
       }
-      i++; prevSignificant = '/'; continue;
+      i++; prevSignificant = '/'; prevWord = ''; continue;
     }
-    if (!/\s/.test(c)) prevSignificant = c;
+    if (!/\s/.test(c)) {
+      prevSignificant = c;
+      prevWord = /[A-Za-z0-9_$]/.test(c) ? prevWord + c : '';
+    }
     i++;
   }
   return out;
