@@ -61,13 +61,32 @@ export function defsOf(text) {
   for (const re of DEF) for (const m of text.matchAll(re)) if (!KW.has(m[1])) out.add(m[1]);
   return out;
 }
+/*  ⛔ צורת ההגדרה קובעת את צורת הקריאה (סבב 96) — ⚠️ **מתודה** נקראת
+    ב-`obj.name(` , ⭐ ושם עצמאי נקרא בלי נקודה לפניו: ⛔ בלי ההבחנה
+    הזו כל `x.close()` שבעץ נספר כקורא של `const close = …` שנמחק
+    בקובץ אחר. ⚠️ הנימוק נמדד: מחיקת עוזר מקומי בשם `close` בשער אחד
+    דיווחה שני «קוראים» — ⭐ `w.document.close()` ו-`fos.close()`,
+    ⛔ ששניהם מתודות של אובייקטים שאין להם שום קשר. */
+export function defKinds(text) {
+  const out = new Map();
+  DEF.forEach((re, i) => {
+    for (const m of text.matchAll(re)) {
+      if (KW.has(m[1])) continue;
+      if (i === 2) out.set(m[1], 'member');
+      else if (!out.has(m[1])) out.set(m[1], 'bare');
+    }
+  });
+  return out;
+}
 const SCAN = /\.(mjs|js|html|java)$/;
+const KINDS = new Map();
 function defsAt(rev) {
   const out = new Map();
   for (const f of git('ls-tree', '-r', '--name-only', rev).split('\n').filter((x) => SCAN.test(x))) {
     let txt = '';
     try { txt = git('show', `${rev}:${f}`); } catch (e) { continue; }
     for (const d of defsOf(txt)) out.set(d, f);
+    for (const [d, k] of defKinds(txt)) if (k === 'member' || !KINDS.has(d)) KINDS.set(d, k);
   }
   return out;
 }
@@ -80,15 +99,18 @@ const TREE = [];
     else if (/\.(mjs|js|html|json|sql|java|xml|yml|sh)$/.test(e.name)) TREE.push(p);
   }
 })(ROOT);
-export function callersOf(id, files = TREE) {
-  const re = new RegExp(`\\b${id}\\s*\\(`);
+export function callersOf(id, files = TREE, kind = 'member') {
+  /*  ⛔ `member` הוא ברירת המחדל ⛔ והוא הרחב מבין השניים — ⚠️ קריאה
+      מנוקדת נספרת בו: ⭐ הצמצום חל אך ורק על שם שהוגדר כשם עצמאי. */
+  const re = kind === 'bare' ? new RegExp(`(?<![\\w$.])${id}\\s*\\(`)
+                             : new RegExp(`\\b${id}\\s*\\(`);
   return files.filter((f) => re.test(fs.readFileSync(f, 'utf8'))).map((f) => f.replace(ROOT + '/', ''));
 }
-export function orphans(before, after, files = TREE) {
+export function orphans(before, after, files = TREE, kinds = null) {
   const out = [];
   for (const id of before.keys()) {
     if (after.has(id)) continue;
-    const hits = callersOf(id, files);
+    const hits = callersOf(id, files, (kinds && kinds.get(id)) || 'member');
     if (hits.length) out.push({ id, from: before.get(id), hits });
   }
   return out;
@@ -103,7 +125,7 @@ catch (e) { prev = null; }
 if (!prev) {
   t(true, 'אין קומיט קודם להשוואה — ⛔ אין מה למדוד, וזו הצהרה ולא דילוג');
 } else {
-  const orph = orphans(defsAt(prev), defsAt(head));
+  const orph = orphans(defsAt(prev), defsAt(head), TREE, KINDS);
   t(orph.length === 0,
     `מזהה שנמחק ונשאר לו קורא — נמדדו ${orph.length} והצפוי אפס` +
     (orph.length ? ': ' + orph.map((o) => `${o.id} ⟵ ${o.hits.slice(0, 2).join(' · ')}`).join(' | ') : ''));
