@@ -253,7 +253,7 @@ const CAPS = {
   },
   pending: {
     name: 'מודול "ממתין לסנכרון"',
-    block: { sha: '8b02444de454f54d', lines: 303,
+    block: { sha: '43b95fc7165f0cff', lines: 303,
              start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
              end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"' },
     hooks: [{ fn: 'pendBoot', at: 'boot' }],
@@ -388,7 +388,7 @@ const CAPS = {
    *  בטבלה כ-⭕ מנומק, בדיוק כמו `lock`.                    */
   sess: {
     name: 'מודל הסשן',
-    block: { sha: '3ecf220b7c519c8f', lines: 51,
+    block: { sha: '4ab395fd78fa83f8', lines: 51,
              start: '/* ═══ מודל הסשן — מודול משותף (סבב 53)',
              end:   '/* ═══════════════ סוף מודול הסשן' },
     hooks: [{ fn: 'sessBoot', at: 'boot' }],
