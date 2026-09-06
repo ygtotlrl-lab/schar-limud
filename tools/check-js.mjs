@@ -100,8 +100,8 @@ const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const work = mkdtempSync(join(tmpdir(), APP.app + '-check-'));
 
-/*  ⛔ אותם עוזרים כמו בחמשת הבודקים האחרים (סבב 72) — ⚠️ עד כאן היה כאן
- *  דפוס שני (`ok`/`FAIL`, בלי מונה ובלי `pass`), ⛔ ושני דפוסים לאותו
+/*  ⛔ אותם עוזרים כמו בחמשת הבודקים האחרים (סבב 72) — ⚠️ ואין לפתוח
+ *  דפוס שני (`ok`/`FAIL`, בלי מונה ובלי `pass`): ⛔ שני דפוסים לאותו
  *  דבר מלמדים לקרוא כל בודק מחדש. */
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };

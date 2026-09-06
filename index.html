@@ -17,57 +17,74 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:rtl;min-height:100vh;font-size:14px}
+body{font-family:'Heebo',sans-serif;background:var(--bgsec);color:var(--text);direction:rtl;min-height:100vh;font-size:14px}
 :root{
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  סרגל לשוניות תחתון קבוע. */
   --toast-bottom:26px;
---navy:#1a1a1a;--navy2:#2d2d2d;--navy3:#111111;--accent:#9fe870;--green:#2e7d32;--greenl:#e8f5e9;--yellow:#b45309;--yellowl:#fef3c7;--red:#c62828;--redl:#ffebee;--border:#e0e0e0;--bgsec:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
+--navy:#1a1a1a;--navy2:#2d2d2d;--navy3:#111111;--accent:#9fe870;--accent2:#8dd95e;--green:#2e7d32;--greenl:#e8f5e9;--yellow:#b45309;--yellowl:#fef3c7;--red:#c62828;--redl:#ffebee;--border:#e0e0e0;--bgsec:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
+/*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
+ *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
+ *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
+@media (prefers-color-scheme:dark){
+  :root{
+    --bgsec:#18242f; --card:#131e29;
+    --text:#e8eef5; --text2:#c2cfdc; --text3:#93a5b8;
+    --border:#24333f;
+    --navy:#e8eef5; --navy2:#c2cfdc; --navy3:#ffffff;
+    --accent:#9fe870; --accent2:#8dd95e;
+    --green:#4ade80; --greenl:#122a1c;
+    --yellow:#fbbf24; --yellowl:#2c2213;
+    --red:#f87171; --redl:#2d1717;
+    --credit:#7bb7f5; --creditl:#122334;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+  }
+}
 #app{max-width:800px;margin:0 auto;padding-bottom:80px}
-#auth-screen{position:fixed;inset:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;z-index:9999}
+#auth-screen{position:fixed;inset:0;background:var(--bgsec);display:flex;align-items:center;justify-content:center;z-index:9999}
 #auth-screen.hidden{display:none}
-.auth-box{background:#fff;border-radius:24px;padding:40px 32px;width:90%;max-width:360px;box-shadow:0 2px 16px rgba(0,0,0,.08);text-align:center}
-.auth-title{font-size:1.3rem;font-weight:700;color:#1a1a1a;margin-bottom:4px}
+.auth-box{background:var(--card);border-radius:24px;padding:40px 32px;width:90%;max-width:360px;box-shadow:0 2px 16px rgba(0,0,0,.08);text-align:center}
+.auth-title{font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:4px}
 .auth-sub{font-size:.85rem;color:var(--text3);margin-bottom:24px}
 .auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;text-align:right}
 .auth-field label{font-size:.8rem;font-weight:600;color:var(--text2)}
-.auth-field input{border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:Heebo;font-size:.95rem;outline:none;transition:border .15s;width:100%;background:#fff}
-.auth-field input:focus{border-color:#1a1a1a}
-.auth-btn{width:100%;background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:13px;font-family:Heebo;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s}
-.auth-btn:hover{background:#8dd95e}
+.auth-field input{border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:Heebo;font-size:.95rem;outline:none;transition:border .15s;width:100%;background:var(--card)}
+.auth-field input:focus{border-color:var(--navy)}
+.auth-btn{width:100%;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:13px;font-family:Heebo;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s}
+.auth-btn:hover{background:var(--accent2)}
 .auth-btn:disabled{opacity:.5;cursor:default}
-.auth-spinner{display:none;margin:10px auto 0;width:24px;height:24px;border:2.5px solid #e0e0e0;border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite}
+.auth-spinner{display:none;margin:10px auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
 .auth-err{color:var(--red);font-size:.82rem;margin-top:8px;min-height:18px}
 @keyframes spin{to{transform:rotate(360deg)}}
-#topnav{position:sticky;top:0;z-index:100;background:#fff;color:#1a1a1a;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;border-bottom:1px solid var(--border)}
-.nav-title{font-size:1rem;font-weight:700;color:#1a1a1a}
+#topnav{position:sticky;top:0;z-index:100;background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;border-bottom:1px solid var(--border)}
+.nav-title{font-size:1rem;font-weight:700;color:var(--text)}
 .nav-user{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:8px}
-.nav-logout{background:#f5f5f5;border:1.5px solid var(--border);color:#555;border-radius:999px;padding:4px 12px;font-family:Heebo;font-size:.75rem;cursor:pointer;transition:background .15s}
-.nav-logout:hover{background:#e0e0e0}
+.nav-logout{background:var(--bgsec);border:1.5px solid var(--border);color:var(--text2);border-radius:999px;padding:4px 12px;font-family:Heebo;font-size:.75rem;cursor:pointer;transition:background .15s}
+.nav-logout:hover{background:var(--border)}
 /*  ⛔ מעל סרגל הלשוניות — ⚠️ טוסט שיושב מתחתיו אינו נראה. */
 :root{--toast-bottom:80px}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:100}
 .tab-btn{flex:1;background:none;border:none;padding:10px 4px 8px;font-family:Heebo;font-size:10px;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s}
 .tab-btn .ti{font-size:1.3rem;line-height:1}
-.tab-btn.active{color:#1a1a1a;font-weight:700}
+.tab-btn.active{color:var(--text);font-weight:700}
 .panel{display:none;padding:16px}
 .panel.active{display:block}
-.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
-.card-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#fafafa}
-.card-hdr h3{font-size:.9rem;font-weight:700;color:#1a1a1a}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
+.card-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bgsec)}
+.card-hdr h3{font-size:.9rem;font-weight:700;color:var(--text)}
 .card-body{padding:16px}
-.btn{display:inline-flex;align-items:center;gap:5px;background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 18px;font-family:Heebo;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
-.btn:hover{background:#8dd95e}
-.btn.out{background:#fff;border:1.5px solid #1a1a1a;color:#1a1a1a}
-.btn.out:hover{background:#f5f5f5}
+.btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:8px 18px;font-family:Heebo;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn:hover{background:var(--accent2)}
+.btn.out{background:var(--card);border:1.5px solid var(--navy);color:var(--text)}
+.btn.out:hover{background:var(--bgsec)}
 .btn.danger{background:#ffebee;color:var(--red);border:1.5px solid #ffcdd2}
 .btn.danger:hover{background:#ffcdd2}
 .btn.sm{padding:5px 12px;font-size:.78rem}
 .tbl{width:100%;border-collapse:collapse;font-size:.82rem}
-.tbl th{background:#f5f5f5;color:#555;padding:9px 10px;text-align:right;font-weight:600;font-size:.76rem;white-space:nowrap;border-bottom:2px solid var(--border)}
-.tbl td{padding:9px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;color:#1a1a1a}
+.tbl th{background:var(--bgsec);color:var(--text2);padding:9px 10px;text-align:right;font-weight:600;font-size:.76rem;white-space:nowrap;border-bottom:2px solid var(--border)}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
 .tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:#fafafa}
+.tbl tr:hover td{background:var(--bgsec)}
 .tbl td.num{text-align:center;font-weight:600}
 .tbl th.num{text-align:center}
 /* ===== הלוח השנתי: תלמיד בשורה, חודש בעמודה =====
@@ -80,13 +97,13 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .dash-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tbl.pivot td{white-space:nowrap}
 .tbl.pivot th.stu,.tbl.pivot td.stu{position:sticky;right:0;z-index:2;text-align:right;font-weight:600;min-width:6rem;background:var(--card);box-shadow:-1px 0 0 var(--border)}
-.tbl.pivot thead th.stu{z-index:3;background:#f5f5f5}
+.tbl.pivot thead th.stu{z-index:3;background:var(--bgsec)}
 .tbl.pivot th.mo{cursor:pointer}
 .tbl.pivot td.mo{cursor:pointer}
 .tbl.pivot td.off{color:var(--text3);opacity:.45}
 .tbl.pivot td.paid{color:var(--green)}
 .tbl.pivot td.zero{color:var(--text3);font-weight:400}
-.tbl.pivot td.tot,.tbl.pivot th.tot{font-weight:700;background:#fafafa}
+.tbl.pivot td.tot,.tbl.pivot th.tot{font-weight:700;background:var(--bgsec)}
 .tbl.pivot tfoot td{background:var(--bgsec);font-weight:700;border-bottom:none}
 .tbl.pivot tfoot td.stu{background:var(--bgsec)}
 .tbl.pivot tfoot tr.top td{border-top:2px solid var(--border)}
@@ -96,65 +113,68 @@ body{font-family:'Heebo',sans-serif;background:#f5f5f5;color:#1a1a1a;direction:r
 .tbl.pivot tfoot tr.sub td.amt-yellow{color:var(--yellow)}
 .tbl.pivot tfoot tr.sub td.amt-red{color:var(--red)}
 .tbl.pivot tfoot tr:hover td{background:var(--bgsec)}
-/* מובייל: השם עובר לשורה שנייה במקום להיחתך — «לא לחתוך שמות באף רזולוציה» */
-@media(max-width:560px){
-  .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
-  .tbl.pivot td,.tbl.pivot th{padding:6px 5px}
+/* ⛔ מובייל-תחילה: השם עובר לשורה שנייה במקום להיחתך — ⚠️ «לא לחתוך שמות
+   באף רזולוציה», ⭐ ולכן זו ברירת המחדל וההרחבה היא שמבטלת אותה. */
+.tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+.tbl.pivot td,.tbl.pivot th{padding:6px 5px}
+@media (min-width:640px){
+  .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
+  .tbl.pivot td,.tbl.pivot th{padding:9px 10px}
 }
 .frm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .frm-row label{font-size:.78rem;font-weight:600;color:var(--text2)}
-.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .15s;background:#fff;color:#1a1a1a}
-.frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:#1a1a1a}
+.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .15s;background:var(--card);color:var(--text)}
+.frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:var(--navy)}
 .frm-row textarea{resize:vertical;min-height:70px}
 .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700}
 .badge.green{background:#e8f5e9;color:#2e7d32}
 
-.badge.gray{background:#f5f5f5;color:#757575;border:1px solid var(--border)}
+.badge.gray{background:var(--bgsec);color:var(--text3);border:1px solid var(--border)}
 
 
 
 
-.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .12s}
+.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
 .st-row:last-child{border-bottom:none}
-.st-row:hover{background:#fafafa}
+.st-row:hover{background:var(--bgsec)}
 
 
-.st-name{font-size:.9rem;color:#1a1a1a}
+.st-name{font-size:.9rem;color:var(--text)}
 .st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
 .veil.open{display:flex}
-.sheet{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
+.sheet{background:var(--card);border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
 .sheet-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.sheet-hd h3{font-size:.95rem;font-weight:700;color:#1a1a1a;flex:1;margin:0}
-.sheet-hd .x{background:none;border:0;font-size:20px;line-height:1;color:#888;cursor:pointer;padding:0 4px}
+.sheet-hd h3{font-size:.95rem;font-weight:700;color:var(--text);flex:1;margin:0}
+.sheet-hd .x{background:none;border:0;font-size:20px;line-height:1;color:var(--text3);cursor:pointer;padding:0 4px}
 .sheet-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .sheet-ft:empty{display:none}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
-.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:#fafafa}
-.acc-hdr:hover{background:#f0f0f0}
-.acc-hdr span{font-size:.85rem;font-weight:600;color:#1a1a1a}
+.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bgsec)}
+.acc-hdr:hover{background:var(--bgsec)}
+.acc-hdr span{font-size:.85rem;font-weight:600;color:var(--text)}
 .acc-body{display:none;padding:14px}
 .acc-body.open{display:block}
 .year-tabs{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.ytab{background:#fff;border:1.5px solid var(--border);border-radius:999px;padding:5px 14px;font-family:Heebo;font-size:.82rem;cursor:pointer;transition:all .15s;color:#555}
-.ytab.active{background:#9fe870;color:#1a1a1a;border-color:#9fe870;font-weight:700}
+.ytab{background:var(--card);border:1.5px solid var(--border);border-radius:999px;padding:5px 14px;font-family:Heebo;font-size:.82rem;cursor:pointer;transition:all .15s;color:var(--text2)}
+.ytab.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700}
 .sd-wrap{position:relative}
-.sd-list{position:absolute;top:100%;right:0;left:0;background:#fff;border:1.5px solid #1a1a1a;border-top:none;border-radius:0 0 12px 12px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.1)}
-.sd-opt{padding:9px 13px;cursor:pointer;font-size:.88rem;color:#1a1a1a}
-.sd-opt:hover{background:#9fe870;color:#1a1a1a}
-.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:.82rem}
+.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--navy);border-top:none;border-radius:0 0 12px 12px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.sd-opt{padding:9px 13px;cursor:pointer;font-size:.88rem;color:var(--text)}
+.sd-opt:hover{background:var(--accent);color:#1a1a1a}
+.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.82rem}
 .txn-row:last-child{border-bottom:none}
-.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f0f0f0;gap:8px}
+.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:8px}
 .set-list-item:last-child{border-bottom:none}
-.sc-hdr{background:#1a1a1a;color:#fff;padding:22px 16px}
+.sc-hdr{background:var(--navy);color:var(--card);padding:22px 16px}
 .sc-name{font-size:1.25rem;font-weight:900}
 .sc-meta{font-size:.8rem;opacity:.65;margin-top:4px}
 
 .sc-tog{border:none;border-radius:999px;padding:6px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s}
-.tog-act-on{background:#9fe870;color:#1a1a1a}
+.tog-act-on{background:var(--accent);color:#1a1a1a}
 .tog-act-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
 
 
@@ -172,8 +192,12 @@ body.locked{overflow:hidden}
 .paid-cell{color:#2e7d32;font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text2)}
 .empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
-.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:#f5f5f5;color:#555;border:1px solid var(--border)}
-@media(max-width:480px){.txn-row{grid-template-columns:65px 1fr auto auto}.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}.st-row{grid-template-columns:1fr auto}.st-total{display:none}}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:var(--bgsec);color:var(--text2);border:1px solid var(--border)}
+.txn-row{grid-template-columns:65px 1fr auto auto}
+.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}
+.st-row{grid-template-columns:1fr auto}
+.st-total{display:none}
+@media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:9px 10px;font-size:inherit}.tbl th{padding:9px 10px;font-size:.76rem}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
 /* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
    אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
@@ -533,6 +557,19 @@ var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזו
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 // סבב 17: נוסח אחיד לארבע האפליקציות.
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+/* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
+   ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
+   מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
+   ⛔ **וכיוון אחד — `min-width`** — ⚠️ עירוב `min` ו-`max` באותו קובץ
+   מאפשר לשני כללים לחול יחד על אותו רוחב, ⭐ וכלל שנראה מבוטל חל בכל זאת.
+   ⛔ **ומה שמתחת לנקודה הראשונה הוא ברירת המחדל** ⛔ ולא שאילתה —
+   ⚠️ שאילתת `max-width` שמתארת מסך צר היא בסיס שנכתב הפוך.
+   ⛔ **ואין ל-CSS גישה לקבוע** — ⚠️ המספרים חוזרים בשאילתות עצמן,
+   ⭐ והשער הוא מה שמשווה ביניהם לרשימה שכאן: ⛔ הקבוע הוא ההצהרה,
+   ⚠️ והשאילתה היא המימוש. */
+var BP_SCALE = [360, 480, 640, 900, 1200];
+window.BP_SCALE = BP_SCALE;
+/* ═══════════════ סוף מודול סולם נקודות השבירה ═════════════════════════ */
 /* ═══ עוזרי הרשת — מודול משותף (סבב 84) ═══════════════════════════════════
    ⛔ שלוש הפונקציות ישבו **בין** בלוקים חתומים, ⚠️ ולכן אף `sha256` לא מדד
       אותן — ⭐ והן נסחפו בשקט בעוד שהטבלה מצהירה עליהן «זהה בית-לבית»:
@@ -3974,8 +4011,8 @@ function enterApp(){
   //    מ-`rtyNote()` ורץ רק כשהתור אינו ריק, והמשיכה המותנית של `plBoot()`
   //    — שקוראת שורה אחת ומושכת רק כשהיא התקדמה.
   plTick();
-  // ⛔ `slMaybeDailyBackup()` הוסרה מכאן (סבב 30, השלמה) — הגיבוי עבר
-  //    ל-`slBoot()`, נקודת ההפעלה המוצהרת, לצד `lsBoot()`/`pendBoot()`.
+  // ⛔ אין לקרוא כאן ל-`slMaybeDailyBackup()` — נקודת ההפעלה המוצהרת
+  //    היא `slBoot()`, לצד `lsBoot()`/`pendBoot()`.
   //    הוא אינו תלוי בכניסה, ולכן אין סיבה שיחכה לה.
   lkReset();ensureCreditMethod();
 }
