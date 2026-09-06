@@ -455,7 +455,12 @@ t(!capsFails((doc) => {
       const app = rd(SRC), at = app.lastIndexOf('</script>');
       return app.slice(0, at) + head + body + tail + app.slice(at);
     };
-    const declare = rd(CAP).replace(/mergePoints: \[/, "mergePoints: ['zzPair', ");
+    /*  ⛔ הזוג המוזרק מוצהר בשלושת המרשמים — ⚠️ נקודת מיזוג שאין לה
+     *  הצהרת כיווץ מפילה בעצמה, ⭐ ואז המוטציה הייתה מפילה טענה אחרת. */
+    const declare = rd(CAP)
+      .replace(/mergePoints: \[/, "mergePoints: ['zzPair', ")
+      .replace(/listCollapse: \{/, "listCollapse: { zzPair: null, ")
+      .replace(/listCollapseWhy: \{/, "listCollapseWhy: { zzPair: 'זוג שהוזרק למוטציה — ⛔ אין ברשימתו ערכים שיכולים לחזור', ");
     /*  ⛔ שורה שסימונה ⭕ אינה מריצה את ה-probe כלל — ⚠️ ולכן אין בה מה
      *  למוטט, ⭐ והדילוג נושא נימוק ⛔ ואינו שקט: ⚠️ מספר השורה נגזר משמה
      *  ⛔ ואינו מוקלד, ⭐ והחריגה נקראת מרשימת ההחרגה שבשער. */
@@ -472,6 +477,57 @@ t(!capsFails((doc) => {
     t(!runGateOn({ [SRC]: inject('  out.items = mergeItemsX(loc.items, rem.items);\n'), [CAP]: declare },
                  'check-capabilities.mjs', () => ({})),
       'נ16 · ⭐ אותו זוג עם שדה שממוזג פר-פריט ⛔ **אינו** מפיל');
+  /*  ⛔ מוטציה: כתיבה לרשימה שאינה בודקת קיום (סבב 100) — ⚠️ הטענה שנופלת
+   *  היא «מיזוג מכל»: ⭐ פריט שנדחף פעמיים הוא פריט אחד על המסך, ⛔ ומחיקה
+   *  אחת משאירה את השני.
+   *  ⛔ **והאתר מוזרק ומוצהר** ⛔ ולא נחתך מהקיים — ⚠️ שמות הכתיבות נבדלים
+   *  בין הארבע, ⭐ ומוטציה שנשענת על שם אחד לא הייתה רצה בשאר. */
+  {
+    const addFn = (guard) => 'function zzAddItem() {\n' +
+      '  var inp = document.getElementById(\'zz-inp\');\n' +
+      '  var v = inp.value.trim();\n' +
+      '  if (!v) return;\n' + guard +
+      '  window.zzList.push(v);\n' +
+      '}\nwindow.zzAddItem = zzAddItem;\nwindow.zzList = [];\n';
+    const injectAdd = (body) => {
+      const app = rd(SRC), at = app.lastIndexOf('</script>');
+      return app.slice(0, at) + body + app.slice(at);
+    };
+    const declAdd = rd(CAP).replace(/listAdds: \[/, "listAdds: ['zzAddItem', ");
+    if (gaps.includes(rowNo)) {
+      t(true, `מ26 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    } else {
+      t(runGateOn({ [SRC]: injectAdd(addFn('')), [CAP]: declAdd }, 'check-capabilities.mjs', () => ({})),
+        'מ26 · כתיבה לרשימה בלי בדיקת קיום **מפילה** את «מיזוג מכל»');
+    }
+    /*  ⭐ מוטציית-נגד: אותה כתיבה בדיוק, ⛔ עם בדיקת קיום מול הרשימה
+     *  שדוחפים אליה — ⚠️ שינוי חי שאסור לו להפיל. */
+    t(!runGateOn({ [SRC]: injectAdd(addFn('  if (window.zzList.indexOf(v) >= 0) return;\n')), [CAP]: declAdd },
+                 'check-capabilities.mjs', () => ({})),
+      'נ17 · ⭐ אותה כתיבה עם בדיקת קיום ⛔ **אינה** מפילה');
+    /*  ⛔ מוטציה: מיזוג שאינו מכווץ (סבב 100) — ⚠️ המכווץ המוצהר משרשר
+     *  את שני הצדדים ⛔ ואין בו מפת ערכים שמכריעה: ⭐ פריט שקיים בשני
+     *  הצדדים יוצא פעמיים. */
+    const declCol = rd(CAP)
+      .replace(/mergePoints: \[/, "mergePoints: ['zzPair', ")
+      .replace(/listCollapse: \{/, "listCollapse: { zzPair: 'mergeItemsX', ");
+    const pairBody = '  out.items = mergeItemsX(loc.items, rem.items);\n';
+    if (gaps.includes(rowNo)) {
+      t(true, `מ27 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    } else {
+      t(runGateOn({ [SRC]: inject(pairBody), [CAP]: declCol }, 'check-capabilities.mjs', () => ({})),
+        'מ27 · מכווץ מוצהר שאין בו מפת ערכים **מפיל** את «מיזוג מכל»');
+    }
+    /*  ⭐ מוטציית-נגד: אותו מיזוג בדיוק, ⛔ ובמכווץ מפת ערכים שמכריעה —
+     *  ⚠️ שינוי חי שאסור לו להפיל. */
+    const collapsing = 'function mergeItemsX(a, b) {\n' +
+      '  var seen = {}, out = [];\n' +
+      '  (a || []).concat(b || []).forEach(function (v) { if (seen[v]) return; seen[v] = 1; out.push(v); });\n' +
+      '  return out;\n}\n';
+    t(!runGateOn({ [SRC]: inject(pairBody).replace('function mergeItemsX(a, b) { return (a || []).concat(b || []); }\n', collapsing),
+                   [CAP]: declCol }, 'check-capabilities.mjs', () => ({})),
+      'נ18 · ⭐ אותו מיזוג עם מכווץ שמחזיק מפת ערכים ⛔ **אינו** מפיל');
+  }
   }
 }
 

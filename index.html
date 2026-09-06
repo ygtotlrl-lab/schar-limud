@@ -4734,7 +4734,12 @@ function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LIST
 function addListItem(cat){
   var v=prompt('הזן ערך חדש:');
   if(!v||!v.trim())return;
-  var row={client_id:newClientId(),category:cat,value:v.trim(),deleted:false,deleted_at:null,deleted_by:null};
+  var val=v.trim();
+  /*  ⛔ ערך שכבר ברשימה אינו נוסף שוב — ⚠️ **וההשוואה על הערך** ⛔ ולא על
+   *  ה-`client_id`: ⭐ הרשימה מזינה בוררים, ⛔ ושתי אפשרויות באותו טקסט
+   *  אינן ניתנות להבחנה — ⚠️ ומחיקת אחת מהן משאירה את השנייה. */
+  if((LISTS[cat]||[]).some(function(it){return it.value===val;})){toast('⚠️ הערך כבר קיים ברשימה',4000);return;}
+  var row={client_id:newClientId(),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_lists',row)){toast('❌ השמירה במכשיר נכשלה — הפריט לא נוסף',5000);return;}
   pendMark(pendLstKey(row));
   refreshUI();

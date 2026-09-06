@@ -115,6 +115,18 @@ const APP = {
    *  מוצהר ריק** ⛔ ואינו נשמט: ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק «נמדד ואין».
    */
   mergePoints: [],
+  /*  ⛔ הכתיבות לרשימת ערכים — ⚠️ כל אחת בודקת קיום לפני הדחיפה,
+   *  ⭐ וההשוואה על **הערך** ⛔ ולא על מזהה: ⚠️ **והרשימה אינה נשמטת** —
+   *  ⭐ שדה חסר נקרא «לא נשאל», וריק נקרא «נמדד ואין». */
+  listAdds: [],
+  /*  ⛔ כתיבה לרשימה שהזהות בה אינה הערך — ⚠️ כל שם נושא את הסיבה,
+   *  ⛔ ושם שאין לו אתר בפועל **מפיל**: ⭐ והמנגנון נשאר דרוך גם כשאין
+   *  חריגה. */
+  listAddExempt: {},
+  /*  ⛔ המכווץ של כל נקודת מיזוג — ⚠️ `null` אומר «אין ברשימה ערכים
+   *  שיכולים לחזור», ⛔ והנימוק יושב לצידו ⛔ ואינו נשמט. */
+  listCollapse: {},
+  listCollapseWhy: {},
   /*  ⛔ אין כאן קריאת מפתח הגדרה יחיד — ⚠️ ההגדרות נקראות כטבלה שלמה,
    *  ⛔ **והרשימה אינה נשמטת**: שדה חסר נקרא «לא נשאל», ⚠️ וריק
    *  נקרא «נמדד ואין». */
@@ -2214,6 +2226,138 @@ function mergePointGaps() {
   }
   return out;
 }
+/*  ⛔ צורות ההגדרה שחיות כאן (סבב 100) — ⚠️ הצהרה בשם, השמה ל-`window`,
+ *  וערך במפת הפעולות: ⭐ שלושתן, ⛔ ומדידה שמכירה אחת מאשרת את השתיים
+ *  האחרות בשתיקה — ⚠️ **והכותרות נסרקות בקוד המולבן** ⛔ ולא במקור:
+ *  ⭐ «function» בתוך הערה אינה הגדרה. */
+const FN_HEADS = /(?:function\s+[A-Za-z_$][\w$]*|[A-Za-z_$][\w$]*\s*=\s*(?:async\s+)?function|:\s*(?:async\s+)?function)\s*\([^)]*\)\s*\{/g;
+function namedFnBodies() {
+  const out = [];
+  for (const m of code.matchAll(FN_HEADS)) {
+    const head = src.slice(m.index, m.index + m[0].length);
+    const name = (/function\s+([A-Za-z_$][\w$]*)/.exec(head) || [])[1]
+      || (/([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function/.exec(head) || [])[1]
+      /*  ⭐ שם שהוא מפתח במפת הפעולות — ⛔ הוא מחרוזת, ⚠️ ובקוד המולבן
+       *  היא ריקה: ⭐ ולכן הוא נקרא מהמקור שלפני הנקודתיים. */
+      || (/['"]([\w$-]+)['"]\s*$/.exec(src.slice(Math.max(0, m.index - 60), m.index)) || [])[1];
+    if (!name) continue;
+    const at = m.index + m[0].length - 1;
+    out.push({ name, at: at + 1, body: braceBodyAt(code, at) });
+  }
+  return out;
+}
+/*  ⛔ ערך שמקורו בקלט המשתמש — ⚠️ הזיהוי עובר דרך ההשמות: ⭐ ערך שנקרא
+ *  משדה מכתים את המשתנה שקיבל אותו, ⛔ וכל השמה שנשענת עליו מכתימה גם
+ *  היא — ⚠️ אחרת דחיפה של אובייקט שנבנה מהקלט נקראת כדחיפה פנימית
+ *  ⛔ ואינה נמדדת כלל. */
+const INPUT_SEED = /\.value\s*\.\s*trim\s*\(|\)\s*\.value\b|_hcGet\s*\(|prompt\s*\(/;
+const idBound = (n) => new RegExp(`(?<![\\w$])${n.replace(/\$/g, '\\$')}(?![\\w$])`);
+function inputTainted(body) {
+  const T = new Set();
+  /*  ⭐ שלושה מעברים — ⛔ שרשרת השמות כאן אינה עמוקה מכך, ⚠️ ומעבר יחיד
+   *  היה מפספס אובייקט שנבנה ממשתנה שנבנה מהשדה. */
+  for (let p = 0; p < 3; p++)
+    for (const a of body.matchAll(/(?:var|let|const)?\s*([A-Za-z_$][\w$]*)\s*=\s*([^;\n]*)/g))
+      if (INPUT_SEED.test(a[2]) || [...T].some((n) => idBound(n).test(a[2]))) T.add(a[1]);
+  return T;
+}
+function argAt(text, open) {
+  let d = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === '(') d++;
+    else if (text[i] === ')') { d--; if (!d) return text.slice(open + 1, i); }
+  }
+  return '';
+}
+/*  ⛔ כתיבה לרשימה שמקורה בקלט — ⚠️ הנמדד הוא **דחיפה שערכה נגזר משדה**,
+ *  ⛔ ולא כל `push`: ⭐ צובר פנימי דוחף תוויות וכשלים, ⚠️ והוא אינו רשימה
+ *  שהמשתמש רואה · ⛔ **והאתר נזקף לפונקציה הפנימית ביותר** — ⚠️ גוף של
+ *  פונקציה עוטפת מכיל אותו אף הוא, ⭐ ושתי הזקיפות היו אותו אתר פעמיים. */
+function inputListWrites() {
+  const by = new Map();
+  for (const f of namedFnBodies()) {
+    const T = inputTainted(f.body);
+    for (const p of f.body.matchAll(/([A-Za-z_$][\w$]*(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*)\s*\.push\s*\(/g)) {
+      const arg = argAt(f.body, p.index + p[0].length - 1);
+      if (!(INPUT_SEED.test(arg) || [...T].some((n) => idBound(n).test(arg)))) continue;
+      const abs = f.at + p.index;
+      const cur = by.get(abs);
+      if (!cur || f.body.length < cur.body.length)
+        by.set(abs, { name: f.name, target: p[1], body: f.body, at: p.index });
+    }
+  }
+  return [...by.values()];
+}
+/*  ⛔ בדיקת הקיום נמדדת **מול היעד** ⛔ ולא כמילה בגוף — ⚠️ `find` על
+ *  אוסף אחר אינו בודק את הרשימה שדוחפים אליה, ⭐ והוא היה מאשר כתיבה
+ *  שאינה בודקת דבר. */
+const MEMBER_TEST = /indexOf\s*\(|\.some\s*\(|\.has\s*\(|includes\s*\(|\bin\s+[A-Za-z_$]/;
+function listGuardBefore(s) {
+  const tgt = s.target.replace(/\s+/g, '');
+  return s.body.slice(0, s.at).split(/;|\n/)
+    .some((st) => MEMBER_TEST.test(st) && st.replace(/\s+/g, '').includes(tgt));
+}
+/*  ⛔ מפת ערכים שמכריעה אם פריט נכנס — ⚠️ אותו שם נכתב לפי מפתח ונבדק
+ *  בתנאי: ⭐ זה הכיווץ עצמו, ⛔ ולא שם הפונקציה. */
+function hasSeenMap(body) {
+  for (const m of body.matchAll(/([A-Za-z_$][\w$]*)\s*\[[^\]]*\]\s*=/g)) {
+    const n = m[1];
+    if (new RegExp(`(?:!|if\\s*\\(|&&|\\|\\||\\?|=\\s*)\\s*\\(?\\s*${n}\\s*\\[|\\bin\\s+${n}(?![\\w$])`).test(body))
+      return true;
+  }
+  return false;
+}
+const fnBodyByName = (n) => (namedFnBodies().find((f) => f.name === n) || {}).body || '';
+/*  ⛔ ופריט אינו מופיע פעמיים באותה רשימה (סבב 100) — ⚠️ **לא בכתיבה
+ *  ולא אחרי מיזוג**: ⭐ שני פריטים באותו ערך הם פריט אחד · ⛔ **בכתיבה** —
+ *  כל אתר שדוחף ערך שמקורו בקלט בודק קיום לפניו, ⚠️ או מוכרז חריג
+ *  בשמו ובנימוקו: ⭐ רשימה שהזהות בה אינה הערך · ⛔ **ובמיזוג** — כל
+ *  נקודת מיזוג מצהירה את המכווץ שלה, ⚠️ או `null` עם נימוק כתוב —
+ *  ⛔ **ושני הצדדים מפילים**: ⚠️ הצהרה בלי אתר ⛔ ואתר בלי הצהרה. */
+function listDupGaps() {
+  const out = [];
+  const adds = APP.listAdds || [], ex = APP.listAddExempt || {};
+  const sites = inputListWrites();
+  const seen = new Set();
+  for (const s of sites) {
+    seen.add(s.name);
+    if (s.name in ex) {
+      if (!String(ex[s.name] || '').trim())
+        out.push(`חריגת כתיבה לרשימה בלי נימוק: ${s.name}`);
+      continue;
+    }
+    if (!adds.includes(s.name)) {
+      out.push(`כתיבה לרשימה שאינה מוצהרת ב-APP.listAdds: ${s.name} → ${s.target}`);
+      continue;
+    }
+    if (!listGuardBefore(s))
+      out.push(`כתיבה לרשימה בלי בדיקת קיום: ${s.name} → ${s.target}`);
+  }
+  for (const n of adds)
+    if (!seen.has(n)) out.push(`הצהרה ב-APP.listAdds בלי אתר בפועל: ${n}`);
+  for (const n of Object.keys(ex))
+    if (!seen.has(n)) out.push(`חריגת כתיבה לרשימה בלי אתר בפועל: ${n}`);
+  const col = APP.listCollapse || {}, why = APP.listCollapseWhy || {}, pts = APP.mergePoints || [];
+  for (const n of pts)
+    if (!(n in col)) out.push(`נקודת מיזוג בלי הצהרת כיווץ ב-APP.listCollapse: ${n}`);
+  for (const n of Object.keys(col)) {
+    if (!pts.includes(n)) { out.push(`הצהרת כיווץ בלי נקודת מיזוג: ${n}`); continue; }
+    const fname = col[n];
+    if (fname == null) {
+      if (!String(why[n] || '').trim())
+        out.push(`נקודת מיזוג שהוכרזה בלי כיווץ ובלי נימוק: ${n}`);
+      continue;
+    }
+    const b = fnBodyByName(fname);
+    if (!b) { out.push(`מכווץ מוצהר שאין לו אתר בפועל: ${fname}`); continue; }
+    if (!hasSeenMap(b)) out.push(`מיזוג שאינו מכווץ — אין במכווץ מפת ערכים שמכריעה: ${fname}`);
+    if (!idBound(fname).test(fnBodyByName(n)))
+      out.push(`מכווץ מוצהר שאינו נקרא מנקודת המיזוג: ${n} → ${fname}`);
+  }
+  for (const n of Object.keys(why))
+    if (col[n] !== null) out.push(`נימוק כיווץ בלי הצהרת ${'null'}: ${n}`);
+  return out;
+}
 function deadMediaSites() {
   const out = [];
   for (const m of src.matchAll(/@media[^{]*\{/g)) {
@@ -2494,7 +2638,7 @@ const MATRIX = [
    *  שנמצא בקוד מוצהר, ⛔ וכל הצהרה נושאת אתר בפועל — ⚠️ והגוף מתייעץ
    *  בסימון מחיקה: ⛔ איחוד עיוור מחזיר מפתח שנמחק בענן. */
   { row: 135, name: 'מיזוג מכל — מפה ומערך',
-    probe: () => mergePointGaps().length === 0 },
+    probe: () => mergePointGaps().length === 0 && listDupGaps().length === 0 },
   { row: 136, name: 'דפוס עמודות אחיד',
     probe: () => colPatternGaps().length === 0 },
   /*  ⛔ שם טבלת הגיבוי נקרא מהקבוע ⛔ ולא מנוכחות המחרוזת — ⚠️ המחרוזת
