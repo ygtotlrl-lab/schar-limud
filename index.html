@@ -3812,9 +3812,13 @@ function slLocalWrite(tbl, row) {
   if (!hit) arr.push(row);
   if (!slMirrorSave(m)) return false;
   slApplyMirror();
-  // ⚠️ משפך הכתיבה המקומית היחיד כאן, ולכן זו נקודת הדריכה היחידה של
-  //    מודול הניסיון החוזר (סבב 44).
+  /*  ⚠️ משפך הכתיבה המקומית היחיד כאן, ⛔ ולכן זו נקודת הדריכה היחידה של
+   *  מודול הניסיון החוזר. ⛔ **ואיתה המתזמן** — ⚠️ עד כאן כל קורא דרך
+   *  אותו בעצמו, ⭐ ומסלול שנוסף ושכח השאיר את הכתיבה ממתינה לפולינג
+   *  הבא: ⛔ המשפך הוא המקום שבו הדריכה אינה יכולה להישכח. ⚠️ והמתזמן
+   *  מושהה ומאחד, ⭐ ולכן קריאה כפולה מקורא שדרך גם הוא אינה מחזור נוסף. */
   rtyNote();
+  schedulePush();
   return true;
 }
 
@@ -4737,7 +4741,10 @@ function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלו
   toast(navigator.onLine?'✅ תשלום נמחק':MSG_SAVED_LOCAL,4000);
   schedulePush();
 });}
-function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
+/*  ⛔ המזהה נשמר כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא טקסט
+ *  מאז שה-`SERIAL` ירד: ⭐ `parseInt` על מזהה שנוצר במכשיר מחזיר NaN,
+ *  ⛔ והכרטיס נפתח ריק. */
+function selectStudent(id){SC_STUDENT_ID=String(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 /* ══════════════════════════════════════════════════════════════════════════
    כרטיס התלמיד — פריסה שנתית, טווח פעילות ויתרת זכות
    ══════════════════════════════════════════════════════════════════════════ */
