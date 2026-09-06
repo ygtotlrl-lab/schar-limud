@@ -3881,6 +3881,34 @@ function toast(msg, dur, kind) {
 var LS_TOAST_MS = 5000;
 function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
+/* ═══ כיווץ רשימת ערכים — מודול משותף (סבב 101) ═══════════════════════════
+   ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה ובמיזוג
+      כאחד**: ⭐ `uniqHas` מונעת את הכפילות שמכאן ואילך, ⛔ ו-`uniqList`
+      מסלקת את מה שכבר נכתב פעמיים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ ושתיהן מכריעות לפי **אותה זהות** — ⚠️ שני מימושים לאותה טענה נבדלים
+      בשקט, ⭐ ואז המסך מראה פעמיים את מה שהמיזוג מכווץ לאחד.
+   ⛔ והראשון שורד — ⚠️ הסדר של הצד שניצח הוא סדר המסך, ⭐ ומי שדורש
+      שהחדש ינצח ממיין לפני הקריאה. */
+function uniqKeyOf(v, keyFn) { return String(keyFn ? keyFn(v) : v); }
+function uniqList(list, keyFn) {
+  if (!Array.isArray(list)) return list;
+  var seen = {}, out = [];
+  list.forEach(function (v) {
+    var k = uniqKeyOf(v, keyFn);
+    if (seen[k]) return;
+    seen[k] = 1;
+    out.push(v);
+  });
+  return out;
+}
+function uniqHas(list, val, keyFn) {
+  if (!Array.isArray(list)) return false;
+  var k = uniqKeyOf(val, keyFn);
+  return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
+}
+/* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
@@ -4738,7 +4766,7 @@ function addListItem(cat){
   /*  ⛔ ערך שכבר ברשימה אינו נוסף שוב — ⚠️ **וההשוואה על הערך** ⛔ ולא על
    *  ה-`client_id`: ⭐ הרשימה מזינה בוררים, ⛔ ושתי אפשרויות באותו טקסט
    *  אינן ניתנות להבחנה — ⚠️ ומחיקת אחת מהן משאירה את השנייה. */
-  if((LISTS[cat]||[]).some(function(it){return it.value===val;})){toast('⚠️ הערך כבר קיים ברשימה',4000);return;}
+  if(uniqHas(LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast('⚠️ הערך כבר קיים ברשימה',4000);return;}
   var row={client_id:newClientId(),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_lists',row)){toast('❌ השמירה במכשיר נכשלה — הפריט לא נוסף',5000);return;}
   pendMark(pendLstKey(row));
