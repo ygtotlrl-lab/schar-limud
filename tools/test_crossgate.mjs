@@ -219,7 +219,7 @@ mutate('פרקי הסבבים מוחרגים מהחלק הפרטי בשער אח
                    'return kind.filter(k => k === 0).length;')]], ['measure-gap']);
 
 mutate('שורה שהוחרגה ב-test_matrix ואינה ב-GATES',
-  [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7778, ')]], ['rows-gap']);
+  [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7779, ')]], ['rows-gap']);
 
 mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
   [['tools/check-capabilities.mjs', (s) => s.replace(/^ {4}(\d+):/m, '    9999:')]], ['probe-gap']);

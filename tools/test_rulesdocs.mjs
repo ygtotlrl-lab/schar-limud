@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 36, 158, 87];
+export const ROWS = [5, 8, 36, 159, 87];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -475,8 +475,12 @@ t(!capsFails((doc) => {
      *  למוטט, ⭐ והדילוג נושא נימוק ⛔ ואינו שקט: ⚠️ מספר השורה נגזר משמה
      *  ⛔ ואינו מוקלד, ⭐ והחריגה נקראת מרשימת ההחרגה שבשער. */
     const rowNo = Number((/^\|\s*(\d+)\s*\|\s*מיזוג מכל/m.exec(DOC) || [])[1]);
+    /*  ⛔ שתי שורות ושני probe (סבב 101) — ⚠️ «מיזוג מכל» מודדת את המבנה,
+     *  ⭐ ו«רשימה אינה נושאת פריט כפול» את הכפילות: ⛔ מוטציה שמפילה את
+     *  השנייה אינה אכיפה של הראשונה. */
+    const dupNo = Number((/^\|\s*(\d+)\s*\|\s*רשימה אינה נושאת פריט כפול/m.exec(DOC) || [])[1]);
     const gaps = ((/gapRows: \[([^\]]*)\]/.exec(rd(CAP)) || [, ''])[1].match(/\d+/g) || []).map(Number);
-    const skip = gaps.includes(rowNo);
+    const skip = gaps.includes(rowNo), skipDup = gaps.includes(dupNo);
     if (skip) {
       t(true, `מ25 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
@@ -488,30 +492,49 @@ t(!capsFails((doc) => {
      *  המסך, ⛔ ומחיקה אחת משאירה את השני.
      *  ⛔ **והאתר מוזרק ומוצהר** ⛔ ולא נחתך מהקיים — ⚠️ שמות הכתיבות
      *  נבדלים בין הארבע, ⭐ ומוטציה שנשענת על שם אחד לא הייתה רצה בשאר. */
-    const addFn = (guard) => 'function zzAddItem() {\n' +
+    const addFn = (guard, stamp) => 'function zzAddItem() {\n' +
       '  var inp = document.getElementById(\'zz-inp\');\n' +
       '  var v = inp.value.trim();\n' +
-      '  if (!v) return;\n' + guard +
+      '  if (!v) return;\n' + (guard || '') + (stamp || '') +
       '  window.zzList.push(v);\n' +
       '}\nwindow.zzAddItem = zzAddItem;\nwindow.zzList = [];\n';
-    if (skip) {
-      t(true, `מ26 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    const GUARD = '  if (uniqHas(window.zzList, v)) return;\n';
+    const declAdd = (c) => c.replace(/listAdds: \[/, "listAdds: ['zzAddItem', ");
+    const declStamp = (c) => declAdd(c).replace(/itemStamp: \[/,
+      "itemStamp: [{ target: 'window.zzList', stamp: 'zzStamp' }, ");
+    if (skipDup) {
+      t(true, `מ26 · ⭕ בשורה ${dupNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
-      t(runGateOn({ [SRC]: inject(pairBody, addFn('')),
-                    [CAP]: declare.replace(/listAdds: \[/, "listAdds: ['zzAddItem', ") },
+      t(runGateOn({ [SRC]: inject(pairBody, addFn('')), [CAP]: declAdd(declare) },
                   'check-capabilities.mjs', () => ({})),
-        'מ26 · כתיבה לרשימה בלי בדיקת קיום **מפילה** את «מיזוג מכל»');
+        'מ26 · כתיבה שאינה עוברת ב-`uniqHas` **מפילה** את «רשימה אינה נושאת פריט כפול»');
     }
     /*  ⛔ מוטציה: מיזוג שאינו מכווץ (סבב 100) — ⚠️ המכווץ המוצהר משרשר
      *  את שני הצדדים ⛔ ואין בו מפת ערכים שמכריעה: ⭐ פריט שקיים בשני
      *  הצדדים יוצא פעמיים. */
-    if (skip) {
-      t(true, `מ27 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    if (skipDup) {
+      t(true, `מ27 · ⭕ בשורה ${dupNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
       t(runGateOn({ [SRC]: inject(pairBody).replace(COLLAPSING, CONCAT), [CAP]: declare },
                   'check-capabilities.mjs', () => ({})),
-        'מ27 · מכווץ מוצהר שאין בו מפת ערכים **מפיל** את «מיזוג מכל»');
+        'מ27 · מכווץ מוצהר שאין בו מפת ערכים **מפיל** את «רשימה אינה נושאת פריט כפול»');
     }
+    /*  ⛔ מוטציה: פריט שנכתב בלי חותמת (סבב 101) — ⚠️ הטענה שנופלת היא
+     *  «מיזוג מכל»: ⭐ פריט בלי חותמת מפסיד לכל עריכה מתוארכת · ⛔ **והכתיבה
+     *  עוברת ב-`uniqHas`** ⛔ כדי שהשורה השנייה תישאר נקייה — ⚠️ מוטציה
+     *  שמפילה שתי שורות אינה מודדת אף אחת מהן. */
+    if (skip) {
+      t(true, `מ28 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    } else {
+      t(runGateOn({ [SRC]: inject(pairBody, addFn(GUARD)), [CAP]: declStamp(declare) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ28 · פריט שנכתב בלי חותמת **מפיל** את «מיזוג מכל»');
+    }
+    /*  ⭐ מוטציית-נגד: אותו אתר בדיוק, ⛔ עם החותמת בגופו — ⚠️ שינוי חי
+     *  שאסור לו להפיל. */
+    t(!runGateOn({ [SRC]: inject(pairBody, addFn(GUARD, '  var zzStamp = Date.now();\n')),
+                   [CAP]: declStamp(declare) }, 'check-capabilities.mjs', () => ({})),
+      'נ17 · ⭐ אותו אתר עם חותמת בגופו ⛔ **אינו** מפיל');
     /*  ⭐ מוטציית-נגד אחת לשלושתן: אותו עץ בדיוק — ⛔ שדה מערך שממוזג
      *  פר-פריט ונכתב לרשומה היוצאת, ⛔ מכווץ שמחזיק מפת ערכים,
      *  ⛔ ובלי כתיבה לרשימה שאינה בודקת קיום: ⚠️ שינוי חי שאסור לו
