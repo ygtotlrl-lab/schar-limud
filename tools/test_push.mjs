@@ -39,13 +39,14 @@ const APP = {
   /*  ⛔ טבלת מפתח-ערך — ⚠️ היא גם ב-`PUSH_TABLES`, ⭐ שיש לשורותיה
    *  `updated_at` והן ממוזגות ברמת רשומה. */
   kvTables: ['sl_settings'],
+  userWriteFn: 'writeUser',
   userTables: ['sl_users'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ שורת טבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן, ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [__ROW__];
+export const ROWS = [59, 149];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -126,12 +127,12 @@ for (const f of ['tables', 'chunk', 'delay', 'dirty', 'key', 'send', 'mark', 'ru
   else fail('4. `PUSH_CFG.' + f + '` חסר');
 }
 
-/* ── 5. המנה — מספר מוצהר, ⛔ ולא ברירת מחדל של המודול ─────────────────── */
+/* ── 5. המנה — מספר מוצהר, ⛔ ולא ברירת מחדל של המודול ──────────────────── */
 if (new RegExp('chunk\\s*:\\s*' + CHUNK + '\\b').test(cfgSrc))
   pass('5. `PUSH_CFG.chunk` = ' + CHUNK + ' — המנה המוצהרת');
 else fail('5. `PUSH_CFG.chunk` אינו ' + CHUNK + ' — המנה היא פרמטר מוצהר ולא נבחר');
 
-/* ── 6. `PUSH_TABLES` — הרשימה, וההצהרה שווה למה שנמדד ────────────────── */
+/* ── 6. `PUSH_TABLES` — הרשימה, וההצהרה שווה למה שנמדד ─────────────────── */
 const tm = /var PUSH_TABLES\s*=\s*\[([^\]]*)\]/.exec(src);
 const tables = tm ? tm[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [];
 if (tables.join('|') === APP.tables.join('|'))
@@ -139,7 +140,7 @@ if (tables.join('|') === APP.tables.join('|'))
 else fail('6. `PUSH_TABLES` נמדד «' + tables.join(',') + '» והצפוי «' + APP.tables.join(',') +
           '». מיישרים את ההצהרה לרשימה שבקוד');
 
-/* ── 7. שלוש השכבות נפרדות — ⛔ ולא פונקציה אחת שיודעת הכול ────────────── */
+/* ── 7. שלוש השכבות נפרדות — ⛔ ולא פונקציה אחת שיודעת הכול ─────────────── */
 function fnBody(text, name) {
   const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(text);
   if (!m) return '';
@@ -165,7 +166,7 @@ for (const L of LAYERS) {
             ']. מחזירים כל תפקיד לשכבה שלו');
 }
 
-/* ── 8. החיווט — `schedulePush` נקראת מקוד האפליקציה, ⛔ ואין מתזמן שני ── */
+/* ── 8. החיווט — `schedulePush` נקראת מקוד האפליקציה, ⛔ ואין מתזמן שני ─── */
 function codeOnly(text) {
   return text
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
@@ -191,6 +192,26 @@ if (!writes.length) pass('10. אפס כתיבות לטבלה שאינה באחד
 else fail('10. כתיבה לטבלה שאינה מוצהרת: ' + [...new Set(writes)].join(', ') +
           '. מוסיפים ל-`PUSH_TABLES` או מצהירים חריגה עם נימוקה');
 
+/* ── 10ב. כל כתיבת משתמש עוברת בפונקציה אחת ────────────────────────────── */
+/*  ⛔ הטבלה אינה ב-`PUSH_TABLES` — ⚠️ המראה מסירה ממנה את הסוד, ⭐ ודחיפה
+ *  גורפת הייתה כותבת אותו חזרה ריק: ⛔ ולכן המסלול היחיד הוא הפונקציה
+ *  שמוצהרת כאן, ⚠️ והיא דורשת רשת. */
+if (!APP.userTables.length) {
+  pass('10ב. כתיבת משתמש — אין כאן טבלת משתמשים, ואין מה לאכוף');
+} else {
+  const wf = fnBody(codeOnly(src), APP.userWriteFn);
+  const ure = new RegExp("\\.from\\(\\s*['\"](" + APP.userTables.join('|') +
+                         ")['\"]\\s*\\)\\s*\\.\\s*(upsert|update|insert)\\b", 'g');
+  const inside = (wf.match(ure) || []).length;
+  const total = (codeOnly(src).match(ure) || []).length;
+  if (!wf) fail('10ב. כתיבת משתמש — `' + APP.userWriteFn + '()` לא נמצאה. ' +
+                'מוסיפים את הפונקציה האחת שכל כתיבה עוברת בה');
+  else if (inside === total && total > 0)
+    pass('10ב. כתיבת משתמש — כל ' + total + ' הכתיבות עוברות ב-`' + APP.userWriteFn + '()`');
+  else fail('10ב. כתיבת משתמש — נמדדו ' + total + ' כתיבות ומהן ' + inside + ' ב-`' +
+            APP.userWriteFn + '()`, והצפוי שכולן. מנתבים את השאר דרכה');
+}
+
 /* ── 11. המנה זהה בארבעת הריפו ─────────────────────────────────────────── */
 {
   const seen = [];
@@ -203,7 +224,11 @@ else fail('10. כתיבה לטבלה שאינה מוצהרת: ' + [...new Set(wr
     seen.push({ p, n: m ? Number(m[1]) : null });
   }
   const bad = seen.filter((x) => x.n !== CHUNK);
-  if (seen.length && !bad.length) pass('11. המנה ' + CHUNK + ' ב-' + seen.length + ' ריפו שנמדדו');
+  /*  ⛔ ההשוואה דורשת את הריפו האחיות על הדיסק — ⚠️ כשהן חסרות היא
+   *  **מדווחת ואינה מדלגת בשתיקה**: ⭐ המנה של הריפו הזה נמדדה בטענה 5,
+   *  ⛔ ומה שחסר כאן הוא ההשוואה **בין** הריפו ⚠️ ולא המדידה עצמה. */
+  if (!seen.length) pass('11. הריפו האחיות אינן על הדיסק — ההשוואה לא נמדדה');
+  else if (!bad.length) pass('11. המנה ' + CHUNK + ' ב-' + seen.length + ' ריפו שנמדדו');
   else fail('11. המנה נבדלת: ' + bad.map((x) => x.p + '=' + x.n).join(', ') +
             ' והצפוי ' + CHUNK + ' בכולם. מיישרים את `PUSH_CFG.chunk`');
 }
@@ -264,13 +289,13 @@ async function scenarios(moduleSrc) {
     add('א. מערך ריק ⇒ העֵד מסומן ואפס כתיבות',
         h.log.sent.length === 0 && h.log.marked.join() === 'A' && r.ok === true && r.n === 0);
   }
-  /* ב. «אין ראיה» ⇒ ⛔ העֵד **אינו** מסומן */
+  /* ב. «אין ראיה» ⇒ ⛔ העֵד **אינו** מסומן — טבלה שלא נמשכה אינה ראיה */
   {
     const h = harness(moduleSrc);
     h.st.dirty.A = null;
     const r = await h.ctx.pushTable('A');
-    add('ב. `null` ⇒ אין סימון עֵד ואפס כתיבות',
-        h.log.sent.length === 0 && h.log.marked.length === 0 && r.ok === true);
+    add('ב. `null` ⇒ אין סימון עֵד, אפס כתיבות, ⛔ ואינו הצלחה',
+        h.log.sent.length === 0 && h.log.marked.length === 0 && r.ok === false);
   }
   /* ג. 1200 שורות במנות של 500 ⇒ שלוש כתיבות, וכל השורות הגיעו */
   {
@@ -294,7 +319,7 @@ async function scenarios(moduleSrc) {
         solo.length === 4 && h.log.cleared.length === 3 && h.log.failed.join() === 'A:3' &&
         r.n === 3 && r.ok === false);
   }
-  /* ה. כשל רשת ⇒ הסימון נשאר, ⛔ ועֵד הפינוי אינו מסומן */
+  /* ה. כשל רשת ⇒ הסימון נשאר, ⛔ ועֵד הפינוי אינו מסומן — יש שורה שלא עלתה */
   {
     const h = harness(moduleSrc);
     h.st.dirty.A = rows(2);
@@ -353,7 +378,7 @@ if (!RUN_MUT) {
    ══════════════════════════════════════════════════════════════════════════ */
 const MUTATIONS = [
   { name: 'סימון עֵד הפינוי גם על «אין ראיה»',
-    from: "    if (!rows) return { ok: true, still: [], n: 0 };",
+    from: "    if (!rows) return { ok: false, still: [], n: 0 };",
     to:   "    if (!rows) { PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }",
     hits: 'ב' },
   { name: 'ביטול המנה — הכול בכתיבה אחת',

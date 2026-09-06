@@ -40,7 +40,11 @@ const APP = {
    *  ⛔ כלומר «הריקון מהמשיכה» ו«הריקון מהניסיון החוזר» הם מסלול אחד. */
   drainFns: ['syncAll'],
   /*  משפך הכתיבה המקומית שדורך את הניסיון החוזר. */
-  noteFn: 'slLocalWrite',
+  noteFn: 'schedulePush',
+  /*  ⛔ משפך דריכה שני, מוכרז ומנומק — ⚠️ הכתיבה למראה רצה גם במסלול
+   *  הזריעה שממתין לסנכרון מלא ⛔ ואינו מתזמן דחיפה: ⭐ בלי הדריכה שם
+   *  לא היה לו ניסיון חוזר. */
+  noteExtra: ['slLocalWrite'],
   bootFn: 'slBoot',
   /*  האם לאפליקציה הזו יש פולינג שדוחף, ולכן `rtyGate()` מחווט בו.
    *  ⚠️ פולינג שמושך בלבד אינו זקוק לשער: אין מה לדחות. */
@@ -467,8 +471,18 @@ for (const mu of MUTATIONS) {
   if (calls('rtyBoot') === 1) pass('5. `rtyBoot()` נקראת פעם אחת בלבד מקוד האפליקציה');
   else fail(`5. \`rtyBoot()\` נקראת ${calls('rtyBoot')} פעמים — נקודת ההפעלה חייבת להיות אחת`);
 
-  if (calls('rtyNote') === 1) pass('6. `rtyNote()` נקראת פעם אחת בלבד — נקודת דריכה יחידה');
-  else fail(`6. \`rtyNote()\` נקראת ${calls('rtyNote')} פעמים — הדריכה חייבת להיות ממשפך אחד`);
+  const extra = APP.noteExtra || [];
+  /*  ⛔ הדריכה ממשפך מוצהר אחד, ⛔ ומכל משפך שני שמוכרז בשמו ובנימוקו —
+   *  ⚠️ והכרזה שאין לה אתר בפועל מפילה אף היא: ⭐ רשימה שהתיישנה היא
+   *  בעצמה השארית שהשורה באה לסלק. */
+  const stale = extra.filter((f) => !/\brtyNote\s*\(/.test(fnBody(codeOutside, f)));
+  if (stale.length)
+    fail(`6. משפך דריכה שמוכרז ואינו דורך: ${stale.join(', ')} — נמדדו ${stale.length} ` +
+         `והצפוי אפס. מסירים אותו מ-noteExtra, או מחזירים בו את rtyNote()`);
+  else if (calls('rtyNote') === 1 + extra.length)
+    pass(`6. \`rtyNote()\` נקראת ${1 + extra.length} פעמים — המשפך המוצהר ו-${extra.length} מוכרזים`);
+  else fail(`6. \`rtyNote()\` נקראת ${calls('rtyNote')} פעמים והצפוי ${1 + extra.length} — ` +
+            `הדריכה ממשפך אחד, וכל נוסף מוכרז ב-noteExtra עם נימוקו`);
 
   function fnBody(text, name) {
     const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(text);
