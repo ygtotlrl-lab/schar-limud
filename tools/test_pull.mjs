@@ -34,7 +34,9 @@ const APP = {
   syncFn: 'syncAll',
   /*  משפכי הכתיבה לענן שחייבים לקדם את החותמת: דחיפת-המצב של ארבע
    *  הטבלאות, וכתיבת הטביעה ל-`sl_users` (שנמשכת ב-`slPullUsers`). */
-  touchFns: ['slPushTable', 'slEnsurePassFp'],
+  /*  ⛔ משפכי הכתיבה לענן **שמחוץ לשכבת הדחיפה** — ⚠️ הדחיפה עצמה מקדמת
+   *  את החותמת בתוך הבלוק החתום, ⭐ ומדידה נוספת עליה כאן הייתה טענה כפולה. */
+  touchFns: ['slEnsurePassFp'],
   every: 3000,
   stampKey: 'sl_last_changed',
 };

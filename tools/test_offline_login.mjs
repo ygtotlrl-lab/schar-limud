@@ -96,6 +96,9 @@ const NAMES_FN = [
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slStripMeta',
   'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slWhoName',
+  /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
+   *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */
+  'writeUser',
   /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף, ולכן הרתמה מריצה
    *  את הפונקציות **האמיתיות** שלו ולא בדל. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive',

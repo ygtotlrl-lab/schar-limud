@@ -78,6 +78,7 @@ const APP = {
           'check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs',
           'test_pull.mjs',
+          'test_push.mjs',
           'test_budget.mjs', 'test_icons.mjs',
           'test_android.mjs', 'test_lists.mjs',
           'test_manifest.mjs',
