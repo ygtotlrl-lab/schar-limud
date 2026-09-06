@@ -54,12 +54,26 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
-const BLOCK = {
-  sha: '31a750f7604b5c54',
-  lines: 109,
-  start: '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)',
+/*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
+ *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
+ *  מה שכבר אינו: ⛔ המרשם שם הוא המקור, וכאן קוראים ממנו לפי סמן הפתיחה. */
+function capsBlock(startMark) {
+  const caps = fs.readFileSync(new URL('./check-capabilities.mjs', import.meta.url), 'utf8');
+  const re = /block:\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(caps)) !== null) {
+    const s = /start:\s*'([^']*)'/.exec(m[1]);
+    if (!s || s[1] !== startMark) continue;
+    return { sha: (/sha:\s*'([0-9a-f]{16})'/.exec(m[1]) || [])[1] || '',
+             lines: Number((/lines:\s*(\d+)/.exec(m[1]) || [])[1]) || 0 };
+  }
+  return { sha: '', lines: 0 };
+}
+const START = '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)';
+const BLOCK = Object.assign({
+  start: START,
   end:   '/* ═══════════════ סוף מודול נעילת חוסר-הפעילות',
-};
+}, capsBlock(START));
 const LOCK_MS = 5 * 60 * 1000;
 const WARN_MS = 4 * 60 * 1000;
 

@@ -626,22 +626,12 @@ var LS_CFG = {
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
 
-  /* ⛔ **`tier1` הוא getter ולא מערך, וזו סטייה מכוונת** (סבב 96) — ⚠️ שלב א
-     מוחק את המפתח **כולו**, והשתיים האלה נכתבות מקומית-תחילה מאז 009:
-     מחיקה של הגדרה או פריט רשימה שנרשמו אופליין אינה חוזרת משום מקום.
-     ⭐ מסבב 96ג יש בשלב א מחסום `pending()` — ⛔ והוא אינו מספיק כאן:
-     «התור ריק» הוא ראיה על **התור**, ⚠️ ולא ראיה שהמפתח הזה עלה. ⛔ ולכן
-     ה-getter מוסיף את מה שהמחסום אינו נותן — **עֵד דחיפה פר-מפתח**
-     (`_slPushedAt`): מעבר דחיפה שהסתיים בלי שורה שנשארה בכשל רשת.
-     ⭐ אין להן «אופק הפינוי» ברמת רשומה כמו ב-tier2: שלב א מוחק מפתח שלם
-     ⛔ ומחזיר אותו במשיכה הבאה — ⚠️ והראיה שהוא בענן היא מה שמתיר זאת.
-     ⛔ **אין להפוך את זה חזרה למערך קבוע.** */
-  get tier1() {
-    try {
-      if (!_slPushedThrough('settings') || !_slPushedThrough('lists')) return [];
-    } catch (e) { return []; }
-    return ['sl_mirror_settings', 'sl_mirror_lists'];
-  },
+  // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
+  //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
+  tier1: [
+    { key: 'sl_mirror_settings', syncedThrough: _slPushedFor('settings') },
+    { key: 'sl_mirror_lists',    syncedThrough: _slPushedFor('lists') }
+  ],
   // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס** (סבב 12 שלב 2) — אלה כספים:
   // רשומה שפונתה מהדיסק אינה נראית באפליקציה אופליין, וחישוב חוב על נתון
   // חסר גרוע מכל מכסה. `sl_mirror_students` הם אבות המפתח הזר שלהן —
@@ -679,6 +669,7 @@ var LS_CFG = {
 var _slPushedAt = {};
 function _slMarkPushed(m) { _slPushedAt[m] = Date.now(); }
 function _slPushedThrough(m) { return _slPushedAt[m] || 0; }
+function _slPushedFor(m) { return function () { return _slPushedThrough(m); }; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
@@ -958,10 +949,17 @@ function lsSweep(reason, needBytes) {
   }
 
   // ── שלב א: מטמונים שניתן לשחזר מהענן ──
+  // ⛔ העֵד נבדק **פר-פריט**, בתוך המערך (סבב 96ד) — ⚠️ ולא בכניסה
+  // לרשימה: שלב א מוחק מפתח **שלם**, ומפתח שנכתב מקומית-תחילה ולא נדחף
+  // אינו חוזר משום מקום. ⭐ ולכן כל פריט נושא `syncedThrough` משלו, בדיוק
+  // כמו ב-tier2, ⛔ ומחסום `pending()` שלמעלה אינו מחליף אותו: «התור ריק»
+  // הוא ראיה על **התור** ⛔ ולא על המפתח.
+  var through = lsGlobalWitness();
   var sized = [];
-  (LS_CFG.tier1 || []).forEach(function (k) {
-    var v = lsGet(k, null);
-    if (v != null) sized.push({ k: k, b: lsEntryBytes(k, v) });
+  (LS_CFG.tier1 || []).forEach(function (spec) {
+    if (!lsSpecWitness(spec, through)) return;
+    var v = lsGet(spec.key, null);
+    if (v != null) sized.push({ k: spec.key, b: lsEntryBytes(spec.key, v) });
   });
   sized.sort(function (a, b) { return b.b - a.b; });   // הגדול קודם — מפנה מהר
   var hit = [];
@@ -973,7 +971,6 @@ function lsSweep(reason, needBytes) {
   if (need && freed >= need) return freed;
 
   // ── שלב ב: רשומות ישנות מסונכרנות ──
-  var through = lsGlobalWitness();
   var specs = (LS_CFG.tier2 || []).slice();
   // מפתח בלי עֵד מקומי אך עם מסלול אימות מול הענן אינו מפונה כאן — האימות
   // אסינכרוני ולכן הוא רץ ב-`lsBootDeferred`, אחרי העלייה. מדווח כדי

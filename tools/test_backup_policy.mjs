@@ -63,7 +63,7 @@ function ruleBlock(doc) {
   return m ? m[1] : null;
 }
 /* ⚠️ הערכים נקראים משורת **טבלה** ולא מפרוזה (סבב 61) — ⛔ פרוזה אינה ניתנת
-   לגזירה אמינה, וזה בדיוק הלקח של כלל ברזל 15 בציר אחר. */
+   לגזירה אמינה, וזה בדיוק אותו לקח בציר אחר. */
 function ruleValues(block) {
   if (!block) return null;
   const row = block.split('\n').find((l) => /^\|\s*\d+\s*\|\s*גיבוי במסד\s*\|/.test(l));
@@ -92,7 +92,7 @@ function cronValues(sql) {
 function mismatches(doc, sql) {
   const out = [];
   const rv = ruleValues(ruleBlock(doc));
-  if (!rv) return ['כלל ברזל 20 — לא נמצאה טבלת הערכים'];
+  if (!rv) return ['מדיניות הגיבויים — לא נמצאה טבלת הערכים'];
   const sv = sqlValues(sql);
   const cv = cronValues(sql);
   for (const k of ['keep', 'days', 'manual']) {
@@ -203,7 +203,7 @@ function t5(sql) {
     const m = f(sql);
     assert(m !== sql, '5· המוטציה «' + name + '» אכן שינתה את המקור');
     assert(mismatches(DOC, m).length > 0,
-      '5· ⛔ מוטציה: ' + name + ' בלי לעדכן את כלל ברזל 20 — **מפילה**');
+      '5· ⛔ מוטציה: ' + name + ' בלי לעדכן את הטבלה — **מפילה**');
   }
   /* ⭐ מוטציית-נגד: ⛔ שינוי הערה אינו מפיל — אחרת השער היה נועל את
      התיעוד שבתוך המיגרציה ולא את המדיניות. */
@@ -214,7 +214,7 @@ function t5(sql) {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-console.log('· ' + APP.name + ' — סבב 61: מדיניות הגיבויים (כלל ברזל 20)');
+console.log('· ' + APP.name + ' — סבב 61: מדיניות הגיבויים');
 t1();
 if (APP.migration) {
   const p = join(ROOT, APP.migration);

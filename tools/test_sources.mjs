@@ -149,7 +149,7 @@ ok(badGate.length === 0,
    (badGate.length ? ' — לא מוכרזים: ' + badGate.join(', ') : ''));
 
 /* ⚠️ ג. רשימה שהתיישנה מפילה גם היא — טבלה מוכרזת שאיש אינו מגבה היא
-   בדיוק השריד שכלל ברזל 14 אוסר ברשימות-היתר. */
+   בדיוק השריד שאסור ברשימות-היתר. */
 const usedNames = found.map((s) => s.name);
 const stale = APP.tables.filter((t) => usedNames.indexOf(t) === -1);
 ok(stale.length === 0,

@@ -19,8 +19,8 @@
  * ⛔ הקובץ זהה בית-לבית בארבעת הריפו פרט לבלוק `APP` שבראשו.
  */
 
-import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
-import { join, dirname, resolve, relative, sep } from 'node:path';
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync, readdirSync } from 'node:fs';
+import { join, dirname, resolve, relative, sep, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -145,10 +145,27 @@ function audit(root) {
   if (ruleW !== docRuleW) v.push({ kind: 'width-gap', msg: `מפריד הבלוק — check-comments ${ruleW} ≠ הכלל ${docRuleW}` });
   if (bannerW !== docBannerW) v.push({ kind: 'width-gap', msg: `באנר ה-tools — check-comments ${bannerW} ≠ הכלל ${docBannerW}` });
 
-  /*  ⛔ **הצלבת מזהי הבלוקים ירדה** (סבב 96) — ⚠️ עד כאן היא השוותה את
-      `CANON` שב-`check-docs` ל-`WANT` שב-`test_rulesdocs`, ⭐ ואחרי מחיקת
-      בלוקי הכללים יש **מזהה אחד** שמוצהר במקום אחד: ⛔ הצלבה שצד אחד
-      שלה ריק אינה מודדת דבר, ⚠️ והמזהה נמדד מול הקובץ ב-`check-docs`. */
+  /*  ⛔ **חתימת בלוק מוצהרת במקום אחד** (סבב 96ד) — ⚠️ הנימוק המדוד:
+      תשע חתימות היו כתובות פעמיים — ב-`check-capabilities` **וגם** בשער
+      שמודד אותו בלוק: ⭐ סבב שקידם את האחת ולא את השנייה מקבל אישור
+      מהשער שלא עודכן, ⛔ והבלוק נמדד מול ערך שכבר אינו. ⚠️ מה שנמדד הוא
+      **מחרוזת בת 16 תווים הקסה שמופיעה בשני קובצי שערים**, ⛔ ולא
+      «אותה טענה»: ⭐ המרשם הוא המקור, וכל שער אחר קורא ממנו. */
+  {
+    const seen = new Map();
+    for (const f of readdirSync(join(root, 'tools'))) {
+      if (!f.endsWith('.mjs') || f === basename(fileURLToPath(import.meta.url))) continue;
+      const s = readFileSync(join(root, 'tools', f), 'utf8');
+      for (const m of s.matchAll(/'([0-9a-f]{16})'/g)) {
+        if (!seen.has(m[1])) seen.set(m[1], new Set());
+        seen.get(m[1]).add(f);
+      }
+    }
+    for (const [sha, files] of seen) {
+      if (files.size > 1) v.push({ kind: 'sha-dup', msg:
+        `החתימה ${sha} מוצהרת ב-${[...files].sort().join(' וב-')} — קוראים אותה מהמרשם` });
+    }
+  }
 
   return v;
 }
@@ -167,6 +184,7 @@ t(n++, !base.some((x) => x.kind.startsWith('measure')), `ב. וארבעת המס
 t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נגזר מ-GATES ${of('rows-gap')}${of('rows-missing')}`);
 t(n++, !base.some((x) => x.kind === 'probe-gap'), `ד. כל שורת \`app: true\` נושאת מפתח ב-tableProbe ${of('probe-gap')}`);
 t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידים זהים בשער ובכלל הכתוב ${of('width-gap')}`);
+t(n++, !base.some((x) => x.kind === 'sha-dup'), `ו. אין חתימת בלוק שמוצהרת בשני קובצי שערים ${of('sha-dup')}`);
 
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
 const tmp = mkdtempSync(join(tmpdir(), 'r71x-'));
@@ -208,6 +226,17 @@ mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
 
 mutate('רוחב הבאנר בשער נבדל מהכלל הכתוב',
   [['tools/check-comments.mjs', (s) => s.replace(/const BANNER_W = \d+;/, 'const BANNER_W = 76;')]], ['width-gap']);
+
+/*  ⛔ החזרת חתימה מוקלדת לשער שני — ⚠️ בדיוק המצב שנמדד: ⭐ אותה מחרוזת
+    בת 16 תווים בשני קובצי שערים. */
+mutate('חתימת בלוק שהוחזרה כליטרל לשער שני',
+  [['tools/test_session.mjs', (s) => s.replace('}, capsBlock(START));',
+      "}, { sha: '4ab395fd78fa83f8', lines: 51 });")]], ['sha-dup']);
+/*  ⭐ מוטציית-נגד: אותה חתימה שנקראת מהמרשם ⛔ אינה מפילה — ⚠️ קוד שנוסף
+    ולא הערה, ⭐ והערך ממשיך לבוא ממקום אחד. */
+mutate('⭐ מוטציית-נגד: קריאה שנייה מהמרשם ⛔ אינה מפילה',
+  [['tools/test_session.mjs', (s) => s.replace('}, capsBlock(START));',
+      '}, capsBlock(START));\nconst SESS_SHA_ALT = capsBlock(START).sha;')]], ['__none__']);
 
 /*  ⭐ מוטציית-נגד — ⛔ שינוי אמיתי בקובץ שאסור לו להפיל: ניסוח הערה.
     ⚠️ בלעדיה הטענות אינן מבחינות בין «משוות ערכים» ל«סופרות בתים». */

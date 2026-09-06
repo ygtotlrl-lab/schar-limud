@@ -62,7 +62,7 @@ const GRADLE   = 'android/app/build.gradle';
 /*  ⭐ החתימות הקנוניות של ריפו **בלי גשר** — נמדדו בסבב 45 ונמצאו זהות
  *  בית-לבית בשלושה (hanhala · schar · gius) אחרי נרמול הזהות. ⛔ ריפו
  *  שהוכרז חסר-גשר חייב לשאת אותן, אחרת השלושה יכולים להיסחף זה מזה
- *  בשקט — בדיוק מה שכלל ברזל 14 אוסר.                                  */
+ *  בשקט — בדיוק מה שאסור.                                  */
 const MANIFEST_SHA_NO_BRIDGE = '5689f6b481333147';
 const GRADLE_SHA_NO_BRIDGE   = '9cbf35bb88e9b753';
 
@@ -190,7 +190,7 @@ const THEME = '@android:style/Theme.Material.Light.NoActionBar';
   else pass('android:theme הוא ' + THEME + ' — ⛔ ובלי מסך מלא');
 }
 
-/*  ⛔ מספר סבב בהערת `build.gradle` — היסטוריית גרסאות (סבב 68, כלל ברזל 21).
+/*  ⛔ מספר סבב בהערת `build.gradle` — היסטוריית גרסאות (סבב 68).
  *  ⚠️ נמדד: 6 · 4 · 4 · 6 אזכורים בארבעתן, ⛔ ובלוק ההערות ביומן מנה עד
  *  סבב 7 ⛔ ולא כלל 8–13 — כלומר מקור אמת שני שכבר נסחף. ⛔ ההיסטוריה
  *  יושבת בטבלה שב-`android/README.md`, שהיא מה שהשער אוכף. */
@@ -256,7 +256,7 @@ const bare = (label, stripped, canon) => {
   if (got === canon) pass(`${label} ללא הגשר: תואם לקנונית (${got})`);
   else fail(`${label} ללא הגשר: ${got} במקום הקנונית ${canon} — ⛔ ההפרש בין ` +
             'הריפו הזה לשלושת האחרים אינו גשר השיתוף בלבד. כל שורה אחרת חייבת ' +
-            'להיות זהה בארבעתן, או מוכרזת פרטית עם נימוק (כלל ברזל 14)');
+            'להיות זהה בארבעתן, או מוכרזת פרטית עם נימוק');
 };
 const bareM = normManifest(stripBridgeManifest(manifestSrc));
 const bareG = normGradle(stripBridgeGradle(gradleSrc));

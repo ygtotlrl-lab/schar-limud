@@ -105,11 +105,27 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
-/*  ⭐ החתימה, מספר השורות והסמנים — זהים בארבעת הריפו. */
-const CORE_SHA = '47d92417774b3b96';
-const CORE_LINES = 253;
+/*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
+ *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
+ *  מה שכבר אינו: ⛔ המרשם שם הוא המקור, וכאן קוראים ממנו לפי סמן הפתיחה. */
+function capsBlock(startMark) {
+  const caps = fs.readFileSync(new URL('./check-capabilities.mjs', import.meta.url), 'utf8');
+  const re = /block:\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(caps)) !== null) {
+    const s = /start:\s*'([^']*)'/.exec(m[1]);
+    if (!s || s[1] !== startMark) continue;
+    return { sha: (/sha:\s*'([0-9a-f]{16})'/.exec(m[1]) || [])[1] || '',
+             lines: Number((/lines:\s*(\d+)/.exec(m[1]) || [])[1]) || 0 };
+  }
+  return { sha: '', lines: 0 };
+}
+/*  ⭐ הסמנים זהים בארבעת הריפו — ⛔ והחתימה ומספר השורות נקראים מהמרשם
+ *  ולא מוקלדים כאן, ⚠️ שערך שמוצהר פעמיים מתיישן באחד משני המקומות. */
 const START = '/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)';
 const END = '/* ═══════════════ סוף מודול ה-service worker';
+const CORE_SHA = capsBlock(START).sha;
+const CORE_LINES = capsBlock(START).lines;
 
 const SELF = fileURLToPath(import.meta.url);
 const SELF_NAME = basename(SELF);
@@ -392,7 +408,7 @@ for (const [key, title, run] of SCENARIOS) {
   const exp = APP.expects[key];
   const spec = exp && typeof exp === 'object' ? exp : { be: exp };
   /* ⭐ סבב 65 — `%CACHE%` במקום מספר הגרסה: ⛔ ערך שקיים בקוד אינו מוצהר
-   *  בשער (כלל ברזל 21). קיבוע `yoman-avoda-v44` כאן הפך כל קידום
+   *  בשער. קיבוע `yoman-avoda-v44` כאן הפך כל קידום
    *  `CACHE_NAME` — שהוא **חובה** בכל שינוי קוד — לשער אדום. */
   const want = typeof spec.be === 'string' ? spec.be.split('%CACHE%').join(CACHE_NAME) : spec.be;
   const mark = spec.defect ? '⛔ התנהגות פגומה — מתוקנת בשלב א3: ' : '';
@@ -477,6 +493,10 @@ function harnessFails(label, from, to) {
     fs.mkdirSync(join(dir, 'tools'));
     fs.writeFileSync(join(dir, 'sw.js'), SRC.replace(from, to));
     fs.copyFileSync(SELF, join(dir, 'tools', SELF_NAME));
+    /*  ⛔ המרשם נוסע עם השער (סבב 96ד) — ⚠️ החתימה נקראת ממנו, ⭐ ובלעדיו
+     *  הרתמה מודדת «אין חתימה» במקום את מה שהיא באה למדוד. */
+    fs.copyFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'),
+                    join(dir, 'tools', 'check-capabilities.mjs'));
     const r = spawnSync(process.execPath, [join(dir, 'tools', SELF_NAME)],
                         { encoding: 'utf8',
                           env: { ...process.env, SW_HARNESS_ONLY: '1' } });
@@ -520,6 +540,10 @@ harnessFails(
       SRC.replace(/CACHE_NAME\s*=\s*'([a-z-]+)-v(\d+)'/,
                   (_, p, v) => `CACHE_NAME = '${p}-v${Number(v) + 1}'`));
     fs.copyFileSync(SELF, join(dir, 'tools', SELF_NAME));
+    /*  ⛔ המרשם נוסע עם השער (סבב 96ד) — ⚠️ החתימה נקראת ממנו, ⭐ ובלעדיו
+     *  הרתמה מודדת «אין חתימה» במקום את מה שהיא באה למדוד. */
+    fs.copyFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'),
+                    join(dir, 'tools', 'check-capabilities.mjs'));
     const r = spawnSync(process.execPath, [join(dir, 'tools', SELF_NAME)],
                         { encoding: 'utf8',
                           env: { ...process.env, SW_HARNESS_ONLY: '1' } });

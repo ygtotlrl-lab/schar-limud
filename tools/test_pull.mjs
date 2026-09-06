@@ -49,12 +49,26 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
-const BLOCK = {
-  sha: 'd0aa2b4d27291da5',
-  lines: 79,
-  start: '/* ═══ מנגנון המשיכה — מודול משותף (סבב 51)',
+/*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
+ *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
+ *  מה שכבר אינו: ⛔ המרשם שם הוא המקור, וכאן קוראים ממנו לפי סמן הפתיחה. */
+function capsBlock(startMark) {
+  const caps = fs.readFileSync(new URL('./check-capabilities.mjs', import.meta.url), 'utf8');
+  const re = /block:\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(caps)) !== null) {
+    const s = /start:\s*'([^']*)'/.exec(m[1]);
+    if (!s || s[1] !== startMark) continue;
+    return { sha: (/sha:\s*'([0-9a-f]{16})'/.exec(m[1]) || [])[1] || '',
+             lines: Number((/lines:\s*(\d+)/.exec(m[1]) || [])[1]) || 0 };
+  }
+  return { sha: '', lines: 0 };
+}
+const START = '/* ═══ מנגנון המשיכה — מודול משותף (סבב 51)';
+const BLOCK = Object.assign({
+  start: START,
   end: '/* ═══════════════ סוף מנגנון המשיכה',
-};
+}, capsBlock(START));
 
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
@@ -146,7 +160,7 @@ for (const fn of APP.touchFns) {
 }
 
 /* ── 10. ⛔ אין פולינג שמסנכרן מחוץ למודול ──────────────────────────────── */
-/*  זו הטענה שמחזיקה את סעיף 3 של הסבב: `setInterval` שקורא לפונקציית
+/*  זו הטענה שמחזיקה את השלישי שבמסקנות הסבב: `setInterval` שקורא לפונקציית
  *  הסנכרון הוא הדחיפה/משיכה התקופתית העיוורת שהוסרה. */
 function periodicSync(code) {
   const out = [];

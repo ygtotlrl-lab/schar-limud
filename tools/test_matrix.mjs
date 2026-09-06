@@ -297,6 +297,19 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
    *  שאסור לו להפיל. */
   await run('סף שכן בשם דומה ובערך אחר',
     [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>', '<script>\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false);
+
+  /*  ⛔ מבנה ה-`tier` (סבב 96ד) — ⚠️ פריט בלי `syncedThrough` משלו מחזיר
+   *  את העֵד לכניסה לרשימה, ⭐ וזה בדיוק המימוש השני שהתקן אישר בשקט. */
+  await run('פריט ב-tier1 בלי עֵד משלו',
+    cellOf(ROW_SWEEP).indexOf('✅') >= 0
+      ? [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [', "tier1: [{ key: 'x_mut' },")]]
+      : [[CAP2, CLEAN_CAP, dropGap(CLEAN_CAP, ROW_SWEEP)]],
+    true, ROW_SWEEP);
+  /*  ⭐ מוטציית-נגד חיה: ⛔ פריט **תקין** שנוסף לאותה רשימה — ⚠️ קוד שנוסף
+   *  ⛔ ולא הערה, ⭐ והמבנה נשמר. */
+  await run('פריט תקין שנוסף ל-tier1',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [',
+      "tier1: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false);
 }
 
 process.chdir(ROOT);

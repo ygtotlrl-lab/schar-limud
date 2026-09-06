@@ -263,7 +263,7 @@ const checkSha = (label, text, want) => {
   if (got === want) pass(`${label}: תואם לחתימה הקנונית (${got})`);
   else fail(`${label}: ${got} במקום ${want} — ⛔ הקובץ נבדל מהשלושה האחרים ` +
             'במשהו שאינו שם הריפו. שינוי מכוון = עדכון בארבעת הריפו ובארבעת ' +
-            'עותקי הבדיקה, באותו סבב (כלל ברזל 8 סעיף 3)');
+            'עותקי הבדיקה, באותו סבב');
 };
 checkSha(`חתימת ${BUILD}`,   buildSrc,   BUILD_SHA);
 checkSha(`חתימת ${CLEANUP}`, cleanupSrc, CLEANUP_SHA);
