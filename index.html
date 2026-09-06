@@ -2675,6 +2675,140 @@ function plBoot() {
 }
 /* ═══════════════ סוף מנגנון המשיכה ══════════════════════════════════════ */
 
+/* ── PUSH_CFG — הדבר היחיד שנבדל בין האפליקציות ────────────────────────── */
+/* ⛔ `sl_users` **אינה כאן ואינה נדחפת לעולם** (סבב 24) — ⚠️ המראה מחזיקה
+   טביעות ולא סיסמאות, ⭐ ודחיפת-מצב שלה הייתה כותבת סיסמה ריקה לכל
+   המשתמשים: ⛔ מסלולה הוא `writeUser`, שדורש רשת.
+   ⚠️ סדר הטבלאות הוא מה ששומר על המפתח הזר — ⭐ תלמידים לפני תנועות. */
+var PUSH_TABLES = ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'];
+/*  ⛔ שם המראה ותחילית ה-⏳ של כל טבלה — ⚠️ הן נקראות בזמן ריצה ⛔ ולא
+ *  בהצהרה: ⭐ הקבועים עצמם מוגדרים אחרי הבלוק החתום. */
+function _slPushOf(t) {
+  return { sl_students:     { m: 'students',     pk: PK_STU },
+           sl_transactions: { m: 'transactions', pk: PK_TXN },
+           sl_settings:     { m: 'settings',     pk: PK_SET },
+           sl_lists:        { m: 'lists',        pk: PK_LST } }[t];
+}
+var PUSH_CFG = {
+  tables: PUSH_TABLES,
+  chunk:  500,
+  delay:  400,
+  dirty:  function (t, ctx) {
+    var c = _slPushOf(t), remote = ctx && ctx[t];
+    if (!remote) return null;
+    return slDirtyRows(c.m, remote, function (k) { return pendHas(c.pk + k); });
+  },
+  key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(c.m, row); },
+  send:   function (t, rows) { return slSendRows(t, rows); },
+  mark:   function (t) { _slMarkPushed(_slPushOf(t).m); },
+  run:    function () { syncAll(); },
+};
+/* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
+   ⛔ שלוש שכבות נפרדות — **מנה · טבלה · טבלאות** — ⚠️ וכל אחת פונקציה
+      משלה: ⭐ שכבות שמעורבבות בפונקציה אחת אינן ניתנות לחתימה ואינן
+      ניתנות למדידה, ⛔ ולכן אותו תפקיד נכתב בארבע צורות בלי שאיש מדד.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ המנה היא `PUSH_CFG.chunk` — ⚠️ הדחיפה הראשונה במכשיר נוגעת בכל
+      הרשומות, ⭐ ובקשה לשורה היא אלפי בקשות רשת: ⛔ **ומנה שנכשלה נדחפת
+      שוב שורה-שורה** — ⚠️ כתיבת מנה היא הכל-או-כלום, ⭐ ושורה פגומה אחת
+      חוסמת את כל התקינות שאיתה.
+   ⛔ ו«אין ראיה» אינו «אין מה לדחוף» — ⚠️ `dirty` שמחזירה `null` מדלגת על
+      הטבלה **בלי לסמן את עֵד הפינוי**, ⭐ ומערך ריק מסמן אותו: ⛔ סימון על
+      טבלה שלא נמשכה היה מתיר לפנות מהדיסק רשומה שמעולם לא עלתה. */
+var _pushTimer = null;
+
+/*  ⛔ שכבה 1 — **מנה אחת ותו לא** — ⚠️ היא אינה יודעת מה מלוכלך ואינה
+ *  נוגעת בסימון ה-⏳: ⭐ כל מה שהיא עושה הוא כתיבה אחת, ⛔ וכשל שלה הוא
+ *  זריקה — ⚠️ תשובה שנושאת `error` אינה זורקת מעצמה, ⭐ והבודקת היחידה
+ *  שלה היא כאן. */
+function pushRow(t, rows) {
+  return Promise.resolve(PUSH_CFG.send(t, rows)).then(function (res) {
+    if (res && res.error) throw res.error;
+    return rows.length;
+  });
+}
+
+/*  ⛔ שכבה 2 — **טבלה אחת**: המנות, סימוני ה-⏳, ועֵד הדחיפה — ⚠️ כשל רשת
+ *  אינו ראיה לכלום ולכן הסימון נשאר וננסה שוב, ⭐ וכשל סמכותי (ולידציה ·
+ *  מפתח זר · הרשאה · סכימה) יחזור על עצמו לנצח: ⛔ הסימון יורד כדי לא
+ *  להבטיח שליחה חוזרת שלא תקרה, ⚠️ והסיבה נרשמת ואינה נבלעת. */
+function pushTable(t, ctx) {
+  return Promise.resolve(PUSH_CFG.dirty(t, ctx)).then(function (rows) {
+    if (!rows) return { ok: true, still: [], n: 0 };
+    if (!rows.length) { PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
+    var still = [], n = 0, bad = 0, i = 0;
+    function won(row) {
+      var k = PUSH_CFG.key(t, row);
+      n++;
+      if (k != null) pendClear(k);
+    }
+    function lost(row, e) {
+      var k = PUSH_CFG.key(t, row);
+      console.warn('[push] ' + t, e && (e.message || e));
+      if (isNetErr(e)) { if (k != null) still.push(k); }
+      else { bad++; if (k != null) pendFailed(k); }
+    }
+    /*  ⛔ הנפילה-חזרה פר-שורה — ⚠️ המנה כולה נדחתה ואיננו יודעים מי בה
+     *  פגומה, ⭐ ולכן כל שורה נשלחת לבדה: ⛔ כך הפגומה מבודדת ⚠️ ואינה
+     *  חוסמת את התקינות שנשלחו איתה. */
+    function solo(part, j) {
+      if (j >= part.length) return Promise.resolve();
+      var row = part[j];
+      return pushRow(t, [row]).then(function () { won(row); },
+                                    function (e) { lost(row, e); })
+        .then(function () { return solo(part, j + 1); });
+    }
+    function batch() {
+      if (i >= rows.length) return Promise.resolve();
+      var part = rows.slice(i, i + PUSH_CFG.chunk);
+      i += part.length;
+      return pushRow(t, part).then(function () { part.forEach(won); },
+                                   function () { return solo(part, 0); })
+        .then(batch);
+    }
+    return batch().then(function () {
+      /*  ⭐ «באמת נכתב משהו לענן» נמדד כאן — ⛔ בלי קידום החותמת הדחיפה
+       *  נשארת בלתי-נראית לכל מכשיר אחר לנצח: ⚠️ הם מושכים רק כשהיא
+       *  מתקדמת. */
+      if (n) plTouch();
+      /*  ⭐ עֵד הפינוי פר-מפתח — ⛔ רק כשלא נשארה שורה בכשל רשת: ⚠️ «עברנו
+       *  על כל המלוכלכות והענן קיבל את כולן» הוא בדיוק התנאי שמתיר לפנות
+       *  מהדיסק רשומה ישנה של אותה טבלה. */
+      if (!still.length) PUSH_CFG.mark(t);
+      return { ok: !still.length && !bad, still: still, n: n };
+    });
+  });
+}
+
+/*  ⛔ שכבה 3 — **הטבלאות**, בסדר שמוצהר ב-`PUSH_CFG.tables` — ⚠️ הסדר הוא
+ *  מה ששומר על המפתח הזר: ⭐ האב נכתב לפני הבן, ⛔ ואין תלות סדר בין
+ *  שורות של אותה טבלה · ⚠️ וכשל בטבלה אחת אינו עוצר את הבאות אחריה. */
+function pushDirty(ctx) {
+  var acc = [], ok = true, n = 0, i = 0;
+  function step() {
+    if (i >= PUSH_CFG.tables.length) return Promise.resolve({ ok: ok, still: acc, n: n });
+    return pushTable(PUSH_CFG.tables[i++], ctx).then(function (r) {
+      acc = acc.concat(r.still);
+      n += r.n;
+      if (!r.ok) ok = false;
+      return step();
+    });
+  }
+  return step();
+}
+
+/*  ⛔ המתזמן — ⚠️ משפך הכתיבה המקומית היחיד, ⭐ ולכן זו נקודת הדריכה של
+ *  מודול הניסיון החוזר · ⛔ **וההשהיה מתחילה מחדש בכל כתיבה** — ⚠️ שתי
+ *  שמירות רצופות הן מחזור סנכרון אחד ⛔ ולא שניים, ⭐ והרשומה כבר מסומנת
+ *  ⏳ לפני ההשהיה. */
+function schedulePush() {
+  rtyNote();
+  if (_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function () { _pushTimer = null; PUSH_CFG.run(); }, PUSH_CFG.delay);
+}
+/* ═══════════════ סוף מודול שכבת הדחיפה ══════════════════════════════════ */
+
 
 
 /* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
@@ -3496,6 +3630,18 @@ async function slPullUsers() {
        מאשר כניסה אופליין בסיסמה מבוטלת.
    ⚠️ אי-התאמה נקבעת רק כשהצלחנו **לגזור** טביעה. `slPassFp` שמחזירה null
    (אין `crypto.subtle`) אינה ראיה לכלום — אז מדלגים בשקט. */
+/* ─────────────────────── כתיבת משתמש — הפונקציה האחת ─────────────────────
+   ⛔ **כל כתיבה לטבלת המשתמשים עוברת כאן** — ⚠️ הטבלה אינה ב-`PUSH_TABLES`,
+   ⭐ שהמראה המקומית מחזיקה טביעות ולא סיסמאות: ⛔ דחיפה גורפת שלה הייתה
+   כותבת סיסמה ריקה לכל המשתמשים.
+   ⛔ **והכתיבה דורשת רשת** — ⚠️ אין רשת ⇒ נכשל ברעש ⛔ ולא «נשמר»: ⭐ מה
+   שאינו נדחף לא יעלה לענן בשום מסלול אחר.
+   ⚠️ אין כאן מסך ניהול משתמשים — ⛔ ולכן אין מסלול יצירה: ⭐ המשתמש נוצר
+   בידי המנהל, והכתיבה היחידה מכאן היא השלמת הטביעה. */
+async function writeUser(id, obj) {
+  return await withTimeout(SB.from('sl_users').update(obj).eq('id', id));
+}
+
 async function slEnsurePassFp(u, pass) {
   try {
     if (!u || u.id == null || !navigator.onLine) return false;
@@ -3514,7 +3660,7 @@ async function slEnsurePassFp(u, pass) {
       if (!made) return false;                  // אין מה לאפס — דילוג שקט
       body = { pass_salt: made.salt, pass_fp: made.fp };
     }
-    var r = await withTimeout(SB.from('sl_users').update(body).eq('id', u.id));
+    var r = await writeUser(u.id, body);
     if (r && r.error) { console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
     u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
     // ⛔ הטביעה החדשה יורדת למראה באותו רגע (סבב 79) — ⚠️ בלי זה כניסה
@@ -3613,24 +3759,44 @@ function slPayload(tbl, row) {
   return out;
 }
 
-// דחיפת-מצב: כל שורה מקומית שהמיזוג הותיר כמנצחת נשלחת.
+// דחיפת-מצב: הכתיבה עצמה, למנה שהשכבה המשותפת מסרה.
 // **שני מסלולי כתיבה, והבחירה ביניהם היא הגנה על כסף:**
 //   • יש `id` ⇒ `update ... eq(id)` — כולל רשומות היסטוריות עם `client_id`
 //     ריק, ש-`upsert` על `client_id` היה יוצר להן **שורה כפולה**.
 //   • אין `id` (נוצרה במכשיר) ⇒ `upsert` על `client_id` — אידמפוטנטי, ולכן
 //     ניסיון חוזר אחרי תשובה שאבדה ברשת מעדכן ולא מכפיל.
-async function slPushRow(tbl, row) {
-  var body = slPayload(tbl, row);
+async function slSendRows(tbl, rows) {
+  var err = null, out = [];
+  rows.forEach(function (row) {
+    var body = slPayload(tbl, row);
+    if (tbl === 'sl_settings') { if (!body.key) err = err || 'שורת הגדרה בלי key — לא נשלחת'; }
+    else if (row.id == null && !body.client_id) err = err || 'רשומה בלי client_id ובלי id — לא נשלחת';
+    out.push({ id: row.id, body: body });
+  });
+  if (err) return { error: { message: err } };
   // `sl_settings` — המפתח הראשי הוא `key`, מחרוזת שהמכשיר יודע לייצר
   // לבדו. UPSERT עליו אידמפוטנטי גם לשורות ההיסטוריות (שאין להן
   // `client_id`), ולכן אין כאן בכלל את פיצול שני המסלולים.
   if (tbl === 'sl_settings') {
-    if (!body.key) return { error: { message: 'שורת הגדרה בלי key — לא נשלחת' } };
-    return await SB.from(tbl).upsert(body, { onConflict: 'key' });
+    var rs = await SB.from(tbl).upsert(out.map(function (x) { return x.body; }), { onConflict: 'key' });
+    if (!(rs && rs.error)) slSyncLog('push', tbl, out.length);
+    return rs;
   }
-  if (row.id != null) return await SB.from(tbl).update(body).eq('id', row.id);
-  if (!body.client_id) return { error: { message: 'רשומה בלי client_id ובלי id — לא נשלחת' } };
-  return await SB.from(tbl).upsert(body, { onConflict: 'client_id' });
+  var news = out.filter(function (x) { return x.id == null; });
+  var olds = out.filter(function (x) { return x.id != null; });
+  if (news.length) {
+    var rn = await SB.from(tbl).upsert(news.map(function (x) { return x.body; }), { onConflict: 'client_id' });
+    if (rn && rn.error) return rn;
+  }
+  /*  ⛔ שורה שיש לה `id` נכתבת ב-`update` פר-שורה ⛔ ולא במנה — ⚠️ היא
+   *  היסטורית ו-`client_id` שלה ריק, ⭐ ו-`upsert` עליו היה יוצר לה
+   *  שורה כפולה: ⛔ ובכסף שורה כפולה היא תשלום כפול. */
+  for (var i = 0; i < olds.length; i++) {
+    var ru = await SB.from(tbl).update(olds[i].body).eq('id', olds[i].id);
+    if (ru && ru.error) return ru;
+  }
+  slSyncLog('push', tbl, out.length);
+  return {};
 }
 
 // מה צריך לעלות: רשומה מקומית שאין לה מקבילה בענן, שהיא חדשה ממנה, **או
@@ -4143,11 +4309,15 @@ async function syncAll(){
     // ── דחיפת-מצב: כל שורה מקומית שניצחה במיזוג עולה. **רק לטבלה שנמשכה
     //    בהצלחה** — בלי לדעת מה יש בענן אי אפשר לדעת מה מקומי-וחדש-יותר,
     //    ודחיפה עיוורת הייתה מחזירה לחיים שורה שנמחקה במכשיר אחר.
-    var stillPending=[];
-    if(pulledStu) stillPending=stillPending.concat(await slPushTable('sl_students','students',remoteStu,PK_STU));
-    if(pulledTxn) stillPending=stillPending.concat(await slPushTable('sl_transactions','transactions',remoteTxn,PK_TXN));
-    if(pulledSet) stillPending=stillPending.concat(await slPushTable('sl_settings','settings',remoteSet,PK_SET));
-    if(pulledLst) stillPending=stillPending.concat(await slPushTable('sl_lists','lists',remoteLst,PK_LST));
+    /*  ⛔ קטגוריה שלא נמשכה נמסרת כ-`null` ⛔ ולא כמפה ריקה — ⚠️ מפה ריקה
+     *  נקראת «הענן ריק» ⭐ ומסמנת את עֵד הפינוי, ⛔ ו-`null` הוא «אין ראיה»
+     *  והשכבה המשותפת מדלגת עליה. */
+    var stillPending=(await pushDirty({
+      sl_students:     pulledStu?remoteStu:null,
+      sl_transactions: pulledTxn?remoteTxn:null,
+      sl_settings:     pulledSet?remoteSet:null,
+      sl_lists:        pulledLst?remoteLst:null
+    })).still;
     // ⚠️ הסריקה מסתמכת על תמונה **מלאה** של הענן: היא מורידה סימון מכל מה
     // שאינו ברשימת ה"עדיין ממתין". קטגוריה שלא נמשכה אינה מיוצגת שם, ולכן
     // די בכשל אחד מארבעה כדי שהורדת הסימון תהיה הסקה ולא ראיה.
@@ -4177,7 +4347,6 @@ async function syncAll(){
   }finally{_syncBusy=false;}
 }
 
-// דוחפת את השורות המקומיות שניצחו, אחת-אחת, ומחזירה את מפתחות הסימון של
 // אלה שעדיין לא עלו. שורה אחת שנכשלה אינה עוצרת את השאר: בניגוד לתור FIFO,
 // כאן אין תלות סדר בין הרשומות (המפתח הזר `student_id` נשמר כי תלמיד חדש
 // נדחף בקטגוריה שלו לפני התנועות — sl_students קודמת ב-syncAll).
@@ -4190,39 +4359,6 @@ function slSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
 var _slPullLogged = false;
-async function slPushTable(tbl,m,remoteByKey,prefix){
-  var dirty=slDirtyRows(m,remoteByKey,function(k){return pendHas(prefix+k);}), still=[];
-  for(var i=0;i<dirty.length;i++){
-    var row=dirty[i], pk=prefix+slKeyOf(m,row);
-    try{
-      var r=await slPushRow(tbl,row);
-      if(r&&r.error){
-        console.error('[push] '+tbl,r.error.message||r.error);
-        // כשל סמכותי (ולידציה/הרשאה/סכימה) — השורה לא נכתבה ולא תיכתב;
-        // הסימון יורד כדי לא להבטיח שליחה חוזרת שלא תקרה. כשל רשת נשאר.
-        if(!isNetErr(r.error)) pendFailed(pk); else still.push(pk);
-      }else{
-        pendClear(pk);
-      }
-    }catch(e){
-      console.error('[push] '+tbl,e);
-      if(!isNetErr(e)) pendFailed(pk); else still.push(pk);
-    }
-  }
-  var pushed=dirty.length-still.length;
-  if(pushed>0)slSyncLog('push',tbl,pushed);
-  /* ⭐ עֵד הפינוי פר-מפתח (סבב 96) — ⛔ רק כשלא נשארה שורה בכשל רשת:
-   *  ⚠️ «עברנו על כל המלוכלכות והענן קיבל את כולן» הוא בדיוק התנאי
-   *  שמתיר לשלב א למחוק את המפתח מהדיסק. ⭐ ומעבר ריק (אין מה לדחוף)
-   *  מסמן אף הוא — ⛔ זה מצבו של מכשיר שרק קורא. */
-  if(!still.length)_slMarkPushed(m);
-  // ⭐ סבב 51 — כאן, ורק כאן, נמדד «באמת נכתב משהו לענן»: זו אותה נקודה
-  //    שכבר רושמת ליומן. ⛔ בלי קידום החותמת (סבב 51) הדחיפה נשארת
-  //    בלתי-נראית לכל מכשיר אחר לנצח — הם מושכים רק כשהיא מתקדמת.
-  if(pushed>0)plTouch();
-  return still;
-}
-
 // ⚠️ מסך ההגדרות מרונדר מחדש **רק כשהוא באמת מוצג** — אחרת כל סנכרון
 // (כל 3 שניות) היה בונה מחדש רשימות שאיש אינו רואה. עד סבב 26 התנאי היה
 // «השער נפתח»; היום הוא «יש הרשאה **וגם** הפאנל פעיל», כי הרשאה לבדה
@@ -4469,7 +4605,7 @@ async function saveTxn(){
   document.getElementById('txn-note').value='';
   refreshUI();
   toast(navigator.onLine?'✅ תשלום נשמר':MSG_SAVED_LOCAL,4000);
-  syncAll();   // בלי await: המשתמש לא ממתין לרשת
+  schedulePush();   // בלי await: המשתמש לא ממתין לרשת
 }
 function renderTxnLog(){
   var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
@@ -4554,7 +4690,7 @@ function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלו
   pendMark(pendTxnKey(row));
   refreshUI();
   toast(navigator.onLine?'✅ תשלום נמחק':MSG_SAVED_LOCAL,4000);
-  syncAll();
+  schedulePush();
 });}
 function selectStudent(id){SC_STUDENT_ID=parseInt(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
 /* ══════════════════════════════════════════════════════════════════════════
@@ -4627,7 +4763,7 @@ function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.id,
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000);return;}
   pendMark(pendStuKey(row));refreshUI();
-  toast(row.active?'✅ תלמיד הופעל':'✅ תלמיד הושהה');syncAll();}
+  toast(row.active?'✅ תלמיד הופעל':'✅ תלמיד הושהה');schedulePush();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
 // ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
 function readMonthRange(startId,endId){
@@ -4659,7 +4795,7 @@ function saveStudentSettings(){
   var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
   if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000);return;}
   pendMark(pendStuKey(row));refreshUI();
-  toast(navigator.onLine?'✅ הגדרות נשמרו':MSG_SAVED_LOCAL,4000);syncAll();
+  toast(navigator.onLine?'✅ הגדרות נשמרו':MSG_SAVED_LOCAL,4000);schedulePush();
 }
 
 /* ⛔⛔ אזור ההגדרות — הערת הגנה משותפת לארבע האפליקציות (סבב 26)
@@ -4729,7 +4865,7 @@ function saveDefaultTuition(){
   pendMark(pendSetKey(row));
   refreshUI();
   toast(navigator.onLine?MSG_SAVED:MSG_SAVED_LOCAL,4000);
-  syncAll();
+  schedulePush();
 }
 /* ⛔ `changeAdminPass` הוסרה בסבב 26 יחד עם השער שהיא שירתה — ואיתה
    `PASS_SIX_RE`/`MSG_PASS_SIX`, שהיא הייתה **אתר האכיפה היחיד שלהם**
@@ -4772,7 +4908,7 @@ function addListItem(cat){
   pendMark(pendLstKey(row));
   refreshUI();
   toast(navigator.onLine?'✅ נוסף':MSG_SAVED_LOCAL,4000);
-  syncAll();
+  schedulePush();
 }
 // ⛔ מחיקה = soft-delete (סבב 13, מיגרציה 009) — מחיקה פיזית הייתה נמחקת מקומית וחוזרת
 // מהענן בסנכרון הבא, כי היעדר רשומה אצל צד אחד אינו מחיקה.
@@ -4788,7 +4924,7 @@ function deleteListItem(key){
     pendMark(pendLstKey(row));
     refreshUI();
     toast(navigator.onLine?'✅ נמחק':MSG_SAVED_LOCAL,4000);
-    syncAll();
+    schedulePush();
   });}
 function openAddStudent(){
   /*  ⚠️ הטופס נבנה כמחרוזת ונמסר ל-`openModal` (סבב 68) — ⛔ מזהי השדות
@@ -4816,7 +4952,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
   closeModal();
   refreshUI();
   toast(navigator.onLine?'✅ תלמיד נוסף':MSG_SAVED_LOCAL,4000);
-  syncAll();}
+  schedulePush();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
 function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){return slKey(x)===String(key);})[0];
@@ -4828,7 +4964,7 @@ function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){retur
   if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
   toast(navigator.onLine?'✅ תלמיד נמחק':MSG_SAVED_LOCAL,4000);
-  syncAll();
+  schedulePush();
 });}
 /*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
  *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
