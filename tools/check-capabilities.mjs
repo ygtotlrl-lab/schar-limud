@@ -2324,7 +2324,12 @@ function pushWrappers() {
  *  ⛔ ולא כל `push`: ⭐ צובר פנימי דוחף תוויות וכשלים, ⚠️ והוא אינו רשימה
  *  שהמשתמש רואה · ⛔ **ושתי צורות**: דחיפה במקום, ⚠️ או ערך שנמסר לעוטף
  *  שדוחף אותו. */
-function inputListWrites() {
+function inputListWrites() { return memoByHash('ilw', code, _inputListWrites); }
+/*  ⛔ הסריקה ממוזכרת לפי חתימת הקוד (סבב 101) — ⚠️ **שני probe קוראים
+ *  לה**, ⭐ ו-`test_matrix` מייבא את הקובץ עשרות פעמים בתהליך אחד:
+ *  ⛔ הנימוק מדוד — הסריקה עוברת על כל כותרות הקוד כדי למצוא את
+ *  העוטפים, ⚠️ וגזירה חוזרת שלה עלתה כעשר שניות בתקציב הסט. */
+function _inputListWrites() {
   const out = [];
   for (const p of code.matchAll(/([A-Za-z_$][\w$]*(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*)\s*\.push\s*\(/g)) {
     const arg = argAt(code, p.index + p[0].length - 1);

@@ -530,17 +530,14 @@ t(!capsFails((doc) => {
                   'check-capabilities.mjs', () => ({})),
         'מ28 · פריט שנכתב בלי חותמת **מפיל** את «מיזוג מכל»');
     }
-    /*  ⭐ מוטציית-נגד: אותו אתר בדיוק, ⛔ עם החותמת בגופו — ⚠️ שינוי חי
-     *  שאסור לו להפיל. */
-    t(!runGateOn({ [SRC]: inject(pairBody, addFn(GUARD, '  var zzStamp = Date.now();\n')),
-                   [CAP]: declStamp(declare) }, 'check-capabilities.mjs', () => ({})),
-      'נ17 · ⭐ אותו אתר עם חותמת בגופו ⛔ **אינו** מפיל');
+
     /*  ⭐ מוטציית-נגד אחת לשלושתן: אותו עץ בדיוק — ⛔ שדה מערך שממוזג
      *  פר-פריט ונכתב לרשומה היוצאת, ⛔ מכווץ שמחזיק מפת ערכים,
      *  ⛔ ובלי כתיבה לרשימה שאינה בודקת קיום: ⚠️ שינוי חי שאסור לו
      *  להפיל. */
-    t(!runGateOn({ [SRC]: inject(pairBody), [CAP]: declare }, 'check-capabilities.mjs', () => ({})),
-      'נ16 · ⭐ אותו עץ עם מיזוג פר-פריט, מכווץ ובדיקת קיום ⛔ **אינו** מפיל');
+    t(!runGateOn({ [SRC]: inject(pairBody, addFn(GUARD, '  var zzStamp = Date.now();\n')),
+                   [CAP]: declStamp(declare) }, 'check-capabilities.mjs', () => ({})),
+      'נ16 · ⭐ אותו עץ עם מיזוג פר-פריט, מכווץ, בדיקת קיום וחותמת ⛔ **אינו** מפיל');
   }
 }
 
