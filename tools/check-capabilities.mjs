@@ -215,6 +215,16 @@ export const ROWS = [27, 37, 39, 41, 49, 71, 44, 134, 82];
  *  לקרוא להן מקוד האפליקציה. `row` — שורת היכולת במטריצה, ו-`probe` הוא
  *  מה שמעיד על קיומה בקוד כשאין לה בלוק משלה.                            */
 const CAPS = {
+  /*  ⭐ סבב 97 — סולם נקודות השבירה. ⛔ אין לו `hooks`: הוא אינו יכולת
+   *  עלייה ואינו יכולת מסך — ⚠️ הוא **הצהרה** שהשער משווה אליה את
+   *  שאילתות ה-`@media`, ⭐ ולכן הוא ראשון בסדר: ⛔ שום בלוק אינו תלוי
+   *  בו, ⚠️ והפריסה שמעליו תלויה בכולם. */
+  bp: {
+    name: 'סולם נקודות השבירה',
+    block: { sha: '16072010ed787fd5', lines: 13,
+             start: '/* ═══ סולם נקודות השבירה — מודול משותף (סבב 97)',
+             end:   '/* ═══════════════ סוף מודול סולם נקודות השבירה' },
+  },
   /*  ⭐ סבב 87 — המשיכה המסוננת. ⚠️ אין לו `hooks`: הוא נקרא מכל מסלול
    *  משיכה ואין לו «פונקציית עלייה» — ⛔ מה שנאכף כאן הוא הליבה עצמה,
    *  ⚠️ שהייתה קיימת בשתי אפליקציות בשתי צורות ⛔ ונעדרה משתיים. */
@@ -452,7 +462,7 @@ function orderGaps() {
     .concat(BLOCK_ORDER.filter((k) => inFile.indexOf(k) < 0).map((k) => 'בסדר ואינו חתום: ' + k));
 }
 
-const BLOCK_ORDER = ['neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'techinfo', 'status', 'backup',
+const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'techinfo', 'status', 'backup',
                      'pending', 'ids', 'retry', 'lock', 'sess', 'pull', 'hotwin',
                      'devid', 'mergecore', 'tomb', 'uihelp'];
 
