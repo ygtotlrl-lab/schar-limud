@@ -1,10 +1,11 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** ארבע טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** חמש טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
-   בטבלת ההגדרות · ⛔ וכל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי.
+   בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
+   ⛔ וכל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/`.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -30,7 +31,7 @@ import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [127, 139, 140, 163];
+export const ROWS = [128, 139, 140, 141, 142, 164];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -43,15 +44,29 @@ const APP = {
   name: 'schar-limud',
   /*  ⛔ ארבע טבלאות הכספים נושאות חותמת שרת מטריגר `touch` — ⚠️ ובה הכשל
    *  היחיד האפשרי הוא ריק, ⭐ שאפס אינו ניתן לייצוג ב-`timestamptz`. */
-  stamped: { sl_students: 'ts', sl_transactions: 'ts', sl_settings: 'ts',
-             sl_lists: 'ts', sl_users: 'ts' },
+  /*  ⛔ הטבלאות שנושאות `updated_at` — ⚠️ **וכולן `bigint`**: ⭐ חותמת
+   *  שהמכשיר מייצר, ⛔ ובה אפס הוא **הישן ביותר** ולא «לא ידוע».
+   *  ⛔ אין כאן טיפוס שני — ⚠️ שני טיפוסים לאותו מושג הם שני מנועי הכרעה. */
+  stamped: ['sl_students', 'sl_transactions', 'sl_settings',
+             'sl_lists', 'sl_users'],
   schemaSkip: [],
   cfgReader: 'slCfgGet',
   cfgTable: 'sl_settings',
   backupTable: 'kv_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
    *  בריפו של האפליקציה הראשונה בפרויקט, ⭐ ועותק שני היה מקור אמת שני. */
-  allowlistFn: ''
+  allowlistFn: '',
+  /*  ⛔ משפחות הטבלאות המקבילות — ⚠️ **הרשימה הקנונית זהה בית-לבית
+   *  בארבעת עותקי השער**, ⭐ ורק שם הטבלה נבדל: ⛔ ולכן טבלה שתואמת לה
+   *  כאן תואמת גם לשלוש האחרות, ⚠️ בלי שהשער יראה את המסד שלהן. */
+  twinTables: {
+    users:    { table: 'sl_users',
+                cols: ['client_id', 'username', 'full_name', 'role', 'active',
+                    'created_at', 'updated_at', 'pass_salt', 'pass_fp'] },
+    settings: { table: 'sl_settings',
+                cols: ['key', 'value', 'updated_at', 'client_id',
+                    'deleted', 'deleted_at', 'deleted_by'] },
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -137,13 +152,11 @@ const addedCols = [...sqlNoCmt.matchAll(
 
 /* ── הטענות ────────────────────────────────────────────────────────────── */
 async function claimStamp() {
-  const tabs = created.filter((t) => APP.stamped[t]);
+  const tabs = created.filter((t) => APP.stamped.includes(t));
   if (!tabs.length) { ok(`א. חותמת בכל רשומה — אין טבלה חתומה בריפו הזה`); return; }
   let badRows = 0, seen = 0;
   for (const t of tabs) {
-    const filter = APP.stamped[t] === 'bigint'
-      ? 'or=(updated_at.eq.0,updated_at.is.null)' : 'updated_at=is.null';
-    const r = await q(`/${t}?${filter}&select=updated_at&limit=1`);
+    const r = await q(`/${t}?or=(updated_at.eq.0,updated_at.is.null)&select=updated_at&limit=1`);
     if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
     seen++;
     const rows = JSON.parse(r.text);
@@ -212,6 +225,75 @@ async function claimAllowlist() {
   if (empty.length) console.log(`  · ד. ומדווח: ${empty.length} מפתחות ברשימה בלי שורה ב-\`${APP.backupTable}\` — ${empty.join(', ')}`);
 }
 
+
+/*  ⛔ טענה ה — «דפוס עמודות אחיד»: ⚠️ החותמת היא `bigint` של המכשיר,
+ *  ⛔ ואין עליה טריגר `touch` בצד השרת.
+ *  ⛔ **הטיפוס נמדד מהערך שחוזר** — ⚠️ `bigint` חוזר מ-PostgREST כמספר
+ *  ו-`timestamptz` כמחרוזת, ⭐ וזו הדרך היחידה לראות טיפוס דרך `anon`:
+ *  ⛔ ל-`information_schema` אין חשיפה ב-REST.
+ *  ⛔ **והטריגר נמדד מהקבצים** — ⚠️ הוא אינו נראה דרך PostgREST כלל,
+ *  ⭐ ולכן נמדד שכל `create trigger` בשם `*_touch` נגרע במיגרציה מאוחרת
+ *  יותר: ⛔ הפעולה **האחרונה** בסדר הקבצים היא הקובעת. */
+async function claimStampType() {
+  const tabs = created.filter((t) => APP.stamped.includes(t));
+  let nums = 0, strs = 0; const empty = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?select=updated_at&limit=1`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) { empty.push(t); continue; }
+    if (typeof rows[0].updated_at === 'number') { nums++; continue; }
+    strs++;
+    bad(`ה. דפוס עמודות אחיד — \`${t}.updated_at\` חוזר כ-${typeof rows[0].updated_at} ולא כמספר. נמדד «${String(rows[0].updated_at).slice(0, 32)}» מול הצפוי מילישניות. מריצים את המיגרציה שממירה את העמודה ל-\`bigint\``);
+  }
+  const last = new Map(), onTable = new Map();
+  for (const m of sqlNoCmt.matchAll(
+    /(create|drop)\s+trigger\s+(?:if\s+exists\s+)?([a-z_0-9]+)[\s\S]{0,120}?\bon\s+(?:public\.)?([a-z_0-9]+)/gi)) {
+    last.set(m[2].toLowerCase(), m[1].toLowerCase());
+    onTable.set(m[2].toLowerCase(), m[3].toLowerCase());
+  }
+  /*  ⛔ טריגר שהטבלה שלו נגרעה נגרע איתה — ⚠️ ואינו דורש `drop trigger`
+   *  משלו: ⭐ דרישה כזו הייתה מפילה על מיגרציה תקינה שגרעה טבלה שלמה. */
+  const liveTrg = [...last]
+    .filter(([n, v]) => v === 'create' && /_touch$/.test(n) && !dropped.has(onTable.get(n)))
+    .map(([n]) => n);
+  if (liveTrg.length)
+    bad(`ה. דפוס עמודות אחיד — טריגר \`touch\` שנוצר ב-\`migrations/\` ואינו נגרע: ${liveTrg.join(', ')}. נמדד ${liveTrg.length} מול הצפוי 0. כותבים מיגרציה שגורעת אותו — ⛔ חותמת שרת דורסת עריכה אופליין`);
+  if (!strs && !liveTrg.length)
+    ok(`ה. דפוס עמודות אחיד — ${nums} טבלאות מחזירות חותמת מספרית${empty.length ? ` (${empty.length} ריקות)` : ''}, ואפס טריגרי \`touch\` חיים`);
+}
+
+/*  ⛔ טענה ו — «טבלה מקבילה — סכימה זהה»: ⚠️ אותן עמודות, אותו סדר,
+ *  ⭐ **וגם עמודה שאינה בשימוש כאן**.
+ *  ⛔ **הסדר נמדד מהתשובה החיה** — ⚠️ PostgREST בונה את ה-JSON בסדר
+ *  העמודות של הטבלה, ⭐ ולכן `Object.keys` על שורה אחת הוא הסדר עצמו:
+ *  ⛔ ואין ל-`information_schema` חשיפה ב-REST.
+ *  ⛔ **וטבלה ריקה אינה נמדדת** — ⚠️ אין ממה לגזור את הסדר, ⭐ והיא
+ *  מדווחת ⛔ ואינה עוברת בשתיקה. */
+async function claimTwins() {
+  const fams = Object.keys(APP.twinTables || {});
+  if (!fams.length) { ok('ו. טבלה מקבילה — אין כאן משפחה מוצהרת'); return; }
+  let good = 0; const empty = [], absent = [];
+  for (const f of fams) {
+    const spec = APP.twinTables[f];
+    if (!spec) { absent.push(f); continue; }
+    const r = await q(`/${spec.table}?select=*&limit=1`);
+    if (r.status !== 200) throw new Error(`${spec.table} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) { empty.push(spec.table); continue; }
+    const got = Object.keys(rows[0]);
+    if (got.join(',') === spec.cols.join(',')) { good++; continue; }
+    bad(`ו. טבלה מקבילה — \`${spec.table}\` אינה בצורת משפחת «${f}». נמדד ` +
+        `«${got.join(',')}» מול הצפוי «${spec.cols.join(',')}». ` +
+        'מיישרים במיגרציה — ⛔ עמודה שאינה בשימוש **נשארת בסכימה**, ' +
+        'וסדר שנבדל אינו ניתן לשינוי ב-`alter` אלא בבנייה מחדש');
+  }
+  if (good === fams.length - absent.length - empty.length)
+    ok(`ו. טבלה מקבילה — ${good} טבלאות בצורת המשפחה שלהן` +
+       (absent.length ? `, ${absent.length} מוצהרות «אין»` : '') +
+       (empty.length ? `, ${empty.length} ריקות ולא נמדדו` : ''));
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
@@ -224,6 +306,8 @@ if (!CONN && !SELFTEST) {
 } else {
   try {
     await claimStamp();
+    await claimStampType();
+    await claimTwins();
     await claimSchema();
     await claimCfgKeys();
     await claimAllowlist();
@@ -257,8 +341,28 @@ if (RUN_MUT && !SELFTEST) {
     if (/limit=0/.test(url))
       return scen === 'schema'
         ? [400, '{"code":"42703","message":"column x does not exist"}'] : [200, '[]'];
-    if (/updated_at/.test(url))
+    /*  ⛔ שני מסלולי `updated_at` נפרדים — ⚠️ טענה א שואלת **בסינון**
+     *  על אפס או ריק, ⭐ וטענה ה שואלת שורה אחת בלי סינון: ⛔ ענף אחד
+     *  לשתיהן היה מפיל את אחת מהן על תשובה שנועדה לשנייה. */
+    if (/updated_at\.eq\.0|updated_at\.is\.null/.test(url))
       return scen === 'stamp' ? [200, '[{"updated_at":0}]'] : [200, '[]'];
+    if (/select=updated_at/.test(url))
+      return scen === 'stamptype'
+        ? [200, '[{"updated_at":"2026-01-01T00:00:00+00:00"}]'] : [200, '[{"updated_at":1786118467247}]'];
+    /*  ⛔ שורת המשפחה נבנית **מההצהרה עצמה** ⛔ ולא משמות מוקלדים — ⚠️ ארבעת
+     *  הריפו מצהירים טבלאות אחרות, ⭐ ורתמה שמכירה שם אחד אינה רתמה לשלושה.
+     *  ⛔ והמוטציה הופכת את **הסדר** ⛔ ולא את שמות העמודות — ⚠️ סדר הוא
+     *  בדיוק מה שהטענה מוסיפה על «אותן עמודות». */
+    if (/select=\*/.test(url)) {
+      const sp = Object.keys(APP.twinTables || {})
+        .map((k) => APP.twinTables[k]).filter(Boolean)
+        .find((x) => url.indexOf('/' + x.table + '?') === 0);
+      if (!sp) return [200, '[]'];
+      const cols = scen === 'twin' ? sp.cols.slice().reverse() : sp.cols;
+      const row = {};
+      cols.forEach((c) => { row[c] = 'x'; });
+      return [200, JSON.stringify([row])];
+    }
     if (APP.allowlistFn && url.includes('/rpc/' + APP.allowlistFn))
       return [200, JSON.stringify([allowFirst])];
     if (APP.backupTable && url.includes('/' + APP.backupTable + '?'))
@@ -302,6 +406,10 @@ if (RUN_MUT && !SELFTEST) {
 
   await mut('⭐ מוטציית-נגד: תשובה נקייה ⛔ אינה מפילה', 'clean', true);
   await mut('⛔ מוטציה: רשומה עם `updated_at` אפס מפילה את «חותמת בכל רשומה»', 'stamp', false);
+  await mut('⛔ מוטציה: חותמת שחוזרת כמחרוזת מפילה את «דפוס עמודות אחיד»', 'stamptype', false);
+  if (Object.keys(APP.twinTables || {}).some((k) => APP.twinTables[k]))
+    await mut('⛔ מוטציה: סדר עמודות הפוך מפיל את «טבלה מקבילה»', 'twin', false);
+  else ok('⛔ אין מוטציית טבלה מקבילה — ⚠️ אין כאן משפחה מוצהרת, ⛔ ואין מה למוטט');
   await mut('⛔ מוטציה: עמודה שאינה קיימת (42703) מפילה את «חתימת סכימה»', 'schema', false);
   if (cfgWant.length)
     await mut('⛔ מוטציה: מפתח הגדרה שנעדר מהטבלה מפיל את «כל מפתח שהקוד מבקש»', 'cfg', false);
@@ -322,5 +430,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — ארבע הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — חמש הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);

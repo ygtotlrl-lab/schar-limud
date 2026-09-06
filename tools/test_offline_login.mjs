@@ -89,6 +89,10 @@ const NAMES_VAR = [
   'SL_STAMP_KEY', '_sessUser', '_sessBooted',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
   'MSG_NO_USERS',
+  /*  ⛔ שני אלה נדרשים ל-`writeUser` (סבב 103) — ⚠️ `USER_CFG` הוא הווו
+   *  הפר-אפליקציה של הבלוק החתום, ⭐ ו-`MSG_OFFLINE` הוא ההודעה שהוא
+   *  קורא: ⛔ רתמה שאינה מחלצת אותם מקבלת `false` שקט מכל השלמת טביעה. */
+  'MSG_OFFLINE', 'USER_CFG',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
@@ -98,7 +102,7 @@ const NAMES_FN = [
   'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slWhoName',
   /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
    *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */
-  'writeUser',
+  'newClientId', '_writeUserSend', 'writeUser',
   /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף, ולכן הרתמה מריצה
    *  את הפונקציות **האמיתיות** שלו ולא בדל. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive',
@@ -156,8 +160,12 @@ function makeCtx(opts = {}) {
     from(table) {
       const q = { table, cols: null, eqs: {}, kind: 'select' };
       const api = {
-        select(cols) { q.cols = cols; calls.sb.push(q); return api; },
-        update(bodyObj) { q.kind = 'update'; q.body = bodyObj; calls.sb.push(q); return api; },
+        /*  ⛔ `select()` אינו רושם קריאה שנייה לאותה שאילתה — ⚠️ מסלול
+         *  הכתיבה מסיים ב-`.select()`, ⭐ וספירה כפולה הייתה הופכת
+         *  «אפס קריאות רשת» לטענה שאינה ניתנת לקריאה. */
+        select(cols) { if (cols !== undefined) q.cols = cols; if (calls.sb.indexOf(q) === -1) calls.sb.push(q); return api; },
+        upsert(bodyObj) { q.kind = 'upsert'; q.body = bodyObj; if (calls.sb.indexOf(q) === -1) calls.sb.push(q); return api; },
+        update(bodyObj) { q.kind = 'update'; q.body = bodyObj; if (calls.sb.indexOf(q) === -1) calls.sb.push(q); return api; },
         eq(c, v) { q.eqs[c] = v; return api; },
         limit(n) { q.limit = n; return api.then ? api : api; },
         maybeSingle() { return api; },
@@ -177,14 +185,14 @@ function oraclePbkdf2(passVal, salt, ctxPrefix, iter) {
   return pbkdf2Sync(String(passVal), Buffer.from(ctxPrefix + String(salt), 'utf8'), iter, 32, 'sha256').toString('hex');
 }
 
-const A = { id: 1, username: 'shimon', password: '135790' };
-const B = { id: 2, username: 'levi', password: '246801' };
+const A = { client_id: '1', username: 'shimon', password: '135790' };
+const B = { client_id: '2', username: 'levi', password: '246801' };
 
 async function userRow(h, u) {
   const made = await h.ctx.slMakePassFp(u.password);
   // ⚠️ `active: true` — במציאות כל שורה במראה עוברת דרך `slUserPub`, שמשלימה
   //    את השדה. פיקסטורה בלעדיו הייתה בודקת מצב שאינו קיים בקוד הרץ.
-  return { id: u.id, username: u.username, pass_salt: made.salt, pass_fp: made.fp, active: true };
+  return { client_id: u.client_id, username: u.username, pass_salt: made.salt, pass_fp: made.fp, active: true };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -241,29 +249,29 @@ async function main() {
     // ⚠️ **עודכן שוב בסבב 37** — `active` נוסף. בלעדיו `slVerifyOffline`
     // לא יכלה לחסום משתמש מושבת, וההשבתה בלוח הבקרה לא הגיעה למכשיר.
     eq('רשימת ההיתר היא שש העמודות המוכרות',
-      h.ctx.SL_USER_COLS.join(','), 'id,username,pass_salt,pass_fp,role,active');
+      h.ctx.SL_USER_COLS.join(','), 'client_id,username,pass_salt,pass_fp,role,active');
 
-    const dirty = { id: 7, username: 'x', password: 'סוד', pass_salt: 's', pass_fp: 'f',
+    const dirty = { client_id: '7', username: 'x', password: 'סוד', pass_salt: 's', pass_fp: 'f',
                     role: 'admin', secret_note: 'עמודה רגישה חדשה' };
     const pub = h.ctx.slUserPub(dirty);
     ok('slUserPub מפיל `password`', !('password' in pub));
     // ⭐ זו הטענה שמצדיקה רשימת-היתר ולא רשימת-איסור: עמודה חדשה בטבלה
     //    נופלת מעצמה, בלי שאיש צריך לזכור להוסיף אותה לאיסור.
     ok('⭐ slUserPub מפיל עמודה זרה שנוספה לטבלה', !('secret_note' in pub));
-    eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'id,pass_fp,pass_salt,role,username');
+    eq('slUserPub שומר את המותרות', Object.keys(pub).sort().join(','), 'client_id,pass_fp,pass_salt,role,username');
     /* ⛔ שורה בלי `active` אינה מושלמת עוד (סבב 63) — העמודה קיימת בטבלה
        (`not null default true`), ולכן «חסר» הוא חוסר-ידיעה
        ולא «ישן», וההכרעה נכשלת-סגור. */
     eq('⛔ עמודה חסרה אינה מושלמת — נכשל-סגור', pub.active, undefined);
     eq('   וערך מפורש false נשמר כמו שהוא',
-      h.ctx.slUserPub({ id: 1, username: 'a', active: false }).active, false);
+      h.ctx.slUserPub({ client_id: '1', username: 'a', active: false }).active, false);
     eq('slUserPub על קלט שאינו אובייקט מחזירה {}', JSON.stringify(h.ctx.slUserPub(null)), '{}');
   }
   {
     // השרת מחזיר בכוונה גם `password` — המראה חייבת להישאר נקייה.
     const h = makeCtx({
       reply: (q) => (q.table === 'sl_users'
-        ? { data: [{ id: 1, username: 'shimon', password: '135790', pass_salt: 's', pass_fp: 'f' }], error: null }
+        ? { data: [{ client_id: '1', username: 'shimon', password: '135790', pass_salt: 's', pass_fp: 'f' }], error: null }
         : { data: null, error: null }),
     });
     eq('slPullUsers מצליחה', await h.ctx.slPullUsers(true), true);
@@ -283,7 +291,7 @@ async function main() {
   {
     // שער הדיסק מסנן גם כשהמראה שבזיכרון הורעלה ישירות (עקיפת המשיכה).
     const h = makeCtx();
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f', active: true }];
+    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f', active: true }];
     h.ctx.slUsersSave();
     ok('⭐ שער הדיסק מסנן `password` גם ממראה שהורעלה',
       h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1 && h.store[h.ctx.SL_USERS_KEY].indexOf('סוד-גלוי') === -1);
@@ -293,7 +301,7 @@ async function main() {
     h.store[h.ctx.SL_USERS_KEY] = '{{ לא JSON';
     h.ctx.slUsersLoad();
     eq('מראה פגומה נטענת ריקה ולא זורקת', h.ctx.SL_USERS.length, 0);
-    h.store[h.ctx.SL_USERS_KEY] = JSON.stringify([{ id: 1 }, { id: 2, username: 'ok' }]);
+    h.store[h.ctx.SL_USERS_KEY] = JSON.stringify([{ client_id: '1' }, { client_id: '2', username: 'ok' }]);
     h.ctx.slUsersLoad();
     eq('שורה בלי username נזרקת', h.ctx.SL_USERS.length, 1);
   }
@@ -305,7 +313,7 @@ async function main() {
     const h = makeCtx({
       reply: () => ({ data: null, error: { message: 'column sl_users.pass_fp does not exist' } }),
     });
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }];
+    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }];
     eq('שגיאת עמודה חסרה מפילה את המשיכה', await h.ctx.slPullUsers(), false);
     eq('⛔ ואין ניסיון שני — שאילתה אחת בלבד', h.calls.sb.length, 1);
     eq('⛔ והמראה הקיימת לא נדרסה', h.ctx.SL_USERS.length, 1);
@@ -366,7 +374,7 @@ async function main() {
   }
   {
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ id: 9, username: 'noab', active: true }];   // בלי טביעה
+    h.ctx.SL_USERS = [{ client_id: '9', username: 'noab', active: true }];   // בלי טביעה
     h.fields['au-user'] = 'noab'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⭐ משתמש בלי טביעה ⇒ MSG_OFF_NO_FP', h.calls.authErr[0], h.ctx.MSG_OFF_NO_FP);
@@ -376,7 +384,7 @@ async function main() {
   }
   {
     const h = makeCtx({ online: false, noCrypto: true });
-    h.ctx.SL_USERS = [{ id: 9, username: 'shimon', pass_salt: 's', pass_fp: 'f', active: true }];
+    h.ctx.SL_USERS = [{ client_id: '9', username: 'shimon', pass_salt: 's', pass_fp: 'f', active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('בלי crypto ⇒ MSG_OFF_NO_CRYPTO', h.calls.authErr[0], h.ctx.MSG_OFF_NO_CRYPTO);
@@ -392,7 +400,7 @@ async function main() {
   {
     // ⛔ מטמון מפורמט ישן — סיסמה גלויה אינה מתקבלת כטביעה.
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', password: '135790', active: true }];
+    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', password: '135790', active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⛔ סיסמה גלויה במראה אינה מתקבלת כטביעה', h.calls.enter, 0);
@@ -402,7 +410,7 @@ async function main() {
     // סיסמה ישנה שאינה שש ספרות — נכנסת בכל זאת (סבב 19).
     const h = makeCtx({ online: false });
     const made = await h.ctx.slMakePassFp('admin');
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', pass_salt: made.salt, pass_fp: made.fp, active: true }];
+    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', pass_salt: made.salt, pass_fp: made.fp, active: true }];
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = 'admin';
     await h.ctx.doLogin();
     eq('⭐ סיסמה ישנה שאינה שש ספרות — נכנסת', h.calls.enter, 1);
@@ -443,7 +451,7 @@ async function main() {
             ? { data: rowA, error: null }
             : { data: null, error: null };
         }
-        return { data: [{ id: A.id }], error: null };
+        return { data: [{ client_id: A.client_id }], error: null };
       },
     });
     h.fields['au-user'] = A.username; h.fields['au-pass'] = A.password;
@@ -491,7 +499,7 @@ async function main() {
   sect('ו. slEnsurePassFp — השלמה, שתיקה, ואיפוס');
   {
     const h = makeCtx({ reply: () => ({ data: null, error: null }) });
-    const u = { id: 1, username: 'shimon' };
+    const u = { client_id: '1', username: 'shimon' };
     eq('אין טביעה ⇒ משלימה', await h.ctx.slEnsurePassFp(u, A.password), true);
     ok('הטביעה נכתבה על האובייקט', !!(u.pass_salt && u.pass_fp));
     eq('⭐ והטביעה שנכתבה מאומתת מול חישוב עצמאי',
@@ -505,7 +513,7 @@ async function main() {
     // ⭐⭐ טביעה תקפה לסיסמה **הישנה** — חייבת להתחלף.
     const h = makeCtx({ reply: () => ({ data: null, error: null }) });
     const old = await h.ctx.slMakePassFp('111111');
-    const u = { id: 1, username: 'shimon', pass_salt: old.salt, pass_fp: old.fp };
+    const u = { client_id: '1', username: 'shimon', pass_salt: old.salt, pass_fp: old.fp };
     eq('⭐ טביעה שאינה תואמת ⇒ מוחלפת', await h.ctx.slEnsurePassFp(u, '222222'), true);
     ok('   הטביעה החדשה תואמת לסיסמה החדשה',
       u.pass_fp === oraclePbkdf2('222222', u.pass_salt, h.ctx.SL_PASS_CTX, h.ctx.SL_PASS_ITER_USER));
@@ -515,7 +523,7 @@ async function main() {
     // ⭐⭐ טביעה לא-תואמת + כשל גזירה ⇒ **איפוס שני השדות**, לא דילוג.
     const h = makeCtx({ reply: () => ({ data: null, error: null }) });
     const old = await h.ctx.slMakePassFp('111111');
-    const u = { id: 1, username: 'shimon', pass_salt: old.salt, pass_fp: old.fp };
+    const u = { client_id: '1', username: 'shimon', pass_salt: old.salt, pass_fp: old.fp };
     // ראשית מחשבים את הטביעה הנוכחית (מצליח), ורק אחר כך שוברים את הגזירה.
     let n = 0;
     const realFp = h.ctx.slPassFp;
@@ -531,21 +539,21 @@ async function main() {
     // אין טביעה + כשל גזירה ⇒ דילוג שקט (אין מה לאפס).
     const h = makeCtx({ reply: () => ({ data: null, error: null }) });
     h.ctx.slRandSalt = () => null;
-    const u = { id: 1, username: 'shimon' };
+    const u = { client_id: '1', username: 'shimon' };
     eq('אין טביעה + כשל גזירה ⇒ דילוג', await h.ctx.slEnsurePassFp(u, '222222'), false);
     eq('   ואפס קריאות רשת', h.calls.sb.length, 0);
     ok('   והאובייקט לא נגע', !('pass_salt' in u));
   }
   {
     const h = makeCtx({ noCrypto: true, reply: () => ({ data: null, error: null }) });
-    const u = { id: 1, username: 'shimon', pass_salt: 's', pass_fp: 'f' };
+    const u = { client_id: '1', username: 'shimon', pass_salt: 's', pass_fp: 'f' };
     eq('בלי crypto — לא נוגעת בטביעה קיימת', await h.ctx.slEnsurePassFp(u, 'x'), false);
     eq('   pass_fp נשאר', u.pass_fp, 'f');
     eq('   ואפס קריאות רשת', h.calls.sb.length, 0);
   }
   {
     const h = makeCtx({ online: false, reply: () => ({ data: null, error: null }) });
-    eq('אופליין — ההשלמה אינה נוגעת ברשת', await h.ctx.slEnsurePassFp({ id: 1 }, 'x'), false);
+    eq('אופליין — ההשלמה אינה נוגעת ברשת', await h.ctx.slEnsurePassFp({ client_id: '1' }, 'x'), false);
     eq('   ואפס שאילתות', h.calls.sb.length, 0);
   }
   {
@@ -589,7 +597,7 @@ async function main() {
     ok('⭐ 3) שער הדיסק מסנן גם מראה שהורעלה', disk.indexOf('secret_probe') === -1 && disk.indexOf('סוד-גלוי') === -1);
     ok('   והשורה הלגיטימית כן נשמרה', disk.indexOf('default_tuition') !== -1);
     eq('slSanitizeRows על טבלה אחרת אינה מסננת',
-      h.ctx.slSanitizeRows('students', [{ id: 1 }]).length, 1);
+      h.ctx.slSanitizeRows('students', [{ client_id: '1' }]).length, 1);
   }
 
   /* ── ח. הסכימה, והסרת העותק המוטבע ───────────────────────────────────── */
