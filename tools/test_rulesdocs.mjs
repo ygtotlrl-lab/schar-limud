@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 36, 157, 87];
+export const ROWS = [5, 8, 36, 158, 87];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -405,6 +405,26 @@ t(!capsFails((doc) => {
   const m = okRow(doc);
   return doc.replace(m[0], m[0].replace(/\|$/, ' נמדדו 74 קבצים בסט המשותף |'));
 }), 'נ9 · ⭐ הערה שנושאת ספירה נגזרת ⛔ **אינה** מפילה');
+
+/*  ⛔ מוטציה: הצהרת מיזוג-מפה שאין לה אתר (סבב 98) — ⚠️ הטענה שנופלת היא
+ *  «מחיקת מפתח בערך משותף»: ⭐ רשימת-היתר שהתיישנה היא בעצמה השארית
+ *  שהשורה באה לסלק. */
+{
+  const CAPS = 'tools/check-capabilities.mjs';
+  const caps = rd(CAPS);
+  t(runGateOn({ [CAPS]: caps.replace(/keyMaps: \[/, "keyMaps: ['mergeNothing', ") },
+              'check-capabilities.mjs', () => ({})),
+    'מ24 · הצהרת מיזוג-מפה בלי אתר בפועל **מפילה** את «מחיקת מפתח בערך משותף»');
+  /*  ⭐ מוטציית-נגד: שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ אינו מפיל —
+   *  ⚠️ המנגנון לא נגע, ⭐ ורק השם השתנה. */
+  t(!runGateOn({ [CAPS]: caps
+      .replace('function keyMergeGaps() {\n  const found = keyMapMerges();',
+               'function keyMergeGaps() {\n  const hits = keyMapMerges();')
+      .replace('for (const f of found) {', 'for (const f of hits) {')
+      .replace('if (!found.some(', 'if (!hits.some(') },
+              'check-capabilities.mjs', () => ({})),
+    'נ15 · ⭐ שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ **אינו** מפיל');
+}
 
 /*  ⛔ מוטציה: קריאת רתמה שהוזזה מעל סוגר הריצה הפנימית (סבב 74ב) —
  *  ⚠️ זו התפיחה שנמדדה בפועל: 77 שניות במקום 7, ⛔ מפני שהרתמה רצה גם

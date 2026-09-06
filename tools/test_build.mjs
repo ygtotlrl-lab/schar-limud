@@ -305,6 +305,68 @@ mut('שם הריפו אינו בחתימה',
 mut('רווח בסוף שורה אינו בחתימה',
     nc, norm(cleanupSrc.replace('\njobs:', '   \njobs:')), false);
 
+
+/* ── יב. מנגנוני ה-workflows — ⛔ נמדדים, ולא רק זהים (סבב 98) ───────────────
+ *  ⚠️ **הנימוק המדוד**: השורה אכפה **זהות בית-לבית** בלבד, ⛔ וסשן שהיה מסיר
+ *  את שני קווי ההגנה היה משאיר קובץ זהה בארבעתן ⭐ והשער היה עובר: ⚠️ שני
+ *  ענפים נמחקו בפועל בעוד שההוראה שניתנה אמרה «אל תמחק», ⛔ וההוראה
+ *  והמנגנון סתרו זה את זה בלי שאיש ידע.
+ *  ⛔ **והבדיקה היא פונקציה טהורה של הטקסט** — ⚠️ כדי שהמוטציה תרוץ על
+ *  עותק בזיכרון, ⭐ ולא על העץ.                                          */
+function cleanupGuards(raw) {
+  const out = [];
+  /*  ⛔ ההערות נחתכות לפני המדידה — ⚠️ ההערה שמעל המנגנון נוקבת בשמו,
+   *  ⭐ ומדידה על הטקסט הגולמי הייתה מוצאת אותו גם אחרי שהוסר מהקוד. */
+  const txt = raw.split('\n').map((l) => l.replace(/(^|\s)#.*$/, '')).join('\n');
+  const del = txt.indexOf('push origin --delete');
+  if (del < 0) { out.push('אין מסלול מחיקה כלל'); return out; }
+  if ((txt.match(/push origin --delete/g) || []).length !== 1)
+    out.push('יותר ממסלול מחיקה אחד');
+  const pre = txt.indexOf('claude/*)');
+  const anc = txt.indexOf('merge-base --is-ancestor');
+  if (pre < 0 || pre > del) out.push('תחילית `claude/` חסרה או אינה קודמת למחיקה');
+  if (anc < 0 || anc > del) out.push('`--is-ancestor` חסר או אינו קודם למחיקה');
+  /*  ⛔ ושתי זרועות בלבד ב-`case` — ⚠️ זה מה שמוכיח ש-`main` אינו מועמד:
+   *  ⭐ הוא נופל לזרוע ה-`continue`, ⛔ ואינו מגיע למחיקה כלל. */
+  if (!/case\s+"\$branch"\s+in\s+claude\/\*\)\s*;;\s*\*\)\s*continue\s*;;\s*esac/
+        .test(txt.replace(/\s+/g, ' ')))
+    out.push('`case` שאינו שתי זרועות — claude/* ואז continue');
+  return out;
+}
+/*  ⛔ ו-`build-apk` נבנה משינוי במעטפת ובחתימה בלבד — ⚠️ שינוי web אינו
+ *  דורש APK, ⭐ שהמעטפת טוענת את הקוד מהרשת · ⛔ ומסלול החתימה אחד,
+ *  ⚠️ שמסלול שני הוא מסלול בלי שער הטביעה. */
+function buildGuards(txt) {
+  const out = [];
+  if (!/paths:/.test(txt)) out.push('אין מסנן נתיבים ל-push');
+  for (const p of ["'android/**'", "'signing/**'"])
+    if (!txt.includes(p)) out.push(`נתיב שאינו מוצהר בטריגר: ${p}`);
+  if (/'index\.html'|'sw\.js'/.test(txt)) out.push('שינוי web מפעיל בנייה');
+  if (!/signing\/sign-apk\.sh/.test(txt)) out.push('החתימה אינה עוברת בסקריפט המשותף');
+  if (/\bapksigner\s+sign\b|\bkeytool\b/.test(txt)) out.push('מסלול חתימה שני בגוף ה-workflow');
+  return out;
+}
+{
+  const cg = cleanupGuards(cleanupSrc), bg = buildGuards(buildSrc);
+  t(cg.length === 0, cg.length ? `יב1 · cleanup — ${cg.join(' · ')}`
+    : 'יב1 · cleanup נושא את שני קווי ההגנה, ו-main אינו מועמד למחיקה');
+  t(bg.length === 0, bg.length ? `יב2 · build-apk — ${bg.join(' · ')}`
+    : 'יב2 · build-apk — מסנן הנתיבים ומסלול החתימה האחד מוצהרים');
+}
+/*  ⛔ מוטציה: הסרת `--is-ancestor` — ⚠️ הטענה שנופלת היא «שני קווי ההגנה». */
+t(cleanupGuards(cleanupSrc.replace('git merge-base --is-ancestor "$ref" origin/main', 'true')).length > 0,
+  'יב3 · מוטציה: הסרת `--is-ancestor` **מפילה** את «שני קווי ההגנה»');
+/*  ⭐ מוטציית-נגד: שם מונה מעטפת שהוחלף בעקביות ⛔ אינו מפיל — ⚠️ המנגנון
+ *  לא נגע, ⭐ ורק השם השתנה. */
+t(cleanupGuards(cleanupSrc.split('deleted=').join('gone=').split('$deleted').join('$gone')).length === 0,
+  'יב4 · ⭐ מוטציית-נגד: שם מונה שהוחלף בעקביות ⛔ **אינו** מפיל');
+/*  ⛔ ומוטציה על `build-apk`: נתיב web שנוסף לטריגר — ⚠️ הטענה שנופלת היא
+ *  «מסנן הנתיבים». */
+t(buildGuards(buildSrc.replace("      - 'signing/**'", "      - 'signing/**'\n      - 'index.html'")).length > 0,
+  'יב5 · מוטציה: `index.html` בטריגר **מפילה** את «מסנן הנתיבים»');
+t(buildGuards(buildSrc.replace('actions/setup-java@v4', 'actions/setup-java@v4 ')).length === 0,
+  'יב6 · ⭐ מוטציית-נגד: רווח בסוף שורה ⛔ **אינו** מפיל את המנגנון');
+
 console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער הבנייה, החתימה וה-workflows`
                      : `\n✅ ${APP.app}: שער הבנייה, החתימה וה-workflows עבר`);
 process.exit(failures ? 1 : 0);
