@@ -2226,25 +2226,28 @@ function mergePointGaps() {
   }
   return out;
 }
-/*  ⛔ צורות ההגדרה שחיות כאן (סבב 100) — ⚠️ הצהרה בשם, השמה ל-`window`,
- *  וערך במפת הפעולות: ⭐ שלושתן, ⛔ ומדידה שמכירה אחת מאשרת את השתיים
- *  האחרות בשתיקה — ⚠️ **והכותרות נסרקות בקוד המולבן** ⛔ ולא במקור:
- *  ⭐ «function» בתוך הערה אינה הגדרה. */
-const FN_HEADS = /(?:function\s+[A-Za-z_$][\w$]*|[A-Za-z_$][\w$]*\s*=\s*(?:async\s+)?function|:\s*(?:async\s+)?function)\s*\([^)]*\)\s*\{/g;
-function namedFnBodies() {
-  const out = [];
-  for (const m of code.matchAll(FN_HEADS)) {
-    const head = src.slice(m.index, m.index + m[0].length);
-    const name = (/function\s+([A-Za-z_$][\w$]*)/.exec(head) || [])[1]
-      || (/([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function/.exec(head) || [])[1]
-      /*  ⭐ שם שהוא מפתח במפת הפעולות — ⛔ הוא מחרוזת, ⚠️ ובקוד המולבן
-       *  היא ריקה: ⭐ ולכן הוא נקרא מהמקור שלפני הנקודתיים. */
-      || (/['"]([\w$-]+)['"]\s*$/.exec(src.slice(Math.max(0, m.index - 60), m.index)) || [])[1];
-    if (!name) continue;
-    const at = m.index + m[0].length - 1;
-    out.push({ name, at: at + 1, body: braceBodyAt(code, at) });
+/*  ⛔ הפונקציה הנקובה שעוטפת מיקום (סבב 100) — ⚠️ **הסריקה מתחילה
+ *  מהדחיפות** ⛔ ולא מכל הפונקציות: ⭐ הנימוק מדוד — מעבר על כל כותרות
+ *  הקוד וגזירת גוף לכל אחת עלתה כעשר שניות בתקציב הסט, ⛔ ומספר
+ *  הדחיפות קטן ממנו בסדר גודל · ⛔ **ושלוש צורות ההגדרה מוכרות**:
+ *  הצהרה בשם, השמה ל-`window`, וערך במפת הפעולות — ⚠️ ומדידה שמכירה
+ *  אחת מאשרת את השתיים האחרות בשתיקה · ⛔ **והשם נקרא מהמקור**
+ *  ⛔ ולא מהקוד המולבן — ⚠️ מפתח במפת הפעולות הוא מחרוזת, ⭐ ובקוד
+ *  המולבן היא ריקה. */
+const FN_HEAD_END = /(?:function\s+([A-Za-z_$][\w$]*)|(?:window\.)?([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function|['"]([\w$-]+)['"]\s*:\s*(?:async\s+)?function)\s*\([^)]*\)\s*$/;
+function enclosingNamedFn(pos) {
+  let d = 0;
+  for (let i = pos; i >= 0; i--) {
+    const c = code[i];
+    if (c === '}') d++;
+    else if (c === '{') {
+      if (d) { d--; continue; }
+      const m = FN_HEAD_END.exec(src.slice(Math.max(0, i - 160), i));
+      if (!m) continue;   // בלוק שאינו פונקציה נקובה — ממשיכים החוצה
+      return { name: m[1] || m[2] || m[3], start: i + 1, body: braceBodyAt(code, i) };
+    }
   }
-  return out;
+  return null;
 }
 /*  ⛔ ערך שמקורו בקלט המשתמש — ⚠️ הזיהוי עובר דרך ההשמות: ⭐ ערך שנקרא
  *  משדה מכתים את המשתנה שקיבל אותו, ⛔ וכל השמה שנשענת עליו מכתימה גם
@@ -2271,22 +2274,22 @@ function argAt(text, open) {
 }
 /*  ⛔ כתיבה לרשימה שמקורה בקלט — ⚠️ הנמדד הוא **דחיפה שערכה נגזר משדה**,
  *  ⛔ ולא כל `push`: ⭐ צובר פנימי דוחף תוויות וכשלים, ⚠️ והוא אינו רשימה
- *  שהמשתמש רואה · ⛔ **והאתר נזקף לפונקציה הפנימית ביותר** — ⚠️ גוף של
- *  פונקציה עוטפת מכיל אותו אף הוא, ⭐ ושתי הזקיפות היו אותו אתר פעמיים. */
+ *  שהמשתמש רואה. */
 function inputListWrites() {
-  const by = new Map();
-  for (const f of namedFnBodies()) {
-    const T = inputTainted(f.body);
-    for (const p of f.body.matchAll(/([A-Za-z_$][\w$]*(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*)\s*\.push\s*\(/g)) {
-      const arg = argAt(f.body, p.index + p[0].length - 1);
-      if (!(INPUT_SEED.test(arg) || [...T].some((n) => idBound(n).test(arg)))) continue;
-      const abs = f.at + p.index;
-      const cur = by.get(abs);
-      if (!cur || f.body.length < cur.body.length)
-        by.set(abs, { name: f.name, target: p[1], body: f.body, at: p.index });
+  const out = [];
+  for (const p of code.matchAll(/([A-Za-z_$][\w$]*(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*)\s*\.push\s*\(/g)) {
+    const arg = argAt(code, p.index + p[0].length - 1);
+    const seeded = INPUT_SEED.test(arg);
+    if (!seeded && !/[A-Za-z_$]/.test(arg)) continue;
+    const fn = enclosingNamedFn(p.index);
+    if (!fn) continue;
+    if (!seeded) {
+      if (!INPUT_SEED.test(fn.body)) continue;
+      if (![...inputTainted(fn.body)].some((n) => idBound(n).test(arg))) continue;
     }
+    out.push({ name: fn.name, target: p[1], body: fn.body, at: p.index - fn.start });
   }
-  return [...by.values()];
+  return out;
 }
 /*  ⛔ בדיקת הקיום נמדדת **מול היעד** ⛔ ולא כמילה בגוף — ⚠️ `find` על
  *  אוסף אחר אינו בודק את הרשימה שדוחפים אליה, ⭐ והוא היה מאשר כתיבה
@@ -2307,7 +2310,10 @@ function hasSeenMap(body) {
   }
   return false;
 }
-const fnBodyByName = (n) => (namedFnBodies().find((f) => f.name === n) || {}).body || '';
+function fnBodyByName(n) {
+  const m = new RegExp(`function\\s+${n}\\s*\\([^)]*\\)\\s*\\{`).exec(code);
+  return m ? braceBodyAt(code, m.index + m[0].length - 1) : '';
+}
 /*  ⛔ ופריט אינו מופיע פעמיים באותה רשימה (סבב 100) — ⚠️ **לא בכתיבה
  *  ולא אחרי מיזוג**: ⭐ שני פריטים באותו ערך הם פריט אחד · ⛔ **בכתיבה** —
  *  כל אתר שדוחף ערך שמקורו בקלט בודק קיום לפניו, ⚠️ או מוכרז חריג
