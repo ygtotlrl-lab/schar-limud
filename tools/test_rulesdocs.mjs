@@ -412,9 +412,18 @@ t(!capsFails((doc) => {
 {
   const CAPS = 'tools/check-capabilities.mjs';
   const caps = rd(CAPS);
-  t(runGateOn({ [CAPS]: caps.replace(/mergePoints: \[/, "mergePoints: ['mergeNothing', ") },
-              'check-capabilities.mjs', () => ({})),
-    'מ24 · הצהרת נקודת-מיזוג בלי אתר בפועל **מפילה** את «מיזוג מכל»');
+  /*  ⛔ שורה שסימונה ⭕ אינה מריצה את ה-probe כלל — ⚠️ ולכן אין בה מה
+   *  למוטט, ⭐ והדילוג נושא נימוק ⛔ ואינו שקט: ⚠️ מספר השורה נגזר משמה
+   *  ⛔ ואינו מוקלד, ⭐ והחריגה נקראת מרשימת ההחרגה שבשער. */
+  const rowNo24 = Number((/^\|\s*(\d+)\s*\|\s*מיזוג מכל/m.exec(DOC) || [])[1]);
+  const gaps24 = ((/gapRows: \[([^\]]*)\]/.exec(caps) || [, ''])[1].match(/\d+/g) || []).map(Number);
+  if (gaps24.includes(rowNo24)) {
+    t(true, `מ24 · ⭕ בשורה ${rowNo24} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+  } else {
+    t(runGateOn({ [CAPS]: caps.replace(/mergePoints: \[/, "mergePoints: ['mergeNothing', ") },
+                'check-capabilities.mjs', () => ({})),
+      'מ24 · הצהרת נקודת-מיזוג בלי אתר בפועל **מפילה** את «מיזוג מכל»');
+  }
   /*  ⭐ מוטציית-נגד: שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ אינו מפיל —
    *  ⚠️ המנגנון לא נגע, ⭐ ורק השם השתנה. */
   t(!runGateOn({ [CAPS]: caps
