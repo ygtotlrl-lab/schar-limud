@@ -126,6 +126,12 @@ const APP = {
     pendResolveErr: 'מפריד כשל רשת מכשל סמכותי בהורדת סימון — ⛔ מנגנון שנכשל-סגור, ⚠️ ואין לו קורא **עד שהוא נחוץ**',
     'check-capabilities.mjs:domEntry': 'עוזר זהה בארבעת עותקי השער — ⛔ הוא נקרא בהנהלה בלבד, ⚠️ ששם יש שכבת כניסה: ⭐ עוזר שנגזם באחת מפסיק להיות זהה',
   },
+  dualRoleAllow: {
+    '--card': 'הדיו ההפוך על מילוי `--navy` — ⚠️ שני האסימונים מתהפכים יחד עם הערכה, ⭐ והצמד נמדד עובר בשני המצבים',
+  },
+  contrastAllow: {
+    '.badge.gray|בהיר': 'תווית משנית אפורה — ⚠️ גוון קיים ⛔ ולא תוצאה של הפיצול: ⭐ שינויו הוא החלטת מנהל',
+  },
   tableProbe: {
     /*  ⛔ מסלול תצוגה שקורא לשכבת השורות בלי טווח (סבב 87) — ⚠️ הטענה
      *  אינה «`_ysRowsPaged` קיימת» אלא **שכל קריאה מצהירה חלון**: ⭐ קריאה
@@ -2117,6 +2123,100 @@ function deadMediaSites() {
  *  `prefers-color-scheme:dark` **יחיד** ובתוכו `:root` יחיד, ⛔ וכל
  *  אסימון צבע שבערכה הבהירה נושא מקבילה כהה — ⭐ ואסימון כהה שאין לו
  *  מקבילה בהירה הוא סחיפה: ⚠️ הוא צובע במצב אחד ואינו קיים בשני. */
+/*  ⛔ אסימון צבע נושא תפקיד אחד (סבב 97א) — ⚠️ הנימוק המדוד: אסימון
+ *  יחיד שימש **גם** כדיו על כרטיס **וגם** כמילוי מתחת לטקסט לבן,
+ *  ⭐ ובמצב כהה שני התפקידים דורשים גוונים הפוכים: ⛔ ונמדד שאין ערך
+ *  יחיד שנותן 4.5 לשניהם — האופטימום 4.08. ⚠️ ולכן `-ink` ו-`-fill`
+ *  נפרדים, ⛔ ואסימון שנשאר בשני התפקידים מוכרז בשמו ובנימוקו. */
+function cssText() {
+  return [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
+function themeRoots() {
+  const grab = (t) => {
+    const m = new Map();
+    for (const x of t.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;\n}]+)/g)) m.set(x[1], x[2].trim());
+    return m;
+  };
+  const li = src.indexOf(':root');
+  const light = grab(src.slice(li, src.indexOf('}', li)));
+  const dm = /@media\s*\(prefers-color-scheme\s*:\s*dark\)\s*\{([\s\S]*?)\n\}/.exec(src);
+  const dark = new Map(light);
+  if (dm) for (const [k, v] of grab(dm[1])) dark.set(k, v);
+  return { light, dark };
+}
+/*  ⛔ פענוח צבע שמחזיר `null` כשאינו ניתן להכרעה — ⚠️ מדרג, שקיפות
+ *  חלקית ומילת מפתch יורשת אינם צמד שאפשר למדוד, ⭐ ו-«לא נמדד» אינו
+ *  «עבר»: ⛔ הם אינם נספרים לשני הכיוונים. */
+function cssColor(val, map, depth) {
+  if (!val || (depth || 0) > 6) return null;
+  val = val.replace(/!important/g, '').trim();
+  const v = /^var\(\s*(--[a-z0-9-]+)\s*(?:,([^)]*))?\)$/.exec(val);
+  if (v) return cssColor(map.get(v[1]) || (v[2] || ''), map, (depth || 0) + 1);
+  if (/gradient|url\(/.test(val)) return null;
+  const lo = val.toLowerCase();
+  if (lo === 'white') return [255, 255, 255];
+  if (lo === 'black') return [0, 0, 0];
+  let m = /^#([0-9a-f]{3})$/i.exec(val);
+  if (m) return [0, 1, 2].map((i) => parseInt(m[1][i] + m[1][i], 16));
+  m = /^#([0-9a-f]{6})$/i.exec(val);
+  if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  m = /^rgba?\(([^)]*)\)$/i.exec(val);
+  if (m) {
+    const p = m[1].split(/[,/\s]+/).filter(Boolean).map(Number);
+    if (p.length >= 3 && p.slice(0, 3).every((x) => !isNaN(x)) && !(p[3] < 0.9)) return p.slice(0, 3);
+  }
+  return null;
+}
+function cssRatio(a, b) {
+  const lum = (c) => {
+    const [r, g, bl] = c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const l1 = lum(a), l2 = lum(b);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+function dualRoleGaps() {
+  const css = cssText();
+  const roles = new Map();
+  for (const m of css.matchAll(/(?<![\w-])(background(?:-color)?|color)\s*:\s*([^;{}]*)/g)) {
+    const role = m[1].charAt(0) === 'b' ? 'bg' : 'txt';
+    for (const t of m[2].matchAll(/var\((--[a-z0-9-]+)\)/g)) {
+      if (!roles.has(t[1])) roles.set(t[1], new Set());
+      roles.get(t[1]).add(role);
+    }
+  }
+  const dual = [...roles].filter((e) => e[1].size > 1).map((e) => e[0]).sort();
+  const allow = Object.keys(APP.dualRoleAllow || {});
+  return dual.filter((t) => allow.indexOf(t) < 0).map((t) => 'אסימון בשני התפקידים ואינו מוכרז: ' + t)
+    .concat(allow.filter((t) => dual.indexOf(t) < 0).map((t) => 'מוכרז ואינו בשני התפקידים: ' + t));
+}
+/*  ⛔ צמד טקסט-על-רקע שמוצהר באותו כלל — ⚠️ זה ההיקף שנגזר מהטקסט:
+ *  ⭐ טקסט שיורש רקע מאב רחוק אינו צמד מוצהר, ⛔ והוא נמדד בדפדפן
+ *  ⚠️ ולא בשער. */
+function contrastGaps() {
+  const css = cssText();
+  const roots = themeRoots();
+  const found = [], out = [];
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim().replace(/\s+/g, ' ');
+    if (sel.charAt(0) === '@' || sel.indexOf(':root') === 0) continue;
+    const bg = /(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/.exec(m[2]);
+    const fg = /(?:^|;)\s*color\s*:\s*([^;]+)/.exec(m[2]);
+    if (!bg || !fg) continue;
+    for (const mode of ['בהיר', 'כהה']) {
+      const map = mode === 'בהיר' ? roots.light : roots.dark;
+      const b = cssColor(bg[1], map), f = cssColor(fg[1], map);
+      if (!b || !f) continue;
+      const cr = cssRatio(b, f);
+      if (cr < 4.5) found.push(`${sel}|${mode}`);
+    }
+  }
+  const allow = Object.keys(APP.contrastAllow || {});
+  for (const k of found) if (allow.indexOf(k) < 0) out.push('צמד מתחת ל-4.5 ואינו מוכרז: ' + k);
+  for (const k of allow) if (found.indexOf(k) < 0) out.push('מוכרז ואינו מתחת ל-4.5: ' + k);
+  return out;
+}
 function themeGaps() {
   const out = [];
   const n = (src.match(/@media\s*\(prefers-color-scheme/g) || []).length;
@@ -2132,7 +2232,7 @@ function themeGaps() {
   for (const [k, v] of L)
     if (/#|rgba?\(/.test(v) && !D.has(k)) out.push(`אסימון בהיר בלי מקבילה כהה: ${k}`);
   for (const k of D.keys()) if (!L.has(k)) out.push(`אסימון כהה שאינו בערכה הבהירה: ${k}`);
-  return out;
+  return out.concat(dualRoleGaps(), contrastGaps());
 }
 /*  ⛔ הערה שמתארת מצב שחלף (סבב 97) — ⚠️ הנמדד הוא **דפוס המצבה**
  *  בלבד: ⭐ שבע הצורות שברשימה שמתחת, ⛔ ושלושת הדפוסים
@@ -2144,6 +2244,25 @@ function themeGaps() {
 const STALE_MARKS = ['היה ' + 'כאן', 'הוסר ' + 'מכאן', 'הוסרה ' + 'מכאן',
                      'נמחק ' + 'מכאן', 'נמחקה ' + 'מכאן', 'הוחלף ' + 'ב-',
                      'בעבר ' + 'היה'];
+/*  ⛔ נקודת שבירה שהתיישנה בתוך הערה (סבב 97א) — ⚠️ הדפוס שהחמיץ:
+ *  ⭐ הסולם השתנה, ⛔ וההערה נשארה מצביעה על מספר שאינו קיים בשום
+ *  שאילתה. ⚠️ **והמדידה היא `<מספר>px` בהערה בלבד** — ⛔ ולא «64
+ *  פיקסלים»: ⭐ גובה, ריפוד ורוחב מדוברים בעברית, ⚠️ ונקודת שבירה
+ *  נכתבת ביחידה הלטינית כמו בשאילתה עצמה. */
+function staleBpNotes(text, file) {
+  const scale = bpScale();
+  if (!scale.length) return [];
+  const out = [];
+  const chunks = file.endsWith('.md') ? [text]
+    : (text.match(/\/\*[\s\S]*?\*\//g) || []).concat(text.match(/^[ \t]*\/\/.*$/gm) || []);
+  for (const c of chunks)
+    for (const m of c.matchAll(/(?<![\d.])(\d{3,4})px/g)) {
+      const n = Number(m[1]);
+      if (n >= 300 && n <= 2000 && !scale.includes(n))
+        out.push(`${file}: ${m[0]} — נקודת שבירה שאינה בסולם`);
+    }
+  return out;
+}
 function staleNoteSites() {
   const out = [];
   const files = ['index.html', 'sw.js'];
@@ -2155,6 +2274,7 @@ function staleNoteSites() {
     try { t = fs.readFileSync(f, 'utf8'); } catch (e) { continue; }
     for (const mark of STALE_MARKS)
       if (t.includes(mark)) out.push(`${f}: «${mark}»`);
+    out.push(...staleBpNotes(t, f));
   }
   return out;
 }
