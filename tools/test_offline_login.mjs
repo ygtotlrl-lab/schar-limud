@@ -565,10 +565,9 @@ async function main() {
   sect('ז. סינון `admin_pass` — שלוש נקודות אכיפה');
   {
     const h = makeCtx();
-    // ⭐ מסבב 35 הרשימה ריקה — שורת `admin_pass` נמחקה מהמסד ע"י המנהל
-    //    (17.8, אומת אפס מופעים). המנגנון נשאר, ולכן הבדיקה מזריקה מפתח
-    //    זמני ומוודאת ששלוש נקודות האכיפה עדיין עובדות.
-    eq('הרשימה ריקה — אין עוד שריד admin_pass', h.ctx.SL_NEVER_MIRROR_SETTINGS.length, 0);
+    // ⛔ המנגנון נאכף על מפתח בדיקה זמני — ⚠️ ולא על תוכן הרשימה:
+    //    ⭐ שלוש נקודות האכיפה הן מה שנמדד, ⛔ ולא מי רשום בהן.
+    eq('אין שריד admin_pass ברשימה', h.ctx.SL_NEVER_MIRROR_SETTINGS.length, 0);
     ok('admin_pass אינו מסונן עוד', !h.ctx.slIsSecretSetting('admin_pass'));
     h.ctx.SL_NEVER_MIRROR_SETTINGS.push('secret_probe');
     ok('slIsSecretSetting מזהה מפתח שברשימה', h.ctx.slIsSecretSetting('secret_probe'));
