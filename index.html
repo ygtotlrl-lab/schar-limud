@@ -4011,8 +4011,8 @@ function enterApp(){
   //    מ-`rtyNote()` ורץ רק כשהתור אינו ריק, והמשיכה המותנית של `plBoot()`
   //    — שקוראת שורה אחת ומושכת רק כשהיא התקדמה.
   plTick();
-  // ⛔ `slMaybeDailyBackup()` הוסרה מכאן (סבב 30, השלמה) — הגיבוי עבר
-  //    ל-`slBoot()`, נקודת ההפעלה המוצהרת, לצד `lsBoot()`/`pendBoot()`.
+  // ⛔ אין לקרוא כאן ל-`slMaybeDailyBackup()` — נקודת ההפעלה המוצהרת
+  //    היא `slBoot()`, לצד `lsBoot()`/`pendBoot()`.
   //    הוא אינו תלוי בכניסה, ולכן אין סיבה שיחכה לה.
   lkReset();ensureCreditMethod();
 }
