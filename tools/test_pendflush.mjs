@@ -57,6 +57,22 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
+/*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
+ *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
+ *  מה שכבר אינו: ⛔ המרשם שם הוא המקור, וכאן קוראים ממנו לפי סמן הפתיחה. */
+function capsBlock(startMark) {
+  const caps = fs.readFileSync(new URL('./check-capabilities.mjs', import.meta.url), 'utf8');
+  const re = /block:\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(caps)) !== null) {
+    const s = /start:\s*'([^']*)'/.exec(m[1]);
+    if (!s || s[1] !== startMark) continue;
+    return { sha: (/sha:\s*'([0-9a-f]{16})'/.exec(m[1]) || [])[1] || '',
+             lines: Number((/lines:\s*(\d+)/.exec(m[1]) || [])[1]) || 0 };
+  }
+  return { sha: '', lines: 0 };
+}
+
 const BLOCK = {
   start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
   end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"',
@@ -394,12 +410,11 @@ for (const mu of MUTATIONS) {
 /*  ⛔ בלוק משלו (סבב 72) — ⚠️ שני השערים חתכו בלוקים שונים מאותו קובץ
  *  ותחת אותם שמות, ⛔ והמיזוג בלי הפרדה היה מחליף ביניהם בשקט. */
 {
-  const BLOCK = {
-    sha: 'c34d134167700192',
-    lines: 68,
-    start: '/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44)',
+  const START = '/* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44)';
+  const BLOCK = Object.assign({
+    start: START,
     end: '/* ═══════════════ סוף מודול הניסיון החוזר',
-  };
+  }, capsBlock(START));
 
 
   const src = fs.readFileSync(APP.file, 'utf8');

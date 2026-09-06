@@ -59,6 +59,21 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
+/*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
+ *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
+ *  מה שכבר אינו: ⛔ המרשם שם הוא המקור, וכאן קוראים ממנו לפי סמן הפתיחה. */
+function capsBlock(startMark) {
+  const caps = readFileSync(new URL('./check-capabilities.mjs', import.meta.url), 'utf8');
+  const re = /block:\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(caps)) !== null) {
+    const s = /start:\s*'([^']*)'/.exec(m[1]);
+    if (!s || s[1] !== startMark) continue;
+    return { sha: (/sha:\s*'([0-9a-f]{16})'/.exec(m[1]) || [])[1] || '',
+             lines: Number((/lines:\s*(\d+)/.exec(m[1]) || [])[1]) || 0 };
+  }
+  return { sha: '', lines: 0 };
+}
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
@@ -76,7 +91,7 @@ const ei = lines.findIndex(l => l.includes(END));
 assert(si >= 0 && ei > si, 'מודול החלון החם קיים ב-index.html');
 const MOD = lines.slice(si, ei + 1).join('\n');
 const sha = crypto.createHash('sha256').update(MOD).digest('hex').slice(0, 16);
-assert(sha === '9fc74d037262999f', 'חתימת המודול תואמת (' + sha + ')');
+assert(sha === capsBlock(START).sha, 'חתימת המודול תואמת (' + sha + ')');
 
 /* רתמה: מריצה את המודול בהקשר נקי עם ספק-פיקסטורה. */
 function harness(modSrc, opts) {
