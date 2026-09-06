@@ -412,18 +412,58 @@ t(!capsFails((doc) => {
 {
   const CAPS = 'tools/check-capabilities.mjs';
   const caps = rd(CAPS);
-  t(runGateOn({ [CAPS]: caps.replace(/keyMaps: \[/, "keyMaps: ['mergeNothing', ") },
+  t(runGateOn({ [CAPS]: caps.replace(/mergePoints: \[/, "mergePoints: ['mergeNothing', ") },
               'check-capabilities.mjs', () => ({})),
-    'מ24 · הצהרת מיזוג-מפה בלי אתר בפועל **מפילה** את «מחיקת מפתח בערך משותף»');
+    'מ24 · הצהרת נקודת-מיזוג בלי אתר בפועל **מפילה** את «מיזוג מכל»');
   /*  ⭐ מוטציית-נגד: שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ אינו מפיל —
    *  ⚠️ המנגנון לא נגע, ⭐ ורק השם השתנה. */
   t(!runGateOn({ [CAPS]: caps
-      .replace('function keyMergeGaps() {\n  const found = keyMapMerges();',
-               'function keyMergeGaps() {\n  const hits = keyMapMerges();')
-      .replace('for (const f of found) {', 'for (const f of hits) {')
-      .replace('if (!found.some(', 'if (!hits.some(') },
+      .replace('const maps = keyMapMerges();', 'const found = keyMapMerges();')
+      .replace('for (const f of maps) {', 'for (const f of found) {')
+      .replace('const found = maps.concat(pairs);', 'const all = found.concat(pairs);')
+      .replace('if (!found.some((f) => f.name === n))', 'if (!all.some((f) => f.name === n))') },
               'check-capabilities.mjs', () => ({})),
     'נ15 · ⭐ שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ **אינו** מפיל');
+  /*  ⛔ מוטציה: זוג-רשומה שמעתיק את שדות הבסיס בלבד (סבב 99) — ⚠️ בדיוק
+   *  המנוע שהוחלף: ⭐ הטענה שנופלת היא «מיזוג מכל».
+   *  ⛔ **והזוג מוזרק ומוצהר** ⛔ ולא נחתך מהקיים — ⚠️ בשתיים מהארבע אין
+   *  זוג כזה כלל, ⭐ ומוטציה שנשענת עליו לא הייתה רצה שם. */
+  {
+    const SRC = 'index.html', CAP = 'tools/check-capabilities.mjs';
+    const stubs = 'function recTsX(r) { return (r && r.updatedAt) || 0; }\n' +
+      'function mergeItemsX(a, b) { return (a || []).concat(b || []); }\n';
+    const exp = 'window.zzPair = zzPair; window.recTsX = recTsX; window.mergeItemsX = mergeItemsX;\n';
+    const head = stubs + 'function zzPair(loc, rem, k, pend) {\n' +
+      '  var base = pend || recTsX(loc) > recTsX(rem) ? loc : rem;\n' +
+      '  var out = {};\n' +
+      '  Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });\n';
+    const tail = '  return out;\n}\n' + exp;
+    /*  ⛔ ההזרקה נכנסת **לתוך בלוק הסקריפט הקיים** ⛔ ולא כבלוק שני —
+     *  ⚠️ הנימוק המדוד: בלוק `<script>` נוסף הסיט את חילוץ הקוד הפרטי,
+     *  ⭐ והשער נפל על «פונקציית העלייה לא נמצאה»: ⛔ מוטציה שמפילה טענה
+     *  אחרת אינה אכיפה. */
+    const inject = (body) => {
+      const app = rd(SRC), at = app.lastIndexOf('</script>');
+      return app.slice(0, at) + head + body + tail + app.slice(at);
+    };
+    const declare = rd(CAP).replace(/mergePoints: \[/, "mergePoints: ['zzPair', ");
+    /*  ⛔ שורה שסימונה ⭕ אינה מריצה את ה-probe כלל — ⚠️ ולכן אין בה מה
+     *  למוטט, ⭐ והדילוג נושא נימוק ⛔ ואינו שקט: ⚠️ מספר השורה נגזר משמה
+     *  ⛔ ואינו מוקלד, ⭐ והחריגה נקראת מרשימת ההחרגה שבשער. */
+    const rowNo = Number((/^\|\s*(\d+)\s*\|\s*מיזוג מכל/m.exec(DOC) || [])[1]);
+    const gaps = ((/gapRows: \[([^\]]*)\]/.exec(rd(CAP)) || [, ''])[1].match(/\d+/g) || []).map(Number);
+    if (gaps.includes(rowNo)) {
+      t(true, `מ25 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
+    } else {
+      t(runGateOn({ [SRC]: inject(''), [CAP]: declare }, 'check-capabilities.mjs', () => ({})),
+        'מ25 · זוג-רשומה שמעתיק את שדות הבסיס בלבד **מפיל** את «מיזוג מכל»');
+    }
+    /*  ⭐ מוטציית-נגד: אותו זוג בדיוק, ⛔ עם שדה אחד שממוזג פר-פריט
+     *  ונכתב לרשומה היוצאת — ⚠️ שינוי חי שאסור לו להפיל. */
+    t(!runGateOn({ [SRC]: inject('  out.items = mergeItemsX(loc.items, rem.items);\n'), [CAP]: declare },
+                 'check-capabilities.mjs', () => ({})),
+      'נ16 · ⭐ אותו זוג עם שדה שממוזג פר-פריט ⛔ **אינו** מפיל');
+  }
 }
 
 /*  ⛔ מוטציה: קריאת רתמה שהוזזה מעל סוגר הריצה הפנימית (סבב 74ב) —
