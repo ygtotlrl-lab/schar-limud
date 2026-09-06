@@ -3109,16 +3109,14 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
    יש לה `client_id` ואין לה `id` (הוא SERIAL שהמסד מקצה), והיא נתפרת לשורה
    שחזרה מהענן לפי ה-`client_id`.
 
-   ⚠️ **המכשיר חותם `updated_at` בעצמו** ביצירה ובעדכון. בלי זה רשומה שנוצרה
-   אופליין הייתה נושאת את חותמת **ההגעה לשרת** ולא את חותמת העריכה, והמיזוג
-   היה מעדיף תמיד את מי שהגיע ראשון לשרת על פני מי שערך אחרון.
-   הטריגר בצד השרת (`sl_transactions_touch`/`sl_students_touch`) דורס את
-   החותמת ב-UPDATE — וזה בסדר, **כי דוחפים רק שורות שכבר ניצחו במיזוג**.
-   שורה מקומית שהפסידה אינה נדחפת כלל, ולכן לעולם אינה מפעילה את הטריגר.
+   ⚠️ **המכשיר חותם `updated_at` בעצמו** ביצירה ובעדכון — ⭐ `Date.now()`
+   במילישניות. ⛔ בלי זה רשומה שנוצרה אופליין הייתה נושאת את חותמת **ההגעה
+   לשרת** ולא את חותמת העריכה, והמיזוג היה מעדיף תמיד את מי שהגיע ראשון
+   לשרת על פני מי שערך אחרון.
 
    ⚠️ **`sl_settings` ו-`sl_lists` — נכנסו לשכבה במלואן (migrations/009).**
    עד 009 הן היו ממורות לקריאה בלבד: 008 נתנה `updated_at` לשתי טבלאות
-   הליבה בלבד, ובלי חותמת אין במה להשוות. 009 נותנת להן `updated_at`+טריגר,
+   הליבה בלבד, ובלי חותמת אין במה להשוות. 009 נותנת להן `updated_at`,
    `client_id` עם אינדקס ייחודי **מלא**, ו-tombstones ל-`sl_lists` — ולכן
    הן ממוזגות, נדחפות ונכתבות מקומית בדיוק כמו השתיים האחרות.
    **החריג היחיד שנשאר: `admin_pass`** — שריד של שער ההגדרות שבוטל בסבב
@@ -3145,6 +3143,8 @@ var SL_COLS = {
 var MIRROR = { students: [], transactions: [], settings: [], lists: [] };
 var _slLastPullOk = 0;
 
+// ⛔ `slNow` היא חותמת ה-**מחיקה** (`deleted_at`), ⚠️ והיא נשארת ISO —
+// ⛔ ואינה חותמת המיזוג: ⭐ `updated_at` הוא `Date.now()` במילישניות.
 function slNow() { return new Date().toISOString(); }
 // מפתח הזהות. `client_id` כשקיים — הוא נוצר במכשיר ושורד את המסע לשרת;
 // `id` הוא נפילה-חזרה לרשומות היסטוריות שקדמו ל-migrations/006.
@@ -3163,7 +3163,7 @@ function slKeyOf(m, r) {
   return slKey(r);
 }
 function slTs(r) {
-  var x = r && r.updated_at ? Date.parse(r.updated_at) : NaN;
+  var x = r && r.updated_at != null ? Number(r.updated_at) : NaN;
   return isFinite(x) ? x : 0;
 }
 // מנוע המיזוג. הענן הוא בסיס הסדר ומנצח בשוויון (דטרמיניסטי — שני מכשירים
@@ -3171,11 +3171,9 @@ function slTs(r) {
 // היא עשויה להיות כתיבה מקומית שטרם עלתה.
 //
 // ⚠️ **`isPending` — רשומה מקומית שטרם אושרה בענן מנצחת ללא תלות בחותמת.**
-// זו לא החמרה תיאורטית אלא תיקון לאובדן נתונים אמיתי: הטריגר בצד השרת
-// (`sl_transactions_touch`) דורס את `updated_at` ב-**NOW()** בכל UPDATE.
-// המשמעות — ברגע שמכשיר א' דוחף את העריכה שלו, השורה בענן מקבלת חותמת
-// מאוחרת יותר מעריכה **חדשה יותר** שיושבת אצל מכשיר ב' וטרם עלתה. בלי
-// הכלל הזה מכשיר ב' היה מאמץ את גרסת א' והעריכה שלו הייתה נעלמת בשקט.
+// ⛔ אין להסיר את הסעיף — ⚠️ חותמת שווה בין שני מכשירים אינה תיאורטית,
+// ⭐ והיא נופלת לענף «הענן מנצח בשוויון»: ⛔ רשומה מקומית שלא אושרה הייתה
+// נדרסת בגרסה שמעולם לא ראתה את העריכה, והעריכה נעלמת בשקט.
 // המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
 // יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
 // שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
@@ -3467,7 +3465,7 @@ var SL_USERS_KEY = 'sl_mirror_users';
 // 22–23; כאן העמודה לא הייתה קיימת כלל — לא בטבלה ולא במראה.
 // ⭐ ומסבב 63 היא קיימת בטבלה (`not null default true`), ולכן
 // הפיגום שהשלים אותה ב-`slUserPub` הוסר — ר' ההערה שם.
-var SL_USER_COLS = ['id', 'username', 'pass_salt', 'pass_fp', 'role', 'active'];
+var SL_USER_COLS = ['client_id', 'username', 'pass_salt', 'pass_fp', 'role', 'active'];
 var SL_USERS = [];
 var SL_PASS_ITER_USER = 100000;
 // המלח הנשמר הוא אקראי פר-משתמש; הקידומת מוסיפה הפרדת-הקשר, כך שטבלה
@@ -3634,21 +3632,73 @@ async function slPullUsers() {
 /* ══════════════════════════════════════════════════════════════════════════
    כתיבת משתמש — נקודת המעבר האחת אל טבלת המשתמשים
    ══════════════════════════════════════════════════════════════════════════ */
-/* ─────────────────────── כתיבת משתמש — הפונקציה האחת ─────────────────────
+/*  ⛔ הדבר היחיד שנבדל בין שלוש האפליקציות שיש בהן כניסה — ⚠️ הלקוח,
+ *  שם הטבלה, הודעת הניתוק, ומה נעשה **אחרי** שהתשובה חזרה: ⭐ הכתיבה
+ *  עצמה זהה בית-לבית. */
+var USER_CFG = {
+  ready: function () { return !!SB && navigator.onLine; },
+  /*  ⛔ ההודעה נקראת בזמן הקריאה ⛔ ולא בזמן ההשמה — ⚠️ הקבוע מוצהר
+   *  במקום אחר בקובץ בכל אפליקציה, ⭐ וקריאה בהשמה נותנת `undefined`
+   *  באחת מהן בשקט. */
+  offMsg: function () { return MSG_OFFLINE; },
+  from: function () { return SB.from('sl_users'); },
+  run: function (q) { return withTimeout(q); },
+  /*  ⛔ אין כאן נפילה-חזרה על עמודות הטביעה — ⚠️ הן קיימות בטבלה מאז
+   *  `013`, ⭐ ואין באפליקציה הזו מסך שיוצר משתמש: ⛔ הכרזה על נפילה-חזרה
+   *  שאין לה מקרה בפועל היא הצהרה שאיש אינו יכול לאמת. */
+  missingFp: function () { return false; },
+  after: function (res) { return res; }
+};
+
+/* ═══ כתיבת משתמש — מודול משותף (סבב 103) ═════════════════════════════════
+   ⛔ שינוי כאן — שלוש האפליקציות שיש בהן כניסה **ושלושת עותקי השער**,
+      באותו סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשניים.
    ⛔ **כל כתיבה לטבלת המשתמשים עוברת כאן** — ⚠️ הטבלה אינה ב-`PUSH_TABLES`,
-   ⭐ שהמראה המקומית מחזיקה טביעות ולא סיסמאות: ⛔ דחיפה גורפת שלה הייתה
-   כותבת סיסמה ריקה לכל המשתמשים.
-   ⛔ **והכתיבה דורשת רשת** — ⚠️ אין רשת ⇒ נכשל ברעש ⛔ ולא «נשמר»: ⭐ מה
-   שאינו נדחף לא יעלה לענן בשום מסלול אחר.
-   ⚠️ אין כאן מסך ניהול משתמשים — ⛔ ולכן אין מסלול יצירה: ⭐ המשתמש נוצר
-   בידי המנהל, והכתיבה היחידה מכאן היא השלמת הטביעה. */
-async function writeUser(id, obj) {
-  return await withTimeout(SB.from('sl_users').update(obj).eq('id', id));
+      ⭐ שהמראה המקומית מסירה ממנה את הסוד: ⛔ דחיפה גורפת שלה הייתה כותבת
+      אותו חזרה ריק לכל המשתמשים.
+   ⛔ **והכתיבה דורשת רשת** — ⚠️ אין רשת ⇒ נדחה ברעש ⛔ ולא «נשמר»: ⭐ מה
+      שאינו נכתב כאן אינו עולה לענן בשום מסלול אחר.
+   ⛔ **`upsert` ליצירה, `update` לעריכה, ⛔ ואין להחליף ביניהם** — ⚠️ שדות
+      החובה נבדקים על השורה המועמדת **לפני** ש-`ON CONFLICT` מופעל, ⭐ ולכן
+      `upsert` עם אובייקט חלקי נופל על `not null` במקום לעדכן. ⚠️ וביצירה
+      השורה מלאה **והמזהה נוצר במכשיר**, ⛔ ולכן ניסיון חוזר אחרי תשובה
+      שאבדה ברשת מעדכן ⛔ ואינו מכפיל.
+   ⛔ **והתשובה מוחזרת ⛔ ואינה נזרקת** — ⚠️ supabase-js אינו זורק בכשל,
+      ⭐ ו-`USER_CFG.after` הוא שמכריע מה נעשה ב-`res.error`. */
+function _writeUserSend(body, key) {
+  var q = key == null
+    ? USER_CFG.from().upsert(body, { onConflict: 'client_id' })
+    : USER_CFG.from().update(body).eq('client_id', key);
+  /*  ⛔ `.select()` בשני המסלולים — ⚠️ הקורא צריך את השורה **כפי שנשמרה**
+   *  ולא כפי שנשלחה: ⭐ בלעדיה המטמון נכתב מהמטען, ⛔ ועמודה שהמסד מילא
+   *  אינה מגיעה אליו לעולם. */
+  return USER_CFG.run(q.select());
 }
+
+function writeUser(id, row) {
+  if (!USER_CFG.ready()) return Promise.reject(new Error(USER_CFG.offMsg()));
+  var key = (id == null || id === '') ? null : String(id);
+  var body = Object.assign({}, row);
+  body.updated_at = Date.now();
+  body.client_id = (key == null) ? (body.client_id || newClientId()) : key;
+  return _writeUserSend(body, key).then(function (res) {
+    /*  ⛔ נפילה-חזרה לחלון שבין דחיפת הקוד להרצת המיגרציה — ⚠️ בלעדיה
+     *  **כל** שמירת משתמש נכשלת עד שהעמודות ייווצרו: ⭐ המשתמש נשמר,
+     *  והכניסה האופליין שלו תיפתח בשינוי הסיסמה הבא. */
+    if (!(res && res.error && USER_CFG.missingFp(res.error))) return res;
+    var b2 = Object.assign({}, body);
+    delete b2.pass_salt; delete b2.pass_fp;
+    return _writeUserSend(b2, key).then(function (r) {
+      if (r && !r.error) r._noFp = true;
+      return r;
+    });
+  }).then(function (res) { return USER_CFG.after(res, body); });
+}
+/* ═══════════════ סוף מודול כתיבת משתמש ══════════════════════════════════ */
 
 async function slEnsurePassFp(u, pass) {
   try {
-    if (!u || u.id == null || !navigator.onLine) return false;
+    if (!u || u.client_id == null || !navigator.onLine) return false;
     var cur = null;
     if (u.pass_salt && u.pass_fp) {
       cur = await slPassFp(pass, u.pass_salt);
@@ -3664,7 +3714,7 @@ async function slEnsurePassFp(u, pass) {
       if (!made) return false;                  // אין מה לאפס — דילוג שקט
       body = { pass_salt: made.salt, pass_fp: made.fp };
     }
-    var r = await writeUser(u.id, body);
+    var r = await writeUser(u.client_id, body);
     if (r && r.error) { console.warn('[pass-fp] עדכון נכשל', r.error.message); return false; }
     u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
     // ⛔ הטביעה החדשה יורדת למראה באותו רגע (סבב 79) — ⚠️ בלי זה כניסה
@@ -3743,7 +3793,7 @@ function slLocalWrite(tbl, row) {
   if (!m) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
   // ⛔ שורת סוד לעולם לא נכתבת מקומית (סבב 13) — ראה הפרק שמעל.
   if (m === 'settings' && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
-  row.updated_at = slNow();               // ⚠️ חותמת המכשיר — ראה ההערה בראש
+  row.updated_at = Date.now();            // ⚠️ חותמת המכשיר — ראה ההערה בראש
   var k = slKeyOf(m, row), arr = MIRROR[m] || (MIRROR[m] = []), hit = false;
   for (var i = 0; i < arr.length; i++) {
     if (slKeyOf(m, arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
@@ -3804,10 +3854,9 @@ async function slSendRows(tbl, rows) {
 }
 
 // מה צריך לעלות: רשומה מקומית שאין לה מקבילה בענן, שהיא חדשה ממנה, **או
-// שהיא עדיין מסומנת ⏳**. הסעיף השלישי אינו ייתור: הטריגר בצד השרת דורס את
-// `updated_at` ב-NOW() בכל UPDATE, ולכן רשומה שמכשיר אחר דחף נראית "חדשה"
-// מעריכה מקומית שטרם עלתה. בלי הסעיף הזה העריכה המקומית הייתה נשארת
-// מסומנת ⏳ לנצח ולעולם לא נדחפת — ר' ההערה ב-slMerge.
+// שהיא עדיין מסומנת ⏳**. ⛔ אין להסיר את הסעיף השלישי — ⚠️ שתי הראשונות
+// משוות חותמות, ⭐ ובחותמת שווה שתיהן שקטות: הרשומה הייתה נשארת מסומנת ⏳
+// לנצח ולעולם לא נדחפת — ר' ההערה ב-slMerge.
 function slDirtyRows(m, remoteByKey, isPending) {
   var out = [];
   (MIRROR[m] || []).forEach(function (l) {
@@ -4147,7 +4196,7 @@ async function doLogin(){
     if(!r.data){
       // טבלה ריקה ⇒ אין כאן סיסמה שגויה אלא התקנה שטרם נוצר בה משתמש.
       // (מאז סבב 24 אין משתמש ברירת מחדל בסכימה — ר' 000_initial_schema.)
-      var any=await SB.from('sl_users').select('id').limit(1);
+      var any=await SB.from('sl_users').select('client_id').limit(1);
       showAuthErr((any&&!any.error&&Array.isArray(any.data)&&!any.data.length)?MSG_NO_USERS:MSG_BAD_LOGIN);
       return;
     }

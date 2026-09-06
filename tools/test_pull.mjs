@@ -137,8 +137,12 @@ function calls(fn) { return (codeOutside.match(new RegExp('\\b' + fn + '\\s*\\('
 if (calls('plBoot') === 1) pass('7. `plBoot()` נקראת פעם אחת בלבד מקוד האפליקציה');
 else fail(`7. \`plBoot()\` נקראת ${calls('plBoot')} פעמים — נקודת ההפעלה חייבת להיות אחת`);
 
+/*  ⛔ הגוף נחתך בהתאמת סוגריים — ⚠️ **גם לאובייקט תצורה ולא רק לפונקציה**:
+ *  ⭐ מסלול הכתיבה הוא לעיתים ווו שיושב באובייקט המוצהר, ⛔ וביטוי שמכיר
+ *  `function X(` בלבד מחזיר מחרוזת ריקה ומפיל טענה על קוד תקין. */
 function fnBody(text, name) {
-  const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(text);
+  const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(|\\bvar\\s+' +
+                       name + '\\s*=\\s*\\{').exec(text);
   if (!m) return '';
   let i = text.indexOf('{', m.index), d = 0;
   for (let j = i; j < text.length; j++) {
