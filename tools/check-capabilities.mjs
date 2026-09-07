@@ -544,6 +544,17 @@ const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'stale
  *  ⭐ וזה בדיוק «probe שאינו יכול להיכשל»: ⛔ הקריאה מהדיסק נשארת, ⚠️ ורק
  *  העיבוד שמעליה נחסך. */
 const _MEMO = (globalThis.__capMemo ||= new Map());
+/*  ⛔ קריאה אחת לקובץ בכל ייבוא (סבב 104) — ⚠️ נמדד: ייבוא **אחד** קרא
+ *  688 קבצים ו-19MB, ⭐ ומהם `CLAUDE.md` 93 פעם: ⛔ אותו קובץ בדיוק,
+ *  באותו מעבר. ⚠️ **והמטמון חי בייבוא ⛔ ואינו חוצה אותו** — ⭐ הוא נולד
+ *  עם המודול ומת איתו: ⛔ מוטציה שכותבת בין ייבוא לייבוא נקראת מחדש,
+ *  ⚠️ ולכן זה אינו מזכר שמחזיר גזירה ישנה. */
+const _READ = new Map();
+function readOnce(f) {
+  const k = String(f);
+  if (!_READ.has(k)) _READ.set(k, fs.readFileSync(k, 'utf8'));
+  return _READ.get(k);
+}
 /*  ⛔ חתימת נכסי האייקון — ⚠️ שם הקובץ **וגם** תוכנו: ⭐ נכס שהוחלף בנכס
  *  אחר באותו גודל היה עובר על חתימה שסופרת גדלים בלבד, ⛔ ונכס שנוסף או
  *  שירד משנה את הרשימה. */
@@ -569,7 +580,7 @@ function memoByHash(ns, text, fn) {
   return v;
 }
 
-const src = fs.readFileSync(APP.file, 'utf8');
+const src = readOnce(APP.file);
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
 const pass = (m) => console.log('✅ ' + m);
@@ -590,7 +601,7 @@ function grab(spec) {
   return { at: i, text: text.slice(i, k + 2), external: !!spec.file };
 }
 function readSafe(p) {
-  try { return fs.readFileSync(p, 'utf8'); } catch (e) { return ''; }
+  try { return readOnce(p); } catch (e) { return ''; }
 }
 
 /*  ⚠️ הסריקה נעשית על **קוד בלבד** (סבב 30, השלמה) — הערות, מחרוזות
@@ -829,7 +840,7 @@ for (const key of Object.keys(CAPS)) {
 
 function tableRowNumbers() {
   if (!fs.existsSync(APP.docs)) return [];
-  const ls = fs.readFileSync(APP.docs, 'utf8').split('\n');
+  const ls = readOnce(APP.docs).split('\n');
   const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
   const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
   if (a < 0 || b < 0) return [];
@@ -838,7 +849,7 @@ function tableRowNumbers() {
 
 function tableRow(row) {
   if (!fs.existsSync(APP.docs)) return null;
-  const ls = fs.readFileSync(APP.docs, 'utf8').split('\n');
+  const ls = readOnce(APP.docs).split('\n');
   /*  ⛔ אין לסרוק את הקובץ כולו (סבב 69) — ⚠️ פרק סבב
    *  מחזיק טבלאות ממוספרות משלו, וחיפוש גלובלי היה מוצא «| 3 |» שלהן. */
   const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
@@ -903,7 +914,7 @@ function javaSrc() {
     for (const e of ents) {
       const f = d + '/' + e.name;
       if (e.isDirectory()) walk(f);
-      else if (e.name.endsWith('.java')) { try { out += fs.readFileSync(f, 'utf8') + '\n'; } catch (e2) {} }
+      else if (e.name.endsWith('.java')) { try { out += readOnce(f) + '\n'; } catch (e2) {} }
     }
   };
   walk(root);
@@ -931,7 +942,7 @@ function sqlDeletesEntity() {
   if (!fs.existsSync(d)) return [];
   const out = [];
   for (const f of fs.readdirSync(d).filter((x) => x.endsWith('.sql'))) {
-    const t = fs.readFileSync(`${d}/${f}`, 'utf8').replace(/--[^\r\n]+/g, '');
+    const t = readOnce(`${d}/${f}`).replace(/--[^\r\n]+/g, '');
     for (const m of t.matchAll(/\bDELETE\s+FROM\s+([\w.]+)/gi))
       if (!BACKUP_TABLE.test(m[1]) && !LEGACY_KV_TABLE.test(m[1])) out.push(`${f}:${m[1]}`);
   }
@@ -1043,7 +1054,7 @@ function legacyFlagsOn() {
 }
 
 function fileHas(p, re) {
-  try { return re.test(fs.readFileSync(p, 'utf8')); } catch (e) { return false; }
+  try { return re.test(readOnce(p)); } catch (e) { return false; }
 }
 function fnBody(name) {
   const r = fnRange(name);
@@ -1226,7 +1237,7 @@ function checkerSet() {
 function checkerMissions() {
   try {
     return SHARED_CHECKERS.every((f) => {
-      const b = fs.readFileSync(`tools/${f}`, 'utf8').split('*/')[0];
+      const b = readOnce(`tools/${f}`).split('*/')[0];
       const m = /⭐ משימת הבודק:([\s\S]*?)(?:\n \*\n|$)/.exec(b);
       return !!m && /סורק/.test(m[1]) && /⛔ ומפיל/.test(m[1]);
     });
@@ -1302,7 +1313,7 @@ const ROW_LITERAL = /\bROW_[A-Z_]*\s*=\s*\d|tableRow\(\s*\d|rowOf\(\s*\d|\.?\bro
 function typedRowSites() {
   const out = [];
   for (const f of fs.readdirSync('tools').filter((x) => x.endsWith('.mjs'))) {
-    let t = fs.readFileSync('tools/' + f, 'utf8');
+    let t = readOnce('tools/' + f);
     for (const re of ROW_REGISTRIES) t = t.replace(re, '');
     t.split('\n').forEach((l, i) => {
       /*  ⚠️ שורת הערה אינה לוגיקה — ⛔ והיא נחתכת לפני הסריקה. */
@@ -1366,11 +1377,18 @@ const srcRefs = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm
 const DEF_RE = '(?:export\\s+)?(?:async\\s+)?function\\s+';
 const bound = (s) => new RegExp('(?<![\\w$])' + s + '(?![\\w$])', 'g');
 const escName = (s) => s.replace(/\$/g, '\\$');
+/*  ⛔ ההלבנה ממוזכרת בחתימת התוכן (סבב 104) — ⚠️ `test_matrix` מייבא את
+ *  הקובץ הזה עשרות פעמים בתהליך אחד, ⭐ ובכל ייבוא הלבין מחדש את **כל**
+ *  קובצי השער: ⛔ נמדד שזו הגזירה היקרה ביותר שנותרה. ⚠️ **והמפתח הוא
+ *  התוכן** ⛔ ולא שם הקובץ — ⭐ קובץ שהשתנה בין ייבוא לייבוא מקבל מפתח
+ *  אחר, ⛔ והקריאה מהדיסק נשארת. */
 function gateCode(f) {
-  const t = fs.readFileSync('tools/' + f, 'utf8');
-  const o = new Array(t.length).fill(' ');
-  scanJs(t, 0, t.length, o);
-  return o.join('');
+  const t = readOnce('tools/' + f);
+  return memoByHash('gateCode', t, () => {
+    const o = new Array(t.length).fill(' ');
+    scanJs(t, 0, t.length, o);
+    return o.join('');
+  });
 }
 function orphanGateFns() {
   let files = [];
@@ -1538,7 +1556,7 @@ function declaredTables() {
   for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
     /*  ⛔ הערה נחתכת גם באמצע שורה — ⚠️ `deleted boolean, -- הערה` הותיר את
         `deleted` מחוץ למדידה, ⭐ והטבלה נראתה תקינה מפני שלא נסרקה. */
-    const sql = fs.readFileSync('migrations/' + f, 'utf8').replace(/--[^\n]*/g, ' ');
+    const sql = readOnce('migrations/' + f).replace(/--[^\n]*/g, ' ');
     for (const m of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_0-9]+)\s*\(([\s\S]*?)\n?\s*\)\s*;/gi)) {
       const cols = tabs.get(m[1]) || new Map();
       /*  ⛔ הפיצול הוא בפסיק **בעומק אפס** ⛔ ולא שורה-שורה ולא בכל פסיק —
@@ -1577,7 +1595,7 @@ function declaredTables() {
 function touchedTables() {
   const on = new Set();
   for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
-    const sql = fs.readFileSync('migrations/' + f, 'utf8').replace(/--[^\n]*/g, ' ');
+    const sql = readOnce('migrations/' + f).replace(/--[^\n]*/g, ' ');
     for (const m of sql.matchAll(/create\s+trigger\s+[a-z_0-9]+\s[\s\S]{0,200}?\son\s+(?:public\.)?([a-z_0-9]+)/gi))
       on.add(m[1]);
     for (const blk of sql.matchAll(/do\s+\$\$[\s\S]*?\$\$/gi)) {
@@ -1622,7 +1640,7 @@ const MIG_BANNER = /^-- ={40,}\n-- \S+\.sql — \S[^\n]*\n-- ={40,}\n--\n-- ⛔/
 function migContentGaps() {
   const out = [];
   for (const f of fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort()) {
-    const raw = fs.readFileSync('migrations/' + f, 'utf8');
+    const raw = readOnce('migrations/' + f);
     const sql = raw.replace(/--[^\n]*/g, ' ');
     if (!MIG_BANNER.test(raw)) out.push(`${f}: אין באנר תקני בראש`);
     if (/create\s+table\s+(?!if\s+not\s+exists)/i.test(sql)) out.push(`${f}: create table בלי if not exists`);
@@ -1647,7 +1665,7 @@ const MIG_MAX_LINES = 250;
 function migLineGaps() {
   const files = fs.readdirSync('migrations').filter((x) => x.endsWith('.sql')).sort();
   return files.slice(1).filter((f) =>
-    fs.readFileSync('migrations/' + f, 'utf8').split('\n').length - 1 > MIG_MAX_LINES);
+    readOnce('migrations/' + f).split('\n').length - 1 > MIG_MAX_LINES);
 }
 
 /*  שורות המטריצה. `probe` מחזירה true כשהיכולת **קיימת בפועל**.
@@ -1664,7 +1682,7 @@ const GEN_SS = 8;
  *  ה-tombstone בימים, וסף הפינוי היזום. */
 const TOMB_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const LS_SWEEP_PCT = 0.60;
-const genSrc = () => fs.readFileSync('tools/gen-icons.mjs', 'utf8');
+const genSrc = () => readOnce('tools/gen-icons.mjs');
 
 /*  ⛔ מיון מקומי של רשומות — ⚠️ `.sort(` שהמשווה שלו נוגע באחד משדות
  *  הסדר של הישות, **מחוץ** לנקודת המיון שמוצהרת ב-`APP.sortFn`: ⭐ המסך
@@ -2070,15 +2088,15 @@ function exportWayGaps() {
 function shellIsWebView() {
   const man = 'android/app/src/main/AndroidManifest.xml';
   if (!hasPath(man)) return false;
-  const xml = fs.readFileSync(man, 'utf8');
+  const xml = readOnce(man);
   if (!/android:name="\.MainActivity"/.test(xml)) return false;
   if (!/android\.intent\.category\.LAUNCHER/.test(xml)) return false;
   let main = '', shell = '';
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const p = d + '/' + e.name;
     if (e.isDirectory()) walk(p);
-    else if (e.name === 'MainActivity.java')  main  = fs.readFileSync(p, 'utf8');
-    else if (e.name === 'ShellActivity.java') shell = fs.readFileSync(p, 'utf8'); } };
+    else if (e.name === 'MainActivity.java')  main  = readOnce(p);
+    else if (e.name === 'ShellActivity.java') shell = readOnce(p); } };
   try { walk('android/app/src/main/java'); } catch (e) { return false; }
   if (!/extends\s+ShellActivity/.test(main)) return false;
   if (!/\bnew\s+WebView\s*\(/.test(shell) && !/\bWebView\b/.test(shell)) return false;
@@ -2105,7 +2123,7 @@ function keystoreFixed() {
  *  בהערות הסבר, ⭐ וספירה גולמית מדווחת פער על קובץ תקין. */
 function schemaSql() {
   if (!hasPath(APP.schemaFile)) return null;
-  return fs.readFileSync(APP.schemaFile, 'utf8').replace(/--[^\n]*/g, '');
+  return readOnce(APP.schemaFile).replace(/--[^\n]*/g, '');
 }
 function schemaSingleSource() {
   const sql = schemaSql();
@@ -2678,7 +2696,7 @@ function staleNoteSites() {
   files.push('CLAUDE.md');
   for (const f of files) {
     let t = '';
-    try { t = fs.readFileSync(f, 'utf8'); } catch (e) { continue; }
+    try { t = readOnce(f); } catch (e) { continue; }
     for (const mark of STALE_MARKS)
       if (t.includes(mark)) out.push(`${f}: «${mark}»`);
     out.push(...staleBpNotes(t, f));
@@ -3045,7 +3063,7 @@ const MATRIX = [
     probe: () => {
       const p = 'tools/test_passwords.mjs';
       if (!hasPath(p)) return false;
-      const t = fs.readFileSync(p, 'utf8');   /* ⚠️ נתיב יחסי, כמו `hasPath` — הבודק רץ מתיקיית הריפו */
+      const t = readOnce(p);   /* ⚠️ נתיב יחסי, כמו `hasPath` — הבודק רץ מתיקיית הריפו */
       const m = /verifyFn:\s*'(\w+)'/.exec(t);
       if (!m) return false;
       return new RegExp(m[1] + '\\s*\\(').test(code);
@@ -3061,7 +3079,7 @@ const MATRIX = [
       if (!hasPath('tools/test_build.mjs')) return false;
       const yml = '.github/workflows/build-apk.yml';
       if (!hasPath(yml)) return false;
-      const bare = fs.readFileSync(yml, 'utf8').split('\n')
+      const bare = readOnce(yml).split('\n')
         .map((l) => (/^\s*#/.test(l) ? '' : l.replace(/\s#(?![{}]).*$/, ''))).join('\n');
       return /\.\/signing\/sign-apk\.sh/.test(bare) && !/apksigner/.test(bare);
     } },
@@ -3252,7 +3270,7 @@ function clockWaitSites() {
   const out = [];
   for (const f of fs.readdirSync('tools')) {
     if (!f.endsWith('.mjs')) continue;
-    const body = fs.readFileSync('tools/' + f, 'utf8')
+    const body = readOnce('tools/' + f)
                    .replace(/async function waitFor\([\s\S]*?\n}\n/g, '');
     for (const m of body.matchAll(/await\s+new\s+Promise\([^;]{0,60}?setTimeout\(/g))
       out.push(f + ':' + body.slice(0, m.index).split('\n').length);
@@ -3407,7 +3425,7 @@ const GATES = {
    הוספה באמצע, והערה ששרדה תיקון נקראת כמצב פתוח שאינו קיים.
    ──────────────────────────────────────────────────────────────────────── */
 {
-  const ls = fs.readFileSync(APP.docs, 'utf8').split('\n');
+  const ls = readOnce(APP.docs).split('\n');
   const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
   const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
   const rows = [];
@@ -3493,7 +3511,7 @@ const GATES = {
   else pass(`טבלת התשתית — כל שורה ❌ נושאת הערה (${rows.filter((r) => r.cells.length >= 9 &&
              [4, 5, 6, 7].some((k) => r.cells[k].indexOf('❌') >= 0)).length} שורות)`);
 
-  const gapChapter = fs.readFileSync(APP.docs, 'utf8')
+  const gapChapter = readOnce(APP.docs)
     .split('\n').filter((l) => /^#{2,3}\s*.*פערים\s*(פתוחים)?\s*$/.test(l));
   if (gapChapter.length)
     fail(`פרק פערים נפרד ב-${APP.docs}: ${gapChapter.join(' · ')} — ` +
@@ -3589,7 +3607,7 @@ const GATES = {
   const declared = new Map();          // שורה → שמות השערים שהצהירו עליה
   const noDecl = [];
   for (const f of fs.readdirSync('tools').filter((x) => x.endsWith('.mjs'))) {
-    const txt = fs.readFileSync('tools/' + f, 'utf8');
+    const txt = readOnce('tools/' + f);
     const m = /^export const ROWS = \[([^\]]*)\];$/m.exec(txt);
     if (!m) { noDecl.push(f); continue; }
     for (const d of m[1].match(/\d+/g) || [])
@@ -3633,7 +3651,7 @@ const GATES = {
     `${strayRows.join(', ')} — נמדדו ${strayRows.length} והצפוי אפס. ` +
     `מיישרים את ROWS ל-GATES`);
   const named = [...new Set(refs.map((r) => r.gate).filter(Boolean))];
-  const js = fs.readFileSync('tools/check-js.mjs', 'utf8');
+  const js = readOnce('tools/check-js.mjs');
   const wired = new Set([...js.matchAll(/'([a-z_-]+)\.mjs'/g)].map((m) => m[1]));
   /*  ⛔ הרץ עצמו מחווט בהגדרה (סבב 72) — ⚠️ הוא אינו מופיע ברשימת השערים
    *  שלו, ⭐ והוא מה שמריץ את כולם. */
@@ -3658,7 +3676,7 @@ const GATES = {
     /*  ⛔ שורה שמוזגה נושאת **כמה** שמות טענה באותו שער (סבב 72) — ⚠️ «תקרה
      *  700 — 400 משותף · 300 פרטי» היא הוראה אחת ששני מנגנונים אוכפים,
      *  ⛔ ושם אחד מהם היה משאיר את השני בלי שורה שמצביעה עליו. */
-    const body = fs.readFileSync(`tools/${r.gate}.mjs`, 'utf8');
+    const body = readOnce(`tools/${r.gate}.mjs`);
     for (const c of [].concat(r.claim))
       if (!body.includes(c)) blind.push(`${r.row}: «${c}» אינו בגוף ${r.gate}`);
   }
