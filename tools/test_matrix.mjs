@@ -74,12 +74,12 @@ const ok = (msg, cond) => {
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [52, 130];
+const DB_FACT_EXEMPT = [52, 136];
 const EXEMPT = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 23, 24, 26, 27, 28, 29,
-  30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 59, 60, 63,
-  74, 78, 85, 86, 87, 88, 89, 90, 92, 93, 97, 98, 100, 101, 102, 104, 105, 107, 108, 109, 112, 114, 116, 119, 122,
-  125, 126, 128, 130, 134, 139, 140, 141, 142, 145, 146, 147, 152, 156, 158, 160, 162, 163, 165, 166, 167, 171
+  30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 60, 61, 64,
+  79, 78, 87, 88, 90, 91, 89, 92, 95, 96, 100, 101, 103, 104, 105, 107, 108, 110, 111, 112, 115, 117, 119, 122, 125,
+  128, 132, 134, 136, 140, 129, 130, 131, 145, 148, 76, 56, 152, 156, 158, 160, 162, 164, 165, 166, 167, 171
 ];
 
 function copyRepo() {
@@ -309,6 +309,94 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   await run('פריט תקין שנוסף ל-tier1',
     [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [',
       "tier1: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false);
+}
+
+
+/* ────── ⛔ שלוש טענות המבנה של הטבלה (סבב 106) ──────────────────────────────
+   ⛔ מה נאכף: הצהרת כל בלוק חתום בשורה · שם שורה שנפתח בסימן · וסדר הפנים
+   שכותרת הקטגוריה מצהירה — ⚠️ שלושתן נמדדות ב-check-capabilities,
+   ⛔ ואף אחת מהן אינה נמדדת בהיפוך תא: ⭐ ההיפוך מודד **סימון**, ⛔ והן
+   מודדות **מבנה**. ⛔ הנימוק המדוד: רכיב «מידע טכני» היה בלוק חתום שאף
+   שורה לא נקבה בו, ⛔ ושלוש שורות ישבו בקטגוריה של המנגנון שאוכף אותן.
+   ⛔ מה יישבר בלעדיו: probe שנוסף ואינו מוטט הוא probe שאיש לא הוכיח
+   שהוא מפיל. ⛔ מה אינו נאכף כאן: תוכן השלבים — ⭐ «למה שורה שייכת לשלב»
+   היא קריאת משמעות, ⚠️ והמרשם הוא מה שנמדד.
+   ⚠️ כל מוטציה נוקבת בשם הטענה שתיפול ⛔ ונבדק שהיא זו שנפלה.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const CAP3 = path.join(WORK, 'tools', 'check-capabilities.mjs');
+  const CLEAN3 = fs.readFileSync(CAP3, 'utf8');
+  const CLEAN_TXT = CLEAN_DOC.toString('utf8');
+  const outOf = async () => {
+    const lg = console.log, er = console.error, out = [];
+    console.log = (...a) => out.push(a.join(' '));
+    console.error = (...a) => out.push(a.join(' '));
+    try {
+      const mod = await import(`${CHECKER}?flip=${spin++}`);
+      return { held: mod.capFailures === 0, out };
+    } catch (e) { return { held: false, out }; }
+    finally { console.log = lg; console.error = er; }
+  };
+  const runClaim = async (label, files, mustFall, claim) => {
+    let changed = false;
+    for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
+    ok('המוטציה «' + label + '» שינתה קוד בעותק', changed);
+    const { held, out } = await outOf();
+    for (const [p, clean] of files) fs.writeFileSync(p, clean);
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את «' + claim + '»',
+       !held && out.some((l) => l.indexOf('❌') === 0 && l.indexOf(claim) >= 0));
+  };
+
+  /*  ⛔ בלוק חתום שאין לו שורה — ⚠️ ההצהרה יורדת, ⛔ והבלוק נשאר: ⭐ בדיוק
+   *  המצב שהיה עד היום, ⛔ ואיש לא ידע. */
+  await runClaim('הסרת docRows מבלוק חתום',
+    [[CAP3, CLEAN3, CLEAN3.replace(/\n    docRows: \[[^\]]*\],/, '')]],
+    true, 'בלוקים שאינם מוצהרים בטבלה');
+  /*  ⛔ שם שורה שנפתח בסימן — ⚠️ הסימן נכנס לשם ⛔ ולא לתקן. */
+  await runClaim('סימן פותח בשם שורה',
+    [[DOC_IN_WORK, CLEAN_TXT, CLEAN_TXT.replace(/^\| (\d+) \| ([^|⛔⚠️⭐])/m, '| $1 | ⛔ $2')]],
+    true, 'שמות שורה שנפתחים בסימן');
+  /*  ⭐ מוטציית-נגד לשתי הטענות בהרצה אחת — ⛔ שני השמות מוחלפים
+   *  בעקביות: ⚠️ שינוי חי ⛔ ולא הערה, ⭐ ושם הטענה שב-`GATES` נגרר איתו.
+   *  ⛔ **ושתיהן בהרצה אחת ⛔ ולא בשתיים** — ⚠️ כל הרצה כאן היא ייבוא
+   *  נוסף של הבודק, ⭐ והשער הזה יושב על המסלול הארוך של הבריכה. */
+  await runClaim('החלפת שמות blockRowGaps ו-NAME_SIGN בעקביות',
+    [[CAP3, CLEAN3, CLEAN3.replace(/blockRowGaps/g, 'blockDocGaps')
+                          .replace(/NAME_SIGN/g, 'ROW_SIGN')]], false);
+
+  /*  ⛔ שורה שהוזזה לשלב אחר — ⚠️ «אחסון מקומי» עולה לפני שורות המסך,
+   *  ⭐ והמספור נגזר מחדש: ⛔ מה שמופר הוא הסדר שהכותרת הצהירה ⛔ ולא
+   *  המספור — ⚠️ מוטציה שמשאירה מספור שבור מפילה טענה אחרת. */
+  const moved = (() => {
+    const L = CLEAN_TXT.split('\n');
+    const i = L.findIndex((l) => (l.split('|')[2] || '').trim() === 'אחסון מקומי');
+    const j = L.findIndex((l) => (l.split('|')[2] || '').trim() === 'מסך מציג מיד ומרענן ברקע');
+    if (i < 0 || j < 0 || j > i) return CLEAN_TXT;
+    const cut = L.splice(i, 1)[0];
+    L.splice(j, 0, cut);
+    let n = 0;
+    return L.map((l) => (/^\|\s*\d+\s*\|/.test(l)
+      ? l.replace(/^\|\s*\d+\s*\|/, () => { n++; return '| ' + n + ' |'; }) : l)).join('\n');
+  })();
+  await runClaim('שורה שהוזזה לשלב אחר בקטגוריה',
+    [[DOC_IN_WORK, CLEAN_TXT, moved]], true, 'סדר הפנים בקטגוריות');
+  /*  ⭐ מוטציית-נגד חיה: ⛔ שתי שורות **באותו שלב** מחליפות מקום — ⚠️ שינוי
+   *  חי בטבלה עצמה ⛔ ולא הערה: ⭐ הסדר בין שכנות בתוך שלב אינו נגזר
+   *  מהטקסט, ⚠️ ולכן החלפתן אינה מפילה. */
+  const swapped = (() => {
+    const L = CLEAN_TXT.split('\n');
+    const at = (nm) => L.findIndex((l) => (l.split('|')[2] || '').trim() === nm);
+    const i = at('מפרידי `═` ברוחב 74'), j = at('מפרידים ב-`tools`');
+    if (i < 0 || j < 0) return CLEAN_TXT;
+    const a = L[i].split('|'), b = L[j].split('|');
+    const t2 = a[2], t3 = a[3];
+    a[2] = b[2]; a[3] = b[3]; b[2] = t2; b[3] = t3;
+    L[i] = a.join('|'); L[j] = b.join('|');
+    return L.join('\n');
+  })();
+  await runClaim('החלפת מקום בין שתי שורות באותו שלב',
+    [[DOC_IN_WORK, CLEAN_TXT, swapped]], false);
 }
 
 process.chdir(ROOT);
