@@ -2310,6 +2310,16 @@ function idEq(a, b) {
 function idArg(v) {
   return "'" + String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '') + "'";
 }
+// ⛔ **נקודת המעבר האחת בין מזהה למספר** — ⚠️ והיא אינה השוואת זהות: ⭐ היא
+//    מחלצת **חותמת שנשמרה בשדה המזהה בגרסה ישנה**, מהתקופה שבה המזהה היה
+//    `Date.now()`. ⛔ ומחרוזת שאינה ספרות בלבד מחזירה 0 ⛔ ולא `NaN` —
+//    ⚠️ `NaN` בהשוואה נכשל בשקט, ⭐ ואפס הוא «אין חותמת» מוצהר.
+// ⛔ אין להמיר מזהה למספר בשום מקום אחר — הוא `text`, ⛔ ו-`parseInt` עליו
+//    מחזיר `NaN`: ⚠️ ההשוואה נכשלת בלי שאיש רואה.
+function legacyIdStamp(v) {
+  var s = String(v == null ? '' : v);
+  return /^[0-9]+$/.test(s) ? Number(s) : 0;
+}
 /* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
@@ -3204,9 +3214,14 @@ function _randDeviceId() {
 // הוא נכתב. ⛔ אין לשכפל אותה (סבב 38) — ר' הנימוק שבראש הבלוק.
 // `isPend` הוא הסימון ⏳ של הרשומה המקומית; `mergePair`, כשהוא קיים, מקבל
 // את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
+// ⛔ **⏳ שובר שוויון ⛔ ואינו גובר על חותמת חדשה יותר** — ⚠️ מכשיר א׳ ערך
+//    ב-08:00 ולא הספיק לדחוף, ב׳ ערך ב-10:00 וסנכרן, וא׳ עלה ב-14:00:
+//    ⭐ ⏳ שמנצח תמיד היה מוחק כאן את עריכת ה-10:00. ⛔ והמקרה שבו ⏳ באמת
+//    נחוץ — רשומה שאינה בענן כלל — מטופל במסלול «מפתח שאינו בענן».
 function _mergePick(loc, rem, k, isPend, tsOf, mergePair) {
   if (mergePair) return mergePair(loc, rem, k, isPend);
-  return (isPend || tsOf(loc) > tsOf(rem)) ? loc : rem;   // שוויון → הענן
+  return tsOf(loc) > tsOf(rem) ? loc
+       : (tsOf(loc) === tsOf(rem) && isPend ? loc : rem);   // שוויון → ⏳, אחרת הענן
 }
 // `opts`: getKey · ts · isPending · mergePair · keepUnversionedLocal · onDrop
 //         ובנוסף ארבע ידיות המדיניות שבראש הבלוק.
@@ -4096,6 +4111,28 @@ function toast(msg, dur, kind) {
 var LS_TOAST_MS = 5000;
 function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
+/* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ **כל קריאת ערך מספרי משדה עוברת כאן** — ⚠️ המרה ישירה מחזירה `NaN`
+      על שדה ריק, ⭐ ו-`NaN` שנכנס להשוואה נכשל בשקט: ⛔ `!val` תופס גם
+      אפס תקין, ⚠️ ו-`val > 30` על `NaN` הוא `false`.
+   ⛔ **והברירה מוצהרת בקריאה** — ⚠️ ולא נגזרת בשקט מהטיפוס: ⭐ מי שקורא
+      רואה מה הוא מקבל על שדה ריק, ⛔ ואינו מגלה זאת מהתנהגות.
+   ⛔ **והקלט הוא האלמנט** ⛔ ולא ערכו — ⚠️ אלמנט חסר הוא מסלול תקף, ⭐ והוא
+      מחזיר את הברירה: ⛔ קורא שמפרק בעצמו `el.value` מקבל `undefined`
+      ונופל לפני שהגיע לכאן.
+   ═══════════════════════════════════════════════════════════════════════ */
+function readNum(inp, dflt) {
+  var d = (dflt === undefined) ? 0 : dflt;
+  if (!inp) return d;
+  var raw = String(inp.value == null ? '' : inp.value).trim();
+  if (raw === '') return d;
+  var n = Number(raw);
+  return isFinite(n) ? n : d;
+}
+/* ═══════════════ סוף מודול קריאת ערך מספרי ══════════════════════════════ */
+
 /* ═══ כיווץ רשימת ערכים — מודול משותף (סבב 101) ═══════════════════════════
    ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה ובמיזוג
       כאחד**: ⭐ `uniqHas` מונעת את הכפילות שמכאן ואילך, ⛔ ו-`uniqList`
@@ -4146,7 +4183,9 @@ function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){d
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
 // קוד JS מורכב בתוך HTML.
 function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
-function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),parseInt(el.getAttribute('data-id')),el.getAttribute('data-label'));}
+// ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
+// ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
+function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
 function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
 function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').style.display='none';document.getElementById('auth-btn').disabled=false;}
@@ -4639,7 +4678,7 @@ function calcDistribution(sid,year){
    תשלומים — רישום, יומן ומחיקה רכה
    ══════════════════════════════════════════════════════════════════════════ */
 async function saveTxn(){
-  var sid=parseInt(document.getElementById('sd-val-student').value),date=document.getElementById('txn-date').value,amount=parseFloat(document.getElementById('txn-amount').value),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
+  var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
   // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
   // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
@@ -4657,9 +4696,9 @@ async function saveTxn(){
   schedulePush();   // בלי await: המשתמש לא ממתין לרשת
 }
 function renderTxnLog(){
-  var fid=parseInt(document.getElementById('sd-val-txnfilter').value)||0;
+  var fid=document.getElementById('sd-val-txnfilter').value||'';
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
-  if(fid)txns=txns.filter(function(t){return t.student_client_id===fid;});
+  if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
   document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,

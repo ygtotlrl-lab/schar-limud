@@ -1,11 +1,13 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** חמש טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** שמונה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
-   ⛔ וכל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/`.
+   ⛔ כל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/` ·
+   ⛔ כל טבלה מקבילה בצורת המשפחה שלה · ⛔ כל עמודה חיה נקראת בקוד או
+   מוצהרת עם נימוקה · ⛔ וכל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -31,7 +33,7 @@ import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [128, 139, 140, 141, 142, 164];
+export const ROWS = [128, 139, 140, 141, 142, 163, 165, 166];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -59,6 +61,18 @@ const APP = {
   /*  ⛔ משפחות הטבלאות המקבילות — ⚠️ **הרשימה הקנונית זהה בית-לבית
    *  בארבעת עותקי השער**, ⭐ ורק שם הטבלה נבדל: ⛔ ולכן טבלה שתואמת לה
    *  כאן תואמת גם לשלוש האחרות, ⚠️ בלי שהשער יראה את המסד שלהן. */
+  /*  ⛔ הטבלאות שהריפו הזה מחזיק — ⚠️ הן והן בלבד נסרקות לשתי טענות
+   *  השאריות: ⭐ טבלה של אחות אינה שלנו למדוד, ⛔ ועמודה שאין לה קורא
+   *  **כאן** אינה שארית אם היא נקראת שם. */
+  ownTables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists', 'sl_users'],
+  /*  ⛔ שמות עמודה שאין להם קורא **בכוונה** (סבב 104) — ⚠️ וכל אחד נושא
+   *  את נימוקו: ⭐ שלישיית המחיקה הרכה ומשפחת הטבלאות המקבילות מחייבות
+   *  את העמודה בסכימה, ⛔ גם באפליקציה שאינה כותבת אותה.
+   *  ⛔ **וההצהרה עצמה נמדדת** — ⚠️ שם שאין לו מקרה חי **מפיל**, ⭐ בדיוק
+   *  כמו כל רשימת חריגה. */
+  colNoReader: {
+    full_name:  'משפחת טבלאות המשתמשים — עמודה שאינה בשימוש כאן נשארת בסכימה',
+  },
   twinTables: {
     users:    { table: 'sl_users',
                 cols: ['client_id', 'username', 'full_name', 'role', 'active',
@@ -294,6 +308,86 @@ async function claimTwins() {
        (empty.length ? `, ${empty.length} ריקות ולא נמדדו` : ''));
 }
 
+/*  ⛔ טענה ז — «עמודה בלי קורא»: ⚠️ עמודה שקיימת במסד ואין לה קורא בקוד
+ *  היא סכימה שמתארת עולם שהשתנה. ⭐ **והחריגות מוצהרות בשמן ובנימוקן**,
+ *  ⛔ וכל שם שמוכרז ואין לו מקרה חי מפיל אף הוא.
+ *  ⛔ **הסריקה על קוד בלבד** — ⚠️ הערה שמזכירה עמודה שירדה אינה קורא. */
+async function claimColReaders() {
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  if (!tabs.length) { ok('ז. עמודה בלי קורא — אין כאן טבלה מוצהרת'); return; }
+  const codeOnly = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1 ');
+  const declared = APP.colNoReader || {};
+  const used = new Set();
+  const orphans = [];
+  const empty = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?select=*&limit=1`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) { empty.push(t); continue; }
+    for (const c of Object.keys(rows[0])) {
+      if (new RegExp('\\b' + c + '\\b').test(codeOnly)) continue;
+      if (Object.prototype.hasOwnProperty.call(declared, c)) { used.add(c); continue; }
+      orphans.push(`${t}.${c}`);
+    }
+  }
+  if (orphans.length)
+    bad(`ז. עמודה בלי קורא — ${orphans.join(', ')}. נמדדו ${orphans.length} מול הצפוי 0. ` +
+        'גורעים את העמודה במיגרציה, או מצהירים אותה ב-`APP.colNoReader` עם נימוקה');
+  /*  ⛔ ההצהרה נמדדת רק מול מדידה **שלמה** — ⚠️ שם שמוכרז יכול לחיות
+   *  בטבלה שלא נמדדה: ⭐ טבלה ריקה, או טבלה שהיעד לא החזיר: ⛔ ושיפוט
+   *  «פיקטיבי» על מדידה חלקית מפיל על סביבה ⛔ ולא על העץ. */
+  const complete = empty.length === 0 && tabs.length === (APP.ownTables || []).length;
+  const fake = complete ? Object.keys(declared).filter((c) => !used.has(c)) : [];
+  if (fake.length)
+    bad(`ז. עמודה בלי קורא — הצהרה בלי מקרה חי: ${fake.join(', ')}. נמדדו ${fake.length} מול הצפוי 0. ` +
+        'מסירים את ההצהרה — ⛔ חריגה שאין לה מקרה בפועל היא רשימה שאיש אינו מתחזק');
+  if (!orphans.length && !fake.length)
+    ok(`ז. עמודה בלי קורא — ${used.size} שמות מוצהרים עם מקרה חי` +
+       (complete ? ', וההצהרה נמדדה במלואה' : ', וההצהרה לא נשפטה — המדידה חלקית') +
+       (empty.length ? `, ${empty.length} טבלאות ריקות ולא נמדדו` : ''));
+}
+
+/*  ⛔ טענה ח — «הגדרה שהוחלפה במיגרציה מאוחרת»: ⚠️ מיגרציה שרצה אינה
+ *  נערכת ואינה נמחקת, ⭐ **והמאוחרת היא ההגדרה** — ⛔ וקוד שנשאר מטפל
+ *  בהגדרה הישנה. ⛔ **והמדידה מול המסד החי**: ⚠️ כל עמודה שהקוד נוקב
+ *  בה בשליפה מטבלה — קיימת בטבלה בפועל. ⭐ זה בדיוק מה שתופס `.id`
+ *  שאינו עוד המפתח, ⛔ ועמודת סיסמה שנגרעה. */
+async function claimReplacedDefs() {
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  if (!tabs.length) { ok('ח. הגדרה שהוחלפה — אין כאן טבלה מוצהרת'); return; }
+  const codeOnly = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1 ');
+  const live = new Map();
+  const empty = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?select=*&limit=1`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) { empty.push(t); continue; }
+    live.set(t, new Set(Object.keys(rows[0])));
+  }
+  const stale = [];
+  let checked = 0;
+  const re = /from\(\s*['"`]([a-z_0-9]+)['"`]\s*\)[\s\S]{0,300}?\.select\(\s*['"`]([^'"`]*)['"`]/g;
+  let m;
+  while ((m = re.exec(codeOnly))) {
+    const cols = live.get(m[1]);
+    if (!cols) continue;
+    for (const c of m[2].split(',').map((x) => x.trim()).filter(Boolean)) {
+      if (c === '*' || c.indexOf('(') >= 0) continue;
+      checked++;
+      if (!cols.has(c)) stale.push(`${m[1]}.${c}`);
+    }
+  }
+  if (stale.length)
+    bad(`ח. הגדרה שהוחלפה — הקוד נוקב בעמודות שאינן במסד: ${[...new Set(stale)].join(', ')}. ` +
+        `נמדדו ${stale.length} מול הצפוי 0. מסירים את הקוד שמטפל בהגדרה הישנה — ` +
+        '⛔ המיגרציה המאוחרת היא ההגדרה');
+  else
+    ok(`ח. הגדרה שהוחלפה — ${checked} עמודות שהקוד נוקב בהן, כולן קיימות במסד` +
+       (empty.length ? `, ${empty.length} טבלאות ריקות ולא נמדדו` : ''));
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
@@ -311,6 +405,8 @@ if (!CONN && !SELFTEST) {
     await claimSchema();
     await claimCfgKeys();
     await claimAllowlist();
+    await claimColReaders();
+    await claimReplacedDefs();
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -353,6 +449,13 @@ if (RUN_MUT && !SELFTEST) {
      *  הריפו מצהירים טבלאות אחרות, ⭐ ורתמה שמכירה שם אחד אינה רתמה לשלושה.
      *  ⛔ והמוטציה הופכת את **הסדר** ⛔ ולא את שמות העמודות — ⚠️ סדר הוא
      *  בדיוק מה שהטענה מוסיפה על «אותן עמודות». */
+    /*  ⛔ שני תרחישי השאריות (סבב 104) — ⚠️ שניהם עונים על `select=*`:
+     *  ⭐ `colreader` מוסיף עמודה שאין לה קורא ואינה מוצהרת, ⛔ ו-`staledef`
+     *  מחזיר שורה שאין בה אף עמודה שהקוד נוקב בה בשליפה. */
+    if (scen === 'colreader' && /select=\*/.test(url))
+      return [200, '[{"zz_orphan_col":"x"}]'];
+    if (scen === 'staledef' && /select=\*/.test(url))
+      return [200, '[{"zz":"x"}]'];
     if (/select=\*/.test(url)) {
       const sp = Object.keys(APP.twinTables || {})
         .map((k) => APP.twinTables[k]).filter(Boolean)
@@ -397,6 +500,20 @@ if (RUN_MUT && !SELFTEST) {
   });
   const at = async (s) => { scenario = s; return runSelf(`http://127.0.0.1:${port}`); };
 
+  /*  ⛔ נמדד מהמקור ⛔ ואינו מוצהר — ⚠️ ריפו שכל שליפותיו `select('*')`
+   *  אינו יכול להפיל את טענה ח, ⭐ והמוטציה שלה מוכרזת «אין מה למוטט». */
+  const NAMED_SELECTS = (() => {
+    const t = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1 ');
+    const re = /from\(\s*['"`]([a-z_0-9]+)['"`]\s*\)[\s\S]{0,300}?\.select\(\s*['"`]([^'"`]*)['"`]/g;
+    let m, n = 0;
+    while ((m = re.exec(t))) {
+      if (!(APP.ownTables || []).includes(m[1])) continue;
+      for (const c of m[2].split(',').map((x) => x.trim()).filter(Boolean))
+        if (c !== '*' && c.indexOf('(') < 0) n++;
+    }
+    return n;
+  })();
+
   const mut = async (label, scen, want) => {
     const r = await at(scen);
     const got = r.status === 0;
@@ -418,6 +535,14 @@ if (RUN_MUT && !SELFTEST) {
     await mut('⛔ מוטציה: מפתח גיבוי חי שאינו ברשימה מפיל את «רשימת-היתר»', 'orphan', false);
   else ok('⛔ אין מוטציית רשימת-היתר — הפינוי אינו בבעלות הריפו הזה, ⚠️ ואין רשימה למוטט');
 
+  await mut('⛔ מוטציה: עמודה שאין לה קורא ואינה מוצהרת מפילה את «עמודה בלי קורא»', 'colreader', false);
+  /*  ⛔ תרחיש ההגדרה שהוחלפה דורש **אתר בפועל** — ⚠️ שליפה שנוקבת בעמודה
+   *  בשמה: ⭐ ריפו שכל שליפותיו `select('*')` אין בו מה למוטט, ⛔ והוא
+   *  מוכרז כאן ⛔ ואינו מדולג בשתיקה. */
+  if (NAMED_SELECTS)
+    await mut('⛔ מוטציה: עמודה שהקוד נוקב בה ואינה בשורה מפילה את «הגדרה שהוחלפה»', 'staledef', false);
+  else ok('⛔ אין מוטציית «הגדרה שהוחלפה» — ⚠️ אין כאן שליפה שנוקבת בעמודה בשמה, ⛔ ואין מה למוטט');
+
   /*  ⭐ מוטציית-נגד אחרונה: ⛔ יעד שאינו נענה **אינו מפיל** — ⚠️ זו ההתנהגות
    *  שהבאנר מכריז, ⭐ ובלי מדידה שלה היא הצהרה בלבד. */
   srv.close();
@@ -430,5 +555,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — חמש הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שמונה הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);
