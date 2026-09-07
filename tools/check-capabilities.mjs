@@ -393,7 +393,10 @@ const CAPS = {
    *  ברגע יצירתו ואין לה «פונקציית עלייה» — ⛔ מה שנאכף כאן הוא הליבה עצמה,
    *  ⚠️ שישבה מחוץ לכל בלוק מסבב 83 ⛔ ונשמרה ברשימת-היתר במקום בחתימה:
    *  ⭐ ארבע פונקציות זהות בית-לבית שאף `sha256` לא מדד. */
-  stale: {
+  /*  ⛔ המפתח נושא תחילית (סבב 109) — ⚠️ `stale` לבדו שימש שישה
+   *  מנגנונים, ⭐ וכאן הוא **האזנת הסכימה**: ⛔ שם שמשמש יותר ממנגנון
+   *  אחד הוא מלכודת, ⚠️ ומי שמחפש את שומר ההקשר מוצא את הבלוק הזה. */
+  schemastale: {
     name: 'מודול האזנת הסכימה',
     docRows: ['באנר עדכון `sw`'],
     block: { sha: 'f6d52387874c7261', lines: 74,
@@ -691,7 +694,7 @@ function orderGaps() {
     .concat(BLOCK_ORDER.filter((k) => inFile.indexOf(k) < 0).map((k) => 'בסדר ואינו חתום: ' + k));
 }
 
-const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'techinfo', 'status', 'backup',
+const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'schemastale', 'techinfo', 'status', 'backup',
                      'pending', 'ids', 'retry', 'lock', 'sess', 'ctxguard', 'pull', 'push', 'hotwin',
                      'devid', 'mergecore', 'tomb', 'writeUser', 'hebdate', 'uihelp', 'readnum', 'uniq'];
 
@@ -1606,8 +1609,8 @@ function errPatternSites() {
     .map((m) => m.replace(/^id="|"$/g, ''));
   const allow = Object.keys(APP.inlineErrAllow || {});
   const undeclared = found.filter((i) => allow.indexOf(i) < 0);
-  const stale = allow.filter((i) => found.indexOf(i) < 0);
-  return undeclared.length + stale.length + (code.match(/\balert\s*\(/g) || []).length;
+  const ghost = allow.filter((i) => found.indexOf(i) < 0);
+  return undeclared.length + ghost.length + (code.match(/\balert\s*\(/g) || []).length;
 }
 
 /*  ⛔ מספר שורה בגוף שער נגזר משם השורה ⛔ ואינו מוקלד — ⚠️ הנימוק נמדד:
@@ -3243,7 +3246,10 @@ function ctxGuardGaps() {
   /*  ⛔ צד ה — אפס אתרים עם `stale` עירום — ⚠️ הנימוק המדוד: השם שימש
    *  שומר הקשר · באנר גיבוי · דגל טביעה · ומחלקת CSS, ⭐ ומי שחיפש את
    *  השומר מצא את השלושה האחרים: ⛔ כל מנגנון נושא תחילית משלו. */
-  const bare = [...code.matchAll(/(?<![\w$-])stale(?![\w$-])/g)];
+  /*  ⛔ השם נבנה ⛔ ואינו כתוב כליטרל צמוד לסוגר — ⚠️ השם צמוד לסוגר בגוף
+   *  השער נקרא כקורא של השם שנמחק, ⭐ ושער ההסרות מפיל עליו: ⛔ וזה
+   *  בדיוק השם שהשורה הזו אוסרת. */
+  const bare = [...code.matchAll(new RegExp('(?<![\\w$-])' + 'stale' + '(?![\\w$-])', 'g'))];
   if (bare.length)
     out.push(`${bare.length} אתרים עם \`stale\` עירום — שורות ` +
              bare.slice(0, 4).map((m) => lineOf(m.index)).join(', '));
@@ -4208,9 +4214,9 @@ const COUNT_NOTE = /^[\s*⛔⚠️⭐️\uFE0F]*נמדד/;
        'או שורת נימוק מדוע אינה ניתנת לאכיפה מכנית');
   else pass(`כיסוי הטבלה — ${nums.length} שורות: ${enforced.size} נאכפות כאן, ` +
             `${nums.length - enforced.size} בשער אחר או עם נימוק כתוב`);
-  const stale = Object.keys(GATES).map(Number).filter((n) => !nums.includes(n));
-  if (stale.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${stale.join(', ')} — ` +
-    `נמדדו ${stale.length} והצפוי אפס. מסירים אותן מ-GATES`);
+  const ghostRows = Object.keys(GATES).map(Number).filter((n) => !nums.includes(n));
+  if (ghostRows.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${ghostRows.join(', ')} — ` +
+    `נמדדו ${ghostRows.length} והצפוי אפס. מסירים אותן מ-GATES`);
   const both = Object.keys(GATES).map(Number).filter((n) => enforced.has(n));
   if (both.length) fail(`שורות שמוכרזות גם ב-MATRIX וגם ב-GATES: ${both.join(', ')} — ` +
     `נמדדו ${both.length} והצפוי אפס. מסירים אותן מאחת השתיים`);
