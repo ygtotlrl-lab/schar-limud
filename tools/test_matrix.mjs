@@ -83,6 +83,7 @@ const EXEMPT = [
 ];
 
 function copyRepo() {
+  /*  ⛔ כותב על עותק — ⚠️ מוטציה בגוף הבודק עצמו, ⛔ וייבוא חדש קורא את הקובץ מהדיסק. */
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37-'));
   fs.cpSync(ROOT, dst, {
     recursive: true,
@@ -101,17 +102,50 @@ process.env.CAP_INPROC = '1';
 const WORK = copyRepo();
 process.chdir(WORK);
 const CHECKER = pathToFileURL(path.join(WORK, 'tools', 'check-capabilities.mjs')).href;
+const CAP_FILE = path.join(WORK, 'tools', 'check-capabilities.mjs');
 const DOC_IN_WORK = path.join(WORK, 'CLAUDE.md');
 let spin = 0;
-async function runChecker() {
-  const lg = console.log, er = console.error;
-  console.log = () => {}; console.error = () => {};
+/*  ⛔ ייבוא אחד (סבב 107) — ⚠️ הבודק חושף `run(over)`, ⭐ ו-`over` היא מפת
+ *  נתיב⟵תוכן שגוברת על הדיסק: ⛔ ההיפוך נמסר כארגומנט ⛔ ואינו נכתב לעץ,
+ *  ⚠️ ואינו דורש ייבוא טרי — ⭐ הנימוק המדוד: 684 היפוכים היו 684 כתיבות
+ *  ו-684 ייבואים, ⛔ וכל ייבוא קרא את העץ כולו מחדש.
+ *  ⛔ **ומדידה שנקטעת אינה משאירה שארית** — ⚠️ אין מה לשחזר. */
+const CLEAN_CAP_TXT = fs.readFileSync(CAP_FILE, 'utf8');
+const capRun = (await import(CHECKER)).run;
+function callRun(runFn, over) {
+  const lg = console.log, er = console.error, out = [];
+  console.log = (...a) => out.push(a.join(' '));
+  console.error = (...a) => out.push(a.join(' '));
+  try { return { held: runFn(over) === 0, out }; }
+  catch (e) { out.push('❌ ' + (e && e.message)); return { held: false, out }; }
+  finally { console.log = lg; console.error = er; }
+}
+const runChecker = (over) => callRun(capRun, over).held;
+const docOver = (text) => ({ 'CLAUDE.md': text });
+/*  ⛔ **הטבלה לבדה עוברת כארגומנט** — ⚠️ וזו אינה עצלות: ⭐ `over` גובר
+ *  על `readOnce` בלבד, ⛔ ושתי השכבות שהבודק מייבא — שכבת האייקונים
+ *  ושכבת הקלט — קוראות את העץ בעצמן: ⚠️ מוטציה שהייתה עוברת להן
+ *  כארגומנט הייתה נמדדת על הקובץ הנקי, ⛔ וזה בדיוק «probe שאינו יכול
+ *  להיכשל». ⭐ **והטבלה היא החריג היחיד** — ⛔ קוראה היחיד הוא
+ *  `readOnce`, ⚠️ והיא זו שנהפכת שורה-שורה. */
+function why(files) {
+  const over = {};
+  const onDisk = [];
+  for (const f of files) {
+    if (path.relative(WORK, f[0]) === 'CLAUDE.md') over['CLAUDE.md'] = f[2];
+    else onDisk.push(f);
+  }
+  return onDisk.length ? withDisk(onDisk, over) : callRun(capRun, over);
+}
+/*  ⛔ מוטציה שאינה בטבלה נכתבת לעותק ונטענת מחדש — ⚠️ **המודול עצמו** הוא
+ *  מה שמוטט בחלקן, ⭐ והעץ משוחזר מיד אחריה: ⛔ גם כשהמדידה זרקה. */
+async function withDisk(files, over) {
+  for (const [p, , text] of files) fs.writeFileSync(p, text);
   try {
     const mod = await import(`${CHECKER}?flip=${spin++}`);
-    return mod.capFailures === 0;
-  } catch (e) {
-    return false;
-  } finally { console.log = lg; console.error = er; }
+    return callRun(mod.run, over);
+  } catch (e) { return { held: false, out: ['❌ ' + (e && e.message)] }; }
+  finally { for (const [p, clean] of files) fs.writeFileSync(p, clean); }
 }
 
 /*  היפוך תא: ✅↔❌, וכל ערך אחר (־«לא רלוונטי», «אין», «טביעה»,
@@ -158,9 +192,7 @@ for (const r of rows) {
     continue;
   }
   lines[r.at] = flipped;
-  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
-  const stillPasses = await runChecker();
-  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+  const stillPasses = runChecker(docOver(lines.join('\n')));
   ok(`שורה ${r.row}: היפוך התא מפיל את check-capabilities`, !stillPasses);
   covered++;
 }
@@ -177,9 +209,7 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   const parts = lines[target.at].split('|');
   parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
   lines[target.at] = parts.join('|');
-  fs.writeFileSync(DOC_IN_WORK, lines.join('\n'));
-  const held = await runChecker();
-  fs.writeFileSync(DOC_IN_WORK, CLEAN_DOC);
+  const held = runChecker(docOver(lines.join('\n')));
   ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
 }
 
@@ -187,19 +217,15 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
  *  אחד מ-`claims` בעוד הוא ממשיך להצהיר עליה ב-`ROWS`, ⚠️ והטענה
  *  שאמורה ליפול היא «אי-התאמה בין ROWS ל-claims». */
 {
-  const CAP = path.join(WORK, 'tools', 'check-capabilities.mjs');
-  const clean = fs.readFileSync(CAP, 'utf8');
+  const clean = CLEAN_CAP_TXT;
   const cut = clean.replace(", 'check-comments': 'מכריז היעדר'", '');
   ok('המוטציה שינתה את גוף check-capabilities בעותק', cut !== clean);
-  fs.writeFileSync(CAP, cut);
-  const stillPasses = await runChecker();
+  const stillPasses = (await withDisk([[CAP_FILE, CLEAN_CAP_TXT, cut]])).held;
   ok('⛔ מוטציה: שער שהוסר מ-claims וממשיך להצהיר ב-ROWS ' +
      'מפיל את «אי-התאמה בין ROWS ל-claims»', !stillPasses);
   const anti = clean.replace(/\bmismatch\b/g, 'pairGap');
   ok('מוטציית-הנגד שינתה את הקוד', anti !== clean);
-  fs.writeFileSync(CAP, anti);
-  const held = await runChecker();
-  fs.writeFileSync(CAP, clean);
+  const held = (await withDisk([[CAP_FILE, CLEAN_CAP_TXT, anti]])).held;
   ok('⭐ מוטציית-נגד: החלפת שם המשתנה בעקביות ⛔ אינה מפילה', held);
 }
 
@@ -237,16 +263,6 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   const ROW_TOMB = rowOf('`tombstones`'), ROW_SWEEP = rowOf('אסטרטגיית `localStorage`');
   /*  ⛔ המוטציה נבדקת מול **שם הטענה** ולא מול «נפל» (סבב 75) — ⚠️ שער
    *  שנופל מסיבה אחרת נראה כאכיפה ⛔ ואינו אוכף דבר. */
-  const why = async () => {
-    const lg = console.log, er = console.error, out = [];
-    console.log = (...a) => out.push(a.join(' '));
-    console.error = (...a) => out.push(a.join(' '));
-    try {
-      const mod = await import(`${CHECKER}?flip=${spin++}`);
-      return { held: mod.capFailures === 0, out };
-    } catch (e) { return { held: false, out }; }
-    finally { console.log = lg; console.error = er; }
-  };
   /*  הסרת שורה מ-`gapRows` — ⛔ המוטציה של תא ⭕: ⚠️ המרשם הוא מה שמוציא
    *  את השורה מהמדידה, ⭐ ובלעדיו ה-probe שלה רץ ונופל. */
   const dropGap = (text, row) => text.replace(/(gapRows: \[)([^\]]*)\]/,
@@ -254,10 +270,9 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
       .filter((x) => x && Number(x) !== row).join(', ') + ']');
   const run = async (label, files, mustFall, row) => {
     let changed = false;
-    for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
-    ok('המוטציה «' + label + '» שינתה קוד בעותק', changed);
-    const { held, out } = await why();
-    for (const [p, clean] of files) fs.writeFileSync(p, clean);
+    for (const [, clean, text] of files) if (text !== clean) changed = true;
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', changed);
+    const { held, out } = await why(files);
     if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
     ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + row,
        !held && out.some((l) => l.indexOf('❌ שורה ' + row + ' ') === 0));
@@ -324,25 +339,14 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
    ⚠️ כל מוטציה נוקבת בשם הטענה שתיפול ⛔ ונבדק שהיא זו שנפלה.
    ──────────────────────────────────────────────────────────────────────── */
 {
-  const CAP3 = path.join(WORK, 'tools', 'check-capabilities.mjs');
-  const CLEAN3 = fs.readFileSync(CAP3, 'utf8');
+  const CAP3 = CAP_FILE;
+  const CLEAN3 = CLEAN_CAP_TXT;
   const CLEAN_TXT = CLEAN_DOC.toString('utf8');
-  const outOf = async () => {
-    const lg = console.log, er = console.error, out = [];
-    console.log = (...a) => out.push(a.join(' '));
-    console.error = (...a) => out.push(a.join(' '));
-    try {
-      const mod = await import(`${CHECKER}?flip=${spin++}`);
-      return { held: mod.capFailures === 0, out };
-    } catch (e) { return { held: false, out }; }
-    finally { console.log = lg; console.error = er; }
-  };
   const runClaim = async (label, files, mustFall, claim) => {
     let changed = false;
-    for (const [p, clean, text] of files) { if (text !== clean) changed = true; fs.writeFileSync(p, text); }
-    ok('המוטציה «' + label + '» שינתה קוד בעותק', changed);
-    const { held, out } = await outOf();
-    for (const [p, clean] of files) fs.writeFileSync(p, clean);
+    for (const [, clean, text] of files) if (text !== clean) changed = true;
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', changed);
+    const { held, out } = await why(files);
     if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
     ok('⛔ מוטציה: ' + label + ' מפילה את «' + claim + '»',
        !held && out.some((l) => l.indexOf('❌') === 0 && l.indexOf(claim) >= 0));
@@ -397,6 +401,23 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   })();
   await runClaim('החלפת מקום בין שתי שורות באותו שלב',
     [[DOC_IN_WORK, CLEAN_TXT, swapped]], false);
+
+  /*  ⛔ שער שכותב ואינו מצהיר (סבב 107) — ⚠️ ההצהרה יורדת, ⛔ והכתיבה
+   *  נשארת: ⭐ בדיוק המצב שהתקן אישר עד היום, ⛔ ששני הענפים היו שווים בו.
+   *  ⚠️ והמוטציה על **שער אחר**, ⛔ ולא על הבודק — ⭐ ולכן היא עוברת דרך
+   *  הדיסק: הבודק קורא את קובצי השער בעצמו, ⛔ ואין להם מסלול בזיכרון. */
+  const IDS_FILE = path.join(WORK, 'tools', 'test_ids.mjs');
+  const CLEAN_IDS = fs.readFileSync(IDS_FILE, 'utf8');
+  const IDS_DECL = /^.*⛔ כותב על עותק — .*$\n/m;
+  await runClaim('הסרת הצהרת הכתיבה משער שכותב',
+    [[IDS_FILE, CLEAN_IDS, CLEAN_IDS.replace(IDS_DECL, '')]],
+    true, 'שערים שכותבים');
+  /*  ⭐ מוטציית-נגד חיה: ⛔ אותה הצהרה בנימוק אחר — ⚠️ טקסט שהוחלף
+   *  בעקביות ⛔ ולא הערה שנוספה, ⭐ והמרשם עצמו נשמר. */
+  await runClaim('נימוק אחר לאותה הצהרת כתיבה',
+    [[IDS_FILE, CLEAN_IDS, CLEAN_IDS.replace(IDS_DECL, (m) =>
+      m.replace(/— .*\*\//, '— ⚠️ המוטציה נמסרת לשער אמיתי שרץ בתהליך נפרד וקורא מהדיסק. */'))]],
+    false);
 }
 
 process.chdir(ROOT);

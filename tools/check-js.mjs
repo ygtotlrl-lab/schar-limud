@@ -99,6 +99,7 @@ export const ROWS = [31, 32, 24];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+/*  ⛔ כותב על עותק — ⚠️ `node --check` מקבל קובץ ⛔ ולא טקסט, ⚠️ וה-JS המוטבע נחתך למחרוזת. */
 const work = mkdtempSync(join(tmpdir(), APP.app + '-check-'));
 
 /*  ⛔ אותם עוזרים כמו בחמשת הבודקים האחרים (סבב 72) — ⚠️ ואין לפתוח

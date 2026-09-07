@@ -114,6 +114,7 @@ assert(R.out.length === 0,
 if (RUN_MUT) {
 /* ── מוטציות — עותק אחד לשער, ולא עותק לכל מוטציה ──────────────────────── */
 if (!INNER) {
+  /*  ⛔ כותב על עותק — ⚠️ המוטציה שותלת קובץ ומסירה אותו, ⛔ וזה שינוי סט ולא שינוי תוכן. */
   const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'orphans-'));
   process.on('exit', () => { try { fs.rmSync(WORK, { recursive: true, force: true }); } catch (e) {} });
   execFileSync('cp', ['-r', ROOT + '/.', WORK]);
