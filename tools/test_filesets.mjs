@@ -38,7 +38,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 103, 158];
+export const ROWS = [17, 20, 104, 159];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -96,6 +96,7 @@ const SHARED = [
   'tools/check-status-area.mjs',
   'tools/check-structure.mjs',
   'tools/gen-icons.mjs',
+  'tools/whiten.mjs',
   'tools/test_android.mjs',
   'tools/test_backup_policy.mjs',
   'tools/test_budget.mjs',
