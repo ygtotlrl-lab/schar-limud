@@ -115,6 +115,7 @@ const APP = {
   ctxSwitchExempt: { slPullUsers: 'רענון תפקיד של **אותה** זהות — ⛔ ולא החלפה' },
   /*  ⛔ מחזורי «קרא ← מזג ← דחוף» — ⚠️ מספרם נגזר מהאפליקציה ⛔ ואינו נאכף. */
   ctxCycles: ['syncAll'],
+  ctxRegs: ['pendConfirmPush', '_slPushedAt'],
   gapRows: [38, 71, 110, 114, 135, 143, 56, 149],
   /*  ⛔ אין כאן מסלול תצוגה שמושך משכבת השורות (סבב 89) — ⚠️ המסכים
    *  קוראים מהמראה שעל הדיסק, ⭐ ולכן אין קריאה שצריך למדוד בה חלון.
@@ -433,7 +434,7 @@ const CAPS = {
   backup: {
     name: 'גיבוי יומי אוטומטי',
     docRows: ['`bk` — גיבוי יומי ויומן', 'הגיבוי שלם ומעומד', '`kv_backup` — טבלת הגיבוי'],
-    block: { sha: '7bafb90c82ab759e', lines: 344,
+    block: { sha: '5ad842196c051ade', lines: 344,
              start: '/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30)',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }, { fn: 'bkStatusMount', at: 'settings' }],
@@ -605,7 +606,8 @@ const CAPS = {
   /*  ⭐ סבב 86 — עוזרי הממשק. ⚠️ אין להם `hooks`: הם נקראים מכל מסך ואין
    *  להם «פונקציית עלייה» — ⛔ מה שנאכף כאן הוא הליבה עצמה, שישבה **מחוץ**
    *  לכל בלוק ⛔ ונסחפה לשלוש צורות של `esc` ושל `openModal`. ⛔ ו-`LS_TOAST`
-   *  יושב **מחוץ** לבלוק — ⚠️ הוא הדבר היחיד שנבדל בין האפליקציות. */
+   *  יושב **מחוץ** לבלוק — ⚠️ ערכו זהה בארבעתן, ⭐ ומה שנבדל הוא השורה
+   *  שלפניו: ⛔ והחתימה מודדת טקסט רצוף. */
   /*  ⛔ מנוע התאריך העברי (סבב 107) — ⚠️ שלוש הגדרות שהיו זהות בית-לבית
    *  בשתי האפליקציות שיש בהן צרכני תאריך, ⛔ ופזורות על פני מאות שורות:
    *  ⭐ החתימה מודדת טקסט רצוף, ⛔ ולכן הן אוחדו לאזור אחד.
@@ -3253,6 +3255,69 @@ function ctxGuardGaps() {
   if (bare.length)
     out.push(`${bare.length} אתרים עם \`stale\` עירום — שורות ` +
              bare.slice(0, 4).map((m) => lineOf(m.index)).join(', '));
+  /*  ⛔ והסריקה חלה גם על מזהי DOM ועל מחלקות CSS — ⚠️ הם אינם קוד, ⭐ וסריקה
+   *  שמודדת שמות משתנים בלבד מדווחת «נקי» על מזהה שיושב בתגית: ⛔ הנימוק
+   *  המדוד — חמישה סלקטורים נשאו `stale` בלי מנגנון אחרי שהקוד כבר יושר. */
+  const MECH = ['bk', 'ctx', 'fp', 'pull', 'schema'];
+  const sel = new Set();
+  for (const m of src.matchAll(/\b(?:id|class)\s*=\s*["']([^"']*)["']/g))
+    for (const n of m[1].trim().split(/\s+/)) if (n) sel.add(n);
+  for (const st of src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))
+    for (const m of st[1].matchAll(/[.#](-?[A-Za-z_][\w-]*)/g)) sel.add(m[1]);
+  const loose = [...sel].filter((n) => /stale/i.test(n) &&
+    !MECH.some((p) => new RegExp('(?:^|[^A-Za-z])' + p + 'stale', 'i').test(n))).sort();
+  if (loose.length)
+    out.push(`${loose.length} סלקטורים עם \`stale\` בלי תחילית מנגנון — ${loose.join(' ')}`);
+  /*  ⛔ צד ו — **כל מחזור נבדק מול השומר**, ⚠️ ומספר הבדיקות שווה למספר
+   *  המחזורים — ⭐ **ומחזור הוא רישום שאחרי המתנה**: עֵד הפינוי · אישור
+   *  ה-⏳ · או חותמת הפולינג, ⛔ והם בדיוק מה שנזקף לחשבון ההקשר.
+   *  ⚠️ הנימוק המדוד: ההצהרה מנתה שני מחזורים בהנהלה, ⛔ ובפועל מסלולי
+   *  שמירה נוספים רשמו אישור ⏳ אחרי `await` בלי לשאול את השומר.
+   *  ⛔ **ורישום שקדם להמתנה אינו מחזור** — ⚠️ הוא מודד את ההקשר שנלכד
+   *  רגע קודם, ⭐ ואינו יכול להיזקף לאחר. */
+  const regRe = new RegExp('(?<![\\w$.])(?:' +
+    APP.ctxRegs.map((n) => n + '\\s*(?:\\(|\\[|=(?!=))').join('|') + ')', 'g');
+  const ctxCyc = [], ctxOk = [], ctxName = {};
+  for (const mm of code.matchAll(regRe)) {
+    let d = 0, from = -1;
+    for (let i = mm.index; i >= 0; i--) {
+      const c = code[i];
+      if (c === '}') d++;
+      else if (c === '{') {
+        if (d) { d--; continue; }
+        if (!FN_HEAD.test(code.slice(Math.max(0, i - 200), i))) continue;
+        from = i; break;
+      }
+    }
+    if (from < 0) continue;
+    let d2 = 0, to = code.length;
+    for (let j = from; j < code.length; j++) {
+      if (code[j] === '{') d2++;
+      else if (code[j] === '}') { d2--; if (!d2) { to = j + 1; break; } }
+    }
+    const b = code.slice(from, to);
+    const wait = Math.min(...['await ', '.then('].map((w) => { const i = b.indexOf(w); return i < 0 ? b.length : i; }));
+    if (wait > mm.index - from) continue;
+    /*  ⛔ המחזור נקרא בשמו ⛔ ולא במספר שורה — ⚠️ `lineOf` מודד את הקוד
+     *  המולבן, ⭐ ושורות ה-HTML שמחוץ ל-`<script>` מתקצרות בו: ⛔ מספר
+     *  שאינו מצביע על השורה הנכונה גרוע ממחרוזת ריקה. */
+    const head = code.slice(Math.max(0, from - 160), from).replace(/\s+/g, ' ');
+    const nm = (/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*$/.exec(head) ||
+                /([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?function\s*\([^)]*\)\s*$/.exec(head) ||
+                [, '(אנונימית) ' + head.slice(-40).trim()])[1];
+    if (!ctxCyc.includes(from)) ctxCyc.push(from);
+    if (b.includes('ctxStale(') && !ctxOk.includes(from)) ctxOk.push(from);
+    ctxName[from] = nm;
+  }
+  const ctxBad = ctxCyc.filter((c) => !ctxOk.includes(c));
+  if (ctxBad.length)
+    out.push(`${ctxCyc.length} מחזורים ו-${ctxOk.length} בדיקות — מחזור בלי שומר: ` +
+             ctxBad.slice(0, 6).map((c) => ctxName[c]).join(' · '));
+  /*  ⛔ **והצהרה בלי אתר מפילה אף היא** — ⚠️ שם רישום שאין לו מקרה בפועל
+   *  מרוקן את המונה בשקט, ⭐ והיחס 1:1 מתקיים על אפס. */
+  for (const n of APP.ctxRegs)
+    if (!new RegExp('(?<![\\w$.])' + n + '\\s*(?:\\(|\\[|=(?!=))').test(code))
+      out.push(`רישום מוצהר שאין לו אתר: ${n}`);
   /*  ⛔ צד ד — רישום עֵד הפינוי נבדק אף הוא: ⚠️ `mark` רץ אחרי `await`,
    *  ⭐ והוא הרישום שזוקף את הצלחת הדחיפה לחשבון ההקשר. */
   const mk = /mark:\s*function\s*\([^)]*\)\s*\{([^{}]*)\}/.exec(code);
@@ -3943,7 +4008,7 @@ const GATES = {
   88: { claim: 'עברית' },
   90: { claims: { 'check-comments': 'RULE_W', 'check-capabilities': 'bannerGaps' } },
   91: { claim: 'BANNER_W' },
-  162: { claim: 'CSS מתות' },
+  162: { claim: ['אין מחלקת CSS שאינה מוחלת לעולם', 'אין מזהה id שאין לו קורא'] },
   40: { claim: 'פתיחת ההערה בטבלה',
         manual: '«למה ולא מה» הוא קריאת משמעות — ⛔ שער מודד צורה בלבד, ⚠️ ונסרק ידנית' },
   89: { claim: 'מפנה לקובץ' },

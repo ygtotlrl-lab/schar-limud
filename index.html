@@ -273,7 +273,7 @@ body.locked{overflow:hidden}
           </div>
         </div>
         <div class="dash-scroll">
-          <table class="tbl pivot" id="dash-table">
+          <table class="tbl pivot">
             <thead id="dash-thead"></thead>
             <tbody id="dash-tbody"></tbody>
             <tfoot id="dash-tfoot"></tfoot>
@@ -300,7 +300,7 @@ body.locked{overflow:hidden}
         <div class="card-body">
           <div class="frm-row">
             <label>תלמיד</label>
-            <div class="sd-wrap" id="sd-wrap-student">
+            <div class="sd-wrap">
               <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
               <div class="sd-list" id="sd-list-student" style="display:none"></div>
               <input type="hidden" id="sd-val-student">
@@ -331,7 +331,7 @@ body.locked{overflow:hidden}
       <div class="card">
         <div class="card-hdr">
           <h3>יומן תשלומים</h3>
-          <div class="sd-wrap" id="sd-wrap-txnfilter" style="width:160px">
+          <div class="sd-wrap" style="width:160px">
             <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
             <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
             <input type="hidden" id="sd-val-txnfilter">
@@ -346,7 +346,7 @@ body.locked{overflow:hidden}
       <div class="card">
         <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
         <div class="card-body" style="padding-bottom:12px">
-          <div class="sd-wrap" id="sd-wrap-sc">
+          <div class="sd-wrap">
             <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
             <div class="sd-list" id="sd-list-sc" style="display:none"></div>
             <input type="hidden" id="sd-val-sc">
@@ -405,7 +405,7 @@ body.locked{overflow:hidden}
           <div class="acc-body" id="acc-sc-annual">
             <div class="year-tabs" id="sc-year-tabs"></div>
             <div style="overflow-x:auto">
-              <table class="tbl" id="sc-annual-table">
+              <table class="tbl">
                 <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
                 <tbody id="sc-annual-tbody"></tbody>
                 <tfoot id="sc-annual-tfoot"></tfoot>
@@ -476,16 +476,16 @@ body.locked{overflow:hidden}
   </div>
 
   <div id="tabbar">
-    <button class="tab-btn active" id="tab-dash" data-act="show-panel" data-panel="dash">
+    <button class="tab-btn active" data-act="show-panel" data-panel="dash">
       <span class="ti">&#128202;</span><span>לוח בקרה</span>
     </button>
-    <button class="tab-btn" id="tab-txn" data-act="show-panel" data-panel="txn">
+    <button class="tab-btn" data-act="show-panel" data-panel="txn">
       <span class="ti">&#128179;</span><span>תשלום</span>
     </button>
-    <button class="tab-btn" id="tab-student" data-act="show-panel" data-panel="student">
+    <button class="tab-btn" data-act="show-panel" data-panel="student">
       <span class="ti">&#128100;</span><span>תלמיד</span>
     </button>
-    <button class="tab-btn" id="tab-settings" data-act="show-panel" data-panel="settings">
+    <button class="tab-btn" data-act="show-panel" data-panel="settings">
       <span class="ti">&#9881;</span><span>הגדרות</span>
     </button>
   </div>
@@ -1926,7 +1926,7 @@ function bkStatusHTML() {
   var t = bkLastAt(), st = bkStale();
   return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
     (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
-    (st ? '<div class="bk-stale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
+    (st ? '<div class="bkStale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
     '</div>';
 }
 function bkStatusMount() {
@@ -4027,11 +4027,13 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 // לפי **מפתח המיזוג** ולא לפי `id`: פריט שנוצר במכשיר עדיין אין לו id.
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
-/* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ ומה שנשאר
- *  נבדל הוא **שם המחלקה** בלבד: ⭐ המשך הוא ערך משותף שיושב בבלוק, ⛔ ולכן
- *  גוף `lsToast` זהה בית-לבית בארבעתן. */
-var LS_TOAST = { kind: '' };
+/* ── LS_TOAST — הודעת האחסון המלא ───────────────────────────────────────── */
+/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ **וגם שם
+ *  המחלקה**: ⭐ אחסון שהתמלא הוא אותו סיכון בארבעתן, ⛔ והודעה אדומה באחת
+ *  ושחורה בשלוש מלמדת את המשתמש ששתי המערכות אומרות שני דברים.
+ *  ⛔ **ואינו בתוך הבלוק החתום** — ⚠️ נקודת ההצהרה נבדלת בין הארבע בשורה
+ *  שלפניה, ⭐ והחתימה מודדת טקסט רצוף. */
+var LS_TOAST = { kind: 'bad' };
 /* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
    ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
       ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
