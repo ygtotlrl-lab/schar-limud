@@ -265,9 +265,9 @@ if (!process.env.RD67_MUT) {
   };
 
   console.log('\n— מוטציות (סבב 67) —');
-  _mut('⛔ שינוי בית בליבת ShellActivity מזיז את החתימה ומפיל', 'android/app/src/main/java/com/schar/limud/ShellActivity.java',
+  _mut('⛔ שינוי בית בליבת ShellActivity מזיז את החתימה ומפיל', APP.core,
        (s) => s.replace(/\bonCreate\b/, 'onCreateRenamed'), true);
-  _mut('⭐ מוטציית-נגד: הוספת שורה ריקה בסוף הקובץ ⛔ אינה מפילה', 'android/app/src/main/java/com/schar/limud/ShellActivity.java',
+  _mut('⭐ מוטציית-נגד: הוספת שורה ריקה בסוף הקובץ ⛔ אינה מפילה', APP.core,
        (s) => s.replace(/\s*$/, '\n'), false);
 }
 

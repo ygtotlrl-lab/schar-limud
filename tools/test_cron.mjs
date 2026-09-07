@@ -26,9 +26,11 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
+/* ⚠️ פר-אפליקציה — הפרויקט שהאפליקציה חיה בו והבעלות על מיגרציית הגיבוי נבדלים בין הארבע */
 /* ⚠️ schar חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם yoman,
    ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`.
    ⛔ עותק שני שלה כאן היה מקור אמת שני שמתיישן (סבב 35ג). */
+/* ⚠️ סוף פר-אפליקציה */
 const APP = {
   name: 'schar-limud',
   keys: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
