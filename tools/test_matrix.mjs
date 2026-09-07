@@ -40,7 +40,7 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
-if (process.env.R33_INNER || process.env.R37_INNER) {
+if (process.env.R33_INNER) {
   console.log('test_matrix: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
@@ -402,22 +402,76 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
   await runClaim('החלפת מקום בין שתי שורות באותו שלב',
     [[DOC_IN_WORK, CLEAN_TXT, swapped]], false);
 
+  /*  ⛔ מוטציה שכל קוראיה עוברים ב-`readOnce` נמסרת כארגומנט (סבב 108) —
+   *  ⚠️ ואינה נכתבת לדיסק ואינה דורשת ייבוא טרי: ⭐ הנימוק המדוד — ייבוא
+   *  אחד בהנהלה הוא כחמש שניות, ⛔ ושש מוטציות דיסק היו שלושים.
+   *  ⛔ **ומה שאינו עובר ב-`readOnce` נשאר בדיסק** — ⚠️ `APP` הוא אובייקט
+   *  של המודול, ⭐ ורק ייבוא טרי מחליף אותו. */
+  const runOver = (label, file, clean, text, mustFall, claim) => {
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', text !== clean);
+    const over = {}; over[file] = text;
+    const { held, out } = callRun(capRun, over);
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את «' + claim + '»',
+       !held && out.some((l) => l.indexOf('❌') === 0 && l.indexOf(claim) >= 0));
+  };
+
   /*  ⛔ שער שכותב ואינו מצהיר (סבב 107) — ⚠️ ההצהרה יורדת, ⛔ והכתיבה
-   *  נשארת: ⭐ בדיוק המצב שהתקן אישר עד היום, ⛔ ששני הענפים היו שווים בו.
-   *  ⚠️ והמוטציה על **שער אחר**, ⛔ ולא על הבודק — ⭐ ולכן היא עוברת דרך
-   *  הדיסק: הבודק קורא את קובצי השער בעצמו, ⛔ ואין להם מסלול בזיכרון. */
-  const IDS_FILE = path.join(WORK, 'tools', 'test_ids.mjs');
-  const CLEAN_IDS = fs.readFileSync(IDS_FILE, 'utf8');
-  const IDS_DECL = /^.*⛔ כותב על עותק — .*$\n/m;
-  await runClaim('הסרת הצהרת הכתיבה משער שכותב',
-    [[IDS_FILE, CLEAN_IDS, CLEAN_IDS.replace(IDS_DECL, '')]],
-    true, 'שערים שכותבים');
+   *  נשארת: ⭐ בדיוק המצב שהתקן אישר עד היום, ⛔ ששני הענפים היו שווים בו. */
+  const WG_REL = 'tools/test_manifest.mjs';
+  const CLEAN_WG = fs.readFileSync(path.join(WORK, WG_REL), 'utf8');
+  const WG_DECL = /^.*⛔ כותב על עותק — .*$\n/m;
+  runOver('הסרת הצהרת הכתיבה משער שכותב', WG_REL, CLEAN_WG,
+    CLEAN_WG.replace(WG_DECL, ''), true, 'שערים שכותבים');
   /*  ⭐ מוטציית-נגד חיה: ⛔ אותה הצהרה בנימוק אחר — ⚠️ טקסט שהוחלף
    *  בעקביות ⛔ ולא הערה שנוספה, ⭐ והמרשם עצמו נשמר. */
-  await runClaim('נימוק אחר לאותה הצהרת כתיבה',
-    [[IDS_FILE, CLEAN_IDS, CLEAN_IDS.replace(IDS_DECL, (m) =>
-      m.replace(/— .*\*\//, '— ⚠️ המוטציה נמסרת לשער אמיתי שרץ בתהליך נפרד וקורא מהדיסק. */'))]],
+  runOver('נימוק אחר לאותה הצהרת כתיבה', WG_REL, CLEAN_WG,
+    CLEAN_WG.replace(WG_DECL, (m) =>
+      m.replace(/— .*\*\//, '— ⚠️ המוטציה נמסרת לשער אמיתי שרץ בתהליך נפרד וקורא מהדיסק. */')),
     false);
+
+  /*  ⛔ שם החודש בצורה אחת (סבב 108) — ⚠️ ושני הצדדים ממוטטים: ⭐ סימן
+   *  שגוי, ⛔ וסימן שהוסר כליל. */
+  const CLEAN_IDX3 = fs.readFileSync(path.join(WORK, 'index.html'), 'utf8');
+  if (/MONTHS_HEB_LEAP\s*=\s*\[/.test(CLEAN_IDX3)) {
+    runOver('אפוסטרוף במקום גרש עברי בשם החודש', 'index.html', CLEAN_IDX3,
+      CLEAN_IDX3.replace(/אדר א׳/g, "אדר א'"), true, 'monthFormGaps');
+    runOver('שם אדר בלי סימן כלל', 'index.html', CLEAN_IDX3,
+      CLEAN_IDX3.replace(/אדר א׳/g, 'אדר א').replace(/אדר ב׳/g, 'אדר ב'),
+      true, 'monthFormGaps');
+    /*  ⭐ מוטציית-נגד חיה: ⛔ שם חודש שהוחלף באיות אחר — ⚠️ ערך חי בשני
+     *  המערכים, ⭐ ואין בו סימן: ⛔ הנמדד הוא הסימן ⛔ ולא השם. */
+    runOver('איות אחר לשם חודש בלי סימן', 'index.html', CLEAN_IDX3,
+      CLEAN_IDX3.replace(/"סיון"/g, '"סיוון"'), false);
+  } else {
+    /*  ⛔ אין כאן מערך חודשים ⛔ ואין מה למוטט — ⚠️ והדילוג נמדד: ⭐ ההיעדר
+     *  מוצהר ב-`skipCaps` של הבודק, ⛔ ואינו הנחה. */
+    ok('⭐ אין כאן מערך חודשים ⛔ ואין מה למוטט — וההיעדר מוצהר ב-skipCaps',
+       /skipCaps:[^\]]*'hebdate'/.test(CLEAN3));
+  }
+
+  /*  ⛔ סוג השער (סבב 108) — ⚠️ וארבע ההפרות ממוטטות: ⭐ שתיים בקוד השער
+   *  עצמו, ⛔ ושתיים בהצהרה שב-`APP`. */
+  const TG_REL = 'tools/test_md.mjs';
+  const CLEAN_TG = fs.readFileSync(path.join(WORK, TG_REL), 'utf8');
+  runOver('שער שמוכרז text ומריץ תהליך', TG_REL, CLEAN_TG,
+    CLEAN_TG + '\nfunction _mdProc(a){ return spawnSync(a); }\nvar _mdSeen = _mdProc;\n',
+    true, 'gateKindGaps');
+  const BG_REL = 'tools/test_removals.mjs';
+  const CLEAN_BG = fs.readFileSync(path.join(WORK, BG_REL), 'utf8');
+  runOver('שער שמוכרז behavior ואין בו תהליך', BG_REL, CLEAN_BG,
+    CLEAN_BG.replace(/execFileSync\(/g, 'gitRun('), true, 'gateKindGaps');
+  await runClaim('הסרת הצהרת סוג משער',
+    [[CAP3, CLEAN3, CLEAN3.replace(/\n    'test_readonly':\s*'behavior[^\n]*\n/, '\n')]],
+    true, 'gateKindGaps');
+  await runClaim('behavior בלי נימוק',
+    [[CAP3, CLEAN3, CLEAN3.replace(/('test_readonly':\s*)'behavior — [^']*'/, "$1'behavior — כי'")]],
+    true, 'gateKindGaps');
+  /*  ⭐ מוטציית-נגד חיה: ⛔ נימוק אחר לאותו שער — ⚠️ טקסט שהוחלף,
+   *  ⭐ והסוג עצמו נשמר: ⛔ הנמדד הוא הסוג והנימוק, ⚠️ ולא ניסוחו. */
+  await runClaim('נימוק אחר לאותו behavior',
+    [[CAP3, CLEAN3, CLEAN3.replace(/('test_readonly':\s*)'behavior — [^']*'/,
+      "$1'behavior — מודד שהסט האמיתי נופל, ובזיכרון לא היה מה למדוד'")]], false);
 }
 
 process.chdir(ROOT);

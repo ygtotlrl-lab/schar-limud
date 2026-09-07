@@ -21,11 +21,9 @@
  */
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ הוא `true` בארבעתן
@@ -43,7 +41,7 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
-if (process.env.R33_INNER || process.env.R37_INNER) {
+if (process.env.R33_INNER) {
   console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
@@ -134,31 +132,23 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
 
 if (RUN_MUT) {
 /* ── 3 · מוטציות ───────────────────────────────────────────────────────── */
-function copyRepo() {
-  /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
-      אחת: ⭐ המוטציה עורכת את `index.html` **ומריצה עליו שער אמיתי**,
-      ⛔ ושתי מוטציות על אותו עותק היו נמדדות זו על גבי זו. */
-  /*  ⛔ כותב על עותק — ⚠️ השער האמיתי רץ בתהליך נפרד, ⛔ והוא קורא את `index.html` מהדיסק. */
-  const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37a-'));
-  fs.cpSync(ROOT, dst, {
-    recursive: true,
-    filter: (src) => {
-      const rel = path.relative(ROOT, src);
-      return !rel.split(path.sep).includes('.git') &&
-             !rel.split(path.sep).includes('node_modules');
-    },
-  });
-  return dst;
-}
+/*  ⛔ הבודק מיובא ⛔ ואינו מורץ כתהליך (סבב 108) — ⚠️ הטענה כאן היא על
+ *  **טקסט**: ⭐ `index.html` המוטט נמסר ל-`run` כארגומנט, ⛔ ואין עותק עץ
+ *  ואין תהליך — ⚠️ הנימוק המדוד: שלושה עותקי עץ ושלושה תהליכי `node`
+ *  בהרצה אחת, ⭐ וכולם כדי לקרוא את אותה חתימה מאותו קובץ.
+ *  ⛔ **ו-`CAP_INPROC` מבטל את `process.exit` שבסוף הבודק** — ⚠️ בלעדיו
+ *  הייבוא היה עוצר את השער הזה עצמו.
+ *  ⛔ **והפלט נבלע** — ⚠️ הבודק מדפיס מאות שורות, ⭐ ומונה הכשלים שהוא
+ *  מחזיר הוא מה שנמדד. */
+process.env.CAP_INPROC = '1';
+const capRun = (await import(
+  pathToFileURL(path.join(ROOT, 'tools', 'check-capabilities.mjs')).href)).run;
 function checkerFails(mutatedSrc) {
-  const dir = copyRepo();
-  try {
-    fs.writeFileSync(path.join(dir, 'index.html'), mutatedSrc);
-    const r = spawnSync(process.execPath, [path.join(dir, 'tools', 'check-capabilities.mjs')], {
-      cwd: dir, env: { ...process.env, R37_INNER: '1' }, encoding: 'utf8',
-    });
-    return r.status !== 0;
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  const lg = console.log, er = console.error;
+  console.log = () => {}; console.error = () => {};
+  try { return capRun({ 'index.html': mutatedSrc }) !== 0; }
+  catch (e) { return true; }
+  finally { console.log = lg; console.error = er; }
 }
 
 /*  א. שינוי **בית אחד** בליבה — החתימה חייבת ליפול. זו ההגנה היחידה מפני

@@ -1202,7 +1202,7 @@ if (failures) {
     try { code = blankComments(fs.readFileSync('tools/' + f, 'utf8')); } catch (e) { continue; }
     const ls = code.split('\n');
     /*  ⭐ דגל הריצה הפנימית — `const` שקורא מ-`process.env`, ⛔ ולא שם
-     *  קבוע: ⚠️ שער אחד קורא `RULESDOCS_ROOT` ואחר `R37_INNER`, ⛔ ושמירה
+     *  קבוע: ⚠️ שער אחד קורא `RULESDOCS_ROOT` ואחר `R33_INNER`, ⛔ ושמירה
      *  על שם אחד הייתה מדלגת על השער שבו הכשל נמדד. */
     const flags = [];
     for (const l of ls) {
