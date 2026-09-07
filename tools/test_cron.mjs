@@ -41,12 +41,28 @@ const APP = {
       ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
       וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
   allowlistMigration: null,
+  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `kv_rishon`/`kv_ramataviv`
+      הן הבית הענני של הגדרות היומן, ⭐ והבעלות שלו: ⛔ `migration` כאן הוא
+      `null` בכל ריפו שאינו הבעלים, ⚠️ ו-`since` הוא המיגרציה שמצהירה מתי
+      הבעלות עברה — ⭐ המיגרציות שקדמו לה רצו ⛔ ואינן נערכות ואינן נמחקות,
+      ⚠️ ומה שנמדד הוא שאין הגדרה **חדשה** מנקודת ההצהרה ואילך. */
+  kvShared: {
+    names: ['kv_rishon', 'kv_ramataviv'],
+    migration: null,
+    migrationDoc: 'yoman-avoda/migrations/000_initial_schema.sql',
+    since: null,
+    /*  ⛔ יומן בלבד — ⚠️ ההפרדה בין המוסדות היא **טבלה למוסד** ⛔ ולא
+        עמודה: ⭐ ולכן שני השמות נמדדים יחד, ⚠️ ואחד בלי השני הוא מוסד
+        שהגדרותיו נכתבות לבית של המוסד השני. ⛔ ובשלוש האחרות אין קורא,
+        ⭐ ולכן `null` מוצהר ⛔ ולא נשמט. */
+    naming: null,
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורה שהקובץ הזה אוכף (סבב 92) — ⚠️ בעלות הסכימה המשותפת: ⭐ עותק
  *  אחד, בריפו אחד, ⛔ והנמדד הוא היעדר העותק השני. */
-export const ROWS = [125];
+export const ROWS = [125, 134];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -413,6 +429,57 @@ t5();
     assert(defines.length > 0,
       '6ב · ⛔ והמיגרציה אכן מגדירה את `' + SHARED_FN + '` — נמדדו ' +
       defines.length + ' קבצים והצפוי לפחות אחד. מיישרים את ההצהרה למי שמגדיר');
+  }
+}
+
+/*  ⛔ משפחה שנייה — שתי טבלאות ההגדרות של היומן (סבב 104). ⚠️ ההבדל
+    מהפונקציה שמעל: ⭐ כאן היו מיגרציות שרצו בריפו שאינו הבעלים, ⛔ והן
+    אינן נערכות ואינן נמחקות: ⚠️ ולכן הנמדד הוא שאין הגדרה **חדשה** מנקודת
+    ההצהרה ואילך — ⭐ קובץ שמספרו גבוה מ-`since` ⛔ ואינו מגדיר אותן. */
+{
+  const K = APP.kvShared;
+  const dir = join(ROOT, 'migrations');
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.sql')).sort() : [];
+  const defRe = new RegExp('(?:create|alter)\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?(?:public\\.)?(?:' +
+                           K.names.join('|') + ')\\b', 'i');
+  const cut = K.since ? K.since.split('/').pop() : '';
+  const after = files.filter((f) => (K.since ? f > cut : true));
+  const defines = after.filter((f) => defRe.test(readFileSync(join(dir, f), 'utf8')));
+  if (K.migration === null) {
+    assert(defines.length === 0,
+      '6ה · ⛔ אין כאן הגדרה חדשה של הסכימה המשותפת `' + K.names.join('`/`') +
+      '` — נמדדו ' + defines.length + ' קבצים מ-«' + (K.since || 'תחילת הריפו') +
+      '» ואילך והצפוי אפס' + (defines.length ? ' (' + defines.join(' · ') + ')' : '') +
+      '. כותבים את השינוי במיגרציה של ריפו הבעלים');
+    const own = (K.migrationDoc || '').split('/')[0];
+    assert(own && own !== APP.name,
+      '6ו · ⛔ ו-`migrationDoc` מצביע על ריפו הבעלים — נמדד «' + own +
+      '» והצפוי שם ריפו אחר. מיישרים את ההצהרה לקובץ שבריפו שמחזיק אותה');
+    if (K.since) {
+      assert(existsSync(join(dir, cut)),
+        '6ז · ⛔ ומיגרציית ההצהרה קיימת — נמדד ש-«' + cut +
+        '» חסר והצפוי שיהיה. מוסיפים את הקובץ שמצהיר מתי הבעלות עברה');
+    }
+  } else {
+    assert(existsSync(join(ROOT, K.migration)),
+      '6ה · ⛔ הריפו הזה מחזיק את הסכימה המשותפת — נמדד ש-`' + K.migration +
+      '` קיים. מיישרים את ההצהרה לקובץ שקיים');
+    assert(defRe.test(readFileSync(join(ROOT, K.migration), 'utf8')),
+      '6ו · ⛔ והמיגרציה אכן מגדירה את `' + K.names.join('`/`') +
+      '` — נמדד שאינה מגדירה והצפוי שתגדיר. מיישרים את ההצהרה למי שמגדיר');
+  }
+  if (K.naming) {
+    const bare = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const m = K.naming.exec(bare);
+    const got = m ? [m[1], m[2]].sort().join(',') : '';
+    assert(got === K.names.slice().sort().join(','),
+      '6ח · ⛔ שני השמות נבחרים יחד בקוד — נמדד «' + got + '» והצפוי «' +
+      K.names.slice().sort().join(',') + '». מיישרים את בורר הטבלה לשני המוסדות');
+  } else {
+    const refs = (SRC.match(new RegExp(K.names.join('|'), 'g')) || []).length;
+    assert(refs === 0,
+      '6ח · ⛔ ואין כאן קורא לסכימה המשותפת — נמדדו ' + refs +
+      ' אזכורים ב-index.html והצפוי אפס. מסירים את הקורא, או מעבירים את הבעלות לכאן');
   }
 }
 
