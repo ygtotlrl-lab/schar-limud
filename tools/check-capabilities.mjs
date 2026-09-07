@@ -235,6 +235,60 @@ const APP = {
     // ⚠️ מתועד ❌ במטריצה — המנהל מנהל סיסמאות מלוח הבקרה של Supabase.
     149: () => false,
   },
+  /*  ⛔ סוג השער (סבב 108) — ⚠️ `text` מקבל את התוכן כארגומנט ורץ בזיכרון,
+   *  ⛔ ו-`behavior` דורש הרצה אמיתית על עץ אמיתי: ⭐ והמבחן הוא אם העברת
+   *  התוכן כארגומנט משנה את מה שנמדד.
+   *  ⛔ **וההצהרה נמדדת משני צדדיה** — ⚠️ שער בלי הצהרה והצהרה בלי שער,
+   *  ⭐ ומעליהם הסתירה: ⛔ `text` שמריץ תהליך, ⚠️ ו-`behavior` שאין בו לא
+   *  תהליך ולא רשת — ⭐ בלי הצד הזה `behavior` היה מסלול עקיפה. */
+  gateKind: {
+    'check-capabilities': 'text',
+    'check-comments':     'text',
+    'check-docs':         'behavior — שואל את היסטוריית ה-git: «קודם באותו קומיט» אינו תוכן שאפשר למסור כארגומנט',
+    'check-js':           'behavior — מריץ את כל השערים ואת `node --check`: פרסור של קובץ ולא של מחרוזת',
+    'check-status-area':  'text',
+    'check-structure':    'text',
+    'test_android':       'behavior — בונה ריפו git זמני ומריץ בו שערים אמיתיים',
+    'test_backup_policy': 'text',
+    'test_budget':        'behavior — מודד את זמן הריצה של שער, ובזיכרון היה מודד את עצמו',
+    'test_build':         'behavior — קורא את סיבית ההרצה מ-`git ls-files -s`, והיא אינה בתוכן הקובץ',
+    'test_bump':          'behavior — קורא היסטוריית git ומריץ את עצמו על עותק',
+    'test_cron':          'text',
+    'test_crossgate':     'behavior — מריץ שני שערים אמיתיים ומשווה את המספרים שדיווחו',
+    'test_dbfacts':       'behavior — מודד את המסד החי, ולא קובץ שיושב בעץ',
+    'test_devid':         'text',
+    'test_filesets':      'behavior — קורא את סט הקבצים המנוהל מ-`git ls-files`',
+    'test_hotwin':        'text',
+    'test_iconlayer':     'behavior — מריץ את המחולל ומשווה את הבייטים שהוא יצר',
+    'test_icons':         'behavior — המוטציה משנה את סט הקבצים, ו-`check-structure` קורא אותו מהדיסק',
+    'test_idarg':         'text',
+    'test_ids':           'text',
+    'test_inputlayer':    'text',
+    'test_lists':         'text',
+    'test_lock':          'text',
+    'test_manifest':      'behavior — מריץ את `check-docs`, שהוא עצמו שואל את היסטוריית ה-git',
+    'test_matrix':        'text',
+    'test_md':            'text',
+    'test_merge_pending': 'text',
+    'test_offline_login': 'behavior — מריץ את עצמו על עותק מוטט, והטענה היא שהשער האמיתי נופל',
+    'test_orphans':       'behavior — המוטציה שותלת קובץ ומסירה אותו, וסט קבצים אינו תוכן שאפשר למסור',
+    'test_passwords':     'text',
+    'test_pendflush':     'text',
+    'test_pull':          'text',
+    'test_push':          'text',
+    'test_readonly':      'behavior — מריץ את הסט האמיתי ומודד שהוא נופל, ובזיכרון היה מודד את עצמו',
+    'test_removals':      'behavior — קורא את הדיף מ-git, והוא אינו בתוכן של אף קובץ',
+    'test_roles':         'behavior — מריץ את עצמו על עותק מוטט, והטענה היא שהשער האמיתי נופל',
+    'test_rulesdocs':     'behavior — מריץ שערים אחרים על עותק מוטט, ומודד את קוד היציאה שלהם',
+    'test_session':       'text',
+    'test_sharedsync':    'text',
+    'test_shell':         'behavior — מריץ את עצמו על עותק מוטט, והטענה היא שהשער האמיתי נופל',
+    'test_signedshared':  'text',
+    'test_sources':       'text',
+    'test_stage_a':       'text',
+    'test_swcore':        'behavior — מריץ את עצמו ברתמה, ומודד `fetch` אמיתי',
+    'test_wiring':        'text',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -289,7 +343,7 @@ function callArity(text, name) {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [27, 37, 39, 41, 50, 79, 44, 145, 90, 129, 51, 22, 56];
+export const ROWS = [27, 37, 39, 41, 50, 79, 44, 145, 90, 129, 51, 22, 56, 23];
 
 /*  היכולות המשותפות. `block` — הליבה שחייבת להיות זהה בית-לבית.
  *  `hooks` — נקודות ההפעלה: `at:'boot'` = פונקציית העלייה, `at:'settings'`
@@ -1698,6 +1752,78 @@ function writeGateGaps() {
     const decl = WRITE_DECL.test(readOnce('tools/' + f));
     if (writes && !decl) out.push(f + ': כותב ואינו מצהיר');
     if (decl && !writes) out.push(f + ': מצהיר ואינו כותב');
+  }
+  return out;
+}
+
+/*  ⛔ שם החודש נכתב בצורה אחת (סבב 108) — ⚠️ גרש עברי `׳` ולא אפוסטרוף
+ *  ולא מרכאה: ⭐ שתי צורות הן שני דליים בארכיון, ⛔ ומיפוי ביניהן הוא
+ *  מקור אמת שני שמתיישן.
+ *  ⛔ **והמדידה על גוף הליטרל** ⛔ ולא על הטקסט הגולמי — ⚠️ המרכאה
+ *  שסוגרת מחרוזת JS אינה סימן בשם, ⭐ ומדידה גולמית הייתה מדווחת כל
+ *  «אדר א» כהפרה.
+ *  ⛔ **ושני הצדדים נמדדים** — ⚠️ סימן שגוי בשם, ⛔ ושם אדר בלי סימן
+ *  כלל: ⭐ בלי הצד השני «אדר א» היה עובר, ⚠️ והוא הדלי הנפרד. */
+const MONTH_ARR = /(?:MONTHS_HEB(?:_LEAP)?|HMO)\s*=\s*\[([^\]]*)\]/g;
+const MONTH_STR = /(["'])((?:[^\\]|\\.)*?)\1/g;
+function monthFormGaps() {
+  const src = readOnce(APP.file);
+  const out = [];
+  let arrays = 0, adar = 0, m;
+  MONTH_ARR.lastIndex = 0;
+  while ((m = MONTH_ARR.exec(src))) {
+    arrays++;
+    MONTH_STR.lastIndex = 0;
+    let s;
+    while ((s = MONTH_STR.exec(m[1]))) {
+      const val = s[2];
+      if (/['"]/.test(val)) out.push(val + ': אפוסטרוף או מרכאה');
+      if (val.indexOf('אדר ') === 0) {
+        adar++;
+        if (val.indexOf('׳') < 0) out.push(val + ': בלי גרש עברי');
+      }
+    }
+  }
+  if (!arrays) return ['index.html: אין מערך חודשים עבריים'];
+  if (!adar) return ['index.html: אין «אדר א׳»/«אדר ב׳» באף מערך חודשים'];
+  return out;
+}
+
+/*  ⛔ סוג השער נמדד משני צדדיו (סבב 108) — ⚠️ שער בלי הצהרה, ⛔ והצהרה
+ *  בלי שער: ⭐ ומעליהם שתי הסתירות — ⛔ שער שהוכרז `text` ומריץ תהליך
+ *  או רשת, ⚠️ ושער שהוכרז `behavior` ואין בו לא תהליך ולא רשת.
+ *  ⛔ **והצד השני הוא מה שמונע עקיפה** — ⚠️ בלעדיו כל שער היה מכריז על
+ *  עצמו `behavior` ⛔ ופוטר את עצמו מהכלל.
+ *  ⛔ **והשם מזוהה בלי נקודה שלפניו** — ⚠️ `_c.spawnSync(` הוא קריאת
+ *  תהליך לכל דבר, ⭐ ושלושת השמות אינם משמשים כמתודה של דבר אחר. */
+const PROC_CALL = /\b(?:spawnSync|execFileSync|execSync)\s*\(/;
+const NET_CALL = /\bfetch\s*\(/;
+const KIND_HEAD = 'behavior — ';
+function gateKindGaps() {
+  const kinds = APP.gateKind || {};
+  let files = [];
+  /*  ⛔ הכשל אינו נבלע — ⚠️ רשימה ריקה היא probe שאינו יכול להיכשל. */
+  try { files = fs.readdirSync('tools').filter((f) => GATE_NAME.test(f)).sort(); }
+  catch (e) { return ['tools/: ' + e.message]; }
+  if (!files.length) return ['tools/: אין קובצי שער'];
+  const names = files.map((f) => f.replace(/\.mjs$/, ''));
+  const out = [];
+  for (const n of names) if (!kinds[n]) out.push(n + ': שער בלי הצהרת סוג');
+  for (const n of Object.keys(kinds)) if (names.indexOf(n) < 0) out.push(n + ': מוצהר ואינו בעץ');
+  for (const n of names) {
+    const kind = kinds[n];
+    if (!kind) continue;
+    const code = gateCode(n + '.mjs');
+    const heavy = PROC_CALL.test(code) || NET_CALL.test(code);
+    if (kind === 'text') {
+      if (heavy) out.push(n + ': מוכרז text ומריץ תהליך או רשת');
+    } else if (kind.indexOf(KIND_HEAD) !== 0) {
+      out.push(n + ': סוג שאינו text ואינו «behavior — נימוק»');
+    } else if (kind.slice(KIND_HEAD.length).trim().split(/\s+/).length < 4) {
+      out.push(n + ': behavior בלי נימוק');
+    } else if (!heavy) {
+      out.push(n + ': מוכרז behavior ואין בו תהליך ולא רשת');
+    }
   }
   return out;
 }
@@ -3651,7 +3777,10 @@ const GATES = {
   19: { claim: 'תקן הבאנר' },
   16: { claim: 'דפוס הבודקים' },
   34: { claim: 'מספרי הבאנר' },
-  23: { claim: 'ריצת check-js' },
+  /*  ⛔ שני שערים לשורה אחת (סבב 108) — ⚠️ `check-comments` מודד את
+   *  מיקום הרתמה מתחת לסוגר הריצה הפנימית, ⛔ ו-`check-capabilities`
+   *  מודד את **סוג** השער: ⭐ שתי טענות נפרדות על אותה שורה. */
+  23: { claims: { 'check-comments': 'ריצת check-js', 'check-capabilities': 'gateKindGaps' } },
   /*  ⛔ שתי השורות של סבב 74ב — ⚠️ שתיהן נאכפות ב-`check-js` עצמו, ⭐ מפני
    *  שרק שם רצים כל השערים: ⛔ שער נפרד שימדוד את זמנם היה מריץ את כולם
    *  פעם שנייה, וזו בדיוק העבודה הכפולה שהשורה שמעליהן אוסרת. */
@@ -3695,7 +3824,7 @@ const GATES = {
   /*  ⛔ מנוע התאריך העברי (סבב 107) — ⚠️ הנימוק הישן הצביע על `test_date`
    *  «ביומן ובהנהלה», ⛔ והוא קיים בהנהלה בלבד: ⭐ מאז שהמנוע בבלוק חתום
    *  החתימה היא מה שמודד אותו, ⛔ ובשכר ובגיוס ההיעדר מוצהר ב-`skipCaps`. */
-  56: { claims: { 'check-capabilities': 'hebdate' } },
+  56: { claims: { 'check-capabilities': ['hebdate', 'monthFormGaps'] } },
   152: { claim: 'pass_salt' },
   156: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
   158: { claim: '⏳' },
@@ -3805,6 +3934,30 @@ const COUNT_NOTE = /^[\s*⛔⚠️⭐️\uFE0F]*נמדד/;
          `מוסיפים שורת «${DECL_MARK} <נימוק>» מעל הכתיבה, או מסירים את ההצהרה`);
   else
     pass(`שער אינו משנה קבצים — כל שער שכותב נושא הצהרה עם נימוקה`);
+
+  /*  ⛔ ושם החודש בצורה אחת (סבב 108) — ⚠️ ובאפליקציה שאין בה מנוע תאריך
+   *  עברי אין שם חודש למדוד: ⛔ ההיעדר מוצהר ב-`APP.skipCaps` ומנומק שם,
+   *  ⚠️ והדילוג נאמר ⛔ ואינו שקט. */
+  if ((APP.skipCaps || []).indexOf('hebdate') >= 0) {
+    pass(`monthFormGaps — אין כאן מנוע תאריך עברי, וההיעדר מוצהר ב-APP.skipCaps`);
+  } else {
+    const mfg = monthFormGaps();
+    if (mfg.length)
+      fail(`monthFormGaps: ${mfg.join(' · ')} — נמדדו ${mfg.length} והצפוי אפס. ` +
+           `כותבים את שם החודש בגרש עברי «׳», ולא באפוסטרוף ולא במרכאה`);
+    else
+      pass(`monthFormGaps — כל שם חודש במערכים נכתב בגרש עברי`);
+  }
+
+  /*  ⛔ וסוג השער מוצהר (סבב 108) — ⚠️ שער שמודד טקסט רץ בזיכרון,
+   *  ⛔ ושער שמודד התנהגות רץ כתהליך ונושא נימוק. */
+  const gkg = gateKindGaps();
+  if (gkg.length)
+    fail(`gateKindGaps: ${gkg.join(' · ')} — נמדדו ${gkg.length} והצפוי אפס. ` +
+         `מצהירים את השער ב-APP.gateKind — «text», או «${KIND_HEAD}<נימוק>»`);
+  else
+    pass(`gateKindGaps — ${Object.keys(APP.gateKind || {}).length} שערים מוצהרים, ` +
+         `וכל behavior נושא נימוק`);
   /*  ⚠️ ארבעת התאים ולא התא של האפליקציה הזו (סבב 72) — ⛔ ההערה משותפת
    *  לארבעת הריפו, והיא לגיטימית כל עוד תא אחד אינו תקין. */
   /*  ⛔ מדידה היא החריג היחיד (סבב 72) — ⚠️ «כמה שערים» ו«כמה קבצים»

@@ -42,7 +42,7 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 
 /*  ⛔ הריצה הפנימית מדלגת — ⚠️ בלעדיה הוא מריץ `check-js` שמריץ אותו,
  *  והרקורסיה אינה נעצרת. */
-if (process.env.R33_INNER || process.env.R37_INNER) {
+if (process.env.R33_INNER) {
   console.log('test_readonly: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
