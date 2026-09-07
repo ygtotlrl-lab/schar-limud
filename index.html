@@ -2605,6 +2605,30 @@ var PL_CFG = {
       }, function () { return { ok: false, ts: null }; });
   },
 };
+/* ═══ שומר ההקשר — מודול משותף (סבב 109) ══════════════════════════════════
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ מחזור «קרא ← מזג ← דחוף» נפתח בהקשר אחד ⛔ ואינו רשאי לכתוב באחר —
+      ⚠️ בין ה-`await` הראשון לאחרון ההקשר יכול להתחלף, ⭐ ומאותו רגע
+      הגלובלים מצביעים על החדש והזיכרון עדיין מחזיק את הישן: ⛔ כל כתיבה
+      שאחריו כותבת את נתוני ההקשר הקודם תחת החדש, ⚠️ וכל רישום הצלחה נזקף
+      לחשבון הלא נכון — ⭐ ועֵד פינוי כזה מתיר למחוק מהדיסק רשומה שמעולם
+      לא עלתה.
+   ⛔ **המונה ⛔ ולא שם ההקשר** — ⚠️ החלפה הלוך-ושוב מחזירה את אותו שם,
+      ⭐ והזיכרון בינתיים כבר הוחלף: ⛔ שוויון שמות אינו שוויון הקשר.
+   ⛔ **ומה נלכד מוצהר פר-אפליקציה** ⛔ ואינו כאן — ⚠️ באפליקציה רב-מוסדית
+      זה המוסד, ⭐ ובשאר המשתמש המחובר: ⛔ המנגנון אחד ⚠️ והנלכד נבדל.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _ctxEpoch = 0;
+function ctxEpoch() { return _ctxEpoch; }
+/*  ⛔ נקודת הקידום היחידה — ⚠️ כל מסלול שמחליף הקשר קורא לה **לפני**
+ *  הטעינה החדשה: ⭐ קידום שאחרי הטעינה משאיר את המחזור שרץ עכשיו סבור
+ *  שהוא עדיין בהקשר שלו, ⛔ והכתיבה שלו נזקפת לחשבון החדש. */
+function ctxSwitch() { _ctxEpoch++; return _ctxEpoch; }
+/*  ⛔ «האם ההקשר התחלף מאז שהתחלתי» — ⚠️ הקורא לוכד את הערך בכניסה
+ *  ⛔ ומוסר אותו כאן, ⭐ ואינו קורא את הגלובלי פעמיים. */
+function ctxStale(ep) { return ep !== _ctxEpoch; }
+/* ═══════════════ סוף שומר ההקשר ═════════════════════════════════════════ */
 /* ═══ מנגנון המשיכה — מודול משותף (סבב 51) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -2699,6 +2723,9 @@ function _slPushOf(t) {
            sl_settings:     { m: 'settings',     pk: PK_SET },
            sl_lists:        { m: 'lists',        pk: PK_LST } }[t];
 }
+/*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `mark` רץ אחרי `await`, ⭐ וקריאת
+ *  הגלובלי בו הייתה זוקפת את הצלחת הדחיפה של משתמש אחד לחשבון השני. */
+var _slPushEp = 0;
 var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
@@ -2706,11 +2733,12 @@ var PUSH_CFG = {
   dirty:  function (t, ctx) {
     var c = _slPushOf(t), remote = ctx && ctx[t];
     if (!remote) return null;
+    _slPushEp = ctxEpoch();
     return slDirtyRows(c.m, remote, function (k) { return pendHas(c.pk + k); });
   },
   key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(c.m, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },
-  mark:   function (t) { _slMarkPushed(_slPushOf(t).m); },
+  mark:   function (t) { if (!ctxStale(_slPushEp)) _slMarkPushed(_slPushOf(t).m); },
   run:    function () { syncAll(); },
 };
 /* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
@@ -3731,9 +3759,9 @@ async function slEnsurePassFp(u, pass) {
       if (cur === null) return false;          // אין crypto — לא ראיה, לא נוגעים
       if (cur === u.pass_fp) return false;      // תואמת — אין מה להשלים
     }
-    var stale = !!(u.pass_salt && u.pass_fp);   // הייתה טביעה, והיא אינה תואמת
+    var fpStale = !!(u.pass_salt && u.pass_fp);   // הייתה טביעה, והיא אינה תואמת
     var body;
-    if (stale) {
+    if (fpStale) {
       body = await slPassFields(pass);          // ⛔ כשל גזירה ⇒ {null,null} (סבב 24) — ר' מעל
     } else {
       var made = await slMakePassFp(pass);
@@ -4239,6 +4267,7 @@ async function doLogin(){
     // ⛔ השורה שבידינו נכנסת למראה מיד (סבב 79) — ⚠️ המשיכה המלאה שברקע
     //    עשויה לא להגיע כלל ברשת שנפלה, ⭐ והמראה היא מסלול הכניסה האופליין.
     slUsersSaveOne(pub);
+    ctxSwitch();
     sessSet(pub);
     document.getElementById('auth-spinner').style.display='none';
     enterApp();
@@ -4267,12 +4296,13 @@ async function doLoginOffline(u,p){
   if(verdict==='no-fp'){ showAuthErr(MSG_OFF_NO_FP); return; }
   if(verdict==='no-crypto'){ showAuthErr(MSG_OFF_NO_CRYPTO); return; }
   if(verdict!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
+  ctxSwitch();
   sessSet(slUserPub(cu));
   document.getElementById('auth-spinner').style.display='none';
   enterApp();
   toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
 }
-function doLogout(){sessClear();lkStop();document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+function doLogout(){ctxSwitch();sessClear();lkStop();document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת.
 // אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
 // איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
@@ -4352,8 +4382,13 @@ async function syncAll(){
   if(_syncBusy) return;
   _syncBusy=true;
   var _t0=Date.now();   // ראה pendSyncScan
+  /*  ⛔ ההקשר נלכד בכניסה ⛔ ונבדק לפני המיזוג ולפני הדחיפה — ⚠️ המחזור
+   *  מושך, ממזג וכותב, ⭐ והמשתמש יכול להתחלף בין המשיכה לכתיבה: ⛔ מה
+   *  שנמזג עבור הקודם היה יורד לדיסק ועולה לענן אחרי שהחדש כבר נכנס. */
+  var _ep=ctxEpoch();
   try{
     var rs=await slPullAll();
+    if(ctxStale(_ep)) return;
     // supabase-js לא זורק בכשל — הוא מחזיר {data:null,error:{...}}. לכן ה-catch
     // כאן היה קוד מת, ושאילתה שנכשלה השאירה נתונים ישנים על המסך בלי משוב.
     var errs=[];
@@ -4400,6 +4435,7 @@ async function syncAll(){
     /*  ⛔ קטגוריה שלא נמשכה נמסרת כ-`null` ⛔ ולא כמפה ריקה — ⚠️ מפה ריקה
      *  נקראת «הענן ריק» ⭐ ומסמנת את עֵד הפינוי, ⛔ ו-`null` הוא «אין ראיה»
      *  והשכבה המשותפת מדלגת עליה. */
+    if(ctxStale(_ep)) return;
     var stillPending=(await pushDirty({
       sl_students:     pulledStu?remoteStu:null,
       sl_transactions: pulledTxn?remoteTxn:null,
@@ -4409,6 +4445,7 @@ async function syncAll(){
     // ⚠️ הסריקה מסתמכת על תמונה **מלאה** של הענן: היא מורידה סימון מכל מה
     // שאינו ברשימת ה"עדיין ממתין". קטגוריה שלא נמשכה אינה מיוצגת שם, ולכן
     // די בכשל אחד מארבעה כדי שהורדת הסימון תהיה הסקה ולא ראיה.
+    if(ctxStale(_ep)) return;
     if(pulledStu&&pulledTxn&&pulledSet&&pulledLst) pendSyncScan(stillPending,_t0);
     // מראת המשתמשים (סבב 24) — נמשכת מתוך המשיכה המווסתת (סבב 53), כלומר
     // רק כשחותמת השינוי התקדמה או על אירוע.

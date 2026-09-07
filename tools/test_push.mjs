@@ -276,6 +276,10 @@ function harness(moduleSrc) {
     pendClear: (k) => log.cleared.push(k),
     pendFailed: (k) => log.failed.push(k),
     plTouch: () => { log.touch++; },
+    /*  ⛔ שומר ההקשר — ⚠️ הוא חי בבלוק חתום אחר, ⭐ והרתמה מספקת אותו
+     *  כדי ששכבת הדחיפה תיטען לבדה: ⛔ הקשר שאינו מתחלף בסביבת הדמה. */
+    ctxEpoch: () => 0,
+    ctxStale: () => false,
     rtyNote: () => { log.notes++; },
   };
   ctx.PUSH_CFG = {
@@ -388,6 +392,52 @@ async function scenarios(moduleSrc) {
 
 const base = await scenarios(block);
 for (const r of base) { if (r.ok) pass('12. ' + r.name); else fail('12. ' + r.name); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⛔ שומר ההקשר — החלפה באמצע מחזור (סבב 109)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ מה נאכף: הדפוס שארבע האפליקציות מחווטות בו — ⚠️ `dirty` לוכד את
+      המונה לפני ההמתנה הראשונה, ⛔ ו-`mark` בודק אותו לפני הרישום.
+   ⛔ הנימוק המדוד: `mark` רץ **אחרי** כל ה-`await` של המנות — ⚠️ והחלפה
+      שקרתה בתוכן זוקפת את הצלחת הדחיפה לחשבון ההקשר החדש: ⭐ ועֵד פינוי
+      כזה מתיר למחוק מהדיסק רשומה שמעולם לא עלתה.
+   ⛔ ומה יישבר בלעדיו: המחזור ייראה מוצלח — ⚠️ אין כאן כשל להראות,
+      ⭐ והנזק מתגלה רק כשהרשומה כבר אינה על הדיסק.
+   ⚠️ ומה שאינו נאכף כאן: **מי** קורא ל-`ctxSwitch` — ⛔ זה נמדד
+      ב-`check-capabilities` מול `APP.ctxKeys`.
+   ══════════════════════════════════════════════════════════════════════════ */
+{
+  /*  ⛔ מונה אמיתי ⛔ ולא stub — ⚠️ stub שמחזיר קבוע אינו יכול להתחלף,
+   *  ⭐ והטענה לא הייתה יכולה להיכשל. */
+  const EP = { n: 0 };
+  const run = async (switchMidFlight) => {
+    const h = harness(block);
+    let captured = 0;
+    h.ctx.ctxEpoch = () => EP.n;
+    h.ctx.ctxStale = (e) => e !== EP.n;
+    h.st.dirty = { A: [{ k: 1 }], B: [{ k: 2 }] };
+    h.ctx.PUSH_CFG.dirty = (t) => { captured = h.ctx.ctxEpoch(); return h.st.dirty[t]; };
+    h.ctx.PUSH_CFG.send = (t, rows) => {
+      if (switchMidFlight) EP.n++;                 /* החלפה בזמן ההמתנה */
+      h.log.sent.push({ t, rows: rows.map((r) => r.k), ok: true });
+      return Promise.resolve({});
+    };
+    h.ctx.PUSH_CFG.mark = (t) => { if (!h.ctx.ctxStale(captured)) h.log.marked.push(t); };
+    await h.ctx.pushDirty();
+    return h.log;
+  };
+  EP.n = 0;
+  const clean = await run(false);
+  if (clean.marked.length === 2) pass('14. מחזור שלא הוחלף בו ההקשר — עֵד הפינוי מסומן לשתי הטבלאות');
+  else fail(`14. מחזור נקי — נמדדו ${clean.marked.length} סימונים והצפוי 2. מיישרים את רתמת השומר`);
+  EP.n = 0;
+  const swapped = await run(true);
+  if (swapped.marked.length === 0 && swapped.sent.length === 2)
+    pass('14. ⛔ החלפת הקשר באמצע — הדחיפה נשלחה ⛔ ועֵד הפינוי אינו מסומן');
+  else
+    fail(`14. החלפה באמצע מחזור — נמדדו ${swapped.marked.length} סימונים והצפוי 0 ` +
+         `(${swapped.sent.length} שליחות). מוסיפים את בדיקת ctxStale ל-PUSH_CFG.mark`);
+}
 
 if (!RUN_MUT) {
   console.log('\n⏭ test_push: המוטציות רצות ברמה המלאה (--full)');

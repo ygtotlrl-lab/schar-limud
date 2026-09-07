@@ -106,7 +106,16 @@ const APP = {
   /*  ⛔ שם מפת מטפלי ה-`data-act` (סבב 89) — ⚠️ השם נבדל בין הארבע
    *  והמנגנון אחד: ⭐ מאזין יחיד ב-`document` שמנתב לפי המפה. */
   actMap: 'DOM_ACTIONS',
-  gapRows: [38, 71, 110, 114, 135, 136, 143, 56, 149],
+  /*  ⛔ מה שכתיבתו מחליפה הקשר — ⚠️ כאן זה המשתמש המחובר, ⭐ והכתיבה
+   *  אליו עוברת בקובעי מודול הסשן: ⛔ המנגנון משותף ⚠️ והנלכד נבדל. */
+  ctxKeys: { sessSet: 'הצבת המשתמש המחובר — ⛔ החלפת הקשר',
+             sessClear: 'ניקוי המשתמש המחובר — ⛔ החלפת הקשר' },
+  /*  ⛔ אתר שכותב לשם ואינו החלפה — ⚠️ מוכרז בשמו ובנימוקו, ⭐ והכרזה
+   *  שאין לה מקרה בפועל מפילה אף היא. */
+  ctxSwitchExempt: { slPullUsers: 'רענון תפקיד של **אותה** זהות — ⛔ ולא החלפה' },
+  /*  ⛔ מחזורי «קרא ← מזג ← דחוף» — ⚠️ מספרם נגזר מהאפליקציה ⛔ ואינו נאכף. */
+  ctxCycles: ['syncAll'],
+  gapRows: [38, 71, 110, 114, 135, 143, 56, 149],
   /*  ⛔ אין כאן מסלול תצוגה שמושך משכבת השורות (סבב 89) — ⚠️ המסכים
    *  קוראים מהמראה שעל הדיסק, ⭐ ולכן אין קריאה שצריך למדוד בה חלון.
    *  ⛔ **והרשימות ריקות ואינן נשמטות** — ⚠️ שדה חסר נקרא «לא נשאל». */
@@ -384,7 +393,10 @@ const CAPS = {
    *  ברגע יצירתו ואין לה «פונקציית עלייה» — ⛔ מה שנאכף כאן הוא הליבה עצמה,
    *  ⚠️ שישבה מחוץ לכל בלוק מסבב 83 ⛔ ונשמרה ברשימת-היתר במקום בחתימה:
    *  ⭐ ארבע פונקציות זהות בית-לבית שאף `sha256` לא מדד. */
-  stale: {
+  /*  ⛔ המפתח נושא תחילית (סבב 109) — ⚠️ `stale` לבדו שימש שישה
+   *  מנגנונים, ⭐ וכאן הוא **האזנת הסכימה**: ⛔ שם שמשמש יותר ממנגנון
+   *  אחד הוא מלכודת, ⚠️ ומי שמחפש את שומר ההקשר מוצא את הבלוק הזה. */
+  schemastale: {
     name: 'מודול האזנת הסכימה',
     docRows: ['באנר עדכון `sw`'],
     block: { sha: 'f6d52387874c7261', lines: 74,
@@ -524,6 +536,15 @@ const CAPS = {
    *  הוא דורך את התקתוק ומרשם את מאזין ה-`online`. ⛔ מה שאינו נאכף כאן
    *  הוא קידום החותמת ממסלולי הכתיבה — הוא נאכף ב-`test_pull.mjs`,
    *  שיודע גם מהם המשפכים בכל אפליקציה.                                */
+  /*  ⭐ סבב 109 — שומר ההקשר. ⚠️ אין לו `hooks`: הקידום נקרא ממסלולי
+   *  ההחלפה של האפליקציה, ⛔ והחיווט החי נמדד ב-`ctxGuardGaps`. */
+  ctxguard: {
+    name: 'שומר ההקשר',
+    docRows: ['הקשר נלכד בכניסה לפונקציה'],
+    block: { sha: '584ff6a476075691', lines: 24,
+             start: '/* ═══ שומר ההקשר — מודול משותף (סבב 109)',
+             end:   '/* ═══════════════ סוף שומר ההקשר' },
+  },
   pull: {
     name: 'מנגנון המשיכה',
     docRows: ['`pull` — מנגנון המשיכה'],
@@ -673,8 +694,8 @@ function orderGaps() {
     .concat(BLOCK_ORDER.filter((k) => inFile.indexOf(k) < 0).map((k) => 'בסדר ואינו חתום: ' + k));
 }
 
-const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'techinfo', 'status', 'backup',
-                     'pending', 'ids', 'retry', 'lock', 'sess', 'pull', 'push', 'hotwin',
+const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'schemastale', 'techinfo', 'status', 'backup',
+                     'pending', 'ids', 'retry', 'lock', 'sess', 'ctxguard', 'pull', 'push', 'hotwin',
                      'devid', 'mergecore', 'tomb', 'writeUser', 'hebdate', 'uihelp', 'readnum', 'uniq'];
 
 /*  ⛔ שמות השורות שבטבלה (סבב 106) — ⚠️ המרשמים שמתחת מצהירים **שם**
@@ -1588,8 +1609,8 @@ function errPatternSites() {
     .map((m) => m.replace(/^id="|"$/g, ''));
   const allow = Object.keys(APP.inlineErrAllow || {});
   const undeclared = found.filter((i) => allow.indexOf(i) < 0);
-  const stale = allow.filter((i) => found.indexOf(i) < 0);
-  return undeclared.length + stale.length + (code.match(/\balert\s*\(/g) || []).length;
+  const ghost = allow.filter((i) => found.indexOf(i) < 0);
+  return undeclared.length + ghost.length + (code.match(/\balert\s*\(/g) || []).length;
 }
 
 /*  ⛔ מספר שורה בגוף שער נגזר משם השורה ⛔ ואינו מוקלד — ⚠️ הנימוק נמדד:
@@ -3121,7 +3142,131 @@ function staleNoteSites() {
   return out;
 }
 
+/*  ⛔⛔ שומר ההקשר (סבב 109) — ⚠️ **המנגנון משותף וההצהרה פרטית**: ⭐ הבלוק
+ *  החתום נותן את `ctxEpoch`/`ctxSwitch`/`ctxStale`, ⛔ ומה שנלכד מוצהר
+ *  ב-`APP.ctxKeys` — ⚠️ המוסד באפליקציה רב-מוסדית, והמשתמש בשאר.
+ *  ⛔ **וההצהרה נמדדת משני צדדיה** — ⚠️ אתר כתיבה להקשר שאינו מקדם את
+ *  המונה ⛔ וקידום שאינו יושב באתר כתיבה: ⭐ הראשון משאיר מחזור שרץ עכשיו
+ *  סבור שהוא עדיין בהקשר שלו, ⛔ והשני מפיל מחזור תקין באמצע.
+ *  ⛔ **וכל מחזור «קרא ← מזג ← דחוף» לוכד בכניסה ובודק אחרי המתנה** —
+ *  ⚠️ ומספרם נגזר מהאפליקציה ⛔ ואינו נאכף: ⭐ מה שנאכף הוא שכל אחד
+ *  מהמוצהרים עושה את שניהם.
+ *  ⚠️ **ומה שאינו נאכף כאן**: ⛔ שכל כתיבה בגוף המחזור מוגנת — ⭐ «כתיבה»
+ *  אינה נגזרת מהטקסט, ⛔ ומה שנמדד הוא נקודת הרישום המוצהרת. */
+const CTX_WRITE = (k) => new RegExp('(?:^|[^\\w$.])' + k.replace(/\./g, '\\.') + '\\s*(?:=(?!=)|\\()');
+/*  ⛔ שמות הפונקציות שגופן מקדם את המונה — ⚠️ אתר הכתיבה מותר לקרוא להן
+ *  במקום לקדם בעצמו, ⭐ וזה בדיוק המסלול של בורר המוסד: ⛔ הוא מאפס
+ *  ומקדם בפונקציה אחת, ⚠️ וכותב את המפתחות בעצמו. */
+function ctxSwitchers() {
+  const out = [];
+  for (const m of code.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
+    const b = fnBody(m[1]);
+    if (b && /\bctxSwitch\s*\(/.test(b)) out.push(m[1]);
+  }
+  return [...new Set(out)].filter((n) => n !== 'ctxSwitch');
+}
+/*  ⛔ אתר כתיבה להקשר — ⚠️ השמה (`X =`) או קריאה לקובע (`X(`), ⭐ ולא
+ *  קריאה: ⛔ הצהרת `var` אינה החלפה, ⚠️ והגדרת הפונקציה אינה קריאה. */
+function ctxWriteSites(name) {
+  const re = new RegExp('(?:^|[^\\w$.])(' + name.replace(/\./g, '\\.') + ')\\s*(?:=(?!=)|\\()', 'g');
+  const out = [];
+  for (const m of code.matchAll(re)) {
+    const at = m.index + m[0].indexOf(m[1]);
+    if (inShared(at)) continue;
+    if (/(?:var|let|const|function)\s+$/.test(code.slice(Math.max(0, at - 14), at))) continue;
+    out.push(at);
+  }
+  return out;
+}
+function ctxGuardGaps() {
+  const keys = APP.ctxKeys || {};
+  const cycles = APP.ctxCycles || [];
+  const exempt = APP.ctxSwitchExempt || {};
+  const out = [];
+  if (!Object.keys(keys).length) return ['APP.ctxKeys ריק — אין הקשר מוצהר'];
+  if (!cycles.length) return ['APP.ctxCycles ריק — אין מחזור מוצהר'];
+  const sw = ctxSwitchers();
+  const bumps = (body) => /\bctxSwitch\s*\(/.test(body) ||
+                          sw.some((n) => new RegExp('\\b' + n + '\\s*\\(').test(body));
+  /*  ⛔ הגוף נחתך מהסוגר הפותח — ⚠️ `fnBody` מחזיר את הכותרת איתו
+   *  ו-`enclosingFnBody` אינו, ⭐ והשוואה בין השניים כמות שהם אינה
+   *  מתקיימת לעולם: ⛔ probe שאינו יכול להצליח. */
+  const braces = (b) => { const i = b.indexOf('{'); return i < 0 ? '' : b.slice(i); };
+  const fnByBody = {};
+  for (const m of code.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g))
+    if (!(m[1] in fnByBody)) fnByBody[m[1]] = braces(fnBody(m[1]));
+  const exemptBody = {};
+  for (const f of Object.keys(exempt)) exemptBody[f] = braces(fnBody(f));
+  const exemptSeen = {};
+  /*  ⛔ צד א — כל מפתח מוצהר קיים בקוד, וכל אתר כתיבה שלו מקדם את המונה. */
+  for (const k of Object.keys(keys)) {
+    const sites = ctxWriteSites(k);
+    if (!sites.length) { out.push(`מפתח מוצהר בלי אתר כתיבה: ${k}`); continue; }
+    for (const at of sites) {
+      const body = enclosingFnBody(code, at);
+      /*  ⛔ ההחרגה נבדקת **לפני** הקידום ⛔ ולא אחריו — ⚠️ פונקציה מוחרגת
+       *  עשויה לקרוא למסלול יציאה שמקדם בענף שגיאה, ⭐ וזיכוי על כך היה
+       *  מסמן את ההחרגה כמיותרת ומפיל אותה: ⛔ ההצהרה קודמת לנגזרת. */
+      const f = Object.keys(exempt).find((x) => exemptBody[x] && exemptBody[x] === body);
+      if (f) { exemptSeen[f] = 1; continue; }
+      if (bumps(body)) continue;
+      out.push(`${k} נכתב בשורה ${lineOf(at)} ⛔ ובלי ctxSwitch()`);
+    }
+  }
+  /*  ⛔ צד ב — כל קידום יושב באתר שכותב הקשר מוצהר: ⚠️ קידום שאינו החלפה
+   *  מפיל מחזור תקין באמצע, ⭐ והוא חמור בדיוק כמו החלפה בלי קידום.
+   *  ⚠️ **ובעקיפין אחת** — ⛔ הקורא רשאי לכתוב את המפתחות בעצמו ⭐ ולקרוא
+   *  למאפס שהקידום יושב בו: ⚠️ זה בדיוק המסלול של בורר המוסד. */
+  const writesKey = (body) => Object.keys(keys).some((k) => CTX_WRITE(k).test(body));
+  const writerBodies = [];
+  for (const k of Object.keys(keys))
+    for (const p of ctxWriteSites(k)) writerBodies.push(enclosingFnBody(code, p));
+  for (const at of callSites('ctxSwitch')) {
+    const body = enclosingFnBody(code, at);
+    if (writesKey(body)) continue;
+    const nm = Object.keys(fnByBody).find((n) => fnByBody[n] === body);
+    if (nm && writerBodies.some((w) => new RegExp('\\b' + nm + '\\s*\\(').test(w))) continue;
+    out.push(`ctxSwitch() בשורה ${lineOf(at)} ⛔ ואינו יושב באתר שכותב הקשר מוצהר`);
+  }
+  /*  ⛔ והחרגה שאין לה מקרה בפועל מפילה אף היא — ⚠️ רשימה שהתיישנה היא
+   *  בעצמה השארית שהשורה באה לסלק. */
+  for (const f of Object.keys(exempt)) if (!exemptSeen[f]) out.push(`החרגה בלי מקרה: ${f}`);
+  /*  ⛔ צד ג — כל מחזור מוצהר לוכד בכניסה ובודק אחרי המתנה. */
+  for (const f of cycles) {
+    const b = fnBody(f);
+    if (!b) { out.push(`מחזור מוצהר שאינו קיים: ${f}`); continue; }
+    const cap = b.indexOf('ctxEpoch()');
+    const wait = Math.min(...['await ', '.then('].map((w) => { const i = b.indexOf(w); return i < 0 ? b.length : i; }));
+    if (cap < 0) { out.push(`${f}: אינו לוכד ctxEpoch()`); continue; }
+    if (cap > wait) out.push(`${f}: לוכד ctxEpoch() אחרי ההמתנה הראשונה`);
+    /*  ⛔ **אחרי** ההמתנה הראשונה ⛔ ולא «קיים» — ⚠️ שער שיושב לפניה
+     *  מודד את ההקשר שנלכד רגע קודם, ⭐ ואינו יכול להיכשל. */
+    if (b.indexOf('ctxStale(', wait) < 0) out.push(`${f}: אין ctxStale() אחרי המתנה`);
+  }
+  /*  ⛔ צד ה — אפס אתרים עם `stale` עירום — ⚠️ הנימוק המדוד: השם שימש
+   *  שומר הקשר · באנר גיבוי · דגל טביעה · ומחלקת CSS, ⭐ ומי שחיפש את
+   *  השומר מצא את השלושה האחרים: ⛔ כל מנגנון נושא תחילית משלו. */
+  /*  ⛔ השם נבנה ⛔ ואינו כתוב כליטרל צמוד לסוגר — ⚠️ השם צמוד לסוגר בגוף
+   *  השער נקרא כקורא של השם שנמחק, ⭐ ושער ההסרות מפיל עליו: ⛔ וזה
+   *  בדיוק השם שהשורה הזו אוסרת. */
+  const bare = [...code.matchAll(new RegExp('(?<![\\w$-])' + 'stale' + '(?![\\w$-])', 'g'))];
+  if (bare.length)
+    out.push(`${bare.length} אתרים עם \`stale\` עירום — שורות ` +
+             bare.slice(0, 4).map((m) => lineOf(m.index)).join(', '));
+  /*  ⛔ צד ד — רישום עֵד הפינוי נבדק אף הוא: ⚠️ `mark` רץ אחרי `await`,
+   *  ⭐ והוא הרישום שזוקף את הצלחת הדחיפה לחשבון ההקשר. */
+  const mk = /mark:\s*function\s*\([^)]*\)\s*\{([^{}]*)\}/.exec(code);
+  if (!mk) out.push('PUSH_CFG.mark לא נמצא');
+  else if (!/ctxStale\(/.test(mk[1])) out.push('PUSH_CFG.mark אינו בודק ctxStale()');
+  return out;
+}
+
 const MATRIX = [
+  /*  ⛔ הקשר נלכד בכניסה לפונקציה (סבב 109) — ⚠️ הצד השני של השורה שמעליה:
+   *  ⭐ שם נמדד ש**המצב מאופס**, ⛔ וכאן שהמחזור **לוכד ובודק**. ⚠️ המנגנון
+   *  משותף ⛔ והנלכד מוצהר ב-`APP.ctxKeys`, ⭐ ונמדד משני צדדיו. */
+  { row: 136, name: 'הקשר נלכד בכניסה לפונקציה',
+    probe: () => ctxGuardGaps().length === 0 },
   /*  ⛔ פריסה במסכי טלפון וטאבלט (סבב 97) — ⚠️ שלוש מדידות יחד: ⭐ תג
    *  `viewport` אחד · ⛔ אין `max-width` בשאילתת פריסה · ⛔ וכל נקודת
    *  שבירה בסולם המוצהר: ⚠️ שתי הראשונות לבדן עוברות על קובץ שסולמו
@@ -3198,12 +3343,6 @@ const MATRIX = [
    *  ששמות משתני המצב נבדלים בין הארבע ⛔ והמנגנון אחד: ⭐ ביומן זהו
    *  מוסד, ⚠️ ובשלוש האחרות משתמש — ⛔ ושם הנתונים אינם פר-משתמש. */
   { row: 135, name: 'החלפת הקשר מאפסת את כל המצב', app: true },
-  /*  ⛔ הקשר נלכד בכניסה לפונקציה (סבב 90) — ⚠️ הצד השני של «החלפת הקשר»:
-   *  ⭐ שם נמדד שהמצב מאופס, ⛔ וכאן שכל פונקציה אסינכרונית לוכדת את ההקשר
-   *  בכניסה ⛔ ואינה קוראת גלובלי פר-הקשר אחרי `await`. ⚠️ ה-probe יושב
-   *  ב-`APP.tableProbe` מפני ששמות משתני ההקשר נבדלים בין הארבע ⛔ והמנגנון
-   *  אחד. */
-  { row: 136, name: 'הקשר נלכד בכניסה לפונקציה', app: true },
   /*  ⛔ המשיכה המסוננת (סבב 87) — ⚠️ ה-probe יושב ב-`APP.tableProbe`
    *  מפני שאתרי הקריאה נבדלים בין הארבע ⛔ והמנגנון אחד: ⭐ בהנהלה זהו
    *  מסך ההשגחה, ⚠️ ביומן דגל ה-`archived`, ⛔ ובשתיים האחרות אין מסלול
@@ -3760,8 +3899,15 @@ const GATES = {
   17: { claim: 'const SHARED' },
   20: { claims: { test_filesets: 'testsOnly', 'check-comments': 'מכריז היעדר' } },
   18: { claim: 'טענות על התנהגות' },
-  28: { manual: 'המונה מדווח ואינו מפיל: 85 שערים נכתבו לפני הדרישה, והפלה רטרואקטיבית חוסמת כל דחיפה' },
-  29: { manual: 'תקן תוכן המוטציה טרם נכתב — טרם נמדד' },
+  /*  ⛔⛔ שתי השורות עברו מנימוק להפניה (סבב 109) — ⚠️ הנימוקים תיארו
+   *  עולם שחלף: ⭐ «המונה מדווח ואינו מפיל» ו«התקן טרם נכתב» נכתבו לפני
+   *  שסבב 79 הפך את שתיהן למפילות, ⛔ ומאז `check-comments` מפיל על שער
+   *  שאין לו היפוך תקין ועל מוטציה בלי שם טענה.
+   *  ⚠️ **ושם הטענה נבחר בלי המילה שסורק המוטציות מחפש** — ⛔ מחרוזת
+   *  שנושאת אותה נספרת כתווית של השער הזה עצמו, ⭐ והוא מדווח שיש בו
+   *  מוטציה שאין בו. */
+  28: { claim: 'לכל אחד שינוי, תווית' },
+  29: { claim: 'שם הטענה שתיפול' },
   27: { claim: 'כיסוי הטבלה' },
   36: { claim: 'ועמודת התקן שלה אוסרת במפורש' },
   37: { claim: ['מספור רציף ובלי כפילויות', 'nameSignGaps', 'catOrderGaps'] },
@@ -4068,9 +4214,9 @@ const COUNT_NOTE = /^[\s*⛔⚠️⭐️\uFE0F]*נמדד/;
        'או שורת נימוק מדוע אינה ניתנת לאכיפה מכנית');
   else pass(`כיסוי הטבלה — ${nums.length} שורות: ${enforced.size} נאכפות כאן, ` +
             `${nums.length - enforced.size} בשער אחר או עם נימוק כתוב`);
-  const stale = Object.keys(GATES).map(Number).filter((n) => !nums.includes(n));
-  if (stale.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${stale.join(', ')} — ` +
-    `נמדדו ${stale.length} והצפוי אפס. מסירים אותן מ-GATES`);
+  const ghostRows = Object.keys(GATES).map(Number).filter((n) => !nums.includes(n));
+  if (ghostRows.length) fail(`שורות ב-GATES שאינן קיימות בטבלה: ${ghostRows.join(', ')} — ` +
+    `נמדדו ${ghostRows.length} והצפוי אפס. מסירים אותן מ-GATES`);
   const both = Object.keys(GATES).map(Number).filter((n) => enforced.has(n));
   if (both.length) fail(`שורות שמוכרזות גם ב-MATRIX וגם ב-GATES: ${both.join(', ')} — ` +
     `נמדדו ${both.length} והצפוי אפס. מסירים אותן מאחת השתיים`);

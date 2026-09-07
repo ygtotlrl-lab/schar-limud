@@ -156,6 +156,13 @@ function makeCtx(opts = {}) {
     showAuthErr(m) { calls.authErr.push(m); },
     startAuthLoad() {},
     enterApp() { calls.enter++; },
+    /*  ⛔ שומר ההקשר — ⚠️ הוא חי בבלוק חתום אחר, ⭐ והרתמה מספקת אותו
+     *  כדי שמסלולי הכניסה ייטענו לבדם: ⛔ מונה אמיתי, ⚠️ ולא ערך קבוע
+     *  שאינו יכול להתחלף. */
+    _ctxEpoch: 0,
+    ctxEpoch() { return ctx._ctxEpoch; },
+    ctxSwitch() { return ++ctx._ctxEpoch; },
+    ctxStale(e) { return e !== ctx._ctxEpoch; },
     toast(m) { calls.toast.push(m); },
     // קוראים חיצוניים שאינם בתחום הסבב הזה.
     renderSettingsLists() { calls.lists++; },
