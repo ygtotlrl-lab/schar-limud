@@ -331,6 +331,7 @@ const APP = {
     'test_signedshared':  'text',
     'test_sources':       'text',
     'test_stage_a':       'text',
+    'test_toolsid':      'text',
     'test_swcore':        'behavior — מריץ את עצמו ברתמה, ומודד `fetch` אמיתי',
     'test_wiring':        'text',
   },
@@ -3261,9 +3262,8 @@ function ctxGuardGaps() {
     const b = code.slice(from, to);
     const wait = Math.min(...['await ', '.then('].map((w) => { const i = b.indexOf(w); return i < 0 ? b.length : i; }));
     if (wait > mm.index - from) continue;
-    /*  ⛔ המחזור נקרא בשמו ⛔ ולא במספר שורה — ⚠️ `lineOf` מודד את הקוד
-     *  המולבן, ⭐ ושורות ה-HTML שמחוץ ל-`<script>` מתקצרות בו: ⛔ מספר
-     *  שאינו מצביע על השורה הנכונה גרוע ממחרוזת ריקה. */
+    /*  ⛔ המחזור נקרא בשמו ⛔ ולא במספר שורה — ⚠️ השם מזהה אותו גם אחרי
+     *  שקוד שמעליו זז, ⭐ ומספר שורה שהתיישן שולח את הקורא למקום אחר. */
     const head = code.slice(Math.max(0, from - 160), from).replace(/\s+/g, ' ');
     const nm = (/function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*$/.exec(head) ||
                 /([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?function\s*\([^)]*\)\s*$/.exec(head) ||
@@ -3339,12 +3339,46 @@ function scanKindGaps() {
   return out;
 }
 
+/*  ⛔ ההלבנה שומרת על מספרי השורות (סבב 112) — ⚠️ הנימוק המדוד: כל
+ *  דיווח של השערים נשען על `lineOf`, ⭐ והוא מודד את הקוד **המולבן**:
+ *  ⛔ הלבנה שמקצרת מחרוזת או בולעת שורה חדשה מזיזה כל מספר שורה שמדווח,
+ *  ⚠️ ודיווח שמצביע על שורה שאינה קיימת גרוע מדיווח בלי שורה. ⛔ **ושלוש
+ *  המדידות יחד**: אורך · מיקומי השורה החדשה · ועשרה מיקומים פרושים. */
+function whitenLineGaps() {
+  const out = [];
+  const nlAt = (x) => { const a = []; let i = -1; while ((i = x.indexOf('\n', i + 1)) >= 0) a.push(i); return a; };
+  const lineAt = (x, p) => x.slice(0, p).split('\n').length;
+  const capTxt = readOnce('tools/check-capabilities.mjs');
+  const cases = [
+    ['index.html · markup', src, whiten(src, { markup: 'blank' })],
+    ['index.html · script', src, whiten(src)],
+    ['check-capabilities.mjs', capTxt, whitenJs(capTxt)],
+  ];
+  for (const [nm, raw, w] of cases) {
+    if (w.length !== raw.length) { out.push(`${nm}: אורך ${w.length} מול ${raw.length}`); continue; }
+    const a = nlAt(raw), b = nlAt(w);
+    if (a.length !== b.length || a.some((v, i) => v !== b[i])) {
+      out.push(`${nm}: ${a.length} שורות חדשות מול ${b.length}, או מיקום שזז`); continue;
+    }
+    for (let k = 1; k <= 10; k++) {
+      const pos = Math.floor((raw.length * k) / 11);
+      if (lineAt(raw, pos) !== lineAt(w, pos)) {
+        out.push(`${nm}: מיקום ${pos} — שורה ${lineAt(w, pos)} מול ${lineAt(raw, pos)}`);
+      }
+    }
+  }
+  if (!cases.length) out.push('אין מקרה נמדד — הבדיקה אינה יכולה להיכשל');
+  return out;
+}
+
 const MATRIX = [
   /*  ⛔ שער סורק קוד מולבן (סבב 111) — ⚠️ הצד שנמדד הוא **ההצהרה מול
    *  המעשה**, ⭐ ולא ההלבנה עצמה: ⛔ הלבנה גורפת הפילה 18 מ-22 שערים,
    *  ⚠️ שהנמדד בהם חי במחרוזות. */
   { row: 23, name: 'שער סורק קוד מולבן',
     probe: () => scanKindGaps().length === 0 },
+  { row: 23, name: 'ההלבנה שומרת על מספרי השורות',
+    probe: () => whitenLineGaps().length === 0 },
   /*  ⛔ הקשר נלכד בכניסה לפונקציה (סבב 109) — ⚠️ הצד השני של השורה שמעליה:
    *  ⭐ שם נמדד ש**המצב מאופס**, ⛔ וכאן שהמחזור **לוכד ובודק**. ⚠️ המנגנון
    *  משותף ⛔ והנלכד מוצהר ב-`APP.ctxKeys`, ⭐ ונמדד משני צדדיו. */
@@ -3880,9 +3914,11 @@ const MATRIX = [
    *  ⛔ ומעבר שלהם ב-`readNum` היה דורש אלמנט שאינו קיים. */
   { row: 148, name: 'קריאת ערך מספרי עוברת ב-readNum',
     probe: () => rawFieldReadSites().length === 0 },
+  /* ⚠️ פר-אפליקציה — הנימוק לשכבת הכניסה נבדל — כניסה מלאה, אין מסך ניהול משתמשים, או אין משתמשים כלל */
   /*  ⛔ ❌ מנומק (סבב 67) — אין כאן מסך ניהול משתמשים, ואין לא
    *  שינוי סיסמה עצמי ולא החלפת משתמש; ⚠️ המנהל הוא המשתמש
    *  היחיד בפועל, וסיסמאות נקבעות ב-INSERT ידני. */
+  /* ⚠️ סוף פר-אפליקציה */
   /*  ⭐ סבב 68 — שכבת המודאל. ⛔ ה-probe מאמת **חתימה** ולא קיום שם:
    *  `openModal(id)` בשכר נשאה עד סבב 68 את אותו שם ומשמעות אחרת, ⚠️ ומי
    *  שהעתיק קריאה מגיוס לשם קיבל קוד שמתקמפל ואינו עובד. ⛔ ובנוסף נדרשים
@@ -3890,8 +3926,10 @@ const MATRIX = [
    *  תקין עד שמישהו לוחץ עליו. */
   { row: 73, name: 'שכבת המודאל',
     probe: () => modalGaps().length === 0 },
+  /* ⚠️ פר-אפליקציה — נקודות הכניסה של שכבת הכניסה נבדלות בשמן ובקיומן בין ארבע האפליקציות */
   { row: 150, name: 'שכבת כניסה מלאה',
     probe: () => false },
+  /* ⚠️ סוף פר-אפליקציה */
 ];
 
 /*  ⭐ אתרי העברת-מזהה (סבב 64) — אופרנד שמשורשר מיד אחרי `('` או `,'`,
@@ -3980,7 +4018,8 @@ const GATES = {
                   test_wiring: 'W.missing' } },
   109: { claim: 'tile-bg' },
   17: { claim: 'const SHARED' },
-  20: { claims: { test_filesets: 'testsOnly', 'check-comments': 'מכריז היעדר' } },
+  20: { claims: { test_filesets: 'testsOnly', 'check-comments': 'מכריז היעדר',
+                  test_toolsid: 'tools-drift' } },
   18: { claim: 'טענות על התנהגות' },
   /*  ⛔⛔ שתי השורות עברו מנימוק להפניה (סבב 109) — ⚠️ הנימוקים תיארו
    *  עולם שחלף: ⭐ «המונה מדווח ואינו מפיל» ו«התקן טרם נכתב» נכתבו לפני
@@ -4019,7 +4058,8 @@ const GATES = {
   49: { manual: 'התנהגות סשן שאינה בעץ — ⛔ אין קובץ שאפשר למדוד בו קריאה חסכונית' },
   51: { claims: { 'check-capabilities': ['sha:', 'orderGaps', 'blockRowGaps'],
                   test_sharedsync: ['block-drift', 'canon-drift'],
-                  test_signedshared: 'unsignedTwins' } },
+                  test_signedshared: 'unsignedTwins',
+                  test_toolsid: ['pure-tools', 'pure-undeclared'] } },
   65: { claim: 'CANON' },
   80: { claim: 'storage' },
   79: { claim: 'ג · פעולה שדורשת רשת' },
