@@ -249,6 +249,7 @@ if (!process.env.RD67_MUT) {
   const _mut = (label, file, edit, expectFail) => {
     /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שניים** בהרצה
         אחת, ⭐ אחד לכל מוטציה: ⛔ כל אחת מריצה שער אמיתי על ליבה שהשתנתה. */
+    /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה שער אמיתי בתהליך נפרד, ⛔ והוא קורא את המקור מהדיסק. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = _p.join(d, file);

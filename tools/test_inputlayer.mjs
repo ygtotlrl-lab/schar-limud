@@ -197,6 +197,7 @@ if (!RUN_MUT) {
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 /*  ⛔ המוטציות אינן נכתבות לעץ (הלקח של סבב 42ג) — עותק בתיקייה זמנית. */
 sec('מוטציות');
+/*  ⛔ כותב על עותק — ⚠️ השער האמיתי רץ בתהליך נפרד, ⛔ והוא קורא את `index.html` מהדיסק. */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'inp-'));
 const mut = (name, edit, expectFail, why) => {
   const dir = path.join(tmp, name);

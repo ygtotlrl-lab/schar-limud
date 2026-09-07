@@ -57,7 +57,9 @@ const APP = {
   settingsFn: 'renderSettingsLists',
   matrixCol: 3,
   /*  ⚠️ אין כאן יכולת משותפת שנעדרת (סבב 52). */
-  skipCaps: [],
+  /*  ⛔ מנוע התאריך העברי נעדר כאן במכוון (סבב 107) — ⚠️ נמדדו אפס צרכני
+   *  תאריך עברי באפליקציה הזו, ⭐ ומודול שאין לו קורא הוא קוד מת. */
+  skipCaps: ['hebdate'],
   /*  ⛔ קבועי מסך הצפייה (סבב 90ג) — ⚠️ מסך «טבלת התשתית» קיים ביומן
    *  בלבד. ⛔ **והרשימה אינה נשמטת** — ⭐ שדה חסר נקרא «לא נשאל». */
   viewOnlyConsts: [],
@@ -236,10 +238,58 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
+/*  נקודת הפעלה חיה לפונקציה — ⛔ בשתי הצורות (סבב 79): `onclick` מוטבע,
+ *  ⛔ **או** `data-act` שמחווט אליה ב-`DOM_ACTIONS`. ⚠️ הנימוק המדוד:
+ *  ה-probe מדד `onclick="…f("` בלבד, ⭐ ולכן המרה לדלגציה — שהיא בדיוק
+ *  מה שהטבלה דורשת — הפילה אותו על קוד תקין. ⛔ והמדידה נשארת «ערך ולא
+ *  קיום»: הפעולה חייבת להיות **בגוף** המפה ולקרוא לפונקציה. */
+function domEntry(fn, s) {
+  const text = s === undefined ? readOnce(APP.file) : s;
+  if (new RegExp('onclick="[^"]*' + fn + '\\s*\\(').test(text)) return true;
+  const i = text.indexOf('var DOM_ACTIONS');
+  if (i < 0) return false;
+  const j = text.indexOf('\ndocument.addEventListener', i);
+  const map = text.slice(i, j < 0 ? i + 8000 : j);
+  const re = new RegExp("'([\\w-]+)'\\s*:\\s*function[^\\n]*\\n?[^}]*?" + fn + '\\s*\\(');
+  const m = re.exec(map);
+  return !!(m && new RegExp('data-act=\\\\?["\']' + m[1] + '\\\\?["\']').test(text));
+}
+
+/*  ⛔ מספר הארגומנטים של קריאה בשם (סבב 87) — ⚠️ הספירה היא של פסיקים
+ *  **ברמה העליונה** ⛔ ולא של תווי `,` בטקסט: ⭐ הארגומנט הראשון של שכבת
+ *  השורות הוא פונקציה, ⛔ והפסיקים שבתוכה אינם מפרידי ארגומנט. ⚠️ וקריאה
+ *  שמשמיטה את החלון מוחזרת כ-2 ⛔ ולא כ-3, ⭐ וזה בדיוק מה שהשורה אוסרת. */
+/*  ⛔ מימוש אחד ⛔ ושני מבטים (סבב 89) — ⚠️ `callArity` מחזירה מספרים,
+ *  ⭐ ו-`callArityAt` את אותן קריאות עם ההיסט שלהן: ⛔ שני גופים לאותה
+ *  ספירה היו נסחפים זה מזה. */
+function callArityAt(text, name) {
+  const out = [], NEEDLE = name + '(';
+  let i = text.indexOf(NEEDLE);
+  while (i >= 0) {
+    const before = i ? text[i - 1] : ' ';
+    if (/[A-Za-z0-9_$.]/.test(before)) { i = text.indexOf(NEEDLE, i + 1); continue; }
+    let d = 0, n = 0, j = i + NEEDLE.length;
+    for (; j < text.length; j++) {
+      const ch = text[j];
+      if (ch === ')' && d === 0) break;
+      if (!n && !/\s/.test(ch)) n = 1;
+      if (ch === '(' || ch === '[' || ch === '{') d++;
+      else if (ch === ')' || ch === ']' || ch === '}') d--;
+      else if (ch === ',' && d === 0) n++;
+    }
+    out.push({ i: i, n: n });
+    i = text.indexOf(NEEDLE, j < 0 ? i + 1 : j);
+  }
+  return out;
+}
+function callArity(text, name) {
+  return callArityAt(text, name).map((x) => x.n);
+}
+
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [27, 37, 39, 41, 50, 79, 44, 145, 90, 129, 51];
+export const ROWS = [27, 37, 39, 41, 50, 79, 44, 145, 90, 129, 51, 22, 56];
 
 /*  היכולות המשותפות. `block` — הליבה שחייבת להיות זהה בית-לבית.
  *  `hooks` — נקודות ההפעלה: `at:'boot'` = פונקציית העלייה, `at:'settings'`
@@ -481,6 +531,18 @@ const CAPS = {
    *  להם «פונקציית עלייה» — ⛔ מה שנאכף כאן הוא הליבה עצמה, שישבה **מחוץ**
    *  לכל בלוק ⛔ ונסחפה לשלוש צורות של `esc` ושל `openModal`. ⛔ ו-`LS_TOAST`
    *  יושב **מחוץ** לבלוק — ⚠️ הוא הדבר היחיד שנבדל בין האפליקציות. */
+  /*  ⛔ מנוע התאריך העברי (סבב 107) — ⚠️ שלוש הגדרות שהיו זהות בית-לבית
+   *  בשתי האפליקציות שיש בהן צרכני תאריך, ⛔ ופזורות על פני מאות שורות:
+   *  ⭐ החתימה מודדת טקסט רצוף, ⛔ ולכן הן אוחדו לאזור אחד.
+   *  ⛔ **ובשכר ובגיוס ההיעדר מוצהר ב-`APP.skipCaps` ומנומק שם** — ⚠️ אין
+   *  בהן אף צרכן תאריך עברי. */
+  hebdate: {
+    name: 'מנוע התאריך העברי',
+    docRows: ['מנוע תאריך עברי'],
+    block: { sha: 'cffcc9389867f0f5', lines: 86,
+             start: '/* ═══ מנוע התאריך העברי — מודול משותף (סבב 107)',
+             end:   '/* ═══════════════ סוף מודול מנוע התאריך העברי' },
+  },
   uihelp: {
     name: 'מודול שכבת המודאל',
     docRows: ['מודאלים', '`toast` — חתימה, גוף ומחלקות'],
@@ -559,7 +621,7 @@ function orderGaps() {
 
 const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'stale', 'techinfo', 'status', 'backup',
                      'pending', 'ids', 'retry', 'lock', 'sess', 'pull', 'push', 'hotwin',
-                     'devid', 'mergecore', 'tomb', 'writeUser', 'uihelp', 'readnum', 'uniq'];
+                     'devid', 'mergecore', 'tomb', 'writeUser', 'hebdate', 'uihelp', 'readnum', 'uniq'];
 
 /*  ⛔ שמות השורות שבטבלה (סבב 106) — ⚠️ המרשמים שמתחת מצהירים **שם**
  *  ⛔ ולא מספר: ⭐ המספר משתנה בכל מספור מחדש, ⛔ והשם הוא מה שהקורא מחפש. */
@@ -724,15 +786,32 @@ const _MEMO = (globalThis.__capMemo ||= new Map());
  *  עם המודול ומת איתו: ⛔ מוטציה שכותבת בין ייבוא לייבוא נקראת מחדש,
  *  ⚠️ ולכן זה אינו מזכר שמחזיר גזירה ישנה. */
 const _READ = new Map();
+/*  ⛔ מקור הטקסט של ריצה אחת (סבב 107) — ⚠️ מפה של נתיב⟵תוכן שהריצה
+ *  מקבלת כארגומנט, ⛔ והיא גוברת על הדיסק: ⭐ רתמת המוטציות מעבירה כאן
+ *  את ההיפוך ⛔ ואינה כותבת אותו לעץ — ⚠️ הנימוק המדוד: 684 היפוכים היו
+ *  684 כתיבות ו-684 ייבואים, ⭐ וכל ייבוא קרא את העץ מחדש.
+ *  ⛔ **והמפה נקראת לפני המטמון** — ⚠️ מטמון שהיה גובר עליה היה מחזיר
+ *  את הטקסט של הריצה הקודמת, ⭐ וזה בדיוק «probe שאינו יכול להיכשל». */
+let _OVER = null;
 function readOnce(f) {
   const k = String(f);
+  if (_OVER && Object.prototype.hasOwnProperty.call(_OVER, k)) return _OVER[k];
   if (!_READ.has(k)) _READ.set(k, fs.readFileSync(k, 'utf8'));
   return _READ.get(k);
 }
 /*  ⛔ חתימת נכסי האייקון — ⚠️ שם הקובץ **וגם** תוכנו: ⭐ נכס שהוחלף בנכס
  *  אחר באותו גודל היה עובר על חתימה שסופרת גדלים בלבד, ⛔ ונכס שנוסף או
  *  שירד משנה את הרשימה. */
+/*  ⛔ החתימה נגזרת פעם אחת בכל ייבוא (סבב 107) — ⚠️ נמדד שקריאת 16
+ *  הנכסים וקידודם היו כרבע מזמן הריצה כשהיא חוזרת מאות פעמים: ⭐ הנכסים
+ *  אינם נכתבים בשום מסלול של הרתמה ⛔ ואינם עוברים כארגומנט, ⚠️ ולכן הם
+ *  אינם יכולים להשתנות בתוך ייבוא — ⛔ ומוטציה שכותבת נכס נטענת מחדש. */
+let _ICON_SIG = null;
 function ICON_SIG() {
+  if (_ICON_SIG === null) _ICON_SIG = _iconSig();
+  return _ICON_SIG;
+}
+function _iconSig() {
   const out = [];
   const walk = (d) => {
     let ents = [];
@@ -746,14 +825,32 @@ function ICON_SIG() {
   walk('icons'); walk('android');
   return out.join('\n');
 }
+/*  ⛔ המפתח הוא **הטקסט עצמו** ⛔ ולא חתימתו (סבב 107) — ⚠️ הנימוק המדוד:
+ *  גזירת `sha256` על חצי מגה, שש פעמים בכל ריצה, הייתה הסעיף הכבד ביותר
+ *  בפרופיל אחרי שהייבואים ירדו: ⭐ מפה שמפתחה מחרוזת משווה תוכן בדיוק
+ *  כמו חתימה, ⛔ ומנוע ה-JS שומר את גיבוב המחרוזת על המחרוזת עצמה.
+ *  ⛔ **והמפה חסומה ב-`MEMO_MAX`** — ⚠️ מפתח שהוא טקסט מלא היה מחזיק
+ *  את כל ההיפוכים בזיכרון, ⭐ והקינון לפי `ns` מבטיח שכל גזירה שומרת
+ *  את האחרונות שלה בלבד. */
+const MEMO_MAX = 128;
 function memoByHash(ns, text, fn) {
-  const k = ns + ':' + crypto.createHash('sha256').update(text).digest('hex');
-  if (_MEMO.has(k)) return _MEMO.get(k);
+  let m = _MEMO.get(ns);
+  if (!m) _MEMO.set(ns, m = new Map());
+  if (m.has(text)) return m.get(text);
   const v = fn();
-  _MEMO.set(k, v);
+  if (m.size >= MEMO_MAX) m.clear();
+  m.set(text, v);
   return v;
 }
 
+/*  ⛔ הבודק הוא **פונקציה** ⛔ ואינו סקריפט (סבב 107) — ⚠️ `over` הוא
+ *  מפת נתיב⟵תוכן שגוברת על הדיסק, ⭐ והיא מה שמאפשר לרתמת המוטציות
+ *  להריץ 684 היפוכים בייבוא אחד ובאפס כתיבות: ⛔ המסלול מהשורה קורא
+ *  אותה בלי ארגומנט, ⚠️ ואז הכל נקרא מהדיסק כרגיל.
+ *  ⛔ **וגוף הפונקציה אינו מוסט פנימה** — ⚠️ רוחב המפרידים ומיקום
+ *  הבאנרים נמדדים בשער ההערות, ⭐ והזחה הייתה מזיזה אותם. */
+export function run(over) {
+_OVER = over || null;
 const src = readOnce(APP.file);
 let failures = 0;
 const fail = (m) => { failures++; console.error('❌ ' + m); };
@@ -962,22 +1059,6 @@ function callSites(fn) {
 
 const lineOf = (pos) => code.slice(0, pos).split('\n').length;
 
-/*  נקודת הפעלה חיה לפונקציה — ⛔ בשתי הצורות (סבב 79): `onclick` מוטבע,
- *  ⛔ **או** `data-act` שמחווט אליה ב-`DOM_ACTIONS`. ⚠️ הנימוק המדוד:
- *  ה-probe מדד `onclick="…f("` בלבד, ⭐ ולכן המרה לדלגציה — שהיא בדיוק
- *  מה שהטבלה דורשת — הפילה אותו על קוד תקין. ⛔ והמדידה נשארת «ערך ולא
- *  קיום»: הפעולה חייבת להיות **בגוף** המפה ולקרוא לפונקציה. */
-function domEntry(fn, s) {
-  const text = s === undefined ? src : s;
-  if (new RegExp('onclick="[^"]*' + fn + '\\s*\\(').test(text)) return true;
-  const i = text.indexOf('var DOM_ACTIONS');
-  if (i < 0) return false;
-  const j = text.indexOf('\ndocument.addEventListener', i);
-  const map = text.slice(i, j < 0 ? i + 8000 : j);
-  const re = new RegExp("'([\\w-]+)'\\s*:\\s*function[^\\n]*\\n?[^}]*?" + fn + '\\s*\\(');
-  const m = re.exec(map);
-  return !!(m && new RegExp('data-act=\\\\?["\']' + m[1] + '\\\\?["\']').test(text));
-}
 
 const anchors = { boot: APP.bootFn, settings: APP.settingsFn };
 const anchorRange = {};
@@ -1030,22 +1111,34 @@ function tableRowNumbers() {
   return ls.slice(a, b).map((l) => /^\|\s*(\d+)\s*\|/.exec(l)).filter(Boolean).map((m) => Number(m[1]));
 }
 
+/*  ⛔ הטבלה מתפרקת פעם אחת לכל תוכן (סבב 107) — ⚠️ הפירוק היה רץ מחדש
+ *  לכל שורה במטריצה, ⭐ ומפצל את הקובץ כולו בכל פעם: ⛔ המזכר מפתחו הוא
+ *  תוכן הקובץ, ⚠️ ולכן היפוך תא מייצר מפה חדשה ⛔ ואינו מקבל ישנה. */
 function tableRow(row) {
   if (!fs.existsSync(APP.docs)) return null;
-  const ls = readOnce(APP.docs).split('\n');
-  /*  ⛔ אין לסרוק את הקובץ כולו (סבב 69) — ⚠️ פרק סבב
-   *  מחזיק טבלאות ממוספרות משלו, וחיפוש גלובלי היה מוצא «| 3 |» שלהן. */
-  const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
-  const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
-  if (a < 0 || b < 0) return null;
-  const line = ls.slice(a, b).find((l) => new RegExp('^\\|\\s*' + row + '\\s*\\|').test(l));
-  if (!line) return null;
-  const cells = line.split('|');
-  if (cells.length < 9) return null;
-  /*  ⛔ אין לצמצם את `allOk` לתא האפליקציה (סבב 69) — ⚠️ ההערה
-   *  משותפת לארבעתן, ולכן היא לגיטימית כל עוד תא אחד אינו ✅. */
-  const allOk = [4, 5, 6, 7].every((k) => cells[k].indexOf('✅') >= 0);
-  return { cell: cells[3 + APP.matrixCol].trim(), note: cells[8].trim(), allOk };
+  return _tableRowMap()[row] || null;
+}
+function _tableRowMap() {
+  return memoByHash('trow', readOnce(APP.docs), () => {
+    const ls = readOnce(APP.docs).split('\n');
+    /*  ⛔ אין לסרוק את הקובץ כולו (סבב 69) — ⚠️ פרק סבב
+     *  מחזיק טבלאות ממוספרות משלו, וחיפוש גלובלי היה מוצא «| 3 |» שלהן. */
+    const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
+    const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
+    const out = {};
+    if (a < 0 || b < 0) return out;
+    for (const l of ls.slice(a, b)) {
+      const m = /^\|\s*(\d+)\s*\|/.exec(l);
+      if (!m) continue;
+      const cells = l.split('|');
+      if (cells.length < 9) continue;
+      /*  ⛔ אין לצמצם את `allOk` לתא האפליקציה (סבב 69) — ⚠️ ההערה
+       *  משותפת לארבעתן, ולכן היא לגיטימית כל עוד תא אחד אינו ✅. */
+      out[m[1]] = { cell: cells[3 + APP.matrixCol].trim(), note: cells[8].trim(),
+                    allOk: [4, 5, 6, 7].every((k) => cells[k].indexOf('✅') >= 0) };
+    }
+    return out;
+  });
 }
 
 // קיום בקוד עבור יכולות שאין להן בלוק משלהן
@@ -1308,36 +1401,6 @@ function modalGaps() {
   return out;
 }
 
-/*  ⛔ מספר הארגומנטים של קריאה בשם (סבב 87) — ⚠️ הספירה היא של פסיקים
- *  **ברמה העליונה** ⛔ ולא של תווי `,` בטקסט: ⭐ הארגומנט הראשון של שכבת
- *  השורות הוא פונקציה, ⛔ והפסיקים שבתוכה אינם מפרידי ארגומנט. ⚠️ וקריאה
- *  שמשמיטה את החלון מוחזרת כ-2 ⛔ ולא כ-3, ⭐ וזה בדיוק מה שהשורה אוסרת. */
-/*  ⛔ מימוש אחד ⛔ ושני מבטים (סבב 89) — ⚠️ `callArity` מחזירה מספרים,
- *  ⭐ ו-`callArityAt` את אותן קריאות עם ההיסט שלהן: ⛔ שני גופים לאותה
- *  ספירה היו נסחפים זה מזה. */
-function callArityAt(text, name) {
-  const out = [], NEEDLE = name + '(';
-  let i = text.indexOf(NEEDLE);
-  while (i >= 0) {
-    const before = i ? text[i - 1] : ' ';
-    if (/[A-Za-z0-9_$.]/.test(before)) { i = text.indexOf(NEEDLE, i + 1); continue; }
-    let d = 0, n = 0, j = i + NEEDLE.length;
-    for (; j < text.length; j++) {
-      const ch = text[j];
-      if (ch === ')' && d === 0) break;
-      if (!n && !/\s/.test(ch)) n = 1;
-      if (ch === '(' || ch === '[' || ch === '{') d++;
-      else if (ch === ')' || ch === ']' || ch === '}') d--;
-      else if (ch === ',' && d === 0) n++;
-    }
-    out.push({ i: i, n: n });
-    i = text.indexOf(NEEDLE, j < 0 ? i + 1 : j);
-  }
-  return out;
-}
-function callArity(text, name) {
-  return callArityAt(text, name).map((x) => x.n);
-}
 /*  ⚠️ קריאה מהמקור **הגולמי** — כולל הערות ומחרוזות (סבב 53). ⛔ שמור
  *  לשמות אירועים ולערכים שחיים בתוך מחרוזת, שאותם `code` מרוקן. */
 const hasSrc = (re) => re.test(src);
@@ -1603,6 +1666,42 @@ function orphanGateFns() {
   return out;
 }
 
+/*  ⛔ שער שכותב מצהיר זאת בגופו (סבב 107) — ⚠️ התקן אמר «עותק **או**
+ *  קריאה בלי כתיבה», ⭐ ושני הענפים היו שווים בו: ⛔ מי שנוח לו לכתוב פתח
+ *  עותק, ואיש לא שאל אם היה צריך. ⛔ **הקריאה בלי כתיבה היא הדרך**, ⚠️
+ *  והעותק הוא חריגה שנושאת נימוק במקום שבו נתקלים בה.
+ *  ⛔ **והמדידה משני צדדיה** — ⚠️ קובץ שער שקורא פונקציית כתיבה של `fs`
+ *  ואין בגופו שורת הצהרה **מפיל**, ⛔ והצהרה בקובץ שאינו כותב מפילה אף
+ *  היא: ⭐ הצהרה שהתיישנה מלמדת שכתיבה כאן מובנת מאליה.
+ *  ⛔ **והנימוק נמדד באורכו** — ⚠️ מרשם בלי טעם הוא חתימה על עצמו.
+ *  ⛔ **ומה שאינו נמדד כאן — שהיעד באמת עותק**: ⭐ זו טענת שער הקריאה
+ *  בלבד, ⚠️ שמריץ את כל השערים על עותק ומודד שאף בית לא זז. */
+const WRITE_FS = /(?<![\w$])(?:writeFileSync|appendFileSync|mkdirSync|mkdtempSync|cpSync|copyFileSync|renameSync|rmSync|unlinkSync|createWriteStream)\s*\(/;
+/*  ⛔ שם השער נגזר מהתבנית ⛔ ואינו רשימה — ⚠️ מחולל האייקונים אינו שער,
+ *  ⭐ והכתיבה שלו היא כל תכליתו: ⛔ רשימת החרגה כאן הייתה מזמינה שם נוסף. */
+const GATE_NAME = /^(?:test_[a-z][a-z0-9_]*|check-[a-z-]+)\.mjs$/;
+/*  ⛔ המרשם נבנה מחלקים ⛔ ואינו ליטרל אחד — ⚠️ הקובץ הזה סורק את קובצי
+ *  השער ומחפש בהם את המרשם, ⭐ וליטרל שלם כאן היה מוצא את עצמו:
+ *  ⛔ הבודק היה מדווח על עצמו «מצהיר ואינו כותב». */
+const DECL_MARK = ['⛔', 'כותב', 'על', 'עותק', '—'].join(' ');
+const WRITE_DECL = new RegExp(DECL_MARK + ' \\S.{19,}');
+function writeGateGaps() {
+  let files = [];
+  /*  ⛔ הכשל אינו נבלע — ⚠️ `catch` ריק סביב איסוף הקבצים מחזיר רשימה
+   *  ריקה, ⭐ ו-probe שסופר אפס על אוסף ריק אינו יכול להיכשל. */
+  try { files = fs.readdirSync('tools').filter((f) => GATE_NAME.test(f)).sort(); }
+  catch (e) { return ['tools/: ' + e.message]; }
+  if (!files.length) return ['tools/: אין קובצי שער'];
+  const out = [];
+  for (const f of files) {
+    const writes = WRITE_FS.test(gateCode(f));
+    const decl = WRITE_DECL.test(readOnce('tools/' + f));
+    if (writes && !decl) out.push(f + ': כותב ואינו מצהיר');
+    if (decl && !writes) out.push(f + ': מצהיר ואינו כותב');
+  }
+  return out;
+}
+
 /*  ⛔ מודאל שאין לו פותח נמחק עם הפונקציה — ⚠️ מיכל שנשאר ב-DOM בלי קוד
  *  שמציג אותו הוא חצי יכולת: ⭐ הוא נראה קיים למי שקורא את ה-HTML, ⛔ ואינו
  *  נפתח לעולם. */
@@ -1668,7 +1767,11 @@ function orphanModals() {
 const ID_CMP_LEFT = [/AUTH\s*\.\s*user\s*\.\s*id$/, /AUTH\s*\.\s*MODULES\s*\[[^\]]*\]\s*\.\s*id$/];
 const ID_CMP_RIGHT = [/^'[^']*'$/, /^"[^"]*"$/, /^undefined$/, /^null$/,
                       /^LS_CFG\s*\.\s*app$/];
-function idCmpSites(text = src) {
+/*  ⛔ הגזירה ממוזכרת לפי תוכן (סבב 107) — ⚠️ היא טהורה בטקסט, ⭐ ורתמת
+ *  המוטציות קוראת לה מאות פעמים על אותו `index.html`: ⛔ מזכר שמפתחו
+ *  התוכן מחזיר את אותה תשובה בדיוק, ⚠️ ואינו יכול להחזיר ישנה. */
+function idCmpSites(text = src) { return memoByHash('idcmp', text, () => _idCmpSites(text)); }
+function _idCmpSites(text) {
   const out = [];
   const re = /([A-Za-z_$][\w$]*(?:\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]\n]*\]))*\.\s*id)\s*===\s*([^;)&|,?\n]{1,40})/g;
   for (const m of text.matchAll(re)) {
@@ -1949,7 +2052,8 @@ const CLOSES_P = new Set(['address', 'article', 'aside', 'blockquote', 'details'
   'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4',
   'h5', 'h6', 'header', 'hr', 'main', 'menu', 'nav', 'ol', 'p', 'pre', 'section',
   'table', 'ul']);
-function modalPlacement(html) {
+function modalPlacement(html) { return memoByHash('modal', html, () => _modalPlacement(html)); }
+function _modalPlacement(html) {
   const blank = (m) => m.replace(/[^\n]/g, ' ');
   const t = html.replace(/<script[\s\S]*?<\/script>/gi, blank)
                 .replace(/<style[\s\S]*?<\/style>/gi, blank)
@@ -2327,7 +2431,8 @@ function schemaIdempotent() {
  *  סורקים טקסט, ⛔ ואף אחד אינו בונה עץ.
  *  ⛔ **וההלבנה קודמת לפרסור** — ⚠️ `'</body></html>'` בתוך מחרוזת JS אינו
  *  תג, ⭐ והוא מסלול חי (חלון ההדפסה): ⛔ שער שסופר טקסט רואה בו כפילות. */
-function docParseGaps() {
+function docParseGaps() { return memoByHash('docparse', src, _docParseGaps); }
+function _docParseGaps() {
   const blank = (m) => m.replace(/[^\n]/g, ' ');
   const t = src.replace(/<script[\s\S]*?<\/script>/gi, blank)
                .replace(/<style[\s\S]*?<\/style>/gi, blank)
@@ -2377,7 +2482,10 @@ function docParseGaps() {
 /*  ⛔ סולם נקודות השבירה (סבב 97) — ⚠️ הסולם נקרא **מהבלוק החתום**
  *  ⛔ ואינו מוקלד כאן: ⭐ שני מקומות לאותה רשימה הם שתי רשימות, ⚠️ ומי
  *  שמעדכן את הבלוק אינו רואה את השער. */
-function bpScale() {
+/*  ⛔ הסולם נגזר פעם אחת לכל `index.html` (סבב 107) — ⚠️ הוא נקרא מתוך
+ *  סריקת ההערות, ⭐ אחת לכל קובץ בעץ: ⛔ אותה גזירה בדיוק, עשרות פעמים. */
+function bpScale() { return memoByHash('bpscale', src, _bpScale); }
+function _bpScale() {
   const m = /var BP_SCALE = \[([^\]]*)\]/.exec(src);
   if (!m) return [];
   return m[1].split(',').map((x) => Number(x.trim())).filter((x) => x > 0);
@@ -3536,7 +3644,7 @@ const GATES = {
   42: { manual: 'עדכון הסימון הוא התנהגות סשן שאינה בעץ — ⛔ נאכף רק בתוצאתו' },
   171: { claim: 'CACHE_NAME' },
   35: { manual: 'מספר בדיווח הוא התנהגות סשן שאינה בעץ — ⛔ אין קובץ שאפשר למדוד בו את הדיווח, ⚠️ ונאכף בתוצאתו בלבד' },
-  22: { claim: 'drift' },
+  22: { claims: { test_readonly: 'drift', 'check-capabilities': 'writeGateGaps' } },
   26: { claim: 'measure-gap',
         manual: 'הצד השני של השורה — ⛔ «אותה טענה» היא קריאת משמעות, ונסרק ידנית בכל סבב שנוגע' },
   30: { claim: 'תווית מוטציה מודפסת' },
@@ -3584,7 +3692,10 @@ const GATES = {
   131: { claim: 'ב. חתימת סכימה' },
   148: { claim: 'type=password' },
   76: { claim: 'aria-label' },
-  56: { manual: 'מנוע התאריך — ⛔ נאכף ב-`test_date` ביומן ובהנהלה, ⚠️ ובשכר ובגיוס אין צרכן תאריך עברי ואין שער' },
+  /*  ⛔ מנוע התאריך העברי (סבב 107) — ⚠️ הנימוק הישן הצביע על `test_date`
+   *  «ביומן ובהנהלה», ⛔ והוא קיים בהנהלה בלבד: ⭐ מאז שהמנוע בבלוק חתום
+   *  החתימה היא מה שמודד אותו, ⛔ ובשכר ובגיוס ההיעדר מוצהר ב-`skipCaps`. */
+  56: { claims: { 'check-capabilities': 'hebdate' } },
   152: { claim: 'pass_salt' },
   156: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
   158: { claim: '⏳' },
@@ -3685,6 +3796,15 @@ const COUNT_NOTE = /^[\s*⛔⚠️⭐️\uFE0F]*נמדד/;
          `מזיזים את השורה לשלב שלה, או מיישרים את שורת ה-↳ שבכותרת`);
   else
     pass(`סדר הפנים — ${CAT_ORDER.length} קטגוריות, וכל שורה בשלב שכותרתן הצהירה`);
+
+  /*  ⛔ ושער שכותב מצהיר זאת בגופו (סבב 107) — ⚠️ הקריאה בלי כתיבה היא
+   *  הדרך, ⛔ והעותק הוא חריגה שנושאת נימוק במקום שבו נתקלים בה. */
+  const wgg = writeGateGaps();
+  if (wgg.length)
+    fail(`שערים שכותבים: ${wgg.join(' · ')} — נמדדו ${wgg.length} והצפוי אפס. ` +
+         `מוסיפים שורת «${DECL_MARK} <נימוק>» מעל הכתיבה, או מסירים את ההצהרה`);
+  else
+    pass(`שער אינו משנה קבצים — כל שער שכותב נושא הצהרה עם נימוקה`);
   /*  ⚠️ ארבעת התאים ולא התא של האפליקציה הזו (סבב 72) — ⛔ ההערה משותפת
    *  לארבעת הריפו, והיא לגיטימית כל עוד תא אחד אינו תקין. */
   /*  ⛔ מדידה היא החריג היחיד (סבב 72) — ⚠️ «כמה שערים» ו«כמה קבצים»
@@ -3972,8 +4092,11 @@ for (const m of MATRIX) {
 
 console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכשלה (${failures})`
                      : '\n✅ בדיקת היכולות המשותפות עברה');
+_OVER = null;
+return failures;
+}
+
 /*  ⛔ יציאה רק בתהליך משלו (סבב 72) — ⚠️ שער שמריץ את הבודק עשרות פעמים
  *  מייבא אותו לתהליך אחד, ו-`process.exit` היה עוצר את השער עצמו באמצע.
- *  ⭐ מונה הכשלים מיוצא, וזה מה שהמייבא בודק. */
-export const capFailures = failures;
-if (!process.env.CAP_INPROC) process.exit(failures ? 1 : 0);
+ *  ⭐ מונה הכשלים מוחזר מ-`run`, וזה מה שהמייבא בודק. */
+if (!process.env.CAP_INPROC) process.exit(run() ? 1 : 0);

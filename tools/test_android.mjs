@@ -323,6 +323,7 @@ else {
   /*  ⛔ עותק לכל רתמה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
       אחת, ⭐ ושתי הרתמות בונות סט קבצים שונה תחת `android/`: ⛔ שחזור סט
       קבצים הוא בעצמו העתקת עץ. */
+  /*  ⛔ כותב על עותק — ⚠️ המוטציה משנה את סט הקבצים תחת `android/`, ⛔ ושחזור סט הוא בעצמו העתקה. */
   const tmp = fs.mkdtempSync(join(os.tmpdir(), 'r45gate-'));
   const g = (args, cwd) => execFileSync('git', ['-C', cwd, ...args],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });

@@ -93,6 +93,7 @@ if (!RUN_MUT) {
 }
 
 const TEMPS = [];
+/*  ⛔ כותב על עותק — ⚠️ `check-docs` רץ בתהליך נפרד, ⛔ והוא קורא את קובצי התיעוד מהדיסק. */
 const temp = (tag) => { const d = mkdtempSync(join(tmpdir(), tag)); TEMPS.push(d); return d; };
 const baseDir = temp('md-skel-');
 // ⚠️ manifest.json נוסף לרשימה בסבב 44 — מסעיף ח של check-docs ואילך

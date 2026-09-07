@@ -293,5 +293,6 @@ t(n++, runDocsOn(s => s.replace('<!-- SHARED:end -->',
 
 console.log(fail ? `\n✗ סבב 49 (תקציב תיעוד) — ${fail} נכשלו, ${pass} עברו`
                  : `\n✓ סבב 49 (תקציב תיעוד) — ${pass} טענות עברו`);
+/*  ⛔ כותב על עותק — ⚠️ הבודק קורא את התיעוד ואת חתימתו מהדיסק, ⛔ ואין דרך למסור לו טקסט. */
 fs.rmSync(WORK, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

@@ -473,6 +473,7 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
     מפיל: נמדד 63/95/127/189/253 מול 48/72/96/144/192 שנדרשים. ⭐ והשוואה
     בית-בית ⛔ ולא «הצלע יצאה נכון»: שני מחוללים שונים מגיעים לאותה צלע. */
 {
+  /*  ⛔ כותב על עותק — ⚠️ המחולל כותב נכסים בינאריים, ⛔ ואין דרך להריצו בלי יעד על הדיסק. */
   const g = mkdtempSync(join(tmpdir(), 'r71g-'));
   try {
     for (const d of ['tools', 'design', 'icons', RES])

@@ -208,6 +208,7 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
    Object.keys(APP.only).length);
 
 console.log('\n— מוטציות —');
+/*  ⛔ כותב על עותק — ⚠️ המוטציה משנה את סט הקבצים של הריפו, ⛔ ואין סט שאפשר למסור בזיכרון. */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fset-'));
 const clone = (name) => {
   const d = path.join(tmp, name);

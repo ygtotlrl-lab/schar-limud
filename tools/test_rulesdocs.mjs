@@ -341,6 +341,7 @@ if (RUN_MUT) {
 let WORK = null;
 function work() {
   if (WORK) return WORK;
+  /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה בודקים אמיתיים על עץ `tools` סינתטי. */
   WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'rulesdocs-'));
   execFileSync('cp', ['-r', ROOT + '/.', WORK]);
   /*  ⛔ המחיקה על יציאה (סבב 72) — ⚠️ נמדד: העותק נשאר בכל הרצה,

@@ -510,6 +510,7 @@ if (!process.env.RD67_MUT) {
     { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
 
   const _mut = (label, file, edit, expectFail) => {
+    /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה שער אמיתי בתהליך נפרד, ⛔ והוא קורא את המקור מהדיסק. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = _p.join(d, file);

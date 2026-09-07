@@ -187,6 +187,7 @@ t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידי
 t(n++, !base.some((x) => x.kind === 'sha-dup'), `ו. אין חתימת בלוק שמוצהרת בשני קובצי שערים ${of('sha-dup')}`);
 
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
+/*  ⛔ כותב על עותק — ⚠️ שני שערים אמיתיים רצים על אותה מוטציה, ⛔ ושניהם קוראים מהדיסק. */
 const tmp = mkdtempSync(join(tmpdir(), 'r71x-'));
 cpSync(ROOT, tmp, { recursive: true, filter: (s) => {
   const p = relative(ROOT, s).split(sep);
