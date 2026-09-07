@@ -34,6 +34,7 @@ const APP = {
   app: 'schar-limud',  cachePrefix: 'schar-limud-',
   /*  מחלקות CSS שמורכבות בזמן ריצה (`'role-' + role`) — ⛔ הן נראות מתות
    *  לסורק סטטי, והן חיות. ⚠️ כל שורה כאן היא הצהרה שאדם מתחזק. */
+  dynamicIds: ['acc-', 'panel-', 'sd-input-', 'sd-list-'],
   dynamicClasses: [],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -301,7 +302,7 @@ const ACTIVE = activeLines.join('\n');
     '24ב · תקן ההערות חל גם על sw.js ועל tools/');
 }
 
-/* ── מחלקות CSS מתות (ממצא 15) ─────────────────────────────────────────── */
+/* ── סלקטור בלי קורא (ממצא 15) ─────────────────────────────────────────── */
 {
   const src = rd('index.html');
   const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
@@ -318,6 +319,31 @@ const ACTIVE = activeLines.join('\n');
     t(pre.length > 0 && rest.includes("'" + pre + "'"),
       `15ב · חריגה מוצהרת \`${c}\` — הקידומת \`${pre}\` באמת מורכבת בקוד`);
   }
+  /*  ⛔ ומזהה `id` נמדד באותה מידה (סבב 110) — ⚠️ המחלקות נמדדו והמזהים לא,
+   *  ⭐ ומזהה שקוראו נמחק או ששמו שונה נשאר בתגית בלי שאיש יידע: ⛔ הנימוק
+   *  המדוד — 13 מזהים בלי קורא נמצאו בסבב שבו הצד הזה נכתב. */
+  const js = [...src.matchAll(/<script(?![^>]*\ssrc[=\s])[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map((m) => m[1]).join('\n');
+  const markup = src.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                    .replace(/<style[^>]*>[\s\S]*?<\/style>/g, ' ');
+  const ids = new Set();
+  for (const m of src.matchAll(/\sid\s*=\s*["']([^"'\s]+)["']/g)) ids.add(m[1]);
+  /*  ⛔ קורא הוא ליטרל ב-JS · כלל `#id` ב-CSS · או מאפיין שמצביע עליו —
+   *  ⚠️ `getElementById` לבדו מפספס `querySelector('#x')` ואת `<label for>`,
+   *  ⭐ ומזהה נגיש שאיבד את קוראו היה נמחק יחד עם הקישור לתווית. */
+  const ATTR = 'for|aria-labelledby|aria-controls|aria-describedby|list|form|headers|href';
+  const deadIds = [...ids].filter((id) => {
+    if (APP.dynamicIds.some((p) => id.startsWith(p))) return false;
+    const q = id.replace(/-/g, '\\-');
+    return !new RegExp('[\'"`]' + q + '[\'"`]|#' + q + '(?![\\w-])').test(js) &&
+           !new RegExp('#' + q + '(?![\\w-])').test(styles) &&
+           !new RegExp('(?:' + ATTR + ')\\s*=\\s*["\']#?' + q + '["\']').test(markup);
+  }).sort();
+  t(deadIds.length === 0,
+    `15ג · אין מזהה id שאין לו קורא${deadIds.length ? ' — ' + deadIds.join(' ') : ''}`);
+  for (const p of APP.dynamicIds)
+    t(new RegExp('[\'"`]' + p.replace(/-/g, '\\-')).test(js),
+      `15ד · קידומת מוצהרת \`${p}\` — באמת מורכבת בקוד`);
 }
 
 /* ── כלל 21 (המשך) — אין הצהרת «זהה בארבעתן» ───────────────────────────── */
@@ -661,6 +687,21 @@ t(!commentsFails({ 'CLAUDE.md': DOC.replace(noteRow,
    *  ירדו היא נכשלה על טענה שאינה קיימת. */
   t(fails({ 'README.md': rd('README.md') + '\n<!-- SHARED:start id="table" -->\nגוף.\n' }),
     'מ3 · עותק של הטבלה ב-`README.md` **מפיל**');
+  /*  ⛔⛔ מ31 — מזהה `id` שאין לו קורא (סבב 110): ⚠️ עד כאן נמדדו המחלקות
+   *  בלבד, ⭐ ומזהה ששמו שונה או שקוראו נמחק נשאר בתגית בלי שאיש יידע.
+   *  ⛔ ההזרקה לפני הסוגר **האחרון** — ⚠️ `'</body>'` בתוך מחרוזת JS אינו
+   *  תג, ⭐ והזרקה לפני הראשון הייתה נוחתת בתוך קוד. */
+  const withOrphan = (extra) => {
+    const h = rd('index.html'), i = h.lastIndexOf('</body>');
+    return h.slice(0, i) + '<div id="zz-no-reader"></div>' + extra + h.slice(i);
+  };
+  t(fails({ 'index.html': withOrphan('') }),
+    'מ31 · מזהה id בלי קורא **מפיל** את «סלקטור בלי קורא»');
+  /*  ⭐ מוטציית-נגד: אותו מזהה עם קורא חי ⛔ אינו מפיל — ⚠️ הנמדד הוא
+   *  **הקורא** ⛔ ולא עצם קיומו של מזהה חדש. */
+  t(!fails({ 'index.html': withOrphan(
+      '<script>document.getElementById(\'zz-no-reader\');</script>') }),
+    'נ19 · ⭐ מזהה שיש לו קורא ⛔ **אינו** מפיל');
   /*  ⛔ מ4 — הפניה שהוחזרה לקוד מפילה את ג1. */
   t(fails({ 'sw.js': "/* ר' «אזור מצב» ב-CLAUDE.md */\n" + rd('sw.js') }),
     'מ4 · הפניה לקובץ בהערה **מפילה**');
