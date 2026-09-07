@@ -2844,7 +2844,15 @@ function pushDirty(ctx) {
 function schedulePush() {
   rtyNote();
   if (_pushTimer) clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(function () { _pushTimer = null; PUSH_CFG.run(); }, PUSH_CFG.delay);
+  /*  ⛔ ההקשר נלכד **בקביעת המועד** ⛔ ולא בהתעוררות — ⚠️ ההשהיה היא המתנה
+   *  לכל דבר, ⭐ והמשתמש או המוסד יכולים להתחלף בתוכה: ⛔ מחזור שמתעורר
+   *  בהקשר אחר דוחף שורות ⏳ שנצברו בקודם, ⚠️ וזוקף את הצלחתן לחדש. */
+  var _ep = ctxEpoch();
+  _pushTimer = setTimeout(function () {
+    _pushTimer = null;
+    if (ctxStale(_ep)) return;
+    PUSH_CFG.run();
+  }, PUSH_CFG.delay);
 }
 /* ═══════════════ סוף מודול שכבת הדחיפה ══════════════════════════════════ */
 
@@ -4027,13 +4035,6 @@ function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 // לפי **מפתח המיזוג** ולא לפי `id`: פריט שנוצר במכשיר עדיין אין לו id.
 function findListItem(key){var f=null;Object.keys(LISTS).forEach(function(c){(LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
 function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
-/* ── LS_TOAST — הודעת האחסון המלא ───────────────────────────────────────── */
-/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ **וגם שם
- *  המחלקה**: ⭐ אחסון שהתמלא הוא אותו סיכון בארבעתן, ⛔ והודעה אדומה באחת
- *  ושחורה בשלוש מלמדת את המשתמש ששתי המערכות אומרות שני דברים.
- *  ⛔ **ואינו בתוך הבלוק החתום** — ⚠️ נקודת ההצהרה נבדלת בין הארבע בשורה
- *  שלפניה, ⭐ והחתימה מודדת טקסט רצוף. */
-var LS_TOAST = { kind: 'bad' };
 /* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
    ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
       ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
@@ -4139,7 +4140,7 @@ function toast(msg, dur, kind) {
 /*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
    כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
 var LS_TOAST_MS = 5000;
-function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
+function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת

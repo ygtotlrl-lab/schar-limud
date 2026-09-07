@@ -62,6 +62,10 @@ const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs'
  *  ששער קורא בלבד; ⛔ ולכן קטגוריה שלישית ומוצהרת, ⛔ ולא הרחבה של
  *  `CHECKERS` שהטבלה מונה בה שישה. */
 const GENERATORS = ['gen-icons.mjs'];
+/*  ⛔ מודול משותף לשערים אינו בודק, אינו מחולל ואינו שער (סבב 111) —
+ *  ⚠️ הוא **נקרא** משערים ואינו רץ בעצמו: ⭐ ולכן קטגוריה רביעית
+ *  ומוצהרת, ⛔ ולא הרחבה של `CHECKERS` שהטבלה מונה בה שישה. */
+const MODULES = ['whiten.mjs'];
 /*  ⛔ שם השער נגזר מהנושא ולא ממספר הסבב (סבב 67) — 53 שערים
  *  נשאו שם כמו `test_round52_pendflush`, ⚠️ ומי שרצה לדעת מה בודק
  *  את מודול הנעילה לא ידע לחפש. ⛔ מספר הסבב עבר לשורת הכותרת
@@ -127,8 +131,14 @@ if (missingG.length) fail(`מחוללים משותפים חסרים ב-tools/: $
                       `מוסיפים את החסרים`);
 else pass(`${GENERATORS.length} המחוללים המשותפים קיימים ב-tools/`);
 
+const missingM = MODULES.filter((g) => !tFiles.includes(g));
+if (missingM.length) fail(`מודולים משותפים חסרים ב-tools/: ${missingM.join(', ')} — נמדדו ` +
+                      `${MODULES.length - missingM.length} מתוך ${MODULES.length}. ` +
+                      `מוסיפים את החסרים — מודול הוא יכולת משותפת ונכנס בארבעתם`);
+else pass(`${MODULES.length} המודולים המשותפים קיימים ב-tools/`);
+
 const tAllowed = (f) => CHECKERS.includes(f) || GENERATORS.includes(f) ||
-  (TEST_RE.test(f) && !OLD_TEST_RE.test(f)) || (f in APP.toolsExtra);
+  MODULES.includes(f) || (TEST_RE.test(f) && !OLD_TEST_RE.test(f)) || (f in APP.toolsExtra);
 const badT = tFiles.filter((f) => !tAllowed(f));
 if (badT.length) fail(`קבצים לא-רשומים ב-tools/: ${badT.join(', ')} — נמדדו ${badT.length} ` +
                       `מעבר לרשימה והצפוי אפס. בודק חדש הוא יכולת משותפת ונכנס ` +
