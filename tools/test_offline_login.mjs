@@ -130,7 +130,7 @@ const NAMES_FN = [
   /*  ⛔ שכבת המראה עצמה (סבב 114) — ⚠️ ההגירה החד-פעמית, הטעינה והחלתה
    *  על מצב התצוגה: ⭐ רתמה שמדמה אותן אינה מודדת את מה שירוץ. */
   'slKeyOf', 'slAdoptLegacyId', 'mirrorKey', 'mirrorTables', 'mirrorKeysMigrate',
-  'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
+  'mirrorLoadOne', 'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
   /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
    *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */
   'newClientId', '_writeUserSend', 'writeUser',

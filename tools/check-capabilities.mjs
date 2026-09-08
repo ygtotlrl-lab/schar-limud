@@ -625,7 +625,7 @@ const CAPS = {
   mirror: {
     name: 'מודול שכבת המראה',
     docRows: ['שכבת המראה'],
-    block: { sha: 'a225de590a04faa8', lines: 59,
+    block: { sha: 'e24ccf7a71f8cb4a', lines: 62,
              start: '/* ═══ שכבת המראה — מודול משותף (סבב 114)',
              end:   '/* ═══════════════ סוף מודול שכבת המראה' },
     hooks: [{ fn: 'mirrorBoot', at: 'boot' }],
