@@ -55,7 +55,7 @@ const APP = {
    *  עשרות פעמים, ⭐ ולכן הסגירה שלו בסוף `run` והיא מוצהרת כאן. */
   sealExempt: { 'check-capabilities': 'רץ בתוך תהליך של שער אחר, והסגירה בסוף `run` ולא במאזין' },
   /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 158,
+  expected: 160,
   app: 'schar-limud',
   file: 'index.html',
   docs: 'CLAUDE.md',
@@ -3794,6 +3794,44 @@ function listIn(text, name) {
   const m = new RegExp(name + ':?\\s*=?\\s*\\[([^\\]]*)\\]').exec(text || '');
   return m ? m[1].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean) : [];
 }
+/*  ⛔ `noPush` — ⚠️ **מה נכנס**: `{t, via, adds}` לכל טבלת מראה שאינה
+ *  בלולאת הדחיפה. ⛔ **ומה מפיל**: צורה שאינה השלישייה — ⚠️ רשימת שמות
+ *  עירומה אינה אומרת מי דוחף ולא מה הוא מוסיף. */
+function noPushIn(text) {
+  const m = /noPush:\s*\[([\s\S]*?)\](?=\s*,\s*\n)/.exec(text || '');
+  if (!m) return { rows: [], raw: '' };
+  const rows = [];
+  for (const e of m[1].matchAll(/\{\s*t:\s*'([^']+)'\s*,\s*via:\s*'([^']+)'\s*,\s*adds:\s*'([^']+)'\s*\}/g))
+    rows.push({ t: e[1], via: e[2], adds: e[3] });
+  return { rows, raw: m[1] };
+}
+/*  ⛔ מה כל סוג מוסיף על לולאת הדחיפה — ⚠️ **מה נכנס**: הסוג המוצהר
+ *  ודפוסי הגוף שמוכיחים אותו; ⛔ **ומה מפיל**: גוף שאין בו את הדפוסים,
+ *  כלומר מסלול שכל שהוא עושה הוא מה שהלולאה כבר עושה.
+ *  ⭐ **ולמה שלושה**: תור שממתין לרשת · דחיפה של שתי טבלאות בקריאה אחת ·
+ *  ומטען שנבנה מהקורא ולא מהמראה — ⛔ ואין רביעי. */
+const NOPUSH_ADDS = {
+  queue:  (b) => /[Qq]ueue/.test(b) && /[Bb]adge/.test(b),
+  parent: (b) => /\bparent\b/.test(b) && /\bchild\b/.test(b),
+  secret: (b) => b.indexOf('MIRROR[') < 0 && /USER_CFG\./.test(b),
+};
+function noPushGaps(tabs) {
+  const out = [];
+  const { rows, raw } = noPushIn(mirrorCfgText());
+  if (!rows.length && /'/.test(raw))
+    out.push('`noPush` אינו רשימת `{t, via, adds}` — נמדד «' + raw.trim() + '»');
+  for (const r of rows) {
+    if (tabs.indexOf(r.t) < 0) out.push('`noPush` נוקב בשם שאינו טבלת מראה: ' + r.t);
+    const rg = fnRange(r.via);
+    if (!rg) { out.push('מסלול `noPush` שאין לו גוף: ' + r.via + ' — ' + r.t); continue; }
+    const add = NOPUSH_ADDS[r.adds];
+    if (!add) { out.push('סוג תוספת שאינו אחד משלושה: ' + r.adds + ' — ' + r.t); continue; }
+    if (!add(code.slice(rg[0], rg[1])))
+      out.push('מסלול שאינו מוסיף דבר על לולאת הדחיפה: ' + r.via + ' — הוצהר «' +
+               r.adds + '» ל-' + r.t + ' — מחק אותו והחזר את הטבלה ללולאה');
+  }
+  return out;
+}
 /*  ⛔ הגירה מקומית חד-פעמית (סבב 116) — ⚠️ **מה נכנס**: אתר שמוחק מפתח
  *  `localStorage` ובאותו הקשר גם קורא אותו, ⭐ או שמוחק מפתח בשמו המפורש.
  *  ⛔ **ומה מפיל**: אתר בלי הצהרת הסבב שבו רץ, ⛔ והצהרה שסבבה חלף.
@@ -3826,7 +3864,11 @@ function localMigrationGaps() {
     const at = [...near.matchAll(/\(סבב (\d+)\)/g)].map((x) => Number(x[1]));
     if (!at.length) { out.push('הגירה מקומית בלי הצהרת סבב: ' + s.name); continue; }
     const last = Math.max(...at);
-    if (round && last < round - 1)
+    /*  ⛔ **הגירה יורדת בסבב שאחרי זה שהריץ אותה** — ⚠️ ולכן הצהרה
+     *  בסבב הקודם **נופלת**, ⭐ והצהרה בסבב הנוכחי אינה: ⛔ `- 1` כאן
+     *  היה מתיר לה סבב נוסף, ⚠️ ומדידה שאינה מפילה על 115 בסבב 116
+     *  היא probe שאינו יכול להיכשל על המקרה שהוא נכתב בשבילו. */
+    if (round && last < round)
       out.push('הגירה מקומית שסבבה חלף: ' + s.name + ' — הוצהרה בסבב ' + last +
                ' והסבב הוא ' + round);
   }
@@ -3843,12 +3885,13 @@ function mirrorLayerGaps() {
   const { prefix, app } = mirrorPrefixApp();
   if (!/^[a-z]+_mirror_$/.test(prefix)) out.push('תחילית המראה אינה `<קידומת>_mirror_`: ' + prefix);
   if (!app || prefix.indexOf(app) !== 0) out.push('תחילית האפליקציה אינה בתוך תחילית המראה: ' + app);
-  const noPush = listIn(cfg, 'noPush');
+  const noPush = noPushIn(cfg).rows.map((r) => r.t);
   const push = listIn(src, 'var PUSH_TABLES');
   const want = push.concat(noPush).slice().sort().join('|');
   const got = tabs.slice().sort().join('|');
   if (want !== got)
     out.push('טבלאות המראה אינן `PUSH_TABLES` ועוד `noPush` — נמדד «' + got + '» והצפוי «' + want + '»');
+  out.push(...noPushGaps(tabs));
   /*  ⛔ ושני צדדיה של רשימת המפתחות השטוחים — ⚠️ מפתח שנכתב שטוח בלי
    *  הצהרה, ⛔ והצהרה שאין לה אתר. */
   /*  ⛔ מפתח מראה הוא שם טבלה במסד — ⚠️ **והפירוק בקריאה ובכתיבה כאחת**:
