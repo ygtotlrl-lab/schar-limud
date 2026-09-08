@@ -33,7 +33,7 @@ const APP = {
     [/function slSyncLog\(/, 'עוטף sync_log קיים (slSyncLog)'],
     [/var SL_NEVER_MIRROR_SETTINGS = \[\];/, 'רשימת הסודות ריקה (admin_pass נמחק מהמסד, סבב 35)'],
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
-    [/hwPastLoad\('sl_mirror_transactions'/, 'מסך «שנים קודמות» קורא דרך hwPastLoad'],
+    [/hwPastLoad\(mirrorKey\('sl_transactions'\)/, 'מסך «שנים קודמות» קורא דרך hwPastLoad'],
   ],
   fileChecks: [
     ['sw.js', /supabase-js@2\.111\.0/, 'רשימת ה-CDN ב-sw.js נעוצה ל-supabase-js 2.111.0'],
