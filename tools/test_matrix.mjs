@@ -233,6 +233,39 @@ for (const r of rows) {
 ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${covered}; מוחרגות: ${EXEMPT.join(', ')})`,
    covered === rows.length - EXEMPT.length && covered > 0);
 
+/* ────── ⛔ הסינון נמדד מול הריצה המלאה (סבב 115) ────────────────────────────
+   ⛔ מה נאכף: היפוך תא נותן את **אותו פסק דין** בריצה המסוננת ובריצה
+   המלאה. ⛔ הנימוק המדוד: הסינון הוא מה שהופך בדיקה שסווגה שגוי לבדיקה
+   שאינה רצה על ההיפוך שאמור להפיל אותה — ⚠️ והיא מדווחת «עבר».
+   ⛔ מה יישבר בלעדיו: סיווג שיסחף יעבור בשקט, ⭐ והמוטציות ימדדו פחות
+   ממה שהן מצהירות. ⚠️ מה אינו נאכף כאן: **כל** ההיפוכים — ⛔ מדגם
+   מוצהר ומנומק: ⭐ גודלו נגזר מתקציב הזמן של הסט ⛔ ואינו נבחר — ⚠️ ריצה
+   מלאה אחת עולה כשלוש שניות, ⛔ ותקרת הסט קובעת כמה מהן נכנסות.
+   ⭐ **והלולאה שמעל כבר מכסה את כולן בכיוון האחר** — ⚠️ היפוך שאינו
+   מפיל בריצה המסוננת נתפס שם, ⛔ ולכן נשאר כאן הכיוון ההפוך בלבד.
+   ──────────────────────────────────────────────────────────────────────── */
+const FILTER_SAMPLE = 2;
+{
+  const cand = rows.filter((r) => EXEMPT.indexOf(r.row) < 0);
+  const step = Math.max(1, Math.floor(cand.length / FILTER_SAMPLE));
+  let seen = 0, same = 0;
+  for (let i = 0; i < cand.length && seen < FILTER_SAMPLE; i += step) {
+    const r = cand[i];
+    const lines = CLEAN_DOC.toString('utf8').split('\n');
+    const flipped = flipCell(lines[r.at], APP.col);
+    if (flipped === null || flipped === lines[r.at]) continue;
+    lines[r.at] = flipped;
+    const over = docOver(lines.join('\n'));
+    const filtered = runChecker(over, DOC_ONLY);
+    const full = runChecker(over, null);
+    seen++;
+    if (filtered === full) same++;
+    else ok(`שורה ${r.row}: הסינון «doc» מסכים עם הריצה המלאה`, false);
+  }
+  ok(`מדגם הסינון — ${same} מתוך ${seen} היפוכים נותנים אותו פסק דין ` +
+     `מלא ומסונן (מדגם מוצהר ${FILTER_SAMPLE})`, seen > 0 && same === seen);
+}
+
 /*  ⭐ מוטציית-נגד — ⛔ בלעדיה ההיפוכים אינם מבחינות בין «מודד ערך»
  *  ל«סופר תווים» (סבב 68): ריפוד התא ברווחים **אינו** משנה את הערך
  *  שהמטריצה מצהירה, ⛔ ולכן `check-capabilities` חייב להמשיך לעבור. */
