@@ -54,8 +54,15 @@ const APP = {
   /*  ⚠️ שער שרץ בתוך תהליך של שער אחר — ⛔ מאזין `exit` שלו היה נרשם
    *  עשרות פעמים, ⭐ ולכן הסגירה שלו בסוף `run` והיא מוצהרת כאן. */
   sealExempt: { 'check-capabilities': 'רץ בתוך תהליך של שער אחר, והסגירה בסוף `run` ולא במאזין' },
-  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 160,
+  /*  ⛔ רצפת הטענות מפוצלת (סבב 118) — ⚠️ **מה נכנס**: המשותפת, שהיא
+   *  מספר זהה בארבעת הריפו, ⛔ והפרטית עם היכולת שמוסיפה אותה;
+   *  ⛔ **ומה מפיל**: משותפת שנבדלת בין הריפו, ⛔ פרטית בלי נימוק,
+   *  ⛔ וסכום שאינו מספר הטענות שרצו. ⭐ **ולמה שתיים**: מספר אחד
+   *  מסתיר טענה משותפת שאבדה — ⚠️ «הריצפה פיגרה, יושרה למדוד» מקבע
+   *  את המצב השבור. */
+  floorShared: 151,
+  floorApp: 9,
+  floorAppWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת',
   app: 'schar-limud',
   file: 'index.html',
   docs: 'CLAUDE.md',
@@ -1161,7 +1168,7 @@ let failures = 0;
  *  פעמים, ⛔ ולכן הסגירה כאן בסוף `run` ולא במאזין `exit`: ⭐ מאזין לכל
  *  ריצה היה נרשם עשרות פעמים, ⚠️ והספירה מתאפסת בכל ריצה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.expected;
+const EXPECTED = APP.floorShared + APP.floorApp;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
  *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
@@ -1928,6 +1935,10 @@ const WRITE_FS = /(?<![\w$])(?:writeFileSync|appendFileSync|mkdirSync|mkdtempSyn
 /*  ⛔ שם השער נגזר מהתבנית ⛔ ואינו רשימה — ⚠️ מחולל האייקונים אינו שער,
  *  ⭐ והכתיבה שלו היא כל תכליתו: ⛔ רשימת החרגה כאן הייתה מזמינה שם נוסף. */
 const GATE_NAME = /^(?:test_[a-z][a-z0-9_]*|check-[a-z-]+)\.mjs$/;
+
+/*  ⛔ ארבעת הריפו בשמם — ⚠️ הרשימה זהה בית-לבית בארבעת העותקים: ⭐ ריפו
+ *  שיורד מכאן יורד בארבעתם באותו סבב. */
+const FLOOR_PEERS = ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius'];
 /*  ⛔ המרשם נבנה מחלקים ⛔ ואינו ליטרל אחד — ⚠️ הקובץ הזה סורק את קובצי
  *  השער ומחפש בהם את המרשם, ⭐ וליטרל שלם כאן היה מוצא את עצמו:
  *  ⛔ הבודק היה מדווח על עצמו «מצהיר ואינו כותב». */
@@ -2042,7 +2053,7 @@ function gateSealGaps() {
   for (const f of files) {
     const txt = whitenJs(readOnce('tools/' + f));
     const name = f.replace(/\.mjs$/, '');
-    if (!/const EXPECTED = (?:APP\.expected|\d+);/.test(txt))
+    if (!/const EXPECTED = (?:APP\.expected|APP\.floorShared \+ APP\.floorApp|\d+);/.test(txt))
       out.push(f + ': אין הצהרת `EXPECTED` — נמדד 0 הצהרות מול 1 נדרשת');
     if (!/let RAN = 0;/.test(txt)) out.push(f + ': אין מונה `RAN`');
     if (!/RAN\s*(?:\+\+|\+=)/.test(txt)) out.push(f + ': המונה מוצהר ואינו מקודם');
@@ -2098,6 +2109,21 @@ function gateSealGaps() {
   }
   for (const n of Object.keys(rwhy))
     if (!(n in range)) out.push(n + ': נימוק טווח בלי טווח');
+  /*  ⛔ הריצפה המשותפת נמדדת **בין** הריפו — ⚠️ מספר שתואם לעצמו באותו
+   *  ריפו אינו עדות לזהות בין הארבעה: ⭐ סבב שאיבד טענה משותפת באחת
+   *  ויישר שם את הריצפה מקבע את האובדן. ⛔ וריפו אחות שאינה על הדיסק
+   *  נאמרת ⛔ ואינה מדולגת בשתיקה. */
+  for (const peer of FLOOR_PEERS) {
+    if (peer === APP.app) continue;
+    const f = `../${peer}/tools/check-capabilities.mjs`;
+    if (!fs.existsSync(f)) { out.push(peer + ': ריפו אחות אינה על הדיסק — הריצפה המשותפת לא הושוותה'); continue; }
+    const m = /floorShared:\s*(\d+)/.exec(fs.readFileSync(f, 'utf8'));
+    if (!m) { out.push(peer + ': אין `floorShared` בריפו האחות'); continue; }
+    if (Number(m[1]) !== APP.floorShared)
+      out.push(peer + `: ריצפה משותפת ${m[1]} מול ${APP.floorShared} כאן — טענה משותפת אבדה באחת מהן`);
+  }
+  if (!(APP.floorAppWhy || '').trim().split(/\s+/).filter(Boolean).length)
+    out.push('floorApp: ריצפה פרטית בלי נימוק');
   return out;
 }
 
