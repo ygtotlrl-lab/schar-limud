@@ -1162,6 +1162,16 @@ let failures = 0;
  *  ריצה היה נרשם עשרות פעמים, ⚠️ והספירה מתאפסת בכל ריצה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 const EXPECTED = APP.expected;
+/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+ *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
+ *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
+ *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
+ *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
+const FLOOR_MAX = (() => {
+  const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
+  return r ? Number(r[2]) : EXPECTED;
+})();
 let RAN = 0;
 const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
 const pass = (m) => (RAN++, console.log('✅ ' + m));
@@ -2037,6 +2047,8 @@ function gateSealGaps() {
     if (!/let RAN = 0;/.test(txt)) out.push(f + ': אין מונה `RAN`');
     if (!/RAN\s*(?:\+\+|\+=)/.test(txt)) out.push(f + ': המונה מוצהר ואינו מקודם');
     if (!/RAN < EXPECTED/.test(txt)) out.push(f + ': אין השוואה בין שרץ למוצהר');
+    if (!/RAN > FLOOR_MAX/.test(txt))
+      out.push(f + ': אין השוואה לתקרה — נמדד כיוון אחד מול שניים נדרשים');
     const sealed = /process\.on\(/.test(txt);
     const why = exempt[name];
     if (why && sealed) out.push(name + ': מוכרז חריג ובכל זאת נושא מאזין');
@@ -2063,6 +2075,29 @@ function gateSealGaps() {
   }
   for (const n of Object.keys(exempt))
     if (files.indexOf(n + '.mjs') < 0) out.push(n + ': חריגה מוכרזת ואין לה קובץ');
+  /*  ⛔ טווח הריצפה מוכרז בשם שער, בצורה «מינימום-מקסימום», ובנימוק —
+   *  ⚠️ שם שאין לו קובץ, טווח שאינו שני מספרים, ונימוק שאינו נימוק,
+   *  ⛔ שלושתם מפילים. */
+  /*  ⛔ נקרא גולמי מהמקום היחיד שמצהיר אותו — ⚠️ ההצהרה היא ליטרלים,
+   *  ⭐ והלבנה הייתה מוחקת את הערכים עצמם. */
+  const jsTxt = readOnce('tools/check-js.mjs');
+  const pick = (k) => {
+    const m = new RegExp(k + ':\\s*\\{([^}]*)\\}').exec(jsTxt);
+    const o = {};
+    if (m) for (const e of m[1].matchAll(/([A-Za-z_][\w-]*)\s*:\s*'([^']*)'/g)) o[e[1]] = e[2];
+    return o;
+  };
+  const range = pick('floorRange');
+  const rwhy = pick('floorRangeWhy');
+  for (const n of Object.keys(range)) {
+    if (files.indexOf(n + '.mjs') < 0) out.push(n + ': טווח ריצפה מוכרז ואין לו קובץ');
+    if (!/^\d+-\d+$/.test(String(range[n] || '')))
+      out.push(n + ': טווח ריצפה אינו «מינימום-מקסימום» — נמדד «' + range[n] + '»');
+    if (String(rwhy[n] || '').trim().split(/\s+/).length < 4)
+      out.push(n + ': טווח ריצפה בלי נימוק');
+  }
+  for (const n of Object.keys(rwhy))
+    if (!(n in range)) out.push(n + ': נימוק טווח בלי טווח');
   return out;
 }
 
@@ -5254,6 +5289,10 @@ if (_CLEAN_RUN) console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
 if (_CLEAN_RUN && RAN < EXPECTED) {
   console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
     'מה עושים: ודא שכל סעיף בבודק רץ, ⛔ ושאין יציאה מוקדמת מ-`run`.');
+  failures++;
+} else if (_CLEAN_RUN && RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
+  console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
+    'עדכן את `EXPECTED`.');
   failures++;
 }
 return failures;

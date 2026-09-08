@@ -52,12 +52,26 @@ const REP = reporter();
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 const EXPECTED = 94;
 let RAN = 0;
+/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+ *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
+ *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
+ *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
+ *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
+const FLOOR_MAX = (() => {
+  const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
+  return r ? Number(r[2]) : EXPECTED;
+})();
 process.on('exit', () => {
   RAN += REP.st.pass + REP.st.fail;
   console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
   if (RAN < EXPECTED) {
     console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `EXPECTED`.');
     process.exitCode = 1;
   }
 });
