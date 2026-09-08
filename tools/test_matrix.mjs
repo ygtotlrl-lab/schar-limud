@@ -244,13 +244,20 @@ ok(`כל השורות שאינן מוחרגות נבדקו במוטציה (${cov
    ⭐ **והלולאה שמעל כבר מכסה את כולן בכיוון האחר** — ⚠️ היפוך שאינו
    מפיל בריצה המסוננת נתפס שם, ⛔ ולכן נשאר כאן הכיוון ההפוך בלבד.
    ──────────────────────────────────────────────────────────────────────── */
+/*  ⛔ גודל המדגם נגזר מתקרת הסט ⛔ ואינו נבחר — ⚠️ כל היפוך הוא **שתי**
+ *  ריצות של הבודק, ⭐ ותקרת הסט היא 105 שניות: ⛔ המספר הנמדד יושב
+ *  בעמודת ההערות שבטבלה. */
 const FILTER_SAMPLE = 2;
 {
   const cand = rows.filter((r) => EXEMPT.indexOf(r.row) < 0);
-  const step = Math.max(1, Math.floor(cand.length / FILTER_SAMPLE));
-  let seen = 0, same = 0;
-  for (let i = 0; i < cand.length && seen < FILTER_SAMPLE; i += step) {
-    const r = cand[i];
+  /*  ⛔ **המדגם מסתובב** ⛔ ואינו קבוע — ⚠️ מדגם קבוע בודק את אותן שתי
+   *  שורות לנצח, ⭐ ומסתובב מכסה את כולן: ⛔ והנקודה נגזרת ממספר הסבב
+   *  ⛔ ואינה מוקלדת. */
+  const round = Number((/עודכן לאחרונה: סבב (\d+)/.exec(CLEAN_DOC.toString('utf8')) || [])[1]) || 0;
+  const start = cand.length ? (round * FILTER_SAMPLE) % cand.length : 0;
+  let seen = 0, same = 0, hit = [];
+  for (let n = 0; n < cand.length && seen < FILTER_SAMPLE; n++) {
+    const r = cand[(start + n) % cand.length];
     const lines = CLEAN_DOC.toString('utf8').split('\n');
     const flipped = flipCell(lines[r.at], APP.col);
     if (flipped === null || flipped === lines[r.at]) continue;
@@ -258,12 +265,13 @@ const FILTER_SAMPLE = 2;
     const over = docOver(lines.join('\n'));
     const filtered = runChecker(over, DOC_ONLY);
     const full = runChecker(over, null);
-    seen++;
+    seen++; hit.push(r.row);
     if (filtered === full) same++;
     else ok(`שורה ${r.row}: הסינון «doc» מסכים עם הריצה המלאה`, false);
   }
   ok(`מדגם הסינון — ${same} מתוך ${seen} היפוכים נותנים אותו פסק דין ` +
-     `מלא ומסונן (מדגם מוצהר ${FILTER_SAMPLE})`, seen > 0 && same === seen);
+     `מלא ומסונן (שורות ${hit.join('·')}, נקודת הפתיחה נגזרת מסבב ${round})`,
+     seen > 0 && same === seen);
 }
 
 /*  ⭐ מוטציית-נגד — ⛔ בלעדיה ההיפוכים אינם מבחינות בין «מודד ערך»

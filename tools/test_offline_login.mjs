@@ -52,7 +52,7 @@ let pass = 0, fail = 0;
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
  *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = 160;
+const EXPECTED = 158;
 let RAN = 0;
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
@@ -129,8 +129,8 @@ const NAMES_FN = [
   'slSanitizeRows', 'mirrorSave', 'slLocalWrite', 'slWhoName',
   /*  ⛔ שכבת המראה עצמה (סבב 114) — ⚠️ ההגירה החד-פעמית, הטעינה והחלתה
    *  על מצב התצוגה: ⭐ רתמה שמדמה אותן אינה מודדת את מה שירוץ. */
-  'slKeyOf', 'slAdoptLegacyId', 'mirrorKey', 'mirrorTables', 'mirrorKeysMigrate',
-  'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
+  'slKeyOf', 'slAdoptLegacyId', 'mirrorKey', 'mirrorTables',
+  'mirrorLoadOne', 'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
   /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
    *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */
   'newClientId', '_writeUserSend', 'writeUser',
@@ -381,16 +381,16 @@ async function main() {
     const txn = [{ client_id: 't1', student_client_id: 's1', date: '2026-01-02', amount: 100, updated_at: 6 }];
     const set = [{ client_id: 'c1', key: 'default_tuition', value: '2000', updated_at: 7 }];
     const lst = [{ client_id: 'l1', category: 'payment_method', value: 'מזומן', updated_at: 8 }];
-    /*  ⚠️ המפתח הישן הוא זה שנכתב בשלב הביניים — ⛔ תחילית כפולה. */
-    h.store['sl_mirror_sl_students'] = JSON.stringify(stu);
-    h.store['sl_mirror_sl_transactions'] = JSON.stringify(txn);
-    h.store['sl_mirror_sl_settings'] = JSON.stringify(set);
-    h.store['sl_mirror_sl_lists'] = JSON.stringify(lst);
+    /*  ⛔ המפתח נגזר משם הטבלה — ⚠️ התחילית כבר בתוכו. */
+    h.store['sl_mirror_students'] = JSON.stringify(stu);
+    h.store['sl_mirror_transactions'] = JSON.stringify(txn);
+    h.store['sl_mirror_settings'] = JSON.stringify(set);
+    h.store['sl_mirror_lists'] = JSON.stringify(lst);
     h.ctx.mirrorBoot();
-    ok('⭐ ההגירה כתבה את ארבעת המפתחות החדשים',
+    ok('⭐ ארבעת המפתחות נקראים בשם הנגזר',
       ['students', 'transactions', 'settings', 'lists']
         .every((m) => h.store['sl_mirror_' + m] !== undefined));
-    ok('⛔ ואפס מפתח כפול — הישנים ירדו',
+    ok('⛔ ואפס מפתח בתחילית כפולה',
       ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists']
         .every((t) => !('sl_mirror_' + t in h.store)));
     eq('⚠️ התוכן עבר כמות שהוא', h.store['sl_mirror_transactions'], JSON.stringify(txn));
@@ -404,18 +404,16 @@ async function main() {
     eq('⚠️ והגדרות', h.ctx.SETTINGS.default_tuition, '2000');
     eq('⚠️ ורשימות', (h.ctx.LISTS.payment_method || []).length, 1);
 
-    const before = JSON.stringify(h.store);
-    h.ctx.mirrorKeysMigrate();
-    eq('⛔ ריצה שנייה אינה משנה דבר', JSON.stringify(h.store), before);
   }
   {
-    /*  ⚠️ מפתח חדש שכבר קיים — ⛔ אינו נדרס, ⭐ והישן יורד בכל זאת. */
+    /*  ⛔ ההגירה של סבב 114 ירדה בסבב 116 — ⚠️ המפתח הישן אינו נקרא עוד,
+     *  ⭐ ומכשיר שלא נטען מאז מושך מהענן בטעינה הראשונה. */
     const h = makeCtx();
     h.store['sl_mirror_sl_students'] = JSON.stringify([{ client_id: 'old' }]);
     h.store['sl_mirror_students'] = JSON.stringify([{ client_id: 'new' }]);
-    h.ctx.mirrorKeysMigrate();
-    eq('⛔ מפתח חדש קיים אינו נדרס', h.store['sl_mirror_students'], JSON.stringify([{ client_id: 'new' }]));
-    ok('⚠️ והישן יורד גם כך', !('sl_mirror_sl_students' in h.store));
+    h.ctx.mirrorBoot();
+    eq('⛔ המראה נקראת מהמפתח הנגזר בלבד',
+       (h.ctx.MIRROR.sl_students || []).map((r) => r.client_id).join('|'), 'new');
   }
   {
     /*  ⛔ המיפוי 1:1 ל-`PUSH_TABLES` — ⚠️ ואין שם מראה שאינו טבלה שנדחפת. */
