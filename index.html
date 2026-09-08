@@ -671,12 +671,15 @@ function guardOnline() {
 /* ── MIRROR_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────── */
 /*  ⚠️ `tables` היא **פונקציה** ⛔ ולא מערך — ⭐ `PUSH_TABLES` מוצהר אחרי
  *  הבלוק הזה, ⛔ והצהרה שקוראת אותו כאן הייתה מקבלת `undefined`.
- *  ⛔ ואין כאן טבלה שאינה נדחפת — ⚠️ מראת המשתמשים חיה במפתח משלה. */
+ *  ⛔ ומראת המשתמשים היא טבלה כמו כל אחרת (סבב 118) — ⚠️ **מה נכנס**:
+ *  שם הטבלה, המסלול שדוחף אותה, וסוג התוספת שלו על הלולאה; ⛔ **מה מפיל**:
+ *  מסלול שאין לו גוף, סוג שאינו אחד משלושה, ומסלול שאינו מוסיף דבר.
+ *  ⭐ **ולמה זה קיים**: מבנה שני לאותו נתון הוא מפתח שאיש אינו סורק. */
 var MIRROR_CFG = {
   prefix: 'sl_mirror_',
   app:    'sl_',
-  tables: function () { return PUSH_TABLES; },
-  noPush: [],
+  tables: function () { return PUSH_TABLES.concat([SL_USERS_TABLE]); },
+  noPush: [{ t: 'sl_users', via: 'writeUser', adds: 'secret' }],
   empty:  function () { return []; },
   ts:     function (r) { return slTs(r); },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
@@ -3537,6 +3540,9 @@ function slAdoptLegacyId(r) {
 // **ובשער הדיסק כאן** — כך שגם נתיב שיתווסף בעתיד לא יוכל להדליף.
 function slSanitizeRows(t, rows) {
   if (t === 'sl_settings') return slStripMeta(rows);
+  /*  ⛔ שער הדיסק של מראת המשתמשים — ⚠️ רשימת-היתר ולא רשימת-איסור:
+   *  ⭐ היא נשארת נכונה כשתיווסף לטבלה עמודה רגישה חדשה. */
+  if (t === SL_USERS_TABLE) return (Array.isArray(rows) ? rows : []).map(slUserPub);
   return Array.isArray(rows) ? rows : [];
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3610,7 +3616,9 @@ function slDropLegacyPassHash() {
    העמודות שברשימה — הסיסמאות של המשתמשים האחרים **אינן מגיעות לזיכרון
    הדפדפן מלכתחילה**, ולא רק שאינן נשמרות.
    ═══════════════════════════════════════════════════════════════════════ */
-var SL_USERS_KEY = 'sl_mirror_users';
+/*  ⛔ שם **הטבלה** ⛔ ולא מפתח האחסון (סבב 118) — ⚠️ המפתח נגזר ממנו
+ *  בשכבת המראה, ⭐ והוא יוצא `sl_mirror_users` בדיוק כפי שהיה. */
+var SL_USERS_TABLE = 'sl_users';
 // רשימת ההיתר. `id`+`username` לזיהוי ולתצוגה (`nav-username`, `created_by`),
 // `pass_salt`+`pass_fp` לאימות, ו-`role` להרשאות (סבב 26 — הוא מקור האמת
 // היחיד לגישה למסך ההגדרות, ולכן חייב לרדת למכשיר כדי שההרשאה תעבוד
@@ -3622,7 +3630,6 @@ var SL_USERS_KEY = 'sl_mirror_users';
 // ⭐ ומסבב 63 היא קיימת בטבלה (`not null default true`), ולכן
 // הפיגום שהשלים אותה ב-`slUserPub` הוסר — ר' ההערה שם.
 var SL_USER_COLS = ['client_id', 'username', 'pass_salt', 'pass_fp', 'role', 'active'];
-var SL_USERS = [];
 var SL_PASS_ITER_USER = 100000;
 // המלח הנשמר הוא אקראי פר-משתמש; הקידומת מוסיפה הפרדת-הקשר, כך שטבלה
 // מחושבת מראש עבור אפליקציה אחרת על אותו origin אינה תקפה כאן. ה-origin
@@ -3709,15 +3716,15 @@ var MSG_SET_DENIED  = '🔒 מסך ההגדרות פתוח למשתמשי ניה
 var MSG_SET_NO_ROLE = '🔧 מסך ההגדרות טרם הופעל במסד הנתונים. יש להריץ את <code>migrations/011_users_role.sql</code> ב-SQL Editor של Supabase, ואז להיכנס מחדש.';
 
 function slUsersLoad() {
-  try {
-    var raw = lsGet(SL_USERS_KEY, null);
-    var v = raw == null ? null : JSON.parse(raw);
-    SL_USERS = Array.isArray(v) ? v.map(slUserPub).filter(function (u) { return u && u.username; }) : [];
-  } catch (e) { console.warn('[users] מראת המשתמשים פגומה — נטענה ריקה', e); SL_USERS = []; }
+  var rows = mirrorLoadOne(SL_USERS_TABLE) || [];
+  MIRROR[SL_USERS_TABLE] = rows.map(slUserPub).filter(function (u) { return u && u.username; });
 }
 // ⛔ שער הדיסק של מראת המשתמשים (סבב 24) — עובר דרך `slUserPub` בדיוק כמו הטעינה
 //    והמשיכה. שלוש נקודות, בדיוק כמו הסרת הסוד מ-`sl_settings`.
-function slUsersSave() { return lsSet(SL_USERS_KEY, JSON.stringify((SL_USERS || []).map(slUserPub))); }
+function slUsersSave() {
+  MIRROR[SL_USERS_TABLE] = (MIRROR[SL_USERS_TABLE] || []).map(slUserPub);
+  return mirrorSave(SL_USERS_TABLE);
+}
 /*  עדכון **שורה אחת** במראה בלי משיכה מלאה (סבב 79) — ⚠️ הכניסה המקוונת
     והשלמת הטביעה מחזיקות את השורה בידן, ⛔ ובלי המסלול הזה היא הייתה
     ממתינה למשיכה הבאה: ⭐ מכשיר שנכנס פעם אחת ואיבד רשת היה מאמת מול
@@ -3726,14 +3733,14 @@ function slUsersSave() { return lsSet(SL_USERS_KEY, JSON.stringify((SL_USERS || 
 function slUsersSaveOne(user) {
   var pub = slUserPub(user);
   if (!pub || !pub.username) return false;
-  SL_USERS = (SL_USERS || []).filter(function (u) {
+  MIRROR[SL_USERS_TABLE] = (MIRROR[SL_USERS_TABLE] || []).filter(function (u) {
     return u && String(u.username) !== String(pub.username);
   });
-  SL_USERS.push(pub);
+  MIRROR[SL_USERS_TABLE].push(pub);
   return slUsersSave();
 }
 function slUserByName(username) {
-  var arr = SL_USERS || [];
+  var arr = MIRROR[SL_USERS_TABLE] || [];
   for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].username) === String(username)) return arr[i];
   return null;
 }
@@ -3757,7 +3764,7 @@ async function slPullUsers() {
   try {
     var r = await withTimeout(SB.from('sl_users').select(SL_USER_COLS.join(',')));
     if (!r || r.error || !Array.isArray(r.data)) return false;
-    SL_USERS = r.data.map(slUserPub).filter(function (u) { return u && u.username; });
+    MIRROR[SL_USERS_TABLE] = r.data.map(slUserPub).filter(function (u) { return u && u.username; });
     slUsersSave();
     // סבב 26: תפקיד שהשתנה בלוח הבקרה מגיע דרך המשיכה הזו, ולכן המשתמש
     // המחובר מסונכרן מולה. **הרענון קורה אחרי שהמראה נשמרה** — הפוך מזה,

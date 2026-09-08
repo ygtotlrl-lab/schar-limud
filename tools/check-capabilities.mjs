@@ -352,7 +352,7 @@ const APP = {
    *  שאין לו אתר בפועל, ⛔ והכרזה בלי נימוק. ⭐ **ולמה היא קיימת**: יש
    *  הגירה שהמכשירים לא בהכרח עברו, ⚠️ ומחיקתה מאבדת נתון. */
   migrateKeep: {},
-  mirrorTables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
+  mirrorTables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists', 'sl_users'],
   /*  ⛔ אין כאן מפתח `ls*` בשם מפורש שאינו טבלה — ⚠️ **וההיעדר מוצהר
    *  ריק** ⛔ ואינו נשמט: ⭐ שדה חסר נקרא «לא נשאל», וריק «נמדד ואין». */
   flatKeys: {},
