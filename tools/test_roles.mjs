@@ -84,11 +84,16 @@ const NAMES_VAR = [
   'SL_NEVER_MIRROR_SETTINGS', 'SL_OLD_PASS_HASH_KEY',
   '_sessUser', '_sessBooted', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
+  /*  ⭐ סבב 113 — שם התפקיד המורשה, ⛔ במקום אחד. */
+  'ROLE_ADMIN',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
   'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
+  /*  ⭐ סבב 113 — ההשוואה לתפקיד עברה לבלוק המשותף. ⛔ הרתמה מחלצת
+   *  אותו, ⚠️ ובלעדיו `slSettingsAccess` נופלת ב-ReferenceError. */
+  'isAdminOf', 'isAdmin',
   /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive', 'slResolveUser',
   'showPanel', 'renderSettingsPanel', 'refreshUI',
