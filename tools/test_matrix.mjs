@@ -379,7 +379,11 @@ const FILTER_SAMPLE = 2;
       ? [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('const LS_SWEEP_PCT = 0.60;', 'const LS_SWEEP_PCT = 0.90;')]]
       : cellOf(ROW_SWEEP).indexOf('⭕') >= 0
         ? [[CAP2, CLEAN_CAP, dropGap(CLEAN_CAP, ROW_SWEEP)]]
-        : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace('/tier2\\s*[:=]\\s*\\[\\s*\\{/', '/tier2\\s*[:=]\\s*\\[/')]],
+        /*  ⛔ הזרוע ל-❌ מחלישה את ה-probe (סבב 117) — ⚠️ העוגן הקודם היה
+         *  ביטוי שכבר אינו בקוד, ⭐ והחלפה שאינה מחליפה דבר עוברת תמיד. */
+        : [[CAP2, CLEAN_CAP, CLEAN_CAP.replace(
+            "if (!/\\bkey\\s*:/.test(it) || !/\\bsyncedThrough\\s*:/.test(it)) bad++;",
+            "if (!/\\bkey\\s*:/.test(it)) bad++;")]],
     true, ROW_SWEEP);
   /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע חדש בשם שכן — ⚠️ אותה טענה בדיוק, ⛔ ובכיוון
    *  שאסור לו להפיל. */
