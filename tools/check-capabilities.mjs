@@ -3805,6 +3805,15 @@ function mirrorLayerGaps() {
     out.push('טבלאות המראה אינן `PUSH_TABLES` ועוד `noPush` — נמדד «' + got + '» והצפוי «' + want + '»');
   /*  ⛔ ושני צדדיה של רשימת המפתחות השטוחים — ⚠️ מפתח שנכתב שטוח בלי
    *  הצהרה, ⛔ והצהרה שאין לה אתר. */
+  /*  ⛔ מפתח מראה הוא שם טבלה במסד — ⚠️ **והפירוק בקריאה ובכתיבה כאחת**:
+   *  ⭐ טבלה שהמסד מכיר נשלפת בקוד ב-`SB.from('<שם>')`, ⛔ ומפתח מראה
+   *  שאיש אינו שולף בשמו הוא מבנה מקומי שאין לו מקבילה בענן. */
+  const dbTables = new Set();
+  for (const m of src.matchAll(/SB\.from\(\s*'([a-z][a-z0-9_]*)'/g)) dbTables.add(m[1]);
+  for (const m of src.matchAll(/(?:parent|child|t):\s*'([a-z][a-z0-9_]*)'/g)) dbTables.add(m[1]);
+  for (const t of tabs)
+    if (!dbTables.has(t))
+      out.push('מפתח מראה שאינו טבלה במסד: ' + t + ' — הפירוק נעשה בדחיפה בלבד');
   const flat = APP.flatKeys || {};
   const seen = new Set();
   for (const m of src.matchAll(/ls(?:Get|Set|SetArray|Remove)\(\s*'([^']+)'/g)) {
