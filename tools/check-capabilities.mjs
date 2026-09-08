@@ -2113,11 +2113,18 @@ function gateSealGaps() {
    *  ריפו אינו עדות לזהות בין הארבעה: ⭐ סבב שאיבד טענה משותפת באחת
    *  ויישר שם את הריצפה מקבע את האובדן. ⛔ וריפו אחות שאינה על הדיסק
    *  נאמרת ⛔ ואינה מדולגת בשתיקה. */
-  for (const peer of FLOOR_PEERS) {
-    if (peer === APP.app) continue;
-    const f = `../${peer}/tools/check-capabilities.mjs`;
-    if (!fs.existsSync(f)) { out.push(peer + ': ריפו אחות אינה על הדיסק — הריצפה המשותפת לא הושוותה'); continue; }
-    const m = /floorShared:\s*(\d+)/.exec(fs.readFileSync(f, 'utf8'));
+  const peerFile = (p) => `../${p}/tools/check-capabilities.mjs`;
+  const others = FLOOR_PEERS.filter((p) => p !== APP.app);
+  const near = others.filter((p) => fs.existsSync(peerFile(p)));
+  /*  ⛔ אפס אחיות אינו «אחות חסרה» — ⚠️ הוא עותק בודד של הריפו: ⭐ השערים
+   *  מריצים את הבודק על עותק זמני, ⛔ ושם אין ולא אמורות להיות אחיות.
+   *  ⚠️ ודרישת הארבעה על הדיסק כבר נאכפת בשער הבלוקים המשותפים, ⛔ ולכן
+   *  אין כאן דילוג שקט: ⭐ **חלקן** על הדיסק הוא המקרה המסוכן, והוא נאמר. */
+  for (const peer of (near.length ? others : [])) {
+    if (!fs.existsSync(peerFile(peer))) {
+      out.push(peer + ': ריפו אחות אינה על הדיסק — הריצפה המשותפת לא הושוותה'); continue;
+    }
+    const m = /floorShared:\s*(\d+)/.exec(fs.readFileSync(peerFile(peer), 'utf8'));
     if (!m) { out.push(peer + ': אין `floorShared` בריפו האחות'); continue; }
     if (Number(m[1]) !== APP.floorShared)
       out.push(peer + `: ריצפה משותפת ${m[1]} מול ${APP.floorShared} כאן — טענה משותפת אבדה באחת מהן`);
