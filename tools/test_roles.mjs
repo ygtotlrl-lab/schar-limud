@@ -46,6 +46,21 @@ const SQL000 = fs.readFileSync(path.join(ROOT, 'migrations', '000_initial_schema
 const SQL011 = fs.readFileSync(path.join(ROOT, 'migrations', '011_users_role.sql'), 'utf8');
 
 const REP = reporter();
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמונה נקרא מהרתמה המשותפת, ⛔ שהיא המדווחת כאן. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = 94;
+let RAN = 0;
+process.on('exit', () => {
+  RAN += REP.st.pass + REP.st.fail;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
 const { ok, eq, sect } = REP;
 
 /* ── חילוץ מהקוד האמיתי — מהמודול הטהור המשותף ─────────────────────────── */
@@ -520,7 +535,7 @@ if (!process.env.RD67_MUT) {
   const _run = (dir) => _c.spawnSync(process.execPath, [_p.join(dir, 'tools', _name)],
     { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
 
-  const _mut = (label, file, edit, expectFail) => {
+  const _mut = (label, file, edit, expectFail) => { RAN++;
     /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה שער אמיתי בתהליך נפרד, ⛔ והוא קורא את המקור מהדיסק. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });

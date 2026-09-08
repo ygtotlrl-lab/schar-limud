@@ -25,6 +25,8 @@ import crypto from 'node:crypto';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 8,
   app: 'schar-limud',
   file: 'index.html',
   mode: 'html',
@@ -39,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [66];
+export const ROWS = [67];
 
 /*  ⛔ החתימה נקראת מ-`check-capabilities` ⛔ ואינה מוקלדת כאן (סבב 96ד) —
  *  ⚠️ ערך שמוצהר בשני מקומות מתיישן באחד מהם, ⭐ והשער השני מאשר בשקט את
@@ -82,8 +84,30 @@ const VOID = new Set(['area','base','br','col','embed','hr','img','input','link'
 
 const src = fs.readFileSync(APP.file, 'utf8');
 let failures = 0;
-const fail = (m) => { failures++; console.error('❌ ' + m); };
-const pass = (m) => console.log('✅ ' + m);
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
+const pass = (m) => (RAN++, console.log('✅ ' + m));
 
 /* ── ב. חתימות הבלוקים המשותפים ────────────────────────────────────────── */
 function grab(spec) {

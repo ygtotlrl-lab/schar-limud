@@ -29,6 +29,8 @@ import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 5,
   app: 'schar-limud',
   file: 'index.html',
   /*  ⛔ שם מפת הפעולות — ⚠️ הוא הדבר היחיד שנבדל בין הריפו בשער הזה,
@@ -42,7 +44,7 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 82) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [49];
+export const ROWS = [50];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -52,7 +54,29 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let failures = 0, n = 0;
-const t = (cond, m) => { n++; if (cond) console.log('  ok   ' + m);
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const t = (cond, m) => { RAN++; n++; if (cond) console.log('  ok   ' + m);
                          else { failures++; console.error('  FAIL ' + m); } };
 
 /* ── הסריקה — שם מול שם, ולא נוכחות מחרוזת ─────────────────────────────── */

@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 const APP = { app: 'schar-limud' };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-export const ROWS = [49];
+export const ROWS = [50];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -36,7 +36,29 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0, n = 0;
-const t = (cond, msg) => { n++; if (cond) console.log('  ok   ' + n + ' · ' + msg);
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = 1;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const t = (cond, msg) => { RAN++; n++; if (cond) console.log('  ok   ' + n + ' · ' + msg);
                            else { failures++; console.error('  FAIL ' + n + ' · ' + msg); } };
 
 const git = (...a) => execFileSync('git', ['-C', ROOT, ...a], { encoding: 'utf8', maxBuffer: 1 << 28 });

@@ -32,6 +32,8 @@ import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 15,
   app: 'schar-limud',
   usersTable: 'sl_users',
   plainCol: 'password',
@@ -49,7 +51,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [157];
+export const ROWS = [158];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -93,8 +95,30 @@ function stripComments(t) {
 const code = stripComments(js);
 
 let n = 0, bad = 0;
-const ok = (m) => console.log(`  ok   ${++n} · ${m}`);
-const no = (m) => { bad++; console.error(`  FAIL ${++n} · ${m}`); };
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const ok = (m) => (RAN++, console.log(`  ok   ${++n} · ${m}`));
+const no = (m) => { RAN++; bad++; console.error(`  FAIL ${++n} · ${m}`); };
 const is = (c, m) => (c ? ok(m) : no(m));
 
 console.log(`\n─────────────── ${APP.app}: הסיסמאות, וצעד ב שסגר את העמודה ──`);

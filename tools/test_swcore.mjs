@@ -39,6 +39,8 @@ import { spawnSync } from 'node:child_process';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 36,
   app: 'schar-limud',
   origin: 'https://ygtotlrl-lab.github.io',
   scope: '/schar-limud/',
@@ -138,8 +140,34 @@ const SW_URL = APP.origin + APP.scope + 'sw.js';
 const CACHE_NAME = (SRC.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/) || [])[1];
 
 let n = 0, bad = 0;
-const ok = (m) => console.log(`  ok   ${++n} · ${m}`);
-const no = (m) => { bad++; console.error(`  FAIL ${++n} · ${m}`); };
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+
+/*  ⛔ השער מריץ שערים בעץ סינתטי — ⚠️ הם מגיעים לחלק מטענותיהם בכוונה,
+ *  ⭐ ולכן הם מוכרזים ריצת-משנה ⛔ ואינם סוגרים על הרצפה. */
+process.env.GATE_SUBRUN = '1';
+const ok = (m) => (RAN++, console.log(`  ok   ${++n} · ${m}`));
+const no = (m) => { RAN++; bad++; console.error(`  FAIL ${++n} · ${m}`); };
 const is = (c, m) => (c ? ok(m) : no(m));
 
 /* ══════════════════════════════════════════════════════════════════════════
