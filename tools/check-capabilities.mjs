@@ -3826,7 +3826,11 @@ function localMigrationGaps() {
     const at = [...near.matchAll(/\(סבב (\d+)\)/g)].map((x) => Number(x[1]));
     if (!at.length) { out.push('הגירה מקומית בלי הצהרת סבב: ' + s.name); continue; }
     const last = Math.max(...at);
-    if (round && last < round - 1)
+    /*  ⛔ **הגירה יורדת בסבב שאחרי זה שהריץ אותה** — ⚠️ ולכן הצהרה
+     *  בסבב הקודם **נופלת**, ⭐ והצהרה בסבב הנוכחי אינה: ⛔ `- 1` כאן
+     *  היה מתיר לה סבב נוסף, ⚠️ ומדידה שאינה מפילה על 115 בסבב 116
+     *  היא probe שאינו יכול להיכשל על המקרה שהוא נכתב בשבילו. */
+    if (round && last < round)
       out.push('הגירה מקומית שסבבה חלף: ' + s.name + ' — הוצהרה בסבב ' + last +
                ' והסבב הוא ' + round);
   }
