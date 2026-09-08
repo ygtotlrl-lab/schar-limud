@@ -57,6 +57,16 @@ let RAN = 0;
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
+/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+ *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
+ *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
+ *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
+ *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
+const FLOOR_MAX = (() => {
+  const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
+  return r ? Number(r[2]) : EXPECTED;
+})();
 process.on('exit', () => {
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
@@ -67,6 +77,10 @@ process.on('exit', () => {
   if (RAN < EXPECTED) {
     console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `EXPECTED`.');
     process.exitCode = 1;
   }
 });
@@ -110,8 +124,15 @@ function decl(name) {
 // גוף פונקציה כטקסט — לטענות "X אינו מופיע בגוף Y".
 const body = (name) => fn(name);
 
+/*  ⛔ מראת המשתמשים היא טבלה בשכבת המראה (סבב 118) — ⚠️ **מה נכנס**:
+ *  שם הטבלה בלבד; ⛔ **ומה מפיל**: מפתח מוקלד — ⭐ הוא נגזר בשכבה,
+ *  ומדידה מול ליטרל הייתה מאשרת מפתח שאינו זה שנכתב בפועל. */
+const UKEY  = (h) => h.ctx.mirrorKey(h.ctx.SL_USERS_TABLE);
+const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
+const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
+
 const NAMES_VAR = [
-  'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
+  'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_NEVER_MIRROR_SETTINGS', 'MIRROR_CFG', 'SL_TABLES', 'MIRROR', 'PUSH_TABLES',
   'SL_STAMP_KEY', '_sessUser', '_sessBooted',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
@@ -314,33 +335,33 @@ async function main() {
     eq('slPullUsers מצליחה', await h.ctx.slPullUsers(true), true);
     const q = h.calls.sb.find((x) => x.table === 'sl_users');
     ok('⭐ ה-select מבקש עמודות מפורשות ולא `*`', q.cols === h.ctx.SL_USER_COLS.join(','), q.cols);
-    ok('⛔ המראה שבזיכרון בלי `password`', !('password' in h.ctx.SL_USERS[0]));
-    ok('⛔ המראה שעל הדיסק בלי `password`', h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1);
-    ok('⛔ ערך הסיסמה עצמו אינו על הדיסק', h.store[h.ctx.SL_USERS_KEY].indexOf('135790') === -1);
+    ok('⛔ המראה שבזיכרון בלי `password`', !('password' in UROWS(h)[0]));
+    ok('⛔ המראה שעל הדיסק בלי `password`', h.store[UKEY(h)].indexOf('password') === -1);
+    ok('⛔ ערך הסיסמה עצמו אינו על הדיסק', h.store[UKEY(h)].indexOf('135790') === -1);
 
     // הלוך-ושוב: כתיבה לדיסק וקריאה חזרה
-    h.ctx.SL_USERS = [];
+    setU(h, []);
     h.ctx.slUsersLoad();
-    eq('טעינה מהדיסק מחזירה את המשתמש', h.ctx.SL_USERS.length, 1);
-    eq('ואת שם המשתמש', h.ctx.SL_USERS[0].username, 'shimon');
-    ok('⛔ וגם אחרי הטעינה אין `password`', !('password' in h.ctx.SL_USERS[0]));
+    eq('טעינה מהדיסק מחזירה את המשתמש', UROWS(h).length, 1);
+    eq('ואת שם המשתמש', UROWS(h)[0].username, 'shimon');
+    ok('⛔ וגם אחרי הטעינה אין `password`', !('password' in UROWS(h)[0]));
   }
   {
     // שער הדיסק מסנן גם כשהמראה שבזיכרון הורעלה ישירות (עקיפת המשיכה).
     const h = makeCtx();
-    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f', active: true }];
+    setU(h, [{ client_id: '1', username: 'shimon', password: 'סוד-גלוי', pass_salt: 's', pass_fp: 'f', active: true }]);
     h.ctx.slUsersSave();
     ok('⭐ שער הדיסק מסנן `password` גם ממראה שהורעלה',
-      h.store[h.ctx.SL_USERS_KEY].indexOf('password') === -1 && h.store[h.ctx.SL_USERS_KEY].indexOf('סוד-גלוי') === -1);
+      h.store[UKEY(h)].indexOf('password') === -1 && h.store[UKEY(h)].indexOf('סוד-גלוי') === -1);
   }
   {
     const h = makeCtx();
-    h.store[h.ctx.SL_USERS_KEY] = '{{ לא JSON';
+    h.store[UKEY(h)] = '{{ לא JSON';
     h.ctx.slUsersLoad();
-    eq('מראה פגומה נטענת ריקה ולא זורקת', h.ctx.SL_USERS.length, 0);
-    h.store[h.ctx.SL_USERS_KEY] = JSON.stringify([{ client_id: '1' }, { client_id: '2', username: 'ok' }]);
+    eq('מראה פגומה נטענת ריקה ולא זורקת', UROWS(h).length, 0);
+    h.store[UKEY(h)] = JSON.stringify([{ client_id: '1' }, { client_id: '2', username: 'ok' }]);
     h.ctx.slUsersLoad();
-    eq('שורה בלי username נזרקת', h.ctx.SL_USERS.length, 1);
+    eq('שורה בלי username נזרקת', UROWS(h).length, 1);
   }
   {
     // ⭐ סבב 38 — אין יותר נפילה-חזרה. `migrations/010`/`011`/`013` רצו
@@ -350,10 +371,10 @@ async function main() {
     const h = makeCtx({
       reply: () => ({ data: null, error: { message: 'column sl_users.pass_fp does not exist' } }),
     });
-    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }];
+    setU(h, [{ client_id: '1', username: 'shimon', pass_salt: 'aa', pass_fp: 'bb', active: true }]);
     eq('שגיאת עמודה חסרה מפילה את המשיכה', await h.ctx.slPullUsers(), false);
     eq('⛔ ואין ניסיון שני — שאילתה אחת בלבד', h.calls.sb.length, 1);
-    eq('⛔ והמראה הקיימת לא נדרסה', h.ctx.SL_USERS.length, 1);
+    eq('⛔ והמראה הקיימת לא נדרסה', UROWS(h).length, 1);
   }
   {
     const h = makeCtx({ reply: () => ({ data: [], error: null }) });
@@ -416,20 +437,23 @@ async function main() {
        (h.ctx.MIRROR.sl_students || []).map((r) => r.client_id).join('|'), 'new');
   }
   {
-    /*  ⛔ המיפוי 1:1 ל-`PUSH_TABLES` — ⚠️ ואין שם מראה שאינו טבלה שנדחפת. */
+    /*  ⛔ המיפוי ל-`PUSH_TABLES` ועוד `noPush` — ⚠️ מפתח מראה שאינו אחד
+     *  משניהם, או טבלה שנדחפת ואין לה מראה, ⭐ שניהם שוברים את השכבה. */
     const h = makeCtx();
     const keys = h.ctx.mirrorTables();
-    ok('⭐ מפתחות המראה = PUSH_TABLES, אות באות',
-      keys.join('|') === h.ctx.PUSH_TABLES.join('|'), keys.join('|'));
-    eq('⛔ ואין טבלה שאינה נדחפת', h.ctx.MIRROR_CFG.noPush.length, 0);
+    const noPush = h.ctx.MIRROR_CFG.noPush.map((r) => r.t);
+    ok('⭐ מפתחות המראה = PUSH_TABLES + noPush',
+      keys.slice().sort().join('|') === h.ctx.PUSH_TABLES.concat(noPush).sort().join('|'),
+      keys.join('|'));
+    eq('⛔ ומראת המשתמשים אינה נדחפת', noPush.join('|'), h.ctx.SL_USERS_TABLE);
   }
 
   /* ── ג. כניסה אופליין ────────────────────────────────────────────────── */
   sect('ג. כניסה אופליין — ארבעה מצבים, ארבע הודעות');
   {
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [await userRow(h, A), await userRow(h, B)];
-    ok('שני משתמשים במראה', h.ctx.SL_USERS.length === 2);
+    setU(h, [await userRow(h, A), await userRow(h, B)]);
+    ok('שני משתמשים במראה', UROWS(h).length === 2);
 
     // ⭐ הטענה המרכזית של הסבב.
     h.fields['au-user'] = B.username; h.fields['au-pass'] = B.password;
@@ -464,7 +488,7 @@ async function main() {
   }
   {
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ client_id: '9', username: 'noab', active: true }];   // בלי טביעה
+    setU(h, [{ client_id: '9', username: 'noab', active: true }]);   // בלי טביעה
     h.fields['au-user'] = 'noab'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⭐ משתמש בלי טביעה ⇒ MSG_OFF_NO_FP', h.calls.authErr[0], h.ctx.MSG_OFF_NO_FP);
@@ -474,7 +498,7 @@ async function main() {
   }
   {
     const h = makeCtx({ online: false, noCrypto: true });
-    h.ctx.SL_USERS = [{ client_id: '9', username: 'shimon', pass_salt: 's', pass_fp: 'f', active: true }];
+    setU(h, [{ client_id: '9', username: 'shimon', pass_salt: 's', pass_fp: 'f', active: true }]);
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('בלי crypto ⇒ MSG_OFF_NO_CRYPTO', h.calls.authErr[0], h.ctx.MSG_OFF_NO_CRYPTO);
@@ -490,7 +514,7 @@ async function main() {
   {
     // ⛔ מטמון מפורמט ישן — סיסמה גלויה אינה מתקבלת כטביעה.
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', password: '135790', active: true }];
+    setU(h, [{ client_id: '1', username: 'shimon', password: '135790', active: true }]);
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = '135790';
     await h.ctx.doLogin();
     eq('⛔ סיסמה גלויה במראה אינה מתקבלת כטביעה', h.calls.enter, 0);
@@ -500,7 +524,7 @@ async function main() {
     // סיסמה ישנה שאינה שש ספרות — נכנסת בכל זאת (סבב 19).
     const h = makeCtx({ online: false });
     const made = await h.ctx.slMakePassFp('admin');
-    h.ctx.SL_USERS = [{ client_id: '1', username: 'shimon', pass_salt: made.salt, pass_fp: made.fp, active: true }];
+    setU(h, [{ client_id: '1', username: 'shimon', pass_salt: made.salt, pass_fp: made.fp, active: true }]);
     h.fields['au-user'] = 'shimon'; h.fields['au-pass'] = 'admin';
     await h.ctx.doLogin();
     eq('⭐ סיסמה ישנה שאינה שש ספרות — נכנסת', h.calls.enter, 1);
@@ -510,7 +534,7 @@ async function main() {
   sect('ד. ⛔ המשתמש המחובר בזיכרון בלבד, ואין סיסמה באף מפתח');
   {
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [await userRow(h, A)];
+    setU(h, [await userRow(h, A)]);
     h.fields['au-user'] = A.username; h.fields['au-pass'] = A.password;
     await h.ctx.doLogin();
     /*  ⭐ סבב 53 — `sl_session` הוסר. המשתמש קיים בזיכרון, ⛔ ואף מפתח
@@ -578,7 +602,7 @@ async function main() {
   {
     // ⭐ כשל רשת באמצע כניסה מקוונת ⇒ נפילה-חזרה לאימות אופליין.
     const h = makeCtx({ reply: () => { throw new Error('Failed to fetch'); } });
-    h.ctx.SL_USERS = [await userRow(h, A)];
+    setU(h, [await userRow(h, A)]);
     h.fields['au-user'] = A.username; h.fields['au-pass'] = A.password;
     await h.ctx.doLogin();
     eq('⭐ כשל רשת ⇒ נפילה-חזרה מוצלחת לאופליין', h.calls.enter, 1);

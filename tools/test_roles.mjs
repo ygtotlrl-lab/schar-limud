@@ -52,12 +52,26 @@ const REP = reporter();
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 const EXPECTED = 94;
 let RAN = 0;
+/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+ *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
+ *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
+ *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
+ *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
+const FLOOR_MAX = (() => {
+  const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
+  return r ? Number(r[2]) : EXPECTED;
+})();
 process.on('exit', () => {
   RAN += REP.st.pass + REP.st.fail;
   console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
   if (RAN < EXPECTED) {
     console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `EXPECTED`.');
     process.exitCode = 1;
   }
 });
@@ -66,17 +80,27 @@ const { ok, eq, sect } = REP;
 /* ── חילוץ מהקוד האמיתי — מהמודול הטהור המשותף ─────────────────────────── */
 const { fn, decl, body, hasFn } = extract(SRC);
 
+/*  ⛔ מראת המשתמשים היא טבלה בשכבת המראה (סבב 118) — ⚠️ השורות חיות
+ *  ב-`MIRROR` בשם הטבלה, ⛔ ואין מבנה שני לצידו. */
+const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
+const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
+
 const NAMES_VAR = [
-  'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
+  'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_NEVER_MIRROR_SETTINGS', 'SL_OLD_PASS_HASH_KEY',
   '_sessUser', '_sessBooted', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
   /*  ⭐ סבב 113 — שם התפקיד המורשה, ⛔ במקום אחד. */
   'ROLE_ADMIN',
+  'MIRROR_CFG', 'PUSH_TABLES', 'SL_STAMP_KEY', 'SL_NEVER_MIRROR_SETTINGS',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
   'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
+  /*  ⛔ שכבת המראה (סבב 118) — ⚠️ מראת המשתמשים היא טבלה בתוכה, ⭐ ורתמה
+   *  שאינה מחלצת את השכבה מקבלת `ReferenceError` שנבלע ב-`catch`. */
+  'mirrorKey', 'mirrorTables', 'mirrorLoadOne', 'mirrorSave',
+  'slSanitizeRows', 'slStripMeta', 'slAdoptLegacyId', 'slTs',
   'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
   /*  ⭐ סבב 113 — ההשוואה לתפקיד עברה לבלוק המשותף. ⛔ הרתמה מחלצת
    *  אותו, ⚠️ ובלעדיו `slSettingsAccess` נופלת ב-ReferenceError. */
@@ -346,7 +370,7 @@ async function main() {
      *  אינו השער. מה שנבדק כאן הוא מה שנשאר נכון: התפקיד מגיע **מהמראה**,
      *  שיורדת לדיסק בלי סיסמאות, ולכן הוא זמין גם בכניסה אופליין. */
     const h = makeCtx({ online: false });
-    h.ctx.SL_USERS = [{ id: 1, username: ADMIN.username, role: 'admin', active: true }];
+    setU(h, [{ id: 1, username: ADMIN.username, role: 'admin', active: true }]);
     eq('⭐ התפקיד נקרא מהמראה בכניסה בלי רשת',
       h.ctx.slSettingsAccess(h.ctx.slResolveUser({ id: 1, username: ADMIN.username })), 'ok');
     ok('⛔ ואין מפתח סשן על הדיסק', !('sl_session' in h.store));
@@ -354,7 +378,7 @@ async function main() {
   {
     // המראה מנצחת: תפקיד שהשתנה בלוח הבקרה והגיע במשיכה גובר על הערך שביד.
     const h = makeCtx();
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'user', active: true }];
+    setU(h, [{ id: 1, username: 'shimon', role: 'user', active: true }]);
     const merged = h.ctx.slResolveUser({ id: 1, username: 'shimon', role: 'admin' });
     eq('⭐ המראה גוברת', merged.role, 'user');
     eq('ולכן הגישה נשללת', h.ctx.slSettingsAccess(merged), 'denied');
@@ -472,13 +496,13 @@ async function main() {
     const h = makeCtx();
     // כניסה אופליין עדיין עובדת, ומחזירה את התפקיד מהמראה.
     const made = await h.ctx.slMakePassFp('135790');
-    h.ctx.SL_USERS = [{ id: 1, username: 'shimon', role: 'admin', pass_salt: made.salt, pass_fp: made.fp, active: true }];
-    eq('סיסמה נכונה ⇒ ok', await h.ctx.slVerifyOffline(h.ctx.SL_USERS[0], '135790'), 'ok');
-    eq('סיסמה שגויה ⇒ bad', await h.ctx.slVerifyOffline(h.ctx.SL_USERS[0], '999999'), 'bad');
+    setU(h, [{ id: 1, username: 'shimon', role: 'admin', pass_salt: made.salt, pass_fp: made.fp, active: true }]);
+    eq('סיסמה נכונה ⇒ ok', await h.ctx.slVerifyOffline(UROWS(h)[0], '135790'), 'ok');
+    eq('סיסמה שגויה ⇒ bad', await h.ctx.slVerifyOffline(UROWS(h)[0], '999999'), 'bad');
     eq('בלי טביעה ⇒ no-fp', await h.ctx.slVerifyOffline({ username: 'x', active: true }, '135790'), 'no-fp');
 
     const h2 = makeCtx({ online: false });
-    h2.ctx.SL_USERS = h.ctx.SL_USERS;
+    setU(h2, UROWS(h));
     h2.dom.els['au-user'].value = 'shimon';
     h2.dom.els['au-pass'].value = '135790';
     await h2.ctx.doLoginOffline('shimon', '135790');
