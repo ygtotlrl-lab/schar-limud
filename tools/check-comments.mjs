@@ -36,6 +36,8 @@ import fs from 'node:fs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 21,
   app: 'schar-limud',
   file: 'index.html',
   /*  ⚠️ אין כאן בלוק משותף שנעדר (סבב 52). */
@@ -48,7 +50,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [16, 20, 18, 19, 30, 31, 32, 25, 36, 42, 45, 91, 93, 94, 99];
+export const ROWS = [16, 20, 18, 19, 30, 31, 32, 25, 37, 43, 46, 92, 94, 95, 100];
 
 /* הבלוקים המשותפים והמודולים הקפואים — מוחרגים מכל ארבעת הסעיפים.
    ⚠️ הסימון הוא **טקסט הסמן בלבד**, בלי מסגרת ה-`═` שלפניו: במודול האחסון
@@ -129,8 +131,30 @@ const TERMS = [
 ];
 
 let failures = 0;
-const fail = (m) => { failures++; console.error('❌ ' + m); };
-const pass = (m) => console.log('✅ ' + m);
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
+const pass = (m) => (RAN++, console.log('✅ ' + m));
 /*  ⛔ אזהרה שאינה מפילה (סבב 72) — ⚠️ תקן שרוב הקבצים נכתבו לפניו
  *  חוסם כל דחיפה אם הוא מפיל, ⛔ והמספר הוא מה שיאמר מתי לסגור. */
 const warn = (m) => console.warn('⚠️ ' + m);
@@ -996,9 +1020,12 @@ if (failures) {
 {
   const CHECKERS = ['check-js', 'check-structure', 'check-status-area',
                     'check-docs', 'check-comments', 'check-capabilities'];
+  /*  ⚠️ הספירה היא חלק מהדפוס (סבב 115) — ⛔ בודק בלי `RAN` אינו יודע
+   *  לומר כמה טענות רצו, ⭐ ותהליך שנסגר באמצע נראה בו כהצלחה. */
   const HELPERS = ["let failures = 0;",
-                   "const fail = (m) => { failures++; console.error('❌ ' + m); };",
-                   "const pass = (m) => console.log('✅ ' + m);"];
+                   "let RAN = 0;",
+                   "const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };",
+                   "const pass = (m) => (RAN++, console.log('✅ ' + m));"];
   const VALUE  = /נמדד|במקום|הצפוי|מתוך/;
   const ACTION = /מוסיפים|גוזמים|יש ל|מעדכנים|עדכון|מסירים|מוחקים|לקדם|מתקנים|מיישרים|בודקים|מעבירים|מקדמים|ממזגים|מצהירים|כותבים|מחליפים|מעתיקים|ממספרים/;
   let bad = 0, sites = 0, withValue = 0, withAction = 0;

@@ -43,6 +43,8 @@ import { spawnSync } from 'node:child_process';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
+  expected: 38,
   app: 'schar-limud',
   file: 'CLAUDE.md',
 };
@@ -51,11 +53,11 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 114, 176];
+export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 115, 178];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', '234b102ea303fe5d'],
+  ['table', '409f823a4a04f485'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -77,8 +79,33 @@ const START_LOOSE = /^<!--\s*SHARED:start\b/;
 const END_RE   = /^<!--\s*SHARED:end\s*-->\s*$/;
 
 let failures = 0;
-const fail = (m) => { failures++; console.error('❌ ' + m); };
-const pass = (m) => console.log('✅ ' + m);
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = APP.expected;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+/*  ⚠️ בריצה פנימית אין סגירה — ⛔ המייבא בודק את מונה הכשלים, ⭐ והספירה
+ *  כאן היא של הריצה שלו. */
+process.on('exit', () => {
+  if (process.env.DOCS_INPROC) return;
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
+const pass = (m) => (RAN++, console.log('✅ ' + m));
 const warn = (m) => console.warn('⚠️ ' + m);   // אזהרה שאינה מפילה את השער
 
 if (!fs.existsSync(APP.file)) {
