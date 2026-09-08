@@ -86,7 +86,7 @@ const body = (name) => fn(name);
 
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
-  'SL_NEVER_MIRROR_SETTINGS', 'SL_MIRROR_PREFIX', 'SL_MIRROR_LEGACY', 'SL_TABLES', 'MIRROR',
+  'SL_NEVER_MIRROR_SETTINGS', 'MIRROR_CFG', 'SL_TABLES', 'MIRROR', 'PUSH_TABLES',
   'SL_STAMP_KEY', '_sessUser', '_sessBooted',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO',
   'MSG_NO_USERS',
@@ -100,10 +100,11 @@ const NAMES_FN = [
   'slUsersLoad', 'slUsersSave', 'slUsersSaveOne', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slStripMeta',
-  'slSanitizeRows', 'slMirrorSave', 'slLocalWrite', 'slWhoName',
+  'slSanitizeRows', 'mirrorSave', 'slLocalWrite', 'slWhoName',
   /*  ⛔ שכבת המראה עצמה (סבב 114) — ⚠️ ההגירה החד-פעמית, הטעינה והחלתה
    *  על מצב התצוגה: ⭐ רתמה שמדמה אותן אינה מודדת את מה שירוץ. */
-  'slKeyOf', 'slAdoptLegacyId', 'slMirrorKeysMigrate', 'slMirrorLoad', 'slApplyMirror',
+  'slKeyOf', 'slAdoptLegacyId', 'mirrorKey', 'mirrorTables', 'mirrorKeysMigrate',
+  'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
   /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
    *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */
   'newClientId', '_writeUserSend', 'writeUser',
@@ -344,28 +345,29 @@ async function main() {
     eq('ואפס שאילתות נשלחו', h.calls.sb.length, 0);
   }
 
-  /* ── ב2. הגירת מפתחות המראה לשם הטבלה ────────────────────────────────── */
-  sect('ב2. שכבת המראה — מפתח לכל טבלה, והגירה חד-פעמית');
+  /* ── ב2. שכבת המראה — מפתח לכל טבלה, ומפתח אחסון נגזר ────────────────── */
+  sect('ב2. שכבת המראה — מפתח לכל טבלה, ומפתח אחסון נגזר');
   {
     const h = makeCtx();
+    eq('⭐ מפתח האחסון נגזר משם הטבלה, בלי כפל תחילית',
+      h.ctx.mirrorKey('sl_students'), 'sl_mirror_students');
     const stu = [{ client_id: 's1', name: 'אברהם', updated_at: 5 }];
     const txn = [{ client_id: 't1', student_client_id: 's1', date: '2026-01-02', amount: 100, updated_at: 6 }];
     const set = [{ client_id: 'c1', key: 'default_tuition', value: '2000', updated_at: 7 }];
     const lst = [{ client_id: 'l1', category: 'payment_method', value: 'מזומן', updated_at: 8 }];
-    h.store['sl_mirror_students'] = JSON.stringify(stu);
-    h.store['sl_mirror_transactions'] = JSON.stringify(txn);
-    h.store['sl_mirror_settings'] = JSON.stringify(set);
-    h.store['sl_mirror_lists'] = JSON.stringify(lst);
-    h.ctx.slMirrorKeysMigrate();
+    /*  ⚠️ המפתח הישן הוא זה שנכתב בשלב הביניים — ⛔ תחילית כפולה. */
+    h.store['sl_mirror_sl_students'] = JSON.stringify(stu);
+    h.store['sl_mirror_sl_transactions'] = JSON.stringify(txn);
+    h.store['sl_mirror_sl_settings'] = JSON.stringify(set);
+    h.store['sl_mirror_sl_lists'] = JSON.stringify(lst);
+    h.ctx.mirrorBoot();
     ok('⭐ ההגירה כתבה את ארבעת המפתחות החדשים',
-      ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists']
-        .every((t) => h.store['sl_mirror_' + t] !== undefined));
-    ok('⛔ ואפס מפתח כפול — הישנים ירדו',
       ['students', 'transactions', 'settings', 'lists']
-        .every((m) => !('sl_mirror_' + m in h.store)));
-    eq('⚠️ התוכן עבר כמות שהוא', h.store['sl_mirror_sl_transactions'], JSON.stringify(txn));
-
-    h.ctx.slMirrorLoad();
+        .every((m) => h.store['sl_mirror_' + m] !== undefined));
+    ok('⛔ ואפס מפתח כפול — הישנים ירדו',
+      ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists']
+        .every((t) => !('sl_mirror_' + t in h.store)));
+    eq('⚠️ התוכן עבר כמות שהוא', h.store['sl_mirror_transactions'], JSON.stringify(txn));
     eq('⭐ הטעינה ממפתחת בשם הטבלה', h.ctx.MIRROR.sl_students.length, 1);
     ok('⛔ ואין מפתח לוגי ב-MIRROR',
       ['students', 'transactions', 'settings', 'lists'].every((m) => h.ctx.MIRROR[m] === undefined));
@@ -376,28 +378,26 @@ async function main() {
     eq('⚠️ והגדרות', h.ctx.SETTINGS.default_tuition, '2000');
     eq('⚠️ ורשימות', (h.ctx.LISTS.payment_method || []).length, 1);
 
-    /*  ⛔ אידמפוטנטית — ⚠️ ריצה שנייה על עץ שכבר הוגר אינה נוגעת בדבר. */
     const before = JSON.stringify(h.store);
-    h.ctx.slMirrorKeysMigrate();
+    h.ctx.mirrorKeysMigrate();
     eq('⛔ ריצה שנייה אינה משנה דבר', JSON.stringify(h.store), before);
   }
   {
     /*  ⚠️ מפתח חדש שכבר קיים — ⛔ אינו נדרס, ⭐ והישן יורד בכל זאת. */
     const h = makeCtx();
-    h.store['sl_mirror_students'] = JSON.stringify([{ client_id: 'old' }]);
-    h.store['sl_mirror_sl_students'] = JSON.stringify([{ client_id: 'new' }]);
-    h.ctx.slMirrorKeysMigrate();
-    eq('⛔ מפתח חדש קיים אינו נדרס', h.store['sl_mirror_sl_students'], JSON.stringify([{ client_id: 'new' }]));
-    ok('⚠️ והישן יורד גם כך', !('sl_mirror_students' in h.store));
+    h.store['sl_mirror_sl_students'] = JSON.stringify([{ client_id: 'old' }]);
+    h.store['sl_mirror_students'] = JSON.stringify([{ client_id: 'new' }]);
+    h.ctx.mirrorKeysMigrate();
+    eq('⛔ מפתח חדש קיים אינו נדרס', h.store['sl_mirror_students'], JSON.stringify([{ client_id: 'new' }]));
+    ok('⚠️ והישן יורד גם כך', !('sl_mirror_sl_students' in h.store));
   }
   {
-    /*  ⛔ המיפוי 1:1 ל-`PUSH_TABLES` — ⚠️ ואין שם מראה שאינו טבלה. */
-    const mir = /var MIRROR = \{([^}]*)\}/.exec(SRC);
-    const keys = mir ? mir[1].split(',').map((x) => x.split(':')[0].trim()).filter(Boolean) : [];
-    const push = /var PUSH_TABLES = \[([^\]]*)\]/.exec(SRC);
-    const tabs = push ? push[1].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean) : [];
-    ok('⭐ מפתחות MIRROR = PUSH_TABLES, אות באות',
-      keys.length === 4 && keys.join('|') === tabs.join('|'), keys.join('|') + ' ≠ ' + tabs.join('|'));
+    /*  ⛔ המיפוי 1:1 ל-`PUSH_TABLES` — ⚠️ ואין שם מראה שאינו טבלה שנדחפת. */
+    const h = makeCtx();
+    const keys = h.ctx.mirrorTables();
+    ok('⭐ מפתחות המראה = PUSH_TABLES, אות באות',
+      keys.join('|') === h.ctx.PUSH_TABLES.join('|'), keys.join('|'));
+    eq('⛔ ואין טבלה שאינה נדחפת', h.ctx.MIRROR_CFG.noPush.length, 0);
   }
 
   /* ── ג. כניסה אופליין ────────────────────────────────────────────────── */
@@ -654,12 +654,12 @@ async function main() {
     ok('   הקלט לא שונה (טהורה)', rows.length === 2);
     eq('2) כתיבה מקומית — slLocalWrite מסרבת',
       h.ctx.slLocalWrite('sl_settings', { key: 'secret_probe', value: 'סוד' }), false);
-    ok('   ולא נכתב דבר לדיסק', !(h.ctx.SL_MIRROR_PREFIX + 'sl_settings' in h.store));
+    ok('   ולא נכתב דבר לדיסק', !(h.ctx.mirrorKey('sl_settings') in h.store));
 
     // 3) שער הדיסק — המראה הורעלה ישירות, בעקיפת שני הקודמים.
     h.ctx.MIRROR.sl_settings = [{ key: 'secret_probe', value: 'סוד-גלוי' }, { key: 'default_tuition', value: '2000' }];
-    h.ctx.slMirrorSave('sl_settings');
-    const disk = h.store[h.ctx.SL_MIRROR_PREFIX + 'sl_settings'];
+    h.ctx.mirrorSave('sl_settings');
+    const disk = h.store[h.ctx.mirrorKey('sl_settings')];
     ok('⭐ 3) שער הדיסק מסנן גם מראה שהורעלה', disk.indexOf('secret_probe') === -1 && disk.indexOf('סוד-גלוי') === -1);
     ok('   והשורה הלגיטימית כן נשמרה', disk.indexOf('default_tuition') !== -1);
     eq('slSanitizeRows על טבלה אחרת אינה מסננת',
