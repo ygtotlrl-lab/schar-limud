@@ -40,6 +40,13 @@ const APP = {
   /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
    *  שתוכנו זהה בארבעתן **מפיל**: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה
    *  השארית שהשער בא לסלק. */
+  /*  ⛔ קובץ תשתית שקיים בחלק מהריפו (סבב 114) — ⚠️ כל שם נושא את הסיבה,
+   *  ⭐ והוא נמדד בית-לבית בין מי שיש לו: ⛔ קובץ שנופל בין הכיסאות
+   *  אינו נמדד כלל. */
+  subsetTools: {
+    'roles-harness.mjs': 'רתמת מודל ההרשאות — שלוש האפליקציות שיש בהן כניסה, '
+      + 'וביומן אין כניסה ואין תפקיד שיוכרע',
+  },
   perAppTools: {
     '_prune-lessons.md': 'לקחי הגיזום של האפליקציה עצמה — היסטוריה פרטית ' +
       'שאין לה מקבילה באחיות, ואיחודה היה מקור אמת שני',
@@ -194,6 +201,35 @@ if (!away.length) {
   t(n++, paNames.length > 0 && noWhy.length === 0,
     `[perapp-reason] נימוק לכל הכרזת perAppTools — נמדדו ${noWhy.length} בלי נימוק ` +
     `מתוך ${paNames.length} והצפוי 0, ולפחות הכרזה אחת. כותבים בכל אחת למה הקובץ פרטי`);
+}
+
+/* ── 2ב. קובץ שקיים בחלק מהריפו — זהה בית-לבית בין מי שיש לו ───────────── */
+/*  ⛔ קובץ תשתית שקיים בכמה ריפו ולא בכולם — ⚠️ הוא נופל בין הכיסאות:
+ *  ⭐ `pureTools` דורש שיהיה בארבעתם, ⛔ ובלי מדידה הוא נסחף בשקט.
+ *  ⚠️ **וההצהרה נמדדת משני צדדיה**: שם שאין לו קובץ אצלנו, ⛔ ושם
+ *  שקיים בארבעתם ולכן מקומו ב-`pureTools`. */
+if (!away.length) {
+  const subset = APP.subsetTools || {};
+  const names = Object.keys(subset);
+  const missing = names.filter((f) => !mine.includes(f));
+  t(n++, missing.length === 0,
+    `[subset-missing] הכרזת subsetTools שאין לה קובץ — נמדדו ${missing.length} והצפוי 0` +
+    `${missing.length ? ` (${missing.join(', ')})` : ''}. מסירים מהרשימה`);
+  const inAll = names.filter((f) => shared.includes(f));
+  t(n++, inAll.length === 0,
+    `[subset-in-all] קובץ שקיים בארבעתם ומוכרז כתת-קבוצה — נמדדו ${inAll.length} והצפוי 0` +
+    `${inAll.length ? ` (${inAll.join(', ')})` : ''}. מעבירים ל-pureTools`);
+  const noWhy2 = names.filter((f) => typeof subset[f] !== 'string' || subset[f].length < 20);
+  t(n++, noWhy2.length === 0,
+    `[subset-reason] נימוק לכל הכרזת subsetTools — נמדדו ${noWhy2.length} בלי נימוק והצפוי 0. ` +
+    'כותבים בכל אחת למה הקובץ אינו בארבעתם');
+  const subDrift = names.filter((f) => {
+    const b = order.filter((p) => existsSync(join(dirOf(p), 'tools', f))).map((p) => readOf(p, f));
+    return b.length < 2 || b.some((x) => x !== b[0]);
+  });
+  t(n++, subDrift.length === 0,
+    `[subset-drift] קובץ תת-קבוצה שאינו זהה בין מי שיש לו — נמדדו ${subDrift.length} והצפוי 0` +
+    `${subDrift.length ? ` (${subDrift.join(', ')})` : ''}. מיישרים אותו באותו סבב`);
 }
 
 /* ── 3. גוף השער זהה אחרי הסרת `APP` ואזורי פר-אפליקציה ────────────────── */
