@@ -681,7 +681,6 @@ var MIRROR_CFG = {
   ts:     function (r) { return slTs(r); },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
   adopt:  function (r) { return slAdoptLegacyId(r); },
-  legacy: function (t) { return MIRROR_CFG.prefix + t; },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
 };
 
@@ -3187,22 +3186,9 @@ function mirrorSave(t) {
 function mirrorWrite(t, rows) {
   return lsSetArray(mirrorKey(t), MIRROR_CFG.clean(t, rows || []), MIRROR_CFG.ts);
 }
-/*  ⭐ הגירת מפתח חד-פעמית ואידמפוטנטית — ⛔ כותבים לחדש לפני שמוחקים את
- *  הישן: ⚠️ כתיבה שנכשלה משאירה את הישן במקומו, ⭐ והמכשיר נטען ממנו
- *  בעלייה הבאה · ⛔ ומפתח חדש שכבר קיים אינו נדרס. */
-function mirrorKeysMigrate() {
-  mirrorTables().forEach(function (t) {
-    var newK = mirrorKey(t), oldK = MIRROR_CFG.legacy(t);
-    if (!oldK || oldK === newK) return;
-    var raw = lsGet(oldK, null);
-    if (raw == null) return;
-    if (lsGet(newK, null) == null && !lsSet(newK, raw)) { MIRROR_CFG.fail('mirrorKeysMigrate', new Error(newK)); return; }
-    try { localStorage.removeItem(oldK); } catch (e) { MIRROR_CFG.fail('mirrorKeysMigrate', e); }
-  });
-}
-/*  ⛔ נקודת ההפעלה האחת — ⚠️ הגירה ואז טעינה: ⭐ טעינה שקדמה להגירה קוראת
- *  מפתח שהרגע עבר, ⛔ ומקבלת ריק. */
-function mirrorBoot() { mirrorKeysMigrate(); mirrorLoad(); }
+/*  ⛔ נקודת ההפעלה האחת — ⚠️ ההגירה של סבב 114 ירדה בסבב 116, ⭐ אחרי
+ *  שהמפתחות הישנים כבר אינם על אף מכשיר שנטען מאז. */
+function mirrorBoot() { mirrorLoad(); }
 /* ═══════════════ סוף מודול שכבת המראה ═══════════════════════════════════ */
 
 /* ── חיבור schar-limud למודול ─────────────────────────────────────────────
