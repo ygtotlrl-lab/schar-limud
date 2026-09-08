@@ -668,6 +668,23 @@ function guardOnline() {
 }
 /* ═══════════════ סוף מודול שער מצב הרשת ════════════════════════════════ */
 // ═══ עמידות אחסון מקומי (סבב 11) ═══
+/* ── MIRROR_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────── */
+/*  ⚠️ `tables` היא **פונקציה** ⛔ ולא מערך — ⭐ `PUSH_TABLES` מוצהר אחרי
+ *  הבלוק הזה, ⛔ והצהרה שקוראת אותו כאן הייתה מקבלת `undefined`.
+ *  ⛔ ואין כאן טבלה שאינה נדחפת — ⚠️ מראת המשתמשים חיה במפתח משלה. */
+var MIRROR_CFG = {
+  prefix: 'sl_mirror_',
+  app:    'sl_',
+  tables: function () { return PUSH_TABLES; },
+  noPush: [],
+  empty:  function () { return []; },
+  ts:     function (r) { return slTs(r); },
+  clean:  function (t, rows) { return slSanitizeRows(t, rows); },
+  adopt:  function (r) { return slAdoptLegacyId(r); },
+  legacy: function (t) { return MIRROR_CFG.prefix + t; },
+  fail:   function (where, e) { console.error('[mirror] ' + where, e); },
+};
+
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין ארבע האפליקציות; המודול שמתחתיה זהה בכולן.
 var LS_CFG = {
@@ -678,23 +695,23 @@ var LS_CFG = {
   // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
   //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
   tier1: [
-    { key: 'sl_mirror_settings', syncedThrough: _slPushedFor('settings') },
-    { key: 'sl_mirror_lists',    syncedThrough: _slPushedFor('lists') }
+    { key: mirrorKey('sl_settings'), syncedThrough: _slPushedFor('sl_settings') },
+    { key: mirrorKey('sl_lists'),    syncedThrough: _slPushedFor('sl_lists') }
   ],
-  // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס** (סבב 12 שלב 2) — אלה כספים:
+  // ⛔ `sl_mirror_sl_transactions` **אינה כאן, וגם לא תיכנס** (סבב 12 שלב 2) — אלה כספים:
   // רשומה שפונתה מהדיסק אינה נראית באפליקציה אופליין, וחישוב חוב על נתון
-  // חסר גרוע מכל מכסה. `sl_mirror_students` הם אבות המפתח הזר שלהן —
+  // חסר גרוע מכל מכסה. `sl_mirror_sl_students` הם אבות המפתח הזר שלהן —
   // גם הם בחוץ, אחרת נשארות תנועות בלי שם מוצג.
   tier2: [],
 
   // ⚠️ סבב 14 — עדות סנכרון חלופית (אימות מול הענן): **המודול המשותף מכיל
   // אותה, וכאן אין לה על מה לחול.** המסלול נכנס לפעולה רק עבור מפתח
   // ב-`tier2` שהגדיר `idOf`+`verify`, ו-`tier2` כאן ריק — ונשאר ריק:
-  // `sl_mirror_transactions` הם **כספים** ו-`sl_mirror_students` הם אבות
+  // `sl_mirror_sl_transactions` הם **כספים** ו-`sl_mirror_sl_students` הם אבות
   // המפתח הזר שלהם. אימות מול הענן מוכיח שהרשומה שם, אבל **אינו הופך
   // רשומה כספית לניתנת לפינוי**: פינוי שלה מסתיר תנועה מהמסך אופליין
-  // וחישוב חוב על נתון חסר גרוע מכל מכסה. `sl_mirror_settings`/
-  // `sl_mirror_lists` נכתבות מקומית-תחילה מאז 009 (ר' `tier1`).
+  // וחישוב חוב על נתון חסר גרוע מכל מכסה. `sl_mirror_sl_settings`/
+  // `sl_mirror_sl_lists` נכתבות מקומית-תחילה מאז 009 (ר' `tier1`).
   // המשמעות המעשית: schar אינה מפנה מקום, ואם הדומיין מלא היא זו שתתריע
   // בלי לפתור. הפתרון שם הוא yoman ו-hanhala, שכן מפנות — לא צמצום
   // העותק המקומי של הכסף.
@@ -716,9 +733,9 @@ var LS_CFG = {
    ⭐ ומכשיר שרק קורא מקבל אותו אף הוא — אין לו שורות מלוכלכות, ולכן
    המעבר מסתיים ריק ומסמן. ⛔ אין לגזור אותו ממשיכה לבדה. */
 var _slPushedAt = {};
-function _slMarkPushed(m) { _slPushedAt[m] = Date.now(); }
-function _slPushedThrough(m) { return _slPushedAt[m] || 0; }
-function _slPushedFor(m) { return function () { return _slPushedThrough(m); }; }
+function _slMarkPushed(t) { _slPushedAt[t] = Date.now(); }
+function _slPushedThrough(t) { return _slPushedAt[t] || 0; }
+function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
@@ -2752,13 +2769,13 @@ function plBoot() {
    המשתמשים: ⛔ מסלולה הוא `writeUser`, שדורש רשת.
    ⚠️ סדר הטבלאות הוא מה ששומר על המפתח הזר — ⭐ תלמידים לפני תנועות. */
 var PUSH_TABLES = ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'];
-/*  ⛔ שם המראה ותחילית ה-⏳ של כל טבלה — ⚠️ הן נקראות בזמן ריצה ⛔ ולא
- *  בהצהרה: ⭐ הקבועים עצמם מוגדרים אחרי הבלוק החתום. */
+/*  ⛔ תחילית ה-⏳ של כל טבלה — ⚠️ היא נקראת בזמן ריצה ⛔ ולא בהצהרה:
+ *  ⭐ הקבועים עצמם מוגדרים אחרי הבלוק החתום. */
 function _slPushOf(t) {
-  return { sl_students:     { m: 'students',     pk: PK_STU },
-           sl_transactions: { m: 'transactions', pk: PK_TXN },
-           sl_settings:     { m: 'settings',     pk: PK_SET },
-           sl_lists:        { m: 'lists',        pk: PK_LST } }[t];
+  return { sl_students:     { pk: PK_STU },
+           sl_transactions: { pk: PK_TXN },
+           sl_settings:     { pk: PK_SET },
+           sl_lists:        { pk: PK_LST } }[t];
 }
 /*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `mark` רץ אחרי `await`, ⭐ וקריאת
  *  הגלובלי בו הייתה זוקפת את הצלחת הדחיפה של משתמש אחד לחשבון השני. */
@@ -2771,11 +2788,11 @@ var PUSH_CFG = {
     var c = _slPushOf(t), remote = ctx && ctx[t];
     if (!remote) return null;
     _slPushEp = ctxEpoch();
-    return slDirtyRows(c.m, remote, function (k) { return pendHas(c.pk + k); });
+    return slDirtyRows(t, remote, function (k) { return pendHas(c.pk + k); });
   },
-  key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(c.m, row); },
+  key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(t, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },
-  mark:   function (t) { if (!ctxStale(_slPushEp)) _slMarkPushed(_slPushOf(t).m); },
+  mark:   function (t) { if (!ctxStale(_slPushEp)) _slMarkPushed(t); },
   run:    function () { syncAll(); },
 };
 /* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
@@ -2908,7 +2925,7 @@ var HW_CFG = {
   enabled: true,
   admin: function () { return slIsAdmin(); },
   specs: [{
-    key: 'sl_mirror_transactions',
+    key: mirrorKey('sl_transactions'),
     label: 'תנועות שנים סגורות',
     inWindow: function (t) {
       var d = t && t.date;
@@ -2927,11 +2944,8 @@ var HW_CFG = {
           ? { ok: true, rows: res.data } : { ok: false, rows: [] };
       } catch (e) { return { ok: false, rows: [] }; }
     },
-    rows: function () { return MIRROR.transactions; },
-    apply: function (kept) {
-      return lsSetArray(SL_MIRROR_PREFIX + 'transactions',
-                        slSanitizeRows('transactions', kept), slTs);
-    }
+    rows: function () { return MIRROR.sl_transactions; },
+    apply: function (kept) { return mirrorWrite('sl_transactions', kept); }
   }]
 };
 /* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35) ════════════════════════
@@ -3128,6 +3142,65 @@ function hwBoot() {
 }
 window.hwBoot = hwBoot;
 /* ═══════════════ סוף מודול החלון החם ══════════════════════════════════ */
+/* ═══ שכבת המראה — מודול משותף (סבב 114) ══════════════════════════════════
+   ⛔ העותק המקומי של הענן חי במבנה **אחד** — ⚠️ `MIRROR`, ממופתח בשם
+      הטבלה: ⭐ שם לוגי שני לאותה מראה הוא מיפוי שחי במקום נפרד, ⛔ ומיפוי
+      שחי במקום נפרד מתיישן בשקט.
+   ⛔ **ומפתח האחסון נגזר** ⛔ ואינו מוקלד — ⚠️ מפתח שהוקלד בהצהרת הפינוי
+      ואינו מה שנכתב בפועל אינו מתפנה לעולם, ⭐ והפינוי מדווח «אין מה
+      לפנות» על מפתח שגדל בלי גבול.
+   ⛔ **שער החלון החם יושב ב-`mirrorSave`** — ⚠️ והכתיבה הגולמית היחידה
+      היא `mirrorWrite`, למסלול שכבר סינן: ⭐ סינון שני מודד את התוצאה של
+      עצמו, ⛔ וכתיבה שעוקפת את השער מחזירה לדיסק את מה שהרגע פונה ממנו.
+   ⛔ שינוי כאן — שלוש האפליקציות **ושלושת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשניים.
+   ⚠️ מה שאינו נאכף כאן: **תוכן** השורות ומי שאינו טבלה — ⭐ הניקוי הוא
+      `MIRROR_CFG.clean`, ⛔ והמפתחות השטוחים מוכרזים בשער.
+   ══════════════════════════════════════════════════════════════════════ */
+var MIRROR = {};
+/*  ⛔ תחילית האפליקציה נגרעת משם הטבלה — ⚠️ היא כבר בתוך
+ *  `MIRROR_CFG.prefix`, ⭐ ושמה פעמיים מייצר מפתח שאיש אינו מחפש. */
+function mirrorKey(t) {
+  var s = String(t), p = MIRROR_CFG.app;
+  return MIRROR_CFG.prefix + (p && s.indexOf(p) === 0 ? s.slice(p.length) : s);
+}
+function mirrorTables() { return MIRROR_CFG.tables(); }
+function mirrorLoad() {
+  mirrorTables().forEach(function (t) {
+    var v = null;
+    try { var raw = lsGet(mirrorKey(t), null); v = raw == null ? null : JSON.parse(raw); }
+    catch (e) { console.warn('[mirror] ' + t + ' פגום — נטען ריק', e); v = null; }
+    if (!Array.isArray(v)) { MIRROR[t] = MIRROR_CFG.empty(); return; }
+    MIRROR[t] = v.filter(function (r) { return r && typeof r === 'object'; });
+    MIRROR[t].forEach(MIRROR_CFG.adopt);
+  });
+}
+function mirrorSave(t) {
+  var k = mirrorKey(t);
+  return lsSetArray(k, MIRROR_CFG.clean(t, hwDiskFilter(k, MIRROR[t] || [])), MIRROR_CFG.ts);
+}
+/*  ⛔ **ואינה נוגעת בזיכרון** — ⚠️ הפינוי מצמצם את הדיסק, ⭐ והמסך שפתוח
+ *  ממשיך להציג את מה שכבר נטען. */
+function mirrorWrite(t, rows) {
+  return lsSetArray(mirrorKey(t), MIRROR_CFG.clean(t, rows || []), MIRROR_CFG.ts);
+}
+/*  ⭐ הגירת מפתח חד-פעמית ואידמפוטנטית — ⛔ כותבים לחדש לפני שמוחקים את
+ *  הישן: ⚠️ כתיבה שנכשלה משאירה את הישן במקומו, ⭐ והמכשיר נטען ממנו
+ *  בעלייה הבאה · ⛔ ומפתח חדש שכבר קיים אינו נדרס. */
+function mirrorKeysMigrate() {
+  mirrorTables().forEach(function (t) {
+    var newK = mirrorKey(t), oldK = MIRROR_CFG.legacy(t);
+    if (!oldK || oldK === newK) return;
+    var raw = lsGet(oldK, null);
+    if (raw == null) return;
+    if (lsGet(newK, null) == null && !lsSet(newK, raw)) { MIRROR_CFG.fail('mirrorKeysMigrate', new Error(newK)); return; }
+    try { localStorage.removeItem(oldK); } catch (e) { MIRROR_CFG.fail('mirrorKeysMigrate', e); }
+  });
+}
+/*  ⛔ נקודת ההפעלה האחת — ⚠️ הגירה ואז טעינה: ⭐ טעינה שקדמה להגירה קוראת
+ *  מפתח שהרגע עבר, ⛔ ומקבלת ריק. */
+function mirrorBoot() { mirrorKeysMigrate(); mirrorLoad(); }
+/* ═══════════════ סוף מודול שכבת המראה ═══════════════════════════════════ */
 
 /* ── חיבור schar-limud למודול ─────────────────────────────────────────────
    ⚠️ **כאן עדיין אין עבודה אופליין** (פער מתועד; נסגר בשלב 2).
@@ -3142,7 +3215,7 @@ function pendTxnKey(row) { return PK_TXN + slKey(row); }
 function pendStuKey(row) { return PK_STU + slKey(row); }
 // הגדרות ורשימות נכנסו לשכבה ב-009, ולכן גם הן מסומנות עד שיש ראיה
 // שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ר' `slKeyOf`.
-function pendSetKey(row) { return PK_SET + slKeyOf('settings', row); }
+function pendSetKey(row) { return PK_SET + slKeyOf('sl_settings', row); }
 function pendLstKey(row) { return PK_LST + slKey(row); }
 
 // כשל רשת אינו ראיה לכלום ⇒ הסימון **נשאר**. כשל סמכותי (ולידציה, הרשאה,
@@ -3205,15 +3278,14 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
    **החריג היחיד שנשאר: `admin_pass`** — שריד של שער ההגדרות שבוטל בסבב
    26, שאינו יורד לדיסק. ר' `SL_NEVER_MIRROR_SETTINGS` למטה.
    ═══════════════════════════════════════════════════════════════════════ */
-var SL_MIRROR_PREFIX = 'sl_mirror_';
 // `pk` — העמודה שעליה נעשה ה-UPSERT לרשומה שנוצרה במכשיר.
 // `sl_settings` היא היחידה שמפתחה הראשי הוא טקסט שהמכשיר יודע לייצר
 // לבדו (`key`), ולכן שם ה-UPSERT הוא עליו ולא על `client_id`.
 var SL_TABLES = [
-  { t: 'sl_students',     m: 'students',     pk: 'client_id' },
-  { t: 'sl_transactions', m: 'transactions', pk: 'client_id' },
-  { t: 'sl_settings',     m: 'settings',     pk: 'key'       },
-  { t: 'sl_lists',        m: 'lists',        pk: 'client_id' }
+  { t: 'sl_students',     pk: 'client_id' },
+  { t: 'sl_transactions', pk: 'client_id' },
+  { t: 'sl_settings',     pk: 'key'       },
+  { t: 'sl_lists',        pk: 'client_id' }
 ];
 // ⛔ העמודות שמותר לשלוח — ⚠️ רשימת היתר ולא רשימת איסור: ⭐ עמודה חדשה
 // שתתווסף לטבלה אינה עולה מכאן עד שמישהו הכריז עליה.
@@ -3223,7 +3295,6 @@ var SL_COLS = {
   sl_settings:     ['client_id','key','value','updated_at'],
   sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
 };
-var MIRROR = { students: [], transactions: [], settings: [], lists: [] };
 var _slLastPullOk = 0;
 
 // ⛔ `slNow` היא חותמת ה-**מחיקה** (`deleted_at`), ⚠️ והיא נשארת ISO —
@@ -3239,8 +3310,8 @@ function slKey(r) {
 // האמיתי שלה, ששני מכשירים מגיעים אליו באופן עצמאי ("default_tuition").
 // מיפתוח לפי `client_id` היה יוצר שתי רשומות לאותה הגדרה, כלומר שני
 // ערכים לאותו מפתח — ו-`slApplyMirror` הייתה בוחרת ביניהם לפי סדר מקרי.
-function slKeyOf(m, r) {
-  if (m === 'settings') return (r && r.key != null && r.key !== '') ? ('k:' + r.key) : '';
+function slKeyOf(t, r) {
+  if (t === 'sl_settings') return (r && r.key != null && r.key !== '') ? ('k:' + r.key) : '';
   return slKey(r);
 }
 function slTs(r) {
@@ -3441,14 +3512,18 @@ function slMerge(local, remote, isPending, keyOf) {
   }));
 }
 
-function slMirrorLoad() {
-  SL_TABLES.forEach(function (spec) {
-    var v = null;
-    try { var raw = lsGet(SL_MIRROR_PREFIX + spec.m, null); v = raw == null ? null : JSON.parse(raw); }
-    catch (e) { console.warn('[mirror] ' + spec.m + ' פגום — נטען ריק', e); v = null; }
-    MIRROR[spec.m] = Array.isArray(v) ? v.filter(function (r) { return r && typeof r === 'object'; }) : [];
-    MIRROR[spec.m].forEach(slAdoptLegacyId);
-  });
+
+/*  ⛔ מראה שנכתבה לפני שה-`SERIAL` ירד נושאת `id` ⛔ ואינה נושאת `client_id`
+ *  — ⚠️ **וזו נקודת ההסבה האחת**: ⭐ המיגרציה השלימה בענן `client_id = id`,
+ *  ⛔ ובלי ההסבה כאן אותה שורה בדיוק הייתה מקבלת שני מפתחות — ⚠️ אחד
+ *  מהדיסק ואחד מהענן, ⭐ והמיזוג היה מכפיל אותה: ⛔ ובכסף, תנועה כפולה.
+ *  ⚠️ ההסבה מוחקת את `id` — ⛔ שדה שאינו קיים בסכימה הוא מקור זהות שני. */
+function slAdoptLegacyId(r) {
+  if (!r || typeof r !== 'object') return r;
+  if ((r.client_id == null || r.client_id === '') && r.id != null) r.client_id = String(r.id);
+  if (r.student_client_id == null && r.student_id != null) r.student_client_id = String(r.student_id);
+  delete r.id; delete r.student_id;
+  return r;
 }
 /*  ⛔ מראה שנכתבה לפני שה-`SERIAL` ירד נושאת `id` ⛔ ואינה נושאת `client_id`
  *  — ⚠️ **וזו נקודת ההסבה האחת**: ⭐ המיגרציה השלימה בענן `client_id = id`,
@@ -3471,16 +3546,9 @@ function slAdoptLegacyId(r) {
 // מעכשיו הסינון יושב בשלוש נקודות, בדיוק כמו `strip: ['password']` בגיוס:
 // במשיכה (`syncAll`), בכתיבה המקומית (`slLocalWrite` — מסרבת במפורש),
 // **ובשער הדיסק כאן** — כך שגם נתיב שיתווסף בעתיד לא יוכל להדליף.
-function slSanitizeRows(m, rows) {
-  if (m === 'settings') return slStripMeta(rows);
+function slSanitizeRows(t, rows) {
+  if (t === 'sl_settings') return slStripMeta(rows);
   return Array.isArray(rows) ? rows : [];
-}
-// ⭐ שער החלון החם יושב כאן (סבב 35) — כל כתיבה למראה עוברת דרך
-//    `hwDiskFilter`: תנועה משנה סגורה שראייתה העננית בידינו אינה נכתבת
-//    שוב לדיסק. בלי ראיה — נכתבת כרגיל (המסנן מחזיר את המערך כמו שהוא).
-function slMirrorSave(m) {
-  var rows = hwDiskFilter(SL_MIRROR_PREFIX + m, MIRROR[m] || []);
-  return lsSetArray(SL_MIRROR_PREFIX + m, slSanitizeRows(m, rows), slTs);
 }
 /* ══════════════════════════════════════════════════════════════════════════
    משתמשים, סודות וכניסה — טביעת PBKDF2 והרשאה לפי תפקיד
@@ -3491,7 +3559,7 @@ function slMirrorSave(m) {
    הרשימה כאן היא **רשימת המפתחות שאסור להם להגיע לשם לעולם**, והיא
    נאכפת בשלוש נקודות (סבב 24): במשיכה (`slStripSecrets` ב-`syncAll`),
    בכתיבה המקומית (`slLocalWrite` מסרבת במפורש), ובשער הדיסק עצמו
-   (`slSanitizeRows` בתוך `slMirrorSave`). שלוש נקודות ולא אחת — כך גם
+   (`slSanitizeRows` בתוך `mirrorSave`). שלוש נקודות ולא אחת — כך גם
    נתיב חדש שיתווסף בעתיד אינו יכול להדליף.
 
    ⭐ **וסוד חדש נכנס לרשימה הזו ולא למנגנון חדש** — ⛔ שלוש נקודות
@@ -3873,35 +3941,33 @@ async function slVerifyOffline(u, pass) {
 // נקודת הסינון היחידה של ה-soft-delete (כלל 5, 6 ו-009) — בדיוק כמו
 // שהייתה ב-syncAll. כל 11 הקוראים של STUDENTS מקבלים אותה אוטומטית.
 function slApplyMirror() {
-  STUDENTS = (MIRROR.students || []).filter(function (s) { return !s.deleted; })
+  STUDENTS = (MIRROR.sl_students || []).filter(function (s) { return !s.deleted; })
     .sort(function (a, b) { return HE.compare(a.name || '', b.name || ''); });
-  TRANSACTIONS = (MIRROR.transactions || []).filter(function (t) { return !t.deleted; })
+  TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   SETTINGS = {};
-  (MIRROR.settings || []).forEach(function (r) { if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = r.value; });
+  (MIRROR.sl_settings || []).forEach(function (r) { if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = r.value; });
   LISTS = {};
   // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
   // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
-  (MIRROR.lists || []).filter(function (r) { return r && !r.deleted; })
+  (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
     .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ key: slKey(r), id: r.client_id, value: r.value }); });
 }
 
 // כתיבה מקומית-תחילה. מחזירה `false` אם הכתיבה ל-localStorage נכשלה —
 // מסלול קריטי: בכסף אסור להציג "נשמר" על כתיבה שלא נכתבה.
-var SL_MIRROR_OF = { sl_students: 'students', sl_transactions: 'transactions', sl_settings: 'settings', sl_lists: 'lists' };
 function slLocalWrite(tbl, row) {
-  var m = SL_MIRROR_OF[tbl];
-  if (!m) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
+  if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
   // ⛔ שורת סוד לעולם לא נכתבת מקומית (סבב 13) — ראה הפרק שמעל.
-  if (m === 'settings' && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
+  if (tbl === 'sl_settings' && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
   row.updated_at = Date.now();            // ⚠️ חותמת המכשיר — ראה ההערה בראש
-  var k = slKeyOf(m, row), arr = MIRROR[m] || (MIRROR[m] = []), hit = false;
+  var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
   for (var i = 0; i < arr.length; i++) {
-    if (slKeyOf(m, arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
+    if (slKeyOf(tbl, arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
   }
   if (!hit) arr.push(row);
-  if (!slMirrorSave(m)) return false;
+  if (!mirrorSave(tbl)) return false;
   slApplyMirror();
   /*  ⚠️ משפך הכתיבה המקומית היחיד כאן, ⛔ ולכן זו נקודת הדריכה היחידה של
    *  מודול הניסיון החוזר. ⛔ **ואיתה המתזמן** — ⚠️ עד כאן כל קורא דרך
@@ -3944,10 +4010,10 @@ async function slSendRows(tbl, rows) {
 // שהיא עדיין מסומנת ⏳**. ⛔ אין להסיר את הסעיף השלישי — ⚠️ שתי הראשונות
 // משוות חותמות, ⭐ ובחותמת שווה שתיהן שקטות: הרשומה הייתה נשארת מסומנת ⏳
 // לנצח ולעולם לא נדחפת — ר' ההערה ב-slMerge.
-function slDirtyRows(m, remoteByKey, isPending) {
+function slDirtyRows(t, remoteByKey, isPending) {
   var out = [];
-  (MIRROR[m] || []).forEach(function (l) {
-    var k = slKeyOf(m, l);
+  (MIRROR[t] || []).forEach(function (l) {
+    var k = slKeyOf(t, l);
     if (!k) return;
     var r = remoteByKey[k];
     if (!r || slTs(l) > slTs(r) || (isPending && isPending(k))) out.push(l);
@@ -4445,13 +4511,13 @@ async function syncAll(){
     if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
       pulledStu=true;
       rs[0].data.forEach(function(r){ remoteStu[slKey(r)]=r; });
-      MIRROR.students=slMerge(MIRROR.students,rs[0].data,function(k){return pendHas(PK_STU+k);}); slMirrorSave('students');
+      MIRROR.sl_students=slMerge(MIRROR.sl_students,rs[0].data,function(k){return pendHas(PK_STU+k);}); mirrorSave('sl_students');
     }
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
       rs[1].data.forEach(function(r){ remoteTxn[slKey(r)]=r; });
-      hwNoteCloud('sl_mirror_transactions', rs[1].data);
-      MIRROR.transactions=slMerge(MIRROR.transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); slMirrorSave('transactions');
+      hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
+      MIRROR.sl_transactions=slMerge(MIRROR.sl_transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); mirrorSave('sl_transactions');
     }
     // הגדרות ורשימות — מאז 009 יש להן `updated_at`, ולכן הן ממוזגות ברמת
     // רשומה בדיוק כמו שתי טבלאות הליבה, ולא מוחלפות בבלוק.
@@ -4461,13 +4527,13 @@ async function syncAll(){
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
-      setRows.forEach(function(r){ remoteSet[slKeyOf('settings',r)]=r; });
-      MIRROR.settings=slMerge(MIRROR.settings,setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf('settings',r);}); slMirrorSave('settings');
+      setRows.forEach(function(r){ remoteSet[slKeyOf('sl_settings',r)]=r; });
+      MIRROR.sl_settings=slMerge(MIRROR.sl_settings,setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf('sl_settings',r);}); mirrorSave('sl_settings');
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
       pulledLst=true;
       rs[3].data.forEach(function(r){ remoteLst[slKey(r)]=r; });
-      MIRROR.lists=slMerge(MIRROR.lists,rs[3].data,function(k){return pendHas(PK_LST+k);}); slMirrorSave('lists');
+      MIRROR.sl_lists=slMerge(MIRROR.sl_lists,rs[3].data,function(k){return pendHas(PK_LST+k);}); mirrorSave('sl_lists');
     }
     slApplyMirror();
     refreshUI();
@@ -4851,7 +4917,7 @@ document.addEventListener('click', function (ev) {
 });
 
 function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
-  var t=(MIRROR.transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
+  var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
   if(!t){toast('⚠️ התשלום לא נמצא');return;}
   var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
@@ -4924,7 +4990,7 @@ async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
   box.innerHTML='<div class="empty">טוען מהענן…</div>';
   var sid=SC_STUDENT_ID;
-  var r=await hwPastLoad('sl_mirror_transactions',function(t){return t.student_client_id===sid;});
+  var r=await hwPastLoad(mirrorKey('sl_transactions'),function(t){return t.student_client_id===sid;});
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
   box.innerHTML='<div style="font-size:.78rem;color:var(--text3);padding:4px">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
@@ -5030,7 +5096,7 @@ function renderSettingsPanel(){
 function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
   if(!v||isNaN(v)){toast('ערך לא תקין');return;}
-  var cur=(MIRROR.settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
+  var cur=(MIRROR.sl_settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:String(v)});
   if(!slLocalWrite('sl_settings',row)){toast('❌ השמירה במכשיר נכשלה — הערך לא נשמר',5000);return;}
   pendMark(pendSetKey(row));
@@ -5088,7 +5154,7 @@ function deleteListItem(key){
   var it=findListItem(key);
   if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
   showConfirm('מחיקה','למחוק פריט זה?',function(){
-    var r0=(MIRROR.lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
+    var r0=(MIRROR.sl_lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
     if(!r0){toast('⚠️ הפריט לא נמצא');return;}
     var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
     if(!slLocalWrite('sl_lists',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
@@ -5126,7 +5192,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
   schedulePush();}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
-function deleteStudent(key){var s=(MIRROR.students||[]).filter(function(x){return slKey(x)===String(key);})[0];
+function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return slKey(x)===String(key);})[0];
  showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',function(){
   if(!s){toast('⚠️ התלמיד לא נמצא');return;}
   var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
@@ -5175,7 +5241,7 @@ async function slBoot(){
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
   try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // העותק המקומי נטען **ראשון** — לפני כל נגיעה ברשת.
-  try { slMirrorLoad(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
+  try { mirrorBoot(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
   // מראת המשתמשים — נטענת לפני מסך הכניסה, אחרת כניסה אופליין לא תמצא
   // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`
   // ו-`role` (סבב 26).

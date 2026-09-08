@@ -25,6 +25,11 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { webcrypto } from 'node:crypto';
+/*  ⛔ ארבע האינווריאנטות והרתמה יושבות במודול הטהור המשותף (סבב 114) —
+ *  ⚠️ שלוש אפליקציות ⛔ ולא שלוש רתמות: ⭐ מה שנשאר כאן הוא **הפרטי** —
+ *  שמות הפונקציות, ה-DOM שהמסך נשען עליו, ושרידי המעבר. */
+import { reporter, extract, adminGaps, messageGaps,
+         residueGaps, rolePasswordGaps } from './roles-harness.mjs';
 
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
@@ -40,44 +45,11 @@ const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const SQL000 = fs.readFileSync(path.join(ROOT, 'migrations', '000_initial_schema.sql'), 'utf8');
 const SQL011 = fs.readFileSync(path.join(ROOT, 'migrations', '011_users_role.sql'), 'utf8');
 
-let pass = 0, fail = 0;
-const ok = (name, cond, extra) => {
-  if (cond) { pass++; console.log('  ✅ ' + name); }
-  else { fail++; console.error('  ❌ ' + name + (extra ? '  →  ' + extra : '')); }
-};
-const eq = (name, got, want) =>
-  ok(name, got === want, `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
-const sect = (t) => console.log('\n▶ ' + t);
+const REP = reporter();
+const { ok, eq, sect } = REP;
 
-/* ── חילוץ מהקוד האמיתי ────────────────────────────────────────────────── */
-// נכשל **ברעש** אם השם נעלם — שינוי שם בקוד לא יעבור כאן בשקט כ"אפס בדיקות".
-function fn(name) {
-  let at = SRC.indexOf('\nfunction ' + name + '(');
-  if (at < 0) at = SRC.indexOf('\nasync function ' + name + '(');
-  if (at < 0) throw new Error('לא נמצאה הפונקציה ' + name + ' ב-index.html');
-  let i = SRC.indexOf('{', at), depth = 0, j = i;
-  for (; j < SRC.length; j++) {
-    if (SRC[j] === '{') depth++;
-    else if (SRC[j] === '}') { depth--; if (!depth) break; }
-  }
-  return SRC.slice(at + 1, j + 1);
-}
-function decl(name) {
-  const m = new RegExp('^var ' + name + '\\s*=', 'm').exec(SRC);
-  if (!m) throw new Error('לא נמצאה ההצהרה ' + name + ' ב-index.html');
-  let depth = 0;
-  for (let j = m.index; j < SRC.length; j++) {
-    const c = SRC[j];
-    if ('{(['.includes(c)) depth++;
-    else if ('})]'.includes(c)) depth--;
-    else if (c === ';' && depth === 0) return SRC.slice(m.index, j + 1);
-  }
-  throw new Error('הצהרה לא נסגרה: ' + name);
-}
-const body = (name) => fn(name);
-// קיים בקובץ בכלל? משמש לטענות «X הוסר».
-const hasFn = (name) =>
-  SRC.indexOf('\nfunction ' + name + '(') >= 0 || SRC.indexOf('\nasync function ' + name + '(') >= 0;
+/* ── חילוץ מהקוד האמיתי — מהמודול הטהור המשותף ─────────────────────────── */
+const { fn, decl, body, hasFn } = extract(SRC);
 
 const NAMES_VAR = [
   'SL_USERS_KEY', 'SL_USER_COLS', 'SL_USERS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
@@ -201,11 +173,12 @@ function makeCtx(opts = {}) {
   return { ctx, store, calls, dom };
 }
 
-/* ⚠️ המתנה ל**אירוע**, לא לשעון — הלקח של סבב 24. `doLogin` מפעילה שרשרת
-   רקע אחרי שהמסך כבר עלה, והמתנה של מספר מילישניות קבוע היא **מרוץ**:
-   על מכונה עמוסה היא נגמרת לפני שהשרשרת סיימה, והטענה נופלת בזמן שהקוד
-   תקין. ⛔ אין להחליף את זה בחזרה ב-`setTimeout` קבוע.
-   התקרה קיימת כדי שהבדיקה **תיכשל ברעש** אם האירוע לא יקרה כלל. */
+/*  ⛔ ההמתנה היא **תנאי** עם תקרה ⛔ ולא שעון — ⚠️ שינה בגודל קבוע נגמרת
+ *  על מכונה עמוסה לפני שהשרשרת הא-סינכרונית סיימה: ⭐ התקרה קיימת כדי
+ *  להיכשל ברעש ⛔ ולא כדי לתזמן.
+ *  ⚠️ **פרטי כאן** ⛔ ואינו במודול המשותף — ⭐ הוא נקרא באפליקציה הזו
+ *  בלבד, ⛔ ומודול שיש בו פונקציה שאיש אינו קורא הוא בדיוק מה שהשער
+ *  «פונקציה בלי קוראים» בא לסלק. */
 async function waitFor(pred, label, ms = 5000) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
@@ -214,6 +187,26 @@ async function waitFor(pred, label, ms = 5000) {
   }
   ok('⛔ ' + label + ' — לא קרה בתוך ' + ms + 'ms', false);
   return false;
+}
+
+/*  ⛔ שלושת מצבי ההרשאה — ⚠️ **פרטי כאן**: ⭐ מצב «העמודה אינה קיימת»
+ *  קיים באפליקציה הזו בלבד, ⛔ ולשתי האחיות אין תשובה שלישית להשוות. */
+function accessGaps(access) {
+  const out = [];
+  const say = (u) => { try { return access(u); } catch (e) { return 'threw:' + e.message; } };
+  const cases = [
+    ['מורשה', { role: 'admin' }, 'ok'],
+    ['שאינו מורשה', { role: 'manager' }, 'denied'],
+    ['תפקיד ריק', { role: '' }, 'no-role'],
+    ['תפקיד חסר', {}, 'no-role'],
+    ['תפקיד שהוקלד בטעות', { role: 'admn' }, 'denied'],
+    ['בלי משתמש', null, 'denied'],
+  ];
+  for (const [label, user, want] of cases) {
+    const got = say(user);
+    if (got !== want) out.push(label + ': נמדד «' + got + '» והצפוי «' + want + '»');
+  }
+  return out;
 }
 
 const ADMIN = { id: 1, username: 'shimon', role: 'admin' };
@@ -226,14 +219,18 @@ async function main() {
   sect('א. slSettingsAccess — שלושה מצבים, ונכשל סגור');
   {
     const h = makeCtx();
-    eq('admin ⇒ ok', h.ctx.slSettingsAccess({ role: 'admin' }), 'ok');
-    eq('user ⇒ denied', h.ctx.slSettingsAccess({ role: 'user' }), 'denied');
-    eq('תפקיד לא מוכר ⇒ denied (נכשל סגור)', h.ctx.slSettingsAccess({ role: 'Admin' }), 'denied');
+    /*  ⛔ שלושת המצבים דרך האינווריאנטה המשותפת — ⚠️ אותן שש מדידות
+     *  בשלוש האפליקציות, ⭐ ומי שאין לו משתמש כלל נחסם אף הוא. */
+    const gaps = accessGaps((u) => h.ctx.slSettingsAccess(u));
+    ok('⭐ שלושת מצבי ההרשאה, ונכשל סגור', gaps.length === 0, gaps.join(' · '));
     eq('תפקיד עם רווח ⇒ denied', h.ctx.slSettingsAccess({ role: ' admin' }), 'denied');
-    eq('אין תפקיד ⇒ no-role', h.ctx.slSettingsAccess({ username: 'x' }), 'no-role');
     eq('תפקיד null ⇒ no-role', h.ctx.slSettingsAccess({ role: null }), 'no-role');
-    eq('תפקיד ריק ⇒ no-role', h.ctx.slSettingsAccess({ role: '' }), 'no-role');
-    eq('⛔ אין משתמש כלל ⇒ denied ולא no-role', h.ctx.slSettingsAccess(null), 'denied');
+    const mg = messageGaps([h.ctx.MSG_SET_DENIED, h.ctx.MSG_SET_NO_ROLE]);
+    ok('⭐ שתי הודעות החסימה נבדלות ואינן ריקות', mg.length === 0, mg.join(' · '));
+    const ag = adminGaps((u) => h.ctx.isAdminOf(u));
+    ok('⛔ ההשוואה היא ל-`admin` בדיוק, בעשרה מצבים', ag.length === 0, ag.join(' · '));
+    const rp = rolePasswordGaps(SRC, ['admin', 'manager', 'junior']);
+    ok('⛔ אין מסלול שמשווה סיסמה מול שם תפקיד', rp.length === 0, rp.join(' · '));
 
     h.ctx.sessSet({ role: 'admin' });
     ok('slIsAdmin קורא את CUR_USER כברירת מחדל', h.ctx.slIsAdmin());
@@ -494,11 +491,13 @@ async function main() {
     ok('CACHE_NAME בתבנית schar-limud-v<N>', /CACHE_NAME = 'schar-limud-v\d+'/.test(sw));
   }
 
-  console.log('\n' + (fail ? '❌' : '✅') + `  ${pass} עברו, ${fail} נכשלו`);
-  process.exit(fail ? 1 : 0);
+  process.exit(REP.summary('מודל ההרשאות') ? 1 : 0);
 }
 
-main().catch((e) => { console.error('💥 ' + ((e && e.stack) || e)); process.exit(1); });
+/*  ⛔ **`await` ולא קריאה חופשית** (סבב 114) — ⚠️ הסוגר שמתחת קורא
+ *  ל-`process.exit` באופן סינכרוני: ⭐ בלעדיו התהליך נסגר אחרי ה-`await`
+ *  הראשון שבתוך הרתמה, ⛔ ורוב הטענות אינן רצות כלל. */
+await main().catch((e) => { console.error('💥 ' + ((e && e.stack) || e)); process.exit(1); });
 
 /* ───────────────────────────────────────────────────────────────────────────
    ⛔ מוטציה ומוטציית-נגד — סבב 67
@@ -540,7 +539,7 @@ if (!process.env.RD67_MUT) {
   /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
   if (!RUN_MUT) {
     console.log('\n⏭ test_roles: המוטציות רצות ברמה המלאה (--full)');
-    process.exit(fail ? 1 : 0);
+    process.exit(REP.st.fail ? 1 : 0);
   }
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי ערכי ה-role מפיל את שער ההרשאות', 'index.html',
