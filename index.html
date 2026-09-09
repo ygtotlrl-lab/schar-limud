@@ -5272,9 +5272,32 @@ if ('serviceWorker' in navigator) {
     var userAccepted = false;
     var reloaded = false;
 
+    /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
+     *  מפיל**: את הרענון האוטומטי שבהשתלטות. ⛔ **ולמה הוא קיים**: רענון
+     *  באמצע הקלדה מאבד את מה שהוקלד, ⚠️ ורענון על דף שאיש לא נגע בו
+     *  אינו מאבד דבר. */
+    var touched = false;
+    function markTouched() { touched = true; }
+    ['pointerdown', 'keydown'].forEach(function(ev) {
+      window.addEventListener(ev, markTouched, { once: true, capture: true });
+    });
+
+    /*  ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר,
+     *  ⭐ וה-`clients.claim()` של העובד הראשון יורה `controllerchange`
+     *  על דף שכבר מריץ את הקוד החדש: ⛔ רענון שם הוא טעינה שנייה
+     *  שאינה משנה דבר. */
+    var hadController = !!navigator.serviceWorker.controller;
+
+    /*  ⛔ ההשתלטות אינה שלמה בלי הרענון — ⚠️ **הנימוק המדוד**: `skipWaiting`
+     *  ו-`clients.claim()` שניהם רצים, ⭐ וה-service worker אכן מתחלף
+     *  ומכניס `index.html` חדש למטמון — ⛔ אבל הלשונית ממשיכה להריץ את
+     *  ה-JS **שכבר בזיכרון**: ⚠️ המכשיר קיבל את הקוד החדש והמשיך להריץ
+     *  את הישן, ⭐ עד שמישהו יילחץ על הבאנר. ⛔ **ודף שאיש לא נגע בו
+     *  נטען מחדש מיד** — ⚠️ ואחרי מגע חוזרים לבאנר, ⭐ שרענון באמצע
+     *  עבודה מאבד אותה. */
     navigator.serviceWorker.addEventListener('controllerchange', function() {
-      // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
-      if (!userAccepted || reloaded) return;
+      if (reloaded || !hadController) return;
+      if (!userAccepted && touched) { showUpdateBanner(null); return; }
       reloaded = true;
       location.reload();
     });
@@ -5318,7 +5341,12 @@ if ('serviceWorker' in navigator) {
       document.body.appendChild(bar);
     }
 
-    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+    /*  ⛔ `updateViaCache: 'none'` — ⚠️ ברירת המחדל `'imports'` מתירה
+     *  לדפדפן לענות ל-`reg.update()` מתוך מטמון ה-HTTP: ⭐ GitHub Pages
+     *  מגיש את `sw.js` עם `max-age`, ⛔ והבדיקה משווה את הקובץ מול עותק
+     *  ישן של עצמו ⛔ ומסיקה «לא השתנה» — ⚠️ כלומר מנגנון הזיהוי היחיד
+     *  שיש נשאל ומשיב על נתון שאינו הפריסה. */
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg) {
       console.log('[sw] registered:', reg.scope);
 
       if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }

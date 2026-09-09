@@ -165,15 +165,23 @@ const APP = {
    *  מוצהר ריק** ⛔ ואינו נשמט: ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק «נמדד ואין».
    */
   mergePoints: [],
-  /*  ⛔ העידן של כל ערך מפתח-ערך שהמכשיר ממזג — ⚠️ **מה נכנס**: שם
-   *  המפתח בענן ושם מפתח העידן שלו, ⛔ **ומה מפיל**: ערך שממוזג ואין לו
-   *  עידן, ⛔ והצהרה שאין לה אתר. ⭐ **ולמה בכלל**: תיקון בקוד אינו מנקה
-   *  מכשיר שכבר מזוהם, ⚠️ והעידן הוא הכלי היחיד שמגיע אליו מהענן.
+  /*  ⛔ חותמת הניקוי של כל ערך מפתח-ערך שהמכשיר ממזג — ⚠️ **מה נכנס**: שם
+   *  המפתח בענן ושם מפתח החותמת שלו, ⛔ **ומה מפיל**: ערך שממוזג ואין לו
+   *  חותמת, ⛔ הצהרה שאין לה אתר, ⛔ ושם שאינו נגמר ב-`_reset`. ⭐ **ולמה
+   *  בכלל**: תיקון בקוד אינו מנקה מכשיר שכבר מזוהם, ⚠️ והחותמת היא הכלי
+   *  היחיד שמגיע אליו מהענן.
    *  ⛔ **וכאן אין ערך מפתח-ערך שממוזג** — ⚠️ הנתונים יושבים בטבלאות
    *  ובשכבת המראה, ⭐ ואין מפתח שנמשך בשמו ונמסר לקריאת מיזוג:
    *  ⛔ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא
    *  נשאל», ⭐ וריק נקרא «נמדד ואין». */
-  kvEpochs: {},
+  kvResets: {},
+  /*  ⛔ מה `controllerchange` עושה — ⚠️ **מה נכנס**: `auto` — רענון של דף
+   *  שאיש לא נגע בו, ⛔ או `user` — רענון רק כשהמשתמש ביקש; ⛔ **ומה
+   *  מפיל**: מצב שאינו תואם ל-`skipWaiting` שב-`sw.js`, ⚠️ ומטפל שאינו
+   *  מרענן כלל. ⭐ **ולמה השניים כרוכים**: עובד שמשתלט מעצמו מותיר את
+   *  הלשונית על ה-JS שבזיכרון, ⛔ ועובד שממתין אינו משתלט בלי בקשה
+   *  ⛔ ורענון אוטומטי שם הוא ענף שלא רץ. */
+  swReload: { mode: 'auto', why: '' },
   /*  ⛔ הכתיבות לרשימת ערכים — ⚠️ כל אחת עוברת ב-`uniqHas` שבמודול
    *  המשותף לפני הכתיבה, ⭐ וההשוואה על **הערך** ⛔ ולא על מזהה. */
   listAdds: ['addListItem'],
@@ -3182,8 +3190,10 @@ function constSeedSites() {
 }
 /*  ⭐ ערך מפתח-ערך שהמכשיר ממזג — ⛔ מפתח שנמשך מהענן בשם קבוע
  *  ותוצאתו נמסרת לקריאת מיזוג: ⚠️ **מה נכנס** — שם המשתנה שנטען
- *  ממשיכה ושם המפתח שלו, ⛔ **ומה מפיל** — ערך כזה בלי עידן מוצהר,
- *  ⛔ הצהרה שאין לה ערך ממוזג, ⛔ ועידן מוצהר שאין לו קורא בקוד.
+ *  ממשיכה ושם המפתח שלו, ⛔ **ומה מפיל** — ערך כזה בלי חותמת מוצהרת,
+ *  ⛔ הצהרה שאין לה ערך ממוזג, ⛔ חותמת שאין לה קורא בקוד,
+ *  ⛔ ושם חותמת שאינו נגמר ב-`_reset`. ⭐ **ולמה הסיומת נמדדת**:
+ *  מונה סידורי אינו מתעד את עצמו, ⚠️ והשם הוא מה שמבדיל ביניהם.
  *  ⛔ **והסריקה גולמית ובכוונה** — ⚠️ הנמדד **הוא** מחרוזת: שם המפתח
  *  בענן, ⭐ וההלבנה מרוקנת בדיוק אותו. */
 function mergedKvKeys() {
@@ -3205,16 +3215,60 @@ function mergedKvKeys() {
   }
   return out;
 }
-function kvEpochGaps() {
+function kvResetGaps() {
   const merged = mergedKvKeys();
-  const cfg = APP.kvEpochs || {};
+  const cfg = APP.kvResets || {};
   const out = [];
   for (const k of merged) {
-    if (!cfg[k]) out.push(`ערך מפתח-ערך שממוזג ואין לו עידן ב-APP.kvEpochs: ${k}`);
+    if (!cfg[k]) out.push(`ערך מפתח-ערך שממוזג ואין לו חותמת ב-APP.kvResets: ${k}`);
   }
-  for (const [k, ep] of Object.entries(cfg)) {
-    if (!merged.has(k)) out.push(`APP.kvEpochs מצהיר עידן לערך שאינו ממוזג: ${k}`);
-    else if (!src.includes(`'${ep}'`)) out.push(`עידן מוצהר שאין לו קורא בקוד: ${ep}`);
+  for (const [k, rk] of Object.entries(cfg)) {
+    if (!merged.has(k)) out.push(`APP.kvResets מצהיר חותמת לערך שאינו ממוזג: ${k}`);
+    else if (!src.includes(`'${rk}'`)) out.push(`חותמת מוצהרת שאין לה קורא בקוד: ${rk}`);
+    if (!/_reset$/.test(rk)) out.push(`סימן זריקה שאינו חותמת: ${rk} — ⛔ השם נגמר ב-\`_reset\``);
+  }
+  return out;
+}
+/*  ⭐ עדכון ה-service worker — ⛔ שני צדדיו של אותו מנגנון: ⚠️ **מה
+ *  נכנס** — כל קריאת `register` בקוד, וגוף מטפל ה-`controllerchange`;
+ *  ⛔ **ומה מפיל** — `register` בלי `updateViaCache: 'none'`, ⛔ ערך
+ *  אחר בשדה, ⛔ מטפל שאינו מרענן, ⛔ ומצב שאינו תואם ל-`skipWaiting`
+ *  שב-`sw.js`. ⭐ **ולמה שני הקבצים**: הידית שקובעת אם העובד משתלט
+ *  מעצמו חיה ב-`sw.js`, ⛔ והתגובה לה חיה בדף.
+ *  ⛔ **והסריקה גולמית ובכוונה** — ⚠️ הנמדד **הוא** מחרוזת: שם האירוע
+ *  וערך השדה, ⭐ וההלבנה מרוקנת בדיוק אותם. */
+function swUpdateGaps() {
+  const out = [];
+  const regs = [...src.matchAll(/serviceWorker\s*\.\s*register\s*\(/g)];
+  if (!regs.length) out.push('אין קריאת `register` ל-service worker');
+  for (const m of regs) {
+    const args = balAt(src, m.index + m[0].length - 1);
+    if (args === null) { out.push('קריאת `register` בלי סוגר סוגר'); continue; }
+    const v = /updateViaCache\s*:\s*'([^']*)'/.exec(args);
+    if (!v) out.push('`register` בלי `updateViaCache` — ⛔ הבדיקה תיענה ממטמון ה-HTTP');
+    else if (v[1] !== 'none') out.push(`\`updateViaCache\` הוא '${v[1]}' ⛔ ולא 'none'`);
+  }
+  const hs = [...src.matchAll(/addEventListener\s*\(\s*'controllerchange'/g)];
+  if (hs.length !== 1) out.push(`מטפלי \`controllerchange\`: ${hs.length} ⛔ והצפוי אחד`);
+  const body = hs.length === 1
+    ? (balAt(src, src.indexOf(OPEN_OBJ, hs[0].index)) || '') : '';
+  if (hs.length === 1 && !/location\s*\.\s*reload\s*\(/.test(body))
+    out.push('מטפל `controllerchange` שאינו מרענן — ⛔ הלשונית נשארת על ה-JS שבזיכרון');
+  const mode = (APP.swReload || {}).mode;
+  const why = ((APP.swReload || {}).why || '').trim();
+  let swWait = null;
+  try { swWait = /skipWaiting\s*:\s*(true|false)/.exec(readOnce('sw.js')); } catch (e) { swWait = null; }
+  if (!swWait) out.push('`skipWaiting` אינו נמצא ב-`sw.js`');
+  else if (mode !== (swWait[1] === 'true' ? 'auto' : 'user'))
+    out.push(`APP.swReload.mode «${mode}» ⛔ אינו תואם ל-\`skipWaiting: ${swWait[1]}\``);
+  if (mode === 'user' && !why) out.push('APP.swReload מצב `user` בלי נימוק');
+  if (mode === 'auto' && why) out.push('APP.swReload מצב `auto` עם נימוק — ⛔ אין ממה לחרוג');
+  if (hs.length === 1) {
+    const auto = /hadController/.test(body) && /touched/.test(body);
+    if (mode === 'auto' && !auto)
+      out.push('מצב `auto` בלי שומר הביקור הראשון והמגע — ⛔ רענון על כל השתלטות');
+    if (mode === 'user' && auto)
+      out.push('מצב `user` עם שומרי הרענון האוטומטי — ⛔ ענף שאינו רץ');
   }
   return out;
 }
@@ -4353,7 +4407,7 @@ const MATRIX = [
    *  השני קיבל אותם: ⛔ ניקוי נתוני האתר במכשיר לא עזר, ⚠️ שהמיזוג דחף
    *  אותם חזרה לענן תוך דקות. */
   { row: 148, name: 'ברירת מחדל אינה ממוזגת',
-    probe: () => constSeedSites().length === 0 && kvEpochGaps().length === 0 },
+    probe: () => constSeedSites().length === 0 && kvResetGaps().length === 0 },
   /*  ⛔ כיווץ הרשימה נמדד בשורה משלו (סבב 101) — ⚠️ «מיזוג מכל» הוא
    *  **מבנה** שקיים בשתיים מהארבע, ⭐ וכפילות ברשימה קיימת בארבעתן:
    *  ⛔ שתי טענות, שני היקפים, ⚠️ ושני probe. */
@@ -4735,7 +4789,8 @@ const MATRIX = [
    *  היתר שאין לה מקרה בפועל היא בעצמה השארית שהשורה באה לסלק. */
   { row: 177, name: 'עדכון אוטומטי — בדיקה מחזורית',
     probe: () => /setInterval\s*\(\s*checkForUpdates?\s*,/.test(code) &&
-                 /reg\.update\s*\(/.test(code) && !hasCode(/\bRAW_URL\b/) },
+                 /reg\.update\s*\(/.test(code) && !hasCode(/\bRAW_URL\b/) &&
+                 swUpdateGaps().length === 0 },
   /*  ⭐ סבב 56 — מקור הקריאה. ⚠️ **שורה תיאורית ולא ✅/❌**: היא מודדת
    *  מאיפה נקראים הנתונים, ולא אם יכולת קיימת. `APP.kvFallbackFn` מצהיר
    *  את שם משפך ה-`kv`, ⛔ וה-probe דורש שהוא יימצא בפועל בקוד — הצהרה
