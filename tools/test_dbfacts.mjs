@@ -34,7 +34,7 @@ import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [139, 134, 135, 136, 151, 174, 175, 176, 177];
+export const ROWS = [140, 135, 136, 137, 153, 176, 177, 178, 179, 147];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -59,6 +59,14 @@ const APP = {
   schemaSkip: [],
   cfgReader: 'slCfgGet',
   cfgTable: 'sl_settings',
+  /*  ⛔ טבלאות המפתח-ערך שבבעלות הריפו — ⚠️ **מה נכנס**: שם טבלה שעמודת
+   *  `value` שלה נושאת JSON; ⛔ **ומה מפיל**: ערך שאינו מתפרש, ⭐ ורשימה
+   *  ריקה. ⚠️ **ולמה היא קיימת**: הבעלות היא של ריפו אחד, ⛔ והמדידה
+   *  רצה שם ⛔ ולא בשלושה. */
+  kvReadFn: '',
+  kvBadMark: '',
+  kvReadWhy: 'ערכי ההגדרות כאן הם מספרים שנקראים כטקסט — ואין בקוד מנתח JSON לערך שבמסד',
+  kvTables: ['sl_settings'],
   backupTable: 'kv_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
    *  בריפו של האפליקציה הראשונה בפרויקט, ⭐ ועותק שני היה מקור אמת שני. */
@@ -109,7 +117,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 11, app: 0, appWhy: '' };
+const FLOOR = { shared: 13, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -236,6 +244,56 @@ const addedCols = [...sqlNoCmt.matchAll(
   .filter((x) => !dropped.has(x.t));
 
 /* ── הטענות ────────────────────────────────────────────────────────────── */
+/*  ⛔ ערך במפתח-ערך הוא JSON (סבב 125) — ⚠️ הקורא עושה `JSON.parse`,
+ *  ⭐ וערך חשוף זורק: ⛔ המפתח נספר ככשל בלי לומר למה, ⚠️ והטוסט צף.
+ *  ⛔ **והמדידה מול המסד החי** ⛔ ולא מול קובץ המיגרציה — ⭐ אילוץ שנכתב
+ *  ולא רץ אינו מונע את הכתיבה הבאה. */
+async function claimKvJson() {
+  const tables = APP.kvTables || [];
+  if (!tables.length) { bad('י. ערך במפתח-ערך — אין טבלת מפתח-ערך מוצהרת. מצהירים אותה ב-`APP.kvTables`'); return; }
+  let n = 0; const bads = [];
+  for (const t of tables) {
+    const r = await q(`/${t}?select=key,value`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    for (const row of JSON.parse(r.text)) {
+      n++;
+      if (row.value == null) continue;
+      try { JSON.parse(row.value); } catch (e) { bads.push(t + '.' + row.key); }
+    }
+  }
+  if (bads.length) bad(`י. ערך במפתח-ערך — ערכים שאינם JSON: ${bads.join(', ')}. נמדדו ${bads.length} מתוך ${n} והצפוי אפס. מתקנים את הערך במסד, ואת אילוץ ה-check שמונע את הכתיבה הבאה`);
+  else ok(`י. ערך במפתח-ערך — ${n} ערכים ב-${tables.length} טבלאות מפתח-ערך, וכולם JSON תקין`);
+}
+
+/*  ⛔ הקורא מבחין בין «אין ערך» ל«ערך פגום» (סבב 125) — ⚠️ שניהם חזרו
+ *  אותה תשובה, ⭐ והמפתח נספר ככשל בלי לומר מה קרה בו: ⛔ ומי שראה את
+ *  ההודעה חיפש רשת שלא נפלה. */
+function kvReaderGaps() {
+  const out = [];
+  const fn = APP.kvReadFn;
+  if (!fn) {
+    if (!APP.kvReadWhy || !String(APP.kvReadWhy).trim()) out.push('אין נקודת קריאה ואין נימוק');
+    if (/JSON\.parse\([^)]*\.value/.test(SRC)) out.push('יש מנתח לערך שבמסד, וההצהרה ריקה');
+    return out;
+  }
+  const i = SRC.indexOf('function ' + fn + '(');
+  if (i < 0) { out.push('נקודת הקריאה המוצהרת אינה קיימת: ' + fn); return out; }
+  const body = SRC.slice(i, i + 1200);
+  if (!/JSON\.parse/.test(body)) out.push('נקודת הקריאה אינה מפרשת JSON: ' + fn);
+  if (!/catch/.test(body)) out.push('נקודת הקריאה אינה תופסת ערך פגום: ' + fn);
+  const bad = APP.kvBadMark;
+  if (!bad) { out.push('אין סימון מוצהר לערך פגום'); return out; }
+  if (body.indexOf(bad) < 0) out.push('הסימון לערך פגום אינו בגוף הקריאה: ' + bad);
+  const uses = (SRC.match(new RegExp('(?<![\\w$.])' + bad + '(?![\\w$])', 'g')) || []).length;
+  if (uses < 2) out.push('הסימון לערך פגום אינו נקרא בשום מקום: ' + bad);
+  return out;
+}
+async function claimKvReader() {
+  const g = kvReaderGaps();
+  if (g.length) bad('יא. ערך פגום נבדל מ«אין ערך» — ' + g.join(' · ') + '. נמדדו ' + g.length + ' פערים והצפוי אפס. מיישרים את נקודת הקריאה, או את ההצהרה');
+  else ok('יא. ערך פגום נבדל מ«אין ערך» — ' + (APP.kvReadFn ? 'נקודת הקריאה `' + APP.kvReadFn + '` תופסת ומסמנת' : 'אין כאן מנתח לערך שבמסד, וההצהרה ריקה ומנומקת'));
+}
+
 async function claimStamp() {
   const tabs = created.filter((t) => APP.stamped.includes(t));
   if (!tabs.length) { ok(`א. חותמת בכל רשומה — אין טבלה חתומה בריפו הזה`); return; }
@@ -538,6 +596,9 @@ if (!RUN_MUT) {
 if (!CONN && !SELFTEST) {
   bad(`לא נמצא מפתח \`anon\` תקין ב-\`index.html\`. נמדד כתובת=${!!_url} מפתח=${!!_key} תפקיד=«${KEY_ROLE || 'אין'}» מול הצפוי «anon». מיישרים את הקריאה שבקוד, ⛔ ולא משתמשים ב-\`service_role\` — הוא עוקף RLS`);
 } else {
+  /*  ⛔ טענת הקורא היא מדידת מקור ⛔ ואינה יוצאת לרשת — ⚠️ ולכן היא
+   *  מחוץ ל-`try` שבולע ניתוק: ⭐ בפנים, ניתוק היה מדלג עליה בשקט. */
+  await claimKvReader();
   try {
     await claimStamp();
     await claimStampType();
@@ -548,6 +609,7 @@ if (!CONN && !SELFTEST) {
     await claimColReaders();
     await claimReplacedDefs();
     await claimDerivedStale();
+    await claimKvJson();
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -582,6 +644,10 @@ if (RUN_MUT && !SELFTEST) {
     /*  ⛔ שני מסלולי `updated_at` נפרדים — ⚠️ טענה א שואלת **בסינון**
      *  על אפס או ריק, ⭐ וטענה ה שואלת שורה אחת בלי סינון: ⛔ ענף אחד
      *  לשתיהן היה מפיל את אחת מהן על תשובה שנועדה לשנייה. */
+    /*  ⛔ ערך המפתח-ערך חוזר כזוג `key,value` — ⚠️ והמוטציה מחזירה ערך
+     *  חשוף: ⭐ בדיוק מה שנכתב במסד, ⛔ ובדיוק מה ש-`JSON.parse` זורק עליו. */
+    if (/select=key,value/.test(url))
+      return [200, JSON.stringify([{ key: 'k', value: scen === 'kvjson' ? 'לא JSON' : '"ok"' }])];
     if (/updated_at\.eq\.0|updated_at\.is\.null/.test(url))
       return scen === 'stamp' ? [200, '[{"updated_at":0}]'] : [200, '[]'];
     if (/select=updated_at/.test(url))
@@ -695,6 +761,7 @@ if (RUN_MUT && !SELFTEST) {
   else ok('⛔ אין מוטציית רשימת-היתר — הפינוי אינו בבעלות הריפו הזה, ⚠️ ואין רשימה למוטט');
 
   await mut('⛔ מוטציה: עמודה שאין לה קורא ואינה מוצהרת מפילה את «עמודה בלי קורא»', 'colreader', false);
+  await mut('⛔ מוטציה: ערך שאינו JSON מפיל את «ערך במפתח-ערך הוא JSON»', 'kvjson', false);
   /*  ⛔ תרחיש ההגדרה שהוחלפה דורש **אתר בפועל** — ⚠️ שליפה שנוקבת בעמודה
    *  בשמה: ⭐ ריפו שכל שליפותיו `select('*')` אין בו מה למוטט, ⛔ והוא
    *  מוכרז כאן ⛔ ואינו מדולג בשתיקה. */
