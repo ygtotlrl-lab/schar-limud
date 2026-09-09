@@ -64,7 +64,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 4, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -203,6 +203,45 @@ if (!away.length) {
               `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}. ` +
               `מריצים את הסבב עם ארבעת הריפו זה לצד זה`);
 }
+/* ── 3. רשימת החרגה משותפת — גוף זהה בין הריפו ─────────────────────────── */
+/*  ⛔ רשימה שגופה זהה בין הריפו נחתמת כמו כל רכיב משותף (סבב 121) —
+ *  ⚠️ גם בקובץ שנושא `APP`: ⭐ **הרשימה היא תשתית**, ⛔ וה-`APP` שסביבה
+ *  אינו — ⚠️ ולכן הקובץ אינו ב-`pureTools` והרשימה בכל זאת נמדדת.
+ *  ⛔ **וההשוואה בית-לבית** — ⚠️ רשימה שהתפצלה בריפו אחד משנה את מה
+ *  שהסורק חותך שם, ⭐ ואת סיווג הקלט של הבדיקות ⛔ בלי שאיש מודד. */
+const SHARED_LISTS = [{ file: 'check-comments.mjs', name: 'bodyCut' }];
+function listBody(text, name) {
+  const i = text.indexOf('\n  ' + name + ': [');
+  if (i < 0) return null;
+  const a = text.indexOf('[', i);
+  let d = 0;
+  for (let j = a; j < text.length; j++) {
+    if (text[j] === '[') d++;
+    else if (text[j] === ']') { d--; if (!d) return text.slice(a, j + 1); }
+  }
+  return null;
+}
+const listOf = (root, f, nm) => {
+  const p = join(root, 'tools', f);
+  return existsSync(p) ? listBody(readFileSync(p, 'utf8'), nm) : null;
+};
+for (const L of SHARED_LISTS) {
+  const mine = listOf(ROOT, L.file, L.name);
+  t(n++, mine !== null && mine.length > 20,
+    `רשימת ${L.name} ב-${L.file} — נמדדו ${mine ? mine.length : 0} תווים והצפוי גוף לא ריק. ` +
+    `מחזירים את הרשימה לקובץ`);
+  if (away.length) {
+    console.log(`  ⚠️  ההשוואה של ${L.name} לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
+                `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}. ` +
+                `מריצים את הסבב עם ארבעת הריפו זה לצד זה`);
+    continue;
+  }
+  const diff = have.filter((p) => listOf(join(SIBS, p), L.file, L.name) !== mine);
+  t(n++, diff.length === 0,
+    `${L.name} שנבדלה בין הריפו — נמדדו ${diff.length} מתוך ${have.length} והצפוי 0` +
+    (diff.length ? ` (${diff.join(', ')})` : '') +
+    `. מיישרים את הרשימה בארבעת הריפו באותו סבב`);
+}
 t(n++, Object.values(allow).every((v) => typeof v === 'string' && v.length >= 20),
   `נימוק לכל הכרזה — נמדדו ${Object.values(allow).filter((v) => typeof v === 'string' && v.length >= 20).length} ` +
   `מתוך ${Object.keys(allow).length} והצפוי כולן. כותבים בכל אחת מה נדרש כדי להוציא אותה`);
@@ -235,6 +274,33 @@ const SYNTH = [SRC];
       `⭐ המוטציה: «${nm}» הוצאה מהבלוק — נמדדו ${after.length} תאומים בלי חתימה ` +
       `מול ${before.length} קודם, והשם בתוכם. הטענה על מיקום הפונקציה אמיתית`);
   }
+}
+
+/* ── 6. מוטציה — רשימה משותפת שנבדלה בריפו אחד **חייבת** להיתפס ────────── */
+/*  ⛔ המוטציה שוברת את המנגנון ⛔ ולא את הצורה — ⚠️ היא מחליפה שורה
+ *  אחת בגוף הרשימה, ⭐ והמדידה היא **ההשוואה בית-לבית**: ⛔ שער שסופר
+ *  שורות היה עובר עליה. ⛔ והמוטציה רצה על מחרוזת ⛔ ואינה נכתבת לעץ. */
+{
+  const L = SHARED_LISTS[0];
+  const own = readFileSync(join(ROOT, 'tools', L.file), 'utf8');
+  const base = listBody(own, L.name);
+  const bent = listBody(own.replace("{ re: '@media", "{ re: '@print"), L.name);
+  t(n++, base !== null && bent !== null && bent !== base,
+    `מ2 · ⛔ מוטציה: תבנית שהוחלפה ברשימה המשותפת מפילה את «${L.name} שנבדלה בין הריפו» — ` +
+    `נמדד גוף ${bent === base ? 'זהה' : 'נבדל'} והצפוי נבדל`);
+}
+
+/* ── 7. מוטציית-נגד — שינוי מחוץ לרשימה ⛔ אינו מפיל ────────────────────── */
+/*  ⛔ שינוי חי ⛔ ולא הערה — ⚠️ שורת קוד שנוספת מחוץ לרשימה היא בדיוק מה
+ *  שכל סבב מוסיף, ⭐ ושער שנופל עליה חוסם עבודה. */
+{
+  const L = SHARED_LISTS[0];
+  const own = readFileSync(join(ROOT, 'tools', L.file), 'utf8');
+  const base = listBody(own, L.name);
+  const grown = own + '\nconst _ncListPing = 1;\n';
+  t(n++, grown !== own && listBody(grown, L.name) === base,
+    `נ2 · ⭐ מוטציית-נגד: שורה שנוספה מחוץ לרשימה ⛔ אינה מפילה — ` +
+    `נמדד גוף ${listBody(grown, L.name) === base ? 'זהה' : 'נבדל'} והצפוי זהה`);
 }
 
 /* ── 5. מוטציית-נגד — קוד חדש שאין לו תאום ⛔ אינו מפיל ─────────────────── */

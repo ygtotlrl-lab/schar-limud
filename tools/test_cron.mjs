@@ -36,6 +36,10 @@ const APP = {
   keys: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
   prefixes: [''],
   legacyKeys: [],
+  /*  ⛔ מפתחות גיבוי של אחות שרשימת-ההיתר המשותפת חייבת להכיל — ⚠️ **מה
+   *  נכנס**: שם מפתח שנכתב מריפו אחר. ⛔ **ומה מפיל**: מפתח כזה שאינו
+   *  ברשימה במסד. ⭐ **ולמה היא קיימת**: הרשימה אחת לכל הפרויקט —
+   *  ⛔ **וכאן אין מפתח של אחות**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   sisterKeys: [],
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql',
