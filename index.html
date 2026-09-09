@@ -452,7 +452,7 @@ body.locked{overflow:hidden}
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input aria-label="2000" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
+            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="לא הוגדר">
             <button class="btn" data-act="tuition-save">שמור</button>
           </div>
         </div>
@@ -4607,7 +4607,7 @@ function updateDropdowns(){
   if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
   if(cur)sel.value=cur;
   var dt=document.getElementById('txn-date');if(!dt.value)dt.value=todayStr();
-  var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'2000';
+  var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'';
   txnMethodHint();
 }
 // הבהרה בזמן הרישום — הרגע שבו אפשר עוד למנוע רישום שגוי של זיכוי ככסף
@@ -4654,8 +4654,12 @@ function dashPrevYear(){DASH_YEAR--;renderDash();}function dashNextYear(){DASH_Y
 // אותו כלל כמו קודם, רק שעכשיו היא פשוט לא נכנסת לסכום במקום להיות
 // מוצגת ומופחתת בשורה נפרדת.
 function txnMonth(t){var d=new Date(t.date+'T00:00:00');return d.getMonth();}
+/*  ⛔ אין להחזיר סכום קבוע כשההגדרה חסרה — ⚠️ סכום מומצא מחשב חוב מול
+ *  מה שאיש לא הזין, ⭐ והמסך מציג אותו כחוב אמיתי: ⛔ ומסך ההגדרות שמציג
+ *  אותו כותב אותו לענן בשמירה הראשונה, ⚠️ כאילו זו החלטת המנהל.
+ *  ⭐ **הגדרה שלא נקבעה היא 0** ⛔ ולא ניחוש. */
 function studentTuition(s){
-  var cs=(s&&s.card_settings)||{},defT=parseInt(SETTINGS['default_tuition']||2000);
+  var cs=(s&&s.card_settings)||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0);
   return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
 }
 // מפת {student_client_id:{monthIdx:סכום}} לשנת לימודים אחת — תנועות בפועל בלבד.
@@ -4781,7 +4785,7 @@ function closeDashMonth(){document.getElementById('dash-month-card').style.displ
 // (paid = cash + cred), רק מסווגים.
 function calcDistribution(sid,year){
   var s=STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
-  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=s.card_settings||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var txns=TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
@@ -4830,7 +4834,7 @@ async function saveTxn(){
   if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000);return;}
   pendMark(pendTxnKey(row));
   releaseCid('txn');
-  document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';
+  document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'';
   document.getElementById('txn-note').value='';
   refreshUI();
   toast(navigator.onLine?'✅ תשלום נשמר':MSG_SAVED_LOCAL,4000);
@@ -4952,7 +4956,7 @@ function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
 function renderScAnnual(){
   if(!SC_STUDENT_ID||!SC_YEAR)return;
   var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
-  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=s.card_settings||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var dist=calcDistribution(SC_STUDENT_ID,SC_YEAR),rows='',tR=0,tP=0;
   // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
   YEAR_MONTHS.forEach(function(m){
@@ -5083,7 +5087,7 @@ function renderSettingsPanel(){
     if(m)m.innerHTML=(acc==='no-role')?MSG_SET_NO_ROLE:MSG_SET_DENIED;
     return;
   }
-  document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';
+  document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'';
   renderSettingsLists();
 }
 // כתיבה מקומית-תחילה (009). `guardOnline` הוסר — שכר לימוד ברירת מחדל הוא

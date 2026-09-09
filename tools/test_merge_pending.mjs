@@ -33,6 +33,10 @@ const APP = {
   app: 'schar-limud',
   names: ['slTs', 'slKey', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'slMerge'],
   vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
+  /*  ⛔ גלובלים שהארגז חול צריך מעבר לבדלים המשותפים — ⚠️ **מה נכנס**:
+   *  שם ⟵ ערך. ⛔ **ומה מפיל**: הרצה שנופלת ב-`ReferenceError`.
+   *  ⭐ **ולמה היא קיימת**: ליבת המיזוג נשענת על מודולים שאינם בה —
+   *  ⛔ **וכאן אין צורך כזה**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   globals: {},
   offlineFn: 'slVerifyOffline',
   // ⭐ סבב 38 — כלל ההכרעה עבר לליבה המשותפת, ולכן גם המוטציה מכוונת
