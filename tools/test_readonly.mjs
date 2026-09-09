@@ -36,7 +36,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 16, app: 0, appWhy: '' };
+const FLOOR = { shared: 20, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -321,6 +321,51 @@ console.log('  ok   מוטנט');
   fs.appendFileSync(idx, '\n<!-- הערה שנוספה במוטציית-הנגד -->\n');
   t(n++, runGate(dir, 'check-js.mjs', STAGES) === 0,
     '⭐ מוטציית-נגד: תוספת HTML תקינה ⛔ אינה מפילה — נאכף התחביר, לא התוכן');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/* ── ז. טענה בשער שנושאה הוסר ──────────────────────────────────────────── */
+/*  ⛔ המוטציה מוסיפה שורה לשער קיים בעותק ⛔ ולא קובץ חדש — ⚠️ קובץ שער
+ *  חדש היה נופל בתקן הבאנר ובכיסוי המוטציות, ⭐ ואז מוטציית-הנגד הייתה
+ *  מפילה מסיבה שאינה הנמדדת. */
+{
+  const dir = copyRepo();
+  const host = path.join(dir, 'tools', 'test_removals.mjs');
+  const CLEAN = fs.readFileSync(host);
+
+  fs.appendFileSync(host,
+    "\nok((SRC.match(/gZzzGone/g) || []).length === 0, 'gZzzGone שהוסר');\n");
+  t(n++, runGate(dir, 'check-comments.mjs') !== 0,
+    '⛔ מוטציה: טענת היעדר שמנוסחת כמצבה מפילה את `check-comments`');
+  fs.writeFileSync(host, CLEAN);
+
+  fs.appendFileSync(host,
+    "\nok((SRC.match(/gZzzGone/g) || []).length === 0, 'אין אתר שכותב את המפתח — נמדדו 0 אתרים');\n");
+  t(n++, runGate(dir, 'check-comments.mjs') === 0,
+    '⭐ מוטציית-נגד: אותה טענה מנוסחת כאיסור חי ⛔ אינה מפילה');
+  fs.writeFileSync(host, CLEAN);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/* ── ח. תבנית לא-מאוזנת במפת הגופים ────────────────────────────────────── */
+/*  ⛔ המוטציה מוסיפה תבנית לעותק ⛔ ולא לעץ — ⚠️ סוגר פותח בלי בן-זוג
+ *  מותח את גוף הפונקציה שאחריו, ⭐ וזה בדיוק מה שהסעיף בא לתפוס. */
+{
+  const dir = copyRepo();
+  const cap = path.join(dir, 'tools', 'check-capabilities.mjs');
+  const CLEAN = fs.readFileSync(cap);
+
+  fs.appendFileSync(cap, "\nconst _zzBrace = /zz\\{yy/;\n");
+  t(n++, runGate(dir, 'check-comments.mjs') !== 0,
+    '⛔ מוטציה: תבנית לא-מאוזנת שאינה מוכרזת מפילה את `check-comments`');
+  fs.writeFileSync(cap, CLEAN);
+
+  fs.appendFileSync(cap, "\nconst _zzBrace = /zz\\{yy\\}/;\n");
+  t(n++, runGate(dir, 'check-comments.mjs') === 0,
+    '⭐ מוטציית-נגד: אותה תבנית מאוזנת ⛔ אינה מפילה');
+  fs.writeFileSync(cap, CLEAN);
 
   fs.rmSync(dir, { recursive: true, force: true });
 }
