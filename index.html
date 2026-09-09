@@ -244,7 +244,7 @@ body.locked{overflow:hidden}
 </style>
 </head>
 <body><div id="auth-screen">
-  <div class="auth-box">
+  <div class="auth-box ksave">
     <div class="auth-title">שכר לימוד</div>
     <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
     <div class="auth-field">
@@ -253,9 +253,9 @@ body.locked{overflow:hidden}
     </div>
     <div class="auth-field">
       <label for="au-pass">סיסמה</label>
-      <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password">
     </div>
-    <button class="auth-btn" id="auth-btn" data-act="login">כניסה</button>
+    <button class="auth-btn" id="auth-btn" data-act="login" data-ksave>כניסה</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-spinner" id="auth-spinner"></div>
   </div>
@@ -309,7 +309,7 @@ body.locked{overflow:hidden}
     <div id="panel-txn" class="panel">
       <div class="card">
         <div class="card-hdr"><h3>הוספת תשלום</h3></div>
-        <div class="card-body">
+        <div class="card-body ksave">
           <div class="frm-row">
             <label>תלמיד</label>
             <div class="sd-wrap">
@@ -337,7 +337,7 @@ body.locked{overflow:hidden}
             <label for="txn-note">הערה</label>
             <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
-          <button class="btn" style="width:100%" data-act="txn-save">שמור תשלום</button>
+          <button class="btn" style="width:100%" data-act="txn-save" data-ksave>שמור תשלום</button>
         </div>
       </div>
       <div class="card">
@@ -379,7 +379,7 @@ body.locked{overflow:hidden}
           <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
             <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
           </div>
-          <div class="acc-body" id="acc-sc-settings">
+          <div class="acc-body ksave" id="acc-sc-settings">
             <div class="frm-row">
               <label for="sc-edit-name">שם</label>
               <input id="sc-edit-name" type="text">
@@ -409,7 +409,7 @@ body.locked{overflow:hidden}
               <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
             <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
-            <button class="btn" data-act="student-settings-save">שמור</button>
+            <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
           </div>
           <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-annual" style="border-top:1px solid var(--border)">
             <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
@@ -451,9 +451,9 @@ body.locked{overflow:hidden}
       <div id="settings-main" style="display:none">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-          <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="card-body ksave" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="לא הוגדר">
-            <button class="btn" data-act="tuition-save">שמור</button>
+            <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
           </div>
         </div>
         <!-- סבב 26: כרטיס «שינוי סיסמת מנהל» הוסר יחד עם השער שהוא שירת.
@@ -506,7 +506,7 @@ body.locked{overflow:hidden}
 <!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68) — ⚠️ פתיחה, סגירה
      ו-Escape חיים במקום אחד; ⛔ שני דפוסים במקביל הם שני מסלולי סגירה. -->
 <div class="veil" id="modal">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
@@ -4293,6 +4293,35 @@ function uniqHas(list, val, keyFn) {
   return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
 }
 /* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
+/* ═══ Enter שומר בשדה עריכה — מודול משותף (סבב 125) ═════════════════════
+   ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
+      ⛔ ולא השדה: ⭐ שדה שנוסף לטופס קיים מקבל את המקש בלי שאיש ייגע בו,
+      ⚠️ ומטפל פר-שדה נשכח בשדה הבא שנוסף.
+   ⛔ והכפתור מסומן — ⚠️ `data-ksave` לשמירה ו-`data-kesc` לביטול: ⭐ בטופס
+      יושב יותר מכפתור אחד, ⛔ ובחירה לפי סדר הייתה מפעילה את הראשון.
+   ⛔ והניתוב הוא **מפת הפעולות** — ⚠️ הכפתור נמצא בתוך ההיקף והפעולה שלו
+      מופעלת: ⭐ מסלול שמירה שני מתיישן ברגע שהראשון משתנה.
+   ⛔ ו-`textarea` אינו נכנס — ⚠️ `Enter` בו הוא שורה חדשה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+function ksFire(scope, attr) {
+  var b = scope.querySelector('[' + attr + ']');
+  if (!b || b.disabled) return false;
+  var act = b.getAttribute('data-act');
+  var fn = DOM_ACTIONS[act];
+  if (!fn) { console.error('[ks] כפתור ' + attr + ' בלי פעולה במפה: ' + act); return false; }
+  fn(b);
+  return true;
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== 'Escape') return;
+  var t = e.target;
+  if (!t || t.tagName !== 'INPUT' || !t.closest) return;
+  var scope = t.closest('.ksave');
+  if (!scope) return;
+  if (ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) e.preventDefault();
+});
+/* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
@@ -5175,7 +5204,7 @@ function openAddStudent(){
     +'<div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>'
     +'<div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
-          +'<button class="btn" data-act="student-add">הוסף</button>';
+          +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal('הוספת תלמיד', body, foot);
 }
 function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
