@@ -803,7 +803,7 @@ function lsUsage() {
       try { v = localStorage.getItem(k) || ''; } catch (e) { }
       var b = lsEntryBytes(k, v), a = lsAppOf(k);
       out.total += b;
-      out.keys.push({ key: k, bytes: b, app: a.id, appName: a.name });
+      out.keys.push({ key: k, bytes: b, app: a.id });
       if (!byApp[a.id]) byApp[a.id] = { id: a.id, name: a.name, bytes: 0, count: 0 };
       byApp[a.id].bytes += b; byApp[a.id].count++;
     }
@@ -1351,7 +1351,7 @@ function lsStatusHTML() {
   h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
   u.keys.slice(0, 12).forEach(function (k) {
     h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
-         '<span style="opacity:.6"> · ' + esc(k.appName) + '</span></td>' +
+         '<span style="opacity:.6"> · ' + esc(lsAppOf(k.key).name) + '</span></td>' +
          '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
   });
   if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';

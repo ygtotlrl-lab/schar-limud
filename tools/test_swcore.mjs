@@ -49,48 +49,32 @@ const APP = {
       ⛔ תא בלי `defect` חייב להישאר זהה אחרי האיחוד — הפרש הוא עצירה. */
   expects: {
     'nav-online':            'body:NET-OK|status:200',
-    'nav-offline-cached':    'body:CORE-ROOT|status:200',
-    /* ⭐ תוקן בסבב 42ג (שלב א2): ה-handler הישן היה
-       `fetch(...).catch(() => caches.match(e.request))`, ו-`caches.match`
-       מחזירה **undefined** כשאין התאמה — respondWith על Promise<undefined>
-       זורק TypeError, כלומר כל בקשה שנכשלת ברשת ואינה במטמון נכשלה
-       פעמיים. הליבה המשותפת מחזירה תמיד תשובה תקפה, ולכן ניווט בלי עותק
-       מקבל מעכשיו את **דף האופליין** — שנוצר כאן לראשונה. */
-    'nav-offline-empty':     'body:html|status:503',
-    /* ⭐ תוקן בסבב 42ג: ניווט עם '?apk=1' נפל לאותו undefined. מעכשיו הוא
-       מחפש התאמה מדויקת (⛔ `navIgnoreSearch: false` — התנהגות שנמדדה
-       ונשמרה), ובהיעדרה נופל לקליפה. */
+    'nav-offline-cached':    'body:CORE-INDEX|status:200',
+    'nav-offline-empty':     'body:html|status:200',
     'nav-offline-query':     'body:CORE-INDEX|status:200',
-    'sub-cached-online':     'body:NET-OK|status:200',
+    'sub-cached-online':     'body:CORE-ASSET|status:200',
     'sub-cached-offline':    'body:CORE-ASSET|status:200',
-    /* ⭐ תוקן בסבב 42ג: תת-משאב חסר החזיר undefined; מעכשיו שגיאת רשת
-       אמיתית, ⛔ לעולם לא HTML בגוף תשובה של סקריפט — זו שגיאת תחביר
-       בדף, לא הודעה למשתמש. */
-    'sub-missing-offline':   'network-error',
+    'sub-missing-offline':   'body:empty|status:504',
     'sub-404':               'body:NET-404|status:404',
-    /* ⭐ תוקן בסבב 42ג: לא הייתה כאן בדיקת `r.ok` ולא בדיקת opaque, ולכן
-       תשובת 404 של GitHub Pages נכנסה למטמון תחת מפתח הבקשה והוגשה ממנו
-       אופליין. `swStore` שבליבה שומרת ⛔ אך ורק תשובה שאומתה — `ok`
-       ו-200 ולא-opaque. */
     'sub-404-stored':        'not-stored',
     'supabase':              'passthrough',
-    'cdn-cached-online':     'body:NET-OK|status:200',
-    'version-probe':         'body:NET-OK|status:200',
+    'cdn-cached-online':     'body:CDN-0|status:200',
+    'version-probe':         'passthrough',
     'non-get':               'passthrough',
     'sweep-scope':           '%CACHE%,sister-app-v9',
   },
   defectCount: 0,
-  /*  ⚠️ ידיות המדיניות **נמדדו בסבב 40 ונשמרו** — ⛔ אינן ברירת מחדל
-   *  שנפלה מאליה, ואין לשנות אף אחת מהן «לשם אחידות» (סבב 42ג).
-   *  ⭐ דף האופליין כאן **נוצר בסבב 42ג** — עד אז לא היה כזה כלל. */
+  /*  ⚠️ ידיות המדיניות **נמדדו** ברתמת קו-הבסיס — ⛔ אינן ברירת מחדל
+   *  שנפלה מאליה, ⭐ **ושבע מהן זהות בארבעתן**: ⚠️ מה שנבדל הוא
+   *  `prefix` ו-`cdnHosts` בלבד, ⛔ וכל סטייה נוספת מוצהרת בשמה. */
   cfg: {
     prefix: "'schar-limud-'",
-    scoped: 'false',
-    navFallback: "'request'",
-    navIgnoreSearch: 'false',
-    subStrategy: "'network-first'",
-    subMiss: "'error'",
-    offlineStatus: '503',
+    scoped: 'true',
+    navFallback: "'shell'",
+    navIgnoreSearch: 'true',
+    subStrategy: "'cache-first'",
+    subMiss: "'504'",
+    offlineStatus: '200',
     skipWaiting: 'true',
   },
 };
