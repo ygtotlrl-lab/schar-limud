@@ -1,13 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** שמונה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** תשע טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
    ⛔ כל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/` ·
    ⛔ כל טבלה מקבילה בצורת המשפחה שלה · ⛔ כל עמודה חיה נקראת בקוד או
-   מוצהרת עם נימוקה · ⛔ וכל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה.
+   מוצהרת עם נימוקה · ⛔ כל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה ·
+   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -33,7 +34,7 @@ import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [138, 133, 134, 135, 150, 173, 174, 175];
+export const ROWS = [139, 134, 135, 136, 151, 174, 175, 176, 177];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -74,6 +75,13 @@ const APP = {
    *  את העמודה בסכימה, ⛔ גם באפליקציה שאינה כותבת אותה.
    *  ⛔ **וההצהרה עצמה נמדדת** — ⚠️ שם שאין לו מקרה חי **מפיל**, ⭐ בדיוק
    *  כמו כל רשימת חריגה. */
+  /*  ⛔ שדות שנשמרו ברשומה ונגזרים ממקור חי — ⚠️ **מה נכנס**: הטבלה,
+   *  השדה, המפתח שלצידו, והמקור פר-הקשר; ⛔ **ומה מפיל**: ערך שמור
+   *  שאינו מסכים עם המקור הנוכחי. ⭐ **ולמה המבנה קיים**: המקור משתנה
+   *  ⛔ והרשומה אינה.
+   *  ⛔ **והרשימה אינה נשמטת** — ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק
+   *  נקרא «נמדד ואין». */
+  derivedFields: [],
   colNoReader: {
     full_name:  'משפחת טבלאות המשתמשים — עמודה שאינה בשימוש כאן נשארת בסכימה',
   },
@@ -101,7 +109,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 10, app: 0, appWhy: '' };
+const FLOOR = { shared: 11, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -182,6 +190,9 @@ const KEY  = CONN ? CONN[2] : '';
 /*  ⛔ תקרת זמן לכל קריאה — ⚠️ שער שממתין לרשת בלי תקרה תולה את הסט:
  *  ⭐ הכשל הוא «לא נמדד» ⛔ ולא המתנה. */
 const TIMEOUT_MS = 8000;
+/*  ⛔ הקריאה בעימוד ⛔ ואינה נחתכת בתקרת השרת — ⚠️ מספר עגול של שורות
+ *  שחוזר בלי המשך הוא חיתוך, ⭐ והלולאה עוצרת רק על עמוד חלקי. */
+const DERIVED_PAGE = 1000;
 
 async function q(path, init) {
   const ac = new AbortController();
@@ -448,6 +459,74 @@ async function claimReplacedDefs() {
        (empty.length ? `, ${empty.length} טבלאות ריקות ולא נמדדו` : ''));
 }
 
+
+/*  ⛔ טענה ט — «ערך נגזר שהתיישן ברשומה»: ⚠️ שדה שנשמר ברשומה ונגזר
+ *  ממקור שהשתנה מתיישן בשקט, ⭐ **והמדידה היא מול המקור החי** — ⛔ ולא
+ *  מול הקוד. ⭐ **ומה שנשמר בכוונה מוצהר**: רשומה שמפתחה כבר אינו
+ *  במקור היא הנפילה-חזרה, ⛔ והיא נספרת ואינה מפילה.
+ *  ⛔ **והצד ההפוך נמדד בכל ריפו** — ⚠️ עמודה חיה ולצידה עמודה בשם
+ *  `<שם>_name` היא שם נגזר ששמור בטבלה: ⭐ ריפו בלי שדות נגזרים מוצהרים
+ *  עדיין נמדד כאן, ⛔ ואינו טענה שאינה יכולה להיכשל. */
+async function claimDerivedStale() {
+  const defs = APP.derivedFields || [];
+  const decl = new Set(defs.map((d) => d.field));
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  const pairs = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?select=*&limit=1`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) continue;
+    const cols = Object.keys(rows[0]);
+    for (const c of cols)
+      if (/_name$/.test(c) && cols.includes(c.replace(/_name$/, '')) && !decl.has(c))
+        pairs.push(`${t}.${c}`);
+  }
+  if (pairs.length)
+    bad(`ט. ערך נגזר שהתיישן — עמודות שם לצד המפתח שלהן ואינן מוצהרות: ${pairs.join(', ')}. ` +
+        'נמדדו ' + pairs.length + ' מול הצפוי 0. גורעים את העמודה במיגרציה, או מצהירים אותה ' +
+        'ב-`APP.derivedFields` עם מקורה');
+  if (!defs.length) {
+    if (!pairs.length)
+      ok(`ט. ערך נגזר שהתיישן — אפס שדות נגזרים מוצהרים, ו-${tabs.length} טבלאות נסרקו`);
+    return;
+  }
+  let seen = 0, kept = 0;
+  const stale = [];
+  for (const d of defs) {
+    for (const s of d.sources) {
+      const sr = await q(`/${s.table}?key=eq.${s.row}&select=value`);
+      if (sr.status !== 200) throw new Error(`${s.table} → ${sr.status} ${sr.text.slice(0, 120)}`);
+      const srow = JSON.parse(sr.text);
+      if (!srow.length) { stale.push(`${s.table}:${s.row} אינו במסד`); continue; }
+      const map = new Map();
+      for (const x of JSON.parse(srow[0].value)) map.set(x[d.by], x[d.as]);
+      for (let off = 0; ; off += DERIVED_PAGE) {
+        const r = await q(`/${d.entries}?${s.where}&${d.json}->>${d.field}=not.is.null` +
+                          `&select=${d.json}&order=${d.order}&limit=${DERIVED_PAGE}&offset=${off}`);
+        if (r.status !== 200) throw new Error(`${d.entries} → ${r.status} ${r.text.slice(0, 120)}`);
+        const rows = JSON.parse(r.text);
+        for (const row of rows) {
+          const rec = row[d.json] || {};
+          if (rec[d.field] == null) continue;
+          seen++;
+          if (!map.has(rec[d.key])) { kept++; continue; }
+          if (map.get(rec[d.key]) !== rec[d.field])
+            stale.push(`${rec[d.key]}: «${rec[d.field]}» מול «${map.get(rec[d.key])}»`);
+        }
+        if (rows.length < DERIVED_PAGE) break;
+      }
+    }
+  }
+  if (stale.length)
+    bad(`ט. ערך נגזר שהתיישן — ${[...new Set(stale)].slice(0, 6).join(' · ')}. ` +
+        `נמדדו ${stale.length} מול הצפוי 0. מתקנים במיגרציה מול המקור הנוכחי, ` +
+        '⛔ ובלי לקדם את `updated_at` — ⚠️ זה תיקון ולא עריכה');
+  else if (!pairs.length)
+    ok(`ט. ערך נגזר שהתיישן — ${seen} רשומות נמדדו מול המקור החי, אפס שגויות` +
+       (kept ? `, ${kept} שומרות מפתח שאינו במקור ומוצהרות` : ''));
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
@@ -468,6 +547,7 @@ if (!CONN && !SELFTEST) {
     await claimAllowlist();
     await claimColReaders();
     await claimReplacedDefs();
+    await claimDerivedStale();
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -491,6 +571,7 @@ if (RUN_MUT && !SELFTEST) {
   const cfgWant = [...new Set([...SRC.matchAll(
     new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
   const allowFirst = 'bk_key_in_the_stub_allowlist';
+  const DF = (APP.derivedFields || [])[0];
 
   /*  ⛔ התשובות נגזרות **מצורת הבקשה** ⛔ ולא משמות טבלה מוקלדים — ⚠️ ארבעת
    *  הריפו שולחים שמות אחרים, ⭐ ושרת ששומע שם אחד אינו רתמה לשלושה. */
@@ -526,6 +607,19 @@ if (RUN_MUT && !SELFTEST) {
       const row = {};
       cols.forEach((c) => { row[c] = 'x'; });
       return [200, JSON.stringify([row])];
+    }
+    /*  ⛔ שני מסלולי טענה ט — ⚠️ המקור החי חוזר כערך מפתח-ערך, ⭐ והרשומות
+     *  חוזרות כעמודת ה-jsonb: ⛔ והמוטציה משנה את **הערך השמור** ⛔ ולא
+     *  את המקור, ⚠️ שזו בדיוק ההתיישנות שהטענה מודדת. */
+    if (DF && /\?key=eq\.[^&]+&select=value$/.test(url)) {
+      const one = {}; one[DF.by] = 'K'; one[DF.as] = 'שם נוכחי';
+      return [200, JSON.stringify([{ value: JSON.stringify([one]) }])];
+    }
+    if (DF && url.indexOf(DF.field + '=not.is.null') >= 0) {
+      const rec = {}; rec[DF.key] = 'K';
+      rec[DF.field] = scen === 'derived' ? 'שם שהתיישן' : 'שם נוכחי';
+      const wrap = {}; wrap[DF.json] = rec;
+      return [200, JSON.stringify([wrap])];
     }
     if (APP.allowlistFn && url.includes('/rpc/' + APP.allowlistFn))
       return [200, JSON.stringify([allowFirst])];
@@ -608,6 +702,10 @@ if (RUN_MUT && !SELFTEST) {
     await mut('⛔ מוטציה: עמודה שהקוד נוקב בה ואינה בשורה מפילה את «הגדרה שהוחלפה»', 'staledef', false);
   else ok('⛔ אין מוטציית «הגדרה שהוחלפה» — ⚠️ אין כאן שליפה שנוקבת בעמודה בשמה, ⛔ ואין מה למוטט');
 
+  if (DF)
+    await mut('⛔ מוטציה: ערך שמור שאינו מסכים עם המקור מפיל את «ערך נגזר שהתיישן»', 'derived', false);
+  else ok('⛔ אין מוטציית «ערך נגזר שהתיישן» — ⚠️ אין כאן שדה נגזר מוצהר, ⛔ ואין מה למוטט');
+
   /*  ⭐ מוטציית-נגד אחרונה: ⛔ יעד שאינו נענה **אינו מפיל** — ⚠️ זו ההתנהגות
    *  שהבאנר מכריז, ⭐ ובלי מדידה שלה היא הצהרה בלבד. */
   srv.close();
@@ -620,5 +718,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שמונה הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — תשע הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);
