@@ -165,6 +165,15 @@ const APP = {
    *  מוצהר ריק** ⛔ ואינו נשמט: ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק «נמדד ואין».
    */
   mergePoints: [],
+  /*  ⛔ העידן של כל ערך מפתח-ערך שהמכשיר ממזג — ⚠️ **מה נכנס**: שם
+   *  המפתח בענן ושם מפתח העידן שלו, ⛔ **ומה מפיל**: ערך שממוזג ואין לו
+   *  עידן, ⛔ והצהרה שאין לה אתר. ⭐ **ולמה בכלל**: תיקון בקוד אינו מנקה
+   *  מכשיר שכבר מזוהם, ⚠️ והעידן הוא הכלי היחיד שמגיע אליו מהענן.
+   *  ⛔ **וכאן אין ערך מפתח-ערך שממוזג** — ⚠️ הנתונים יושבים בטבלאות
+   *  ובשכבת המראה, ⭐ ואין מפתח שנמשך בשמו ונמסר לקריאת מיזוג:
+   *  ⛔ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא
+   *  נשאל», ⭐ וריק נקרא «נמדד ואין». */
+  kvEpochs: {},
   /*  ⛔ הכתיבות לרשימת ערכים — ⚠️ כל אחת עוברת ב-`uniqHas` שבמודול
    *  המשותף לפני הכתיבה, ⭐ וההשוואה על **הערך** ⛔ ולא על מזהה. */
   listAdds: ['addListItem'],
@@ -3171,6 +3180,44 @@ function constSeedSites() {
   }
   return out;
 }
+/*  ⭐ ערך מפתח-ערך שהמכשיר ממזג — ⛔ מפתח שנמשך מהענן בשם קבוע
+ *  ותוצאתו נמסרת לקריאת מיזוג: ⚠️ **מה נכנס** — שם המשתנה שנטען
+ *  ממשיכה ושם המפתח שלו, ⛔ **ומה מפיל** — ערך כזה בלי עידן מוצהר,
+ *  ⛔ הצהרה שאין לה ערך ממוזג, ⛔ ועידן מוצהר שאין לו קורא בקוד.
+ *  ⛔ **והסריקה גולמית ובכוונה** — ⚠️ הנמדד **הוא** מחרוזת: שם המפתח
+ *  בענן, ⭐ וההלבנה מרוקנת בדיוק אותו. */
+function mergedKvKeys() {
+  const reads = new Map();
+  for (const m of src.matchAll(
+      /(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:pull|sbGet|sbGetResult)\s*\(\s*'([^']+)'/g)) {
+    reads.set(m[1], m[2]);
+  }
+  const w = memoByHash('seedSrc', src, () => whitenJs(src));
+  const out = new Set();
+  for (const m of w.matchAll(/(?<![\w$.])merge[A-Za-z]*\s*\(/g)) {
+    if (/function\s+$/.test(w.slice(Math.max(0, m.index - 12), m.index))) continue;
+    const args = balAt(w, m.index + m[0].length - 1);
+    if (args === null) continue;
+    for (const a of topArgs(args)) {
+      const id = /^\s*([A-Za-z_$][\w$]*)\s*$/.exec(a);
+      if (id && reads.has(id[1])) out.add(reads.get(id[1]));
+    }
+  }
+  return out;
+}
+function kvEpochGaps() {
+  const merged = mergedKvKeys();
+  const cfg = APP.kvEpochs || {};
+  const out = [];
+  for (const k of merged) {
+    if (!cfg[k]) out.push(`ערך מפתח-ערך שממוזג ואין לו עידן ב-APP.kvEpochs: ${k}`);
+  }
+  for (const [k, ep] of Object.entries(cfg)) {
+    if (!merged.has(k)) out.push(`APP.kvEpochs מצהיר עידן לערך שאינו ממוזג: ${k}`);
+    else if (!src.includes(`'${ep}'`)) out.push(`עידן מוצהר שאין לו קורא בקוד: ${ep}`);
+  }
+  return out;
+}
 /*  ⛔ מיזוג בצורת מפה (סבב 98) — ⚠️ הנמדד הוא **מפה שנבנית בגוף, נכתבת
  *  לפי מפתח ומוחזרת**, ⛔ ולא כל פונקציה ששמה «merge»: ⭐ העתקת שדות של
  *  הרשומה המנצחת קוראת `Object.keys` פעם אחת ואינה מאחדת שני צדדים,
@@ -4306,7 +4353,7 @@ const MATRIX = [
    *  השני קיבל אותם: ⛔ ניקוי נתוני האתר במכשיר לא עזר, ⚠️ שהמיזוג דחף
    *  אותם חזרה לענן תוך דקות. */
   { row: 148, name: 'ברירת מחדל אינה ממוזגת',
-    probe: () => constSeedSites().length === 0 },
+    probe: () => constSeedSites().length === 0 && kvEpochGaps().length === 0 },
   /*  ⛔ כיווץ הרשימה נמדד בשורה משלו (סבב 101) — ⚠️ «מיזוג מכל» הוא
    *  **מבנה** שקיים בשתיים מהארבע, ⭐ וכפילות ברשימה קיימת בארבעתן:
    *  ⛔ שתי טענות, שני היקפים, ⚠️ ושני probe. */
