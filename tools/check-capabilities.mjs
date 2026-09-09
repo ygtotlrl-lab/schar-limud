@@ -54,15 +54,6 @@ const APP = {
   /*  ⚠️ שער שרץ בתוך תהליך של שער אחר — ⛔ מאזין `exit` שלו היה נרשם
    *  עשרות פעמים, ⭐ ולכן הסגירה שלו בסוף `run` והיא מוצהרת כאן. */
   sealExempt: { 'check-capabilities': 'רץ בתוך תהליך של שער אחר, והסגירה בסוף `run` ולא במאזין' },
-  /*  ⛔ רצפת הטענות מפוצלת (סבב 118) — ⚠️ **מה נכנס**: המשותפת, שהיא
-   *  מספר זהה בארבעת הריפו, ⛔ והפרטית עם היכולת שמוסיפה אותה;
-   *  ⛔ **ומה מפיל**: משותפת שנבדלת בין הריפו, ⛔ פרטית בלי נימוק,
-   *  ⛔ וסכום שאינו מספר הטענות שרצו. ⭐ **ולמה שתיים**: מספר אחד
-   *  מסתיר טענה משותפת שאבדה — ⚠️ «הריצפה פיגרה, יושרה למדוד» מקבע
-   *  את המצב השבור. */
-  floorShared: 151,
-  floorApp: 9,
-  floorAppWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת',
   app: 'schar-limud',
   file: 'index.html',
   docs: 'CLAUDE.md',
@@ -1168,18 +1159,32 @@ let failures = 0;
  *  פעמים, ⛔ ולכן הסגירה כאן בסוף `run` ולא במאזין `exit`: ⭐ מאזין לכל
  *  ריצה היה נרשם עשרות פעמים, ⚠️ והספירה מתאפסת בכל ריצה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.floorShared + APP.floorApp;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+/* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
+const FLOOR = { shared: 151, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
+/* ⚠️ סוף פר-אפליקציה */
+const EXPECTED = FLOOR.shared + FLOOR.app;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
 })();
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
 const pass = (m) => (RAN++, console.log('✅ ' + m));
 
@@ -2049,16 +2054,50 @@ function gateSealGaps() {
   try { files = fs.readdirSync('tools').filter((f) => GATE_NAME.test(f)).sort(); }
   catch (e) { return ['tools/: ' + e.message]; }
   if (!files.length) return ['tools/: אין קובצי שער'];
+  /*  ⛔ הסמנים נבנים מחלקיהם ⛔ ואינם ליטרלים שלמים — ⚠️ אחרת גוף הבודק
+   *  עצמו נראה כשער בלי `mutStage` ובלי תקרה, ⭐ והשער מודד את עצמו. */
+  /*  ⛔ הסוגריים המסולסלים בתבנית מאוזנים — ⚠️ מפת גופי הפונקציות סופרת
+   *  אותם גם בתוך תבנית, ⭐ ו-`\{` בלי `\}` היה מותח את גוף הפונקציה עד
+   *  לשכנתה: ⛔ והסיווג יצא «mixed» לבדיקה שקוראת `tools/` בלבד. */
+  const FLOOR_RE = /^const FLOOR = \{ shared: (\d+), app: (\d+), appWhy: '((?:[^'\\]|\\.)*)' \};$/m;
+  const MUT_DECL = 'const RUN_' + 'MUT = ';
+  const MUT_MARK = 'mut' + 'Stage();';
+  const CEIL_SUSP = new RegExp('N > FLOOR_MAX[^\\n]*GATE_' + 'MUT');
   const out = [];
+  const floors = {};
   for (const f of files) {
     const txt = whitenJs(readOnce('tools/' + f));
     const name = f.replace(/\.mjs$/, '');
-    if (!/const EXPECTED = (?:APP\.expected|APP\.floorShared \+ APP\.floorApp|\d+);/.test(txt))
-      out.push(f + ': אין הצהרת `EXPECTED` — נמדד 0 הצהרות מול 1 נדרשת');
+    /*  ⛔ ההצהרה בצורה אחת (סבב 119) — ⚠️ שתי צורות הן סריקה שמפספסת:
+     *  ⭐ סורק שחיפש `expected:` לא ראה `EXPECTED = 0`, ⛔ ותשעה שערים
+     *  נשארו בלי ריצפה בשני הכיוונים. */
+    if (!/^const EXPECTED = FLOOR\.shared \+ FLOOR\.app;$/m.test(txt))
+      out.push(f + ': אין הצהרת `EXPECTED` בצורה האחת — נמדד 0 הצהרות מול 1 נדרשת');
+    if (/^\s*expected: \d+,$/m.test(txt) || /^const EXPECTED = \d+;$/m.test(txt))
+      out.push(f + ': הצהרת ריצפה בצורה שנייה — מאחדים ל-`FLOOR`');
+    /*  ⛔ נקרא גולמי — ⚠️ הנימוק הוא מחרוזת, ⭐ וההלבנה הייתה מוחקת אותו. */
+    const fm = FLOOR_RE.exec(readOnce('tools/' + f));
+    if (!fm) out.push(f + ': אין `FLOOR` בצורה המוצהרת — shared · app · appWhy');
+    else {
+      const sh = Number(fm[1]), ap = Number(fm[2]), wh = fm[3].trim();
+      floors[f] = sh;
+      /*  ⛔ ריצפה 0 אינה ריצפה — ⚠️ `N < 0` בלתי אפשרי, ⭐ ו-`N > 0` היה
+       *  מושהה בדיוק היכן שהשער רץ. */
+      if (sh + ap === 0) out.push(f + ': ריצפה 0 — שער שמצהיר אפס אינו נמדד באף כיוון');
+      if (ap > 0 && wh.split(/\s+/).filter(Boolean).length < 4)
+        out.push(f + ': ריצפה פרטית בלי נימוק');
+      if (ap === 0 && wh) out.push(f + ': נימוק לריצפה פרטית שאינה קיימת');
+    }
+    /*  ⛔ שלב המוטציות מסומן — ⚠️ בלי `mutStage` התקרה מושהית על הרמה
+     *  המלאה כולה, ⭐ ושער שכל גופו מוטציות אינו נמדד באף כיוון. */
+    if (txt.includes(MUT_DECL) && !txt.includes(MUT_MARK))
+      out.push(f + ': שלב מוטציות בלי `mutStage()`');
+    if (CEIL_SUSP.test(txt))
+      out.push(f + ': התקרה מושהית על הרמה המלאה — ההשהיה היא על שלב המוטציות בלבד');
     if (!/let RAN = 0;/.test(txt)) out.push(f + ': אין מונה `RAN`');
     if (!/RAN\s*(?:\+\+|\+=)/.test(txt)) out.push(f + ': המונה מוצהר ואינו מקודם');
-    if (!/RAN < EXPECTED/.test(txt)) out.push(f + ': אין השוואה בין שרץ למוצהר');
-    if (!/RAN > FLOOR_MAX/.test(txt))
+    if (!/N < EXPECTED/.test(txt)) out.push(f + ': אין השוואה בין שרץ למוצהר');
+    if (!/N > FLOOR_MAX/.test(txt))
       out.push(f + ': אין השוואה לתקרה — נמדד כיוון אחד מול שניים נדרשים');
     const sealed = /process\.on\(/.test(txt);
     const why = exempt[name];
@@ -2113,24 +2152,29 @@ function gateSealGaps() {
    *  ריפו אינו עדות לזהות בין הארבעה: ⭐ סבב שאיבד טענה משותפת באחת
    *  ויישר שם את הריצפה מקבע את האובדן. ⛔ וריפו אחות שאינה על הדיסק
    *  נאמרת ⛔ ואינה מדולגת בשתיקה. */
-  const peerFile = (p) => `../${p}/tools/check-capabilities.mjs`;
+  const peerDir = (p) => `../${p}/tools`;
   const others = FLOOR_PEERS.filter((p) => p !== APP.app);
-  const near = others.filter((p) => fs.existsSync(peerFile(p)));
+  const near = others.filter((p) => fs.existsSync(peerDir(p)));
   /*  ⛔ אפס אחיות אינו «אחות חסרה» — ⚠️ הוא עותק בודד של הריפו: ⭐ השערים
    *  מריצים את הבודק על עותק זמני, ⛔ ושם אין ולא אמורות להיות אחיות.
    *  ⚠️ ודרישת הארבעה על הדיסק כבר נאכפת בשער הבלוקים המשותפים, ⛔ ולכן
    *  אין כאן דילוג שקט: ⭐ **חלקן** על הדיסק הוא המקרה המסוכן, והוא נאמר. */
   for (const peer of (near.length ? others : [])) {
-    if (!fs.existsSync(peerFile(peer))) {
+    if (!fs.existsSync(peerDir(peer))) {
       out.push(peer + ': ריפו אחות אינה על הדיסק — הריצפה המשותפת לא הושוותה'); continue;
     }
-    const m = /floorShared:\s*(\d+)/.exec(fs.readFileSync(peerFile(peer), 'utf8'));
-    if (!m) { out.push(peer + ': אין `floorShared` בריפו האחות'); continue; }
-    if (Number(m[1]) !== APP.floorShared)
-      out.push(peer + `: ריצפה משותפת ${m[1]} מול ${APP.floorShared} כאן — טענה משותפת אבדה באחת מהן`);
+    for (const f of Object.keys(floors)) {
+      /*  ⛔ שער שאינו בריפו האחות אינו מושווה — ⚠️ הוא פרטי, ⭐ וכל ריצפתו
+       *  ב-`app` עם נימוקה. */
+      const pf = `${peerDir(peer)}/${f}`;
+      if (!fs.existsSync(pf)) continue;
+      const m = FLOOR_RE.exec(fs.readFileSync(pf, 'utf8'));
+      if (!m) { out.push(`${peer}/${f}: אין \`FLOOR\` בריפו האחות`); continue; }
+      if (Number(m[1]) !== floors[f])
+        out.push(`${peer}/${f}: ריצפה משותפת ${m[1]} מול ${floors[f]} כאן — ` +
+          'טענה משותפת אבדה באחת מהן');
+    }
   }
-  if (!(APP.floorAppWhy || '').trim().split(/\s+/).filter(Boolean).length)
-    out.push('floorApp: ריצפה פרטית בלי נימוק');
   return out;
 }
 
@@ -5318,14 +5362,15 @@ console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכש�
 _OVER = null;
 /*  ⛔ הסגירה על ריצה נקייה בלבד — ⚠️ ריצה מסוננת מריצה את מי שהקלט שלו
  *  השתנה, ⭐ והרצפה נמדדה על הריצה המלאה. */
-if (_CLEAN_RUN) console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-if (_CLEAN_RUN && RAN < EXPECTED) {
-  console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+const N = PRE_MUT || RAN;
+if (_CLEAN_RUN) console.log(`רצו ${N} מתוך ${EXPECTED}`);
+if (_CLEAN_RUN && N < EXPECTED) {
+  console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
     'מה עושים: ודא שכל סעיף בבודק רץ, ⛔ ושאין יציאה מוקדמת מ-`run`.');
   failures++;
-} else if (_CLEAN_RUN && RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-  console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-    'עדכן את `EXPECTED`.');
+} else if (_CLEAN_RUN && N > FLOOR_MAX) {
+  console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+    'עדכן את `FLOOR`.');
   failures++;
 }
 return failures;
