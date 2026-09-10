@@ -244,16 +244,11 @@ body.locked{overflow:hidden}
 }
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
-   הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים יורשים צבע
+   הגדרות: בלוק "☁️ סנכרון", ואחריו שורות המצב הנוספות. הכללים יורשים צבע
    וגופן, ⛔ ואינם נשענים על אסימוני הגוון של אף אפליקציה — הם נבדלים
    ביניהן. ⚠️ **החריג היחיד הוא `--stale-ink`** (סבב 113): ⭐ הוא מוגדר
    בשם אחד בארבעתן, בערכה הבהירה ובכהה, ⛔ ולכן כלל שנשען עליו נשאר
    זהה בית-לבית. */
-.tech-info{margin-top:22px;font-size:12px;opacity:.7}
-.tech-info>summary{cursor:pointer;list-style:none;display:inline-block;padding:4px 2px}
-.tech-info>summary::-webkit-details-marker{display:none}
-.tech-info[open]{opacity:1}
-.tech-info .ls-status button{display:none!important}
 .sync-box{margin-top:22px;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.02)}
 .sync-box-ttl{font-weight:800;font-size:14px;margin-bottom:6px}
 .sync-line{font-size:13px;line-height:1.8;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08)}
@@ -514,7 +509,7 @@ body.locked{overflow:hidden}
         </div>
         <!-- אזור מצב (סבב 17) — שני האלמנטים האחרונים במסך, בסדר הזה -->
         <div id="sync-status-box"></div>
-        <div id="tech-info-box"></div>
+        <div id="status-extra-box"></div>
       </div>
     </div>
   </div>
@@ -730,7 +725,11 @@ var MIRROR_CFG = {
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין ארבע האפליקציות; המודול שמתחתיה זהה בכולן.
 var LS_CFG = {
-  app: 'schar',
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+   *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
+   *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
+   *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
+  cachePrefix: 'schar-limud-',
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
   /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
@@ -797,10 +796,10 @@ var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
 var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
 
 // נוסח אחיד בארבע האפליקציות. סמלים: ✅ הצלחה / ⚠️ אזהרה / ❌ שגיאה, בתחילה.
-var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. פנו מקום בהגדרות ← אחסון מקומי.';
+var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו והמקום יתפנה.';
 var MSG_LS_BLOCK  = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
-var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — כדאי לפנות מקום בהגדרות';
-var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — פנו מקום בהגדרות מיד';
+var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — התחברו לרשת, והמקום יתפנה מעצמו';
+var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — התחברו לרשת כדי שהמקום יתפנה';
 var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
 
 // כל האפליקציות שחולקות את ה-origin. הקידומת היא מה שמזהה מי תופס מה.
@@ -1335,7 +1334,6 @@ function lsBootDeferred() {
     var u = lsUsage();
     if (freed > 0) lsLog('פינוי נדחה הסתיים', lsFmtBytes(freed) + ' · נותרו ' + Math.round(u.pct * 100) + '%', freed);
     lsBootAlert(u);
-    try { lsRenderStatus(); } catch (e) { }
     return { usage: u, freed: freed };
   }
   return p.then(finish, function () { return finish(0); });
@@ -1370,103 +1368,24 @@ function lsBootAlert(u) {
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
-/* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
-function lsStatusHTML() {
-  var u = lsUsage();
-  var pct = Math.min(100, Math.round(u.pct * 100));
-  var col = u.total >= LS_CRIT_BYTES ? '#b3261e' : (u.total >= LS_WARN_BYTES ? '#b26a00' : '#2e7d32');
-  var h = '<div class="ls-status" dir="rtl" style="font-size:13px;line-height:1.7">';
-  h += '<div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:4px">' +
-       '<span>נפח כולל בדומיין</span><span style="color:' + col + '">' + esc(lsFmtBytes(u.total)) +
-       ' / ' + esc(lsFmtBytes(u.quota)) + ' (' + pct + '%)</span></div>';
-  h += '<div style="background:rgba(128,128,128,.25);border-radius:6px;height:9px;overflow:hidden;margin-bottom:8px">' +
-       '<div style="width:' + pct + '%;height:100%;background:' + col + '"></div></div>';
-  h += '<div style="margin-bottom:8px">נשאר: <b>' + esc(lsFmtBytes(u.free)) + '</b></div>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי אפליקציה</div><table style="width:100%;border-collapse:collapse">';
-  u.apps.forEach(function (a) {
-    h += '<tr><td style="padding:2px 0">' + esc(a.name) + (a.id === LS_CFG.app ? ' <b>(זו)</b>' : '') +
-         '</td><td style="text-align:left;padding:2px 0">' + esc(lsFmtBytes(a.bytes)) +
-         ' <span style="opacity:.6">· ' + a.count + ' מפתחות</span></td></tr>';
-  });
-  if (!u.apps.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
-  u.keys.slice(0, 12).forEach(function (k) {
-    h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
-         '<span style="opacity:.6"> · ' + esc(lsAppOf(k.key).name) + '</span></td>' +
-         '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
-  });
-  if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  var hz = lsHorizonKeys();
-  if (hz.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(178,106,0,.12);color:#b26a00">' +
-         '⚠️ פונו רשומות ישנות מ-' + hz.length + ' מפתחות מחוסר מקום. הן שמורות בענן ויחזרו לתצוגה כשיש רשת.</div>';
-  }
-
-  var vs = lsVerifySpecs();
-  if (vs.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(21,101,192,.12);color:#1565c0">' +
-         '☁️ במכשיר הזה אין עדות דחיפה מקומית עבור: ' +
-         esc(vs.map(function (s) { return s.label || s.key; }).join(', ')) +
-         '. פינוי שלהם נעשה רק אחרי אימות ישיר מול הענן — רשומה שאינה שם לא נמחקת.</div>';
-  }
-
-  var log = lsLogRead();
-  h += '<div style="font-weight:800;margin:10px 0 4px">יומן פינוי</div>';
-  if (!log.length) h += '<div style="opacity:.6">— טרם בוצע פינוי —</div>';
-  else {
-    h += '<div style="font-size:12px;opacity:.85">';
-    for (var i = log.length - 1; i >= 0; i--) {
-      var d = new Date(log[i].t);
-      h += '<div>' + esc(d.toLocaleDateString('he-IL')) + ' ' + esc(d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })) +
-           ' — ' + esc(log[i].a) + (log[i].d ? ' · ' + esc(log[i].d) : '') +
-           (log[i].b ? ' · ' + esc(lsFmtBytes(log[i].b)) : '') + '</div>';
-    }
-    h += '</div>';
-  }
-
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-       '<button type="button" data-act="ls-sweep-now">🧹 פנה מקום עכשיו</button>' +
-       '<button type="button" data-act="ls-refresh-status">↻ רענן</button>';
-  if (hz.length) h += '<button type="button" data-act="ls-restore-all">☁️ טען הכל מחדש מהענן</button>';
-  h += '</div></div>';
-  return h;
-}
-function lsRenderStatus() {
-  var el = document.getElementById('ls-status-box');
-  if (el) el.innerHTML = lsStatusHTML();
-}
-function lsRefreshStatus() { lsRenderStatus(); }
-// מחזירה Promise — הפינוי הידני עובר גם במסלול הסינכרוני וגם באימות מול
-// הענן, ולכן ההודעה למשתמש מחכה לשניהם.
-function lsSweepNow() {
-  var freed = lsSweepGuarded('פינוי ידני מההגדרות', 0);
-  lsRenderStatus();
-  var p = lsHasVerifiers() ? lsSweepVerified('פינוי ידני מההגדרות — אימות מול הענן', 0) : Promise.resolve(0);
-  function finish(extra) {
-    freed += Number(extra) || 0;
-    lsRenderStatus();
-    /*  ⛔ שתי הודעות ולא אחת — ⚠️ הסיווג נגזר מהמסלול: ⭐ פינוי שהצליח
-     *  הוא הודעה נייטרלית, ⛔ ו«אין מה לפנות» היא אזהרה. */
-    try {
-      if (freed > 0) lsToast('✅ פונו ' + lsFmtBytes(freed), 4000);
-      else lsToast('⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000, 'bad');
-    } catch (e) { }
-    return freed;
-  }
-  return p.then(finish, function () { return finish(0); });
+/* ── שורת האזהרה בהגדרות ───────────────────────────────────────────────── */
+/*  ⛔ שורה אחת, ורק מעל הסף הקריטי — ⚠️ **מה נכנס**: הנפח שנמדד והמכסה,
+ *  ⛔ **ומה מפיל**: פירוט פר-מפתח וכפתור פינוי — ⭐ הראשון הוא תוכן
+ *  למפתח, ⚠️ והשני מסתיר שהפינוי אוטומטי: ⛔ מה שבידי המשתמש הוא לחבר
+ *  רשת, ⭐ שרשומה שעלתה לענן היא רשומה שהפינוי רשאי לגרוע. */
+function lsCritLineHTML() {
+  try {
+    var u = lsUsage();
+    if (u.total < LS_CRIT_BYTES) return '';
+    return '<div class="ls-crit-line">' + esc(MSG_LS_CRIT) + ' (' +
+           esc(lsFmtBytes(u.total)) + ' מתוך ' + esc(lsFmtBytes(u.quota)) + ')</div>';
+  } catch (e) { return ''; }
 }
 function lsRestoreAll() {
   lsClearHorizons();
-  lsRenderStatus();
   try { lsToast('✅ האופק נוקה — הנתונים הישנים יחזרו בסנכרון הבא', 4000); } catch (e) { }
 }
-window.lsSweepNow = lsSweepNow;
-window.lsRefreshStatus = lsRefreshStatus;
+window.lsCritLineHTML = lsCritLineHTML;
 window.lsRestoreAll = lsRestoreAll;
 window.lsSet = lsSet;
 window.lsGet = lsGet;
@@ -1553,57 +1472,51 @@ function sbWatch(c) {
   return c;
 }
 /* ═══════════════ סוף מודול האזנת הסכימה ════════════════════════════════ */
-
-/* ═══ מידע טכני — מודול משותף (סבב 91) ════════════════════════════════════
-   המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
-   בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
-   הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
-   המנגנון האוטומטי (lsBoot/lsSweep) הוא הדרך היחידה לפינוי.
-   חריג יחיד ומכוון: מעל LS_CRIT_BYTES מוצגת שורת מצב עדינה גם מחוץ
-   לרכיב — רשת הביטחון היחידה שמוצגת ביוזמת המערכת.
-
-   ⚠️ סבב 17: מצב הפתיחה נשמר ב-`_techInfoOpen` (זיכרון בלבד) ולא רק
-   ב-DOM. בגיוס מסך ההגדרות נבנה מחדש בכל `render()`, ולכן העוגן חוזר
-   ריק, ה-`details` הקודם כבר לא קיים — והרכיב היה נסגר בכל שמירה ובכל
-   ציור מושהה של ⏳. המצב חי בזיכרון בלבד בכוונה: זו העדפת תצוגה של
-   הרגע, לא נתון שראוי לצרוך ממנו מכסת אחסון. */
-var _techInfoOpen = false;
-function techInfoHTML() {
-  var crit = '';
-  try {
-    var u = lsUsage();
-    if (u.total >= LS_CRIT_BYTES) {
-      crit = '<div class="ls-crit-line">⚠️ האחסון המקומי כמעט מלא (' + esc(lsFmtBytes(u.total)) +
-             ' מתוך ' + esc(lsFmtBytes(u.quota)) + ') — פרטים ב"מידע טכני"</div>';
-    }
-  } catch (e) { }
-  return crit +
-    '<details class="tech-info" ontoggle="window.techInfoToggle&&window.techInfoToggle(this)">' +
-    '<summary>מידע טכני &rsaquo;</summary>' +
-    '<div id="ls-status-box"></div>' +
-    '</details>';
-}
-function techInfoToggle(el) {
-  if (!el) return;
-  _techInfoOpen = !!el.open;
-  if (el.open) { try { lsRenderStatus(); } catch (e) { } }
-}
-function techInfoMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var prev = box.querySelector('details.tech-info');
-  if (prev) _techInfoOpen = !!prev.open;
-  box.innerHTML = techInfoHTML();
-  // פתיחה מחדש מפעילה `ontoggle` (גם כשהיא תכנותית), וזה מה שמרנדר את
-  // הפירוט — אין צורך לקרוא כאן ל-lsRenderStatus ואין טעם לרנדר פעמיים.
-  if (_techInfoOpen) {
-    var d = box.querySelector('details.tech-info');
-    if (d) d.open = true;
+/* ═══ כפתור עסוק והשומר שבניתוב — מודול משותף (סבב 135) ══════════════════
+   ⛔ **כפתור שמפעיל מסלול שממתין לרשת מושבת עד שהמסלול הסתיים** —
+   ⚠️ וההשבתה יושבת בנקודת הניתוב האחת ⛔ ולא באתר הקריאה: ⭐ מטפל
+   שמחזיר הבטחה מסמן «יש כאן המתנה», ⛔ ואין מה להצהיר בכל אתר בנפרד.
+   ⚠️ הנימוק המדוד: שני מימושים חיו זה לצד זה — ⭐ אחד עם תווית ואחד
+   עם ספינר, ⛔ ובשתיים לא היה אף אחד: לחיצה שנייה על «שמור» בזמן
+   שהראשונה באוויר שלחה בקשה שנייה, ⚠️ ובכתיבת משתמש היא יוצרת שורה
+   כפולה או דורסת עדכון שטרם חזר.
+   ⛔ **ומטפל סינכרוני אינו נכנס** — ⚠️ הוא נגמר לפני שהלחיצה השנייה
+   יכולה לנחות, ⭐ ואין «בזמן» שאפשר להשבית בו. */
+/*  ⛔ התווית היא פרמטר עם ברירת מחדל ⛔ ולא מחרוזת קבועה — ⚠️ יש פעולות
+ *  רשת שאינן שמירה, ⭐ ו«שומר…» עליהן מתאר למשתמש פעולה שאינה מתרחשת. */
+function busy(btn, on, label) {
+  if (!btn) return;
+  if (on) {
+    if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
+    btn.disabled = true; btn.style.opacity = '.6'; btn.style.cursor = 'wait';
+    btn.innerHTML = label || '⏳ שומר…';
+  } else {
+    btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
+    if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
   }
 }
-window.techInfoToggle = techInfoToggle;
-window.techInfoMount = techInfoMount;
-/* ═══════════════ סוף מודול מידע טכני ═══════════════════════════════════ */
+/*  ⛔ הדגל נדרש גם לאלמנט שאינו כפתור — ⚠️ `disabled` אינו קיים על `div`
+ *  או על שורת טבלה, ⭐ ולחיצה שנייה עליהם הייתה נכנסת. */
+function actRun(el, fn) {
+  if (el._actBusy) return;
+  var out;
+  try { out = fn(el); }
+  catch (e) { console.error('[act] ' + el.getAttribute('data-act'), e); return; }
+  if (!out || typeof out.then !== 'function') return;
+  el._actBusy = true;
+  var isBtn = el.tagName === 'BUTTON';
+  if (isBtn) busy(el, true, '⏳ שומר…');
+  out.then(function () { }, function (e) {
+    console.error('[act] ' + el.getAttribute('data-act'), e);
+  }).then(function () {
+    el._actBusy = false;
+    if (isBtn) busy(el, false);
+  });
+}
+window.busy = busy;
+window.actRun = actRun;
+/* ═══════════════ סוף מודול כפתור עסוק ═══════════════════════════════════ */
+
 /* ── SYNC_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var SYNC_CFG = {
   // `_slLastPullOk` נכתב רק כשכל ארבע הקטגוריות נמשכו בהצלחה — ר' syncAll.
@@ -1637,7 +1550,7 @@ function swBanner() { return document.getElementById('updater'); }
 function swVer() {
   if (typeof caches === 'undefined') return Promise.resolve('');
   return caches.keys().then(function (ks) {
-    return ks.filter(function (n) { return n.indexOf(LS_CFG.app) === 0; }).sort().join('|');
+    return ks.filter(function (n) { return n.indexOf(LS_CFG.cachePrefix) === 0; }).sort().join('|');
   }).catch(function () { return ''; });
 }
 function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); }
@@ -1662,7 +1575,7 @@ function swHideUpdate() {
  *  חוזר, והלחיצה הבאה חוזרת עליו. */
 function swApply(btn) {
   _swAccepted = true;
-  if (btn) { btn.disabled = true; btn.textContent = 'מעדכן…'; }
+  busy(btn, true, 'מעדכן…');
   if (!(_swReg && _swReg.waiting)) { swApplyFail(btn); return; }
   _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   _swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);
@@ -1672,7 +1585,7 @@ function swApply(btn) {
 function swApplyFail(btn) {
   _swWait = 0;
   if (_swReloaded) return;
-  if (btn) { btn.disabled = false; btn.textContent = 'עדכן עכשיו'; }
+  busy(btn, false);
   swBannerHide();
   toast('⚠️ העדכון לא הושלם — נסה שוב', 6000, 'bad');
 }
@@ -1729,7 +1642,9 @@ function syncLineHTML() {
     (_syncNowBusy ? 'מסנכרן…' : '🔄 סנכרן עכשיו') + '</button></div>' +
     '</div>';
 }
-function syncStatusHTML() { return pendStatusHTML() + syncLineHTML(); }
+/*  ⛔ שורת האזהרה נכנסת כאן ⛔ ולא ברכיב משלה — ⚠️ היא מוצגת מעל הסף
+ *  הקריטי בלבד, ⭐ ומקומה בבלוק שהמשתמש כבר פותח כדי לראות מצב. */
+function syncStatusHTML() { return pendStatusHTML() + syncLineHTML() + lsCritLineHTML(); }
 function syncStatusMount() {
   var box = document.getElementById('sync-status-box');
   if (!box) return;
@@ -1745,11 +1660,10 @@ function syncNowFromStatus() {
   Promise.resolve(p)['catch'](function () { })
     .then(function () { _syncNowBusy = false; syncStatusMount(); });
 }
-// נקודת החיווט היחידה של אזור המצב. כל מסך הגדרות קורא לה, והיא מרכיבה
-// את שני האלמנטים בסדר המחייב. בדיקת האחידות דורשת שתהיה לה קריאה חיה.
+// נקודת החיווט היחידה של אזור המצב. כל מסך הגדרות קורא לה, והיא מציירת
+// את בלוק הסנכרון. בדיקת האחידות דורשת שתהיה לה קריאה חיה.
 function statusAreaMount() {
   syncStatusMount();
-  techInfoMount();
 }
 window.syncStatusMount = syncStatusMount;
 window.syncNowFromStatus = syncNowFromStatus;
@@ -1776,14 +1690,16 @@ var BK_CFG = {
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   /*  ⛔ עמודת סדר לכל מקור (סבב 87ג) — ⚠️ שליפה בעמודים חייבת סדר יציב:
    *  ⭐ בלי `ORDER BY` פוסטגרס אינו מבטיח אותו, ⛔ ועמוד שני שמסודר אחרת
-   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⚠️ ל-`sl_settings` אין `id`,
-   *  ⛔ והמפתח שלה הוא `key`. */
+   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⛔ **ואין כאן `id`** — ⚠️ המפתח
+   *  שנוצר במכשיר הוא `client_id`, ⭐ ו-`sl_settings` ממופתחת ב-`key`:
+   *  ⛔ `order` על עמודה שאינה בסכימה מחזיר `42703`, ⚠️ והוא נקרא
+   *  «סכימה מיושנת» ומציג באנר עדכון שאינו קשור לגרסה. */
   sources: function () {
     return [
-      { kind: 'table', name: 'sl_students',     order: 'id',  ts: 'updated_at' },
-      { kind: 'table', name: 'sl_transactions', order: 'id',  ts: 'updated_at' },
-      { kind: 'table', name: 'sl_settings',     order: 'key', ts: 'updated_at' },
-      { kind: 'table', name: 'sl_lists',        order: 'id',  ts: 'updated_at' }
+      { kind: 'table', name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_settings',     order: 'key',       ts: 'updated_at' },
+      { kind: 'table', name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
     ];
   }
 };
@@ -1795,7 +1711,7 @@ var BK_CFG = {
 var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
 var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
-var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
+var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה בשורות המצב
 var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
 
@@ -2081,10 +1997,10 @@ async function _bkRetention(c, keys) {
   return n;
 }
 
-/* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */
-// ⛔ הרכיב נתלה **אחרי** הבלוק הקפוא ואינו עורך אותו (סבב 30) — «מידע
-//    טכני» חתום ב-`check-status-area.mjs`, ועריכתו הייתה מחייבת שינוי
-//    בארבעת הריפו ובחתימות עבור שורת תצוגה אחת.
+/* ── תצוגה: «גובה לאחרונה» בשורות המצב הנוספות ────────────────────────── */
+// ⛔ הרכיב נתלה בעוגן שמחוץ לבלוק הקפוא ואינו עורך אותו (סבב 30) — בלוק
+//    «☁️ סנכרון» חתום ב-`check-status-area.mjs`, ⚠️ והוא כותב `innerHTML`
+//    בכל ציור: ⭐ עוגן נפרד הוא מה ששומר את השורה בחיים אחרי «סנכרן עכשיו».
 function bkLastAt() {
   var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
   return isFinite(v) ? v : 0;
@@ -2107,9 +2023,7 @@ function bkStatusHTML() {
     '</div>';
 }
 function bkStatusMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
+  var d = document.getElementById('status-extra-box');
   if (!d) return;
   var prev = d.querySelector('.bk-line');
   if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
@@ -3234,8 +3148,8 @@ async function hwPastLoad(key, filter) {
 }
 
 /* ── כפתור השחזור — נגישות ל-`lsRestoreAll` ────────────────────────────── */
-// ⛔ הרכיב נתלה אחרי הבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה טכניקה
-//    של `bkStatusMount`: «מידע טכני» חתום ב-`check-status-area.mjs`,
+// ⛔ הרכיב נתלה בעוגן שמחוץ לבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה
+//    טכניקה של `bkStatusMount`: בלוק «☁️ סנכרון» חתום ב-`check-status-area.mjs`,
 //    והכפתור מצטרף אליו מבחוץ.
 var _hwRestoreArmed = 0;
 function hwRestoreHTML() {
@@ -3248,9 +3162,7 @@ function hwRestoreMount() {
     if (!(typeof HW_CFG !== 'undefined' && HW_CFG &&
           typeof HW_CFG.admin === 'function' && HW_CFG.admin())) return;
   } catch (e) { return; }
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
+  var d = document.getElementById('status-extra-box');
   if (!d) return;
   var prev = d.querySelector('.hw-restore-line');
   if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
@@ -4719,7 +4631,12 @@ var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'
  *  יציב, ⛔ ובלי `ORDER BY` פוסטגרס אינו מבטיח אותו: ⭐ עמוד שני שמסודר
  *  אחרת מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⛔ ו-`sl_settings` ממוינת
  *  ב-`key` ⛔ ולא ב-`id` — ⚠️ אין לה עמודה כזו. */
-var SYNC_TABLES=[['sl_students','id'],['sl_transactions','id'],['sl_settings','key'],['sl_lists','id']];
+/*  ⛔ עמודת המיון של כל טבלה — ⚠️ **מה נכנס**: שם הטבלה ושם עמודה
+ *  שקיימת בה בפועל, ⛔ **ומה מפיל**: עמודה שאינה בסכימה — ⚠️ `order`
+ *  עליה מחזיר `42703`, ⭐ והוא נקרא «סכימה מיושנת» ומציג באנר עדכון
+ *  שאינו קשור לגרסה. ⛔ **ואין כאן `id`** — ⚠️ המפתח שנוצר במכשיר
+ *  הוא `client_id`, ⭐ ו-`sl_settings` ממופתחת ב-`key`. */
+var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],['sl_settings','key'],['sl_lists','client_id']];
 /*  ⛔ הסנכרון מושך **מלא** ⛔ ואין לו חלון — ⚠️ מנוע ההכרעה חייב את כל
  *  הרשומות: ⭐ רשומה שלא נמשכה נקראת «אין אצלי», ⛔ והמיזוג מבין «נמחקה».
  *  ⚠️ מה שכן נוסף כאן הוא **העימוד** — ⛔ עד כאן `select('*')` הביא את
@@ -5163,12 +5080,9 @@ var DOM_ACTIONS = {
   'txn-save':                function () { saveTxn(); },
   'tuition-save':            function () { saveDefaultTuition(); },
   'my-pass':                 function () { slMyPassword(); },
-  'my-pass-save':            function () { slSaveMyPassword(); },
-  'login':                   function () { doLogin(); },
+  'my-pass-save':            function () { return slSaveMyPassword(); },
+  'login':                   function () { return doLogin(); },
   'logout':                  function () { doLogout(); },
-  'ls-sweep-now':      function () { lsSweepNow(); },
-  'ls-refresh-status': function () { lsRefreshStatus(); },
-  'ls-restore-all':    function () { lsRestoreAll(); },
   'sync-now-status':   function () { syncNowFromStatus(); },
   'hw-restore':        function (el) { hwRestoreClick(el); },
 };
@@ -5182,7 +5096,7 @@ document.addEventListener('click', function (ev) {
   var fn = DOM_ACTIONS[el.getAttribute('data-act')];
   if (!fn) return;
   ev.preventDefault();
-  fn(el);
+  actRun(el, fn);
 });
 /*  ⛔ מאזין המקלדת האחד של האפליקציה — ⚠️ הוא קורא לשני המסלולים
  *  המשותפים בסדר מוצהר: ⭐ שמירה בשדה עריכה קודמת לסגירת המודאל,

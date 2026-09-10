@@ -228,7 +228,7 @@ function makeEnv(opts = {}) {
     parseInt, isFinite, Promise, RegExp, Error,
     window: {},
     document: {
-      getElementById: (id) => (id === 'tech-info-box' ? { querySelector: () => details } : null),
+      getElementById: (id) => (id === 'status-extra-box' ? details : null),
       createElement: () => { const n = { _h: '', get firstChild() { return { html: n._h }; } }; Object.defineProperty(n, 'innerHTML', { set(h) { n._h = h; } }); return n; },
     },
     esc: (s) => String(s == null ? '' : s),
@@ -504,7 +504,7 @@ async function t8() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   9 · «גובה לאחרונה» — התצוגה ב«מידע טכני»
+   9 · «גובה לאחרונה» — התצוגה בשורות המצב הנוספות
    ══════════════════════════════════════════════════════════════════════════ */
 async function t9() {
   const env = makeEnv({ kv: { k1: 'A', k2: 'B' } });
@@ -516,7 +516,7 @@ async function t9() {
   ok(/גובה לאחרונה/.test(env.sb.bkStatusHTML()), '9ד · והתצוגה מציגה אותה');
   env.details.kids.length = 0;
   env.sb.bkStatusMount();
-  eq(env.details.kids.length, 1, '9ה · ⛔ הרכיב נתלה בתוך «מידע טכני» ואינו עורך את הבלוק הקפוא');
+  eq(env.details.kids.length, 1, '9ה · ⛔ הרכיב נתלה בעוגן שמחוץ לבלוק הקפוא ואינו עורך אותו');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

@@ -53,7 +53,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 39, 173, 95];
+export const ROWS = [5, 8, 39, 174, 96];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -816,6 +816,121 @@ t(!capsFails((doc) => {
         'נ29 · ⭐ קידום גרסה עקבי בשני הקבצים ⛔ **אינו** מפיל');
     }
   }
+  /*  ⛔⛔ מ56 — דיו שאינו עומד ביחס במצב אחד (סבב 135): ⚠️ הטענה שנופלת היא
+   *  «ערכת נושא — בהיר וכהה», ⭐ והנימוק המדוד הוא שצמד נמדד **בשני**
+   *  המצבים: ⛔ דיו שנכון בבהיר יכול להיבלע בכהה, ⚠️ ומדידה במצב אחד
+   *  מאשרת אותו. */
+  {
+    const idx = rd('index.html');
+    const dm = /@media\s*\(prefers-color-scheme\s*:\s*dark\)/.exec(idx);
+    const j = dm ? idx.indexOf('--on-brand:', dm.index) : -1;
+    if (j < 0) t(true, 'מ56 · ⭕ אין כאן `--on-brand` בערכה הכהה — ⛔ ואין מה למוטט');
+    else {
+      const end = idx.indexOf(';', j) + 1;
+      t(runGateOn({ 'index.html': idx.slice(0, j) + '--on-brand:var(--brand);' + idx.slice(end) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ56 · דיו שאינו עומד ביחס במצב הכהה **מפיל** את «ערכת נושא — בהיר וכהה»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: דיו אחר שכן עומד ביחס ⛔ אינו מפיל — ⚠️ הנמדד הוא
+   *  **היחס** ⛔ ולא הערך, ⭐ ושינוי גוון בתוך הטווח הוא שינוי חי. */
+  {
+    const idx = rd('index.html');
+    const dm = /@media\s*\(prefers-color-scheme\s*:\s*dark\)/.exec(idx);
+    const j = dm ? idx.indexOf('--on-brand:', dm.index) : -1;
+    if (j < 0) t(true, 'נ35 · ⭕ אין כאן `--on-brand` בערכה הכהה — ⛔ ואין מה להחליף');
+    else {
+      const end = idx.indexOf(';', j) + 1;
+      const was = idx.slice(j, end);
+      const to = /#f|#e|#d|#c|#b|#a|#9|#8/i.test(was) ? '--on-brand:#fdfdfd;' : '--on-brand:#0b1220;';
+      t(!runGateOn({ 'index.html': idx.slice(0, j) + to + idx.slice(end) },
+                   'check-capabilities.mjs', () => ({})),
+        'נ35 · ⭐ גוון דיו אחר שעומד ביחס ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ57 — השומר שבניתוב (סבב 135): ⚠️ הטענה שנופלת היא «פעולה מגיבה
+   *  מיד», ⭐ והנימוק המדוד הוא שההשבתה **היא** התגובה: ⛔ ניתוב שממתין
+   *  להבטחה בלי להשבית מותיר את הכפתור חי, ⚠️ ולחיצה שנייה נכנסת.
+   *  ⛔ **והמוטציה נושאת איתה את החתימה** — ⚠️ הבלוק חתום. */
+  const BZ_A = '/* ═══ כפתור עסוק והשומר שבניתוב';
+  const BZ_Z = '/* ═══════════════ סוף מודול כפתור עסוק';
+  const bzResign = (h) => {
+    const i = h.indexOf(BZ_A), k = h.indexOf(BZ_Z, i), e = h.indexOf('*/', k) + 2;
+    const sha = crypto.createHash('sha256').update(h.slice(i, e)).digest('hex').slice(0, 16);
+    return caps.replace(/(busyguard:[\s\S]*?block: \{ sha: ')[0-9a-f]{16}/, '$1' + sha);
+  };
+  {
+    const idx = rd('index.html');
+    const empty = /writeActs: \[\s*\]/.test(caps);
+    if (empty || idx.indexOf('actRun(el, fn)') < 0)
+      t(true, 'מ57 · ⭕ אין כאן פעולה שממתינה לכתיבה ברשת — ⛔ והשומר אינו נמדד');
+    else {
+      const bad = idx.replace('\n  actRun(el, fn);', '\n  fn(el);');
+      t(runGateOn({ 'index.html': bad, [CAPS]: bzResign(bad) }, 'check-capabilities.mjs', () => ({})),
+        'מ57 · ניתוב שאינו עובר בשומר **מפיל** את «כפתור שכותב מושבת בזמן הכתיבה»');
+      /*  ⭐ מוטציית-נגד: שינוי שם עקבי של דגל השומר ⛔ אינו מפיל — ⚠️ הנמדד
+       *  הוא הצורה «דגל על האלמנט שיוצא מוקדם», ⛔ ולא השם. */
+      const okS = idx.split('_actBusy').join('_actPending');
+      t(!runGateOn({ 'index.html': okS, [CAPS]: bzResign(okS) }, 'check-capabilities.mjs', () => ({})),
+        'נ36 · ⭐ שינוי שם עקבי של דגל השומר ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ58 — פעולה מוצהרת שאינה מחזירה (סבב 135): ⚠️ הטענה שנופלת היא
+   *  «כפתור שכותב מושבת בזמן הכתיבה», ⭐ והנימוק המדוד הוא שהשומר יושב
+   *  בניתוב: ⛔ מטפל שאינו מחזיר את ההבטחה אינו נכנס אליו כלל, ⚠️ והכפתור
+   *  נשאר חי בזמן שהכתיבה באוויר. */
+  {
+    const m = /writeActs: \[([^\]]*)\]/.exec(caps);
+    const names = m ? (m[1].match(/'[a-z0-9-]+'/g) || []).map((s) => s.slice(1, -1)) : [];
+    if (!names.length) t(true, 'מ58 · ⭕ אין כאן פעולה שממתינה לכתיבה ברשת — ⛔ ואין מה למוטט');
+    else {
+      const idx = rd('index.html');
+      const re = new RegExp("('" + names[0] + "'\\s*:\\s*function\\s*\\([^)]*\\)\\s*\\{\\s*)return\\s+");
+      const bad = idx.replace(re, '$1');
+      t(bad !== idx && runGateOn({ 'index.html': bad }, 'check-capabilities.mjs', () => ({})),
+        'מ58 · פעולה מוצהרת שאינה מחזירה את ההבטחה **מפילה** את «כפתור שכותב מושבת בזמן הכתיבה»');
+      /*  ⭐ מוטציית-נגד: שם אחר לפונקציה שהמטפל מחזיר, בעקביות ⛔ אינו
+       *  מפיל — ⚠️ הנמדד הוא ה-`return`, ⛔ ולא מי נקרא. */
+      const fnm = new RegExp("'" + names[0] + "'\\s*:\\s*function\\s*\\([^)]*\\)\\s*\\{\\s*return\\s+([A-Za-z_$][\\w$]*)").exec(idx);
+      if (!fnm) t(true, 'נ37 · ⭕ המטפל אינו מחזיר קריאה בשם — ⛔ ואין מה להחליף');
+      else {
+        const okS = idx.replace(new RegExp('\\b' + fnm[1] + '\\b', 'g'), fnm[1] + 'Alt');
+        t(!runGateOn({ 'index.html': okS }, 'check-capabilities.mjs', () => ({})),
+          'נ37 · ⭐ שינוי שם עקבי של הפונקציה שהמטפל מחזיר ⛔ **אינו** מפיל');
+      }
+    }
+  }
+  /*  ⛔⛔ מ55 — סינון המטמון בקידומת האחסון (סבב 135): ⚠️ הטענה שנופלת היא
+   *  «סימן דחיית הבאנר מתמיד», ⭐ והנימוק המדוד הוא שהקידומות מתלכדות
+   *  היום **במקרה** — ⛔ ושם אחסון שישתנה יחזיר רשימה ריקה, ⚠️ וסימן
+   *  שנשען על מחרוזת ריקה מת בשקט.
+   *  ⛔ **והמוטציה נושאת איתה את החתימה** — ⚠️ הבלוק חתום. */
+  {
+    const idx = rd('index.html');
+    if (idx.indexOf('LS_CFG.cachePrefix') < 0)
+      t(true, 'מ55 · ⭕ אין כאן `cachePrefix` — ⛔ ואין מה למוטט');
+    else {
+      const bad = idx.replace('indexOf(LS_CFG.cachePrefix)', 'indexOf(LS_CFG.hzPrefix)');
+      t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'check-capabilities.mjs', () => ({})),
+        'מ55 · סינון המטמון בקידומת האחסון **מפיל** את «סימן דחיית הבאנר מתמיד»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: קידומת אחרת בשני הקבצים יחד ⛔ אינה מפילה — ⚠️ הנמדד
+   *  הוא **ההתאמה** בין `LS_CFG.cachePrefix` ל-`SW_CFG.prefix`, ⛔ ולא
+   *  הערך עצמו. */
+  {
+    const idx = rd('index.html'), sw = rd('sw.js');
+    const m = /cachePrefix: '([^']*)'/.exec(idx);
+    if (!m) t(true, 'נ34 · ⭕ אין כאן `cachePrefix` — ⛔ ואין מה להחליף');
+    else {
+      const to = m[1] + 'x';
+      const ok2 = { 'index.html': idx.split("cachePrefix: '" + m[1] + "'").join("cachePrefix: '" + to + "'"),
+                    'sw.js': sw.split("prefix: '" + m[1] + "'").join("prefix: '" + to + "'") };
+      ok2[CAPS] = swResign(ok2['index.html']);
+      t(!runGateOn(ok2, 'check-capabilities.mjs', () => ({})),
+        'נ34 · ⭐ קידומת מטמון אחרת בשני הקבצים ⛔ **אינה** מפילה');
+    }
+  }
   /*  ⛔⛔ מ54 — שומר כפול (סבב 134): ⚠️ הטענה שנופלת היא «שומר אחד לכל
    *  פעולה», ⭐ והנימוק המדוד הוא שהניתוב כבר מנטרל את הכפתור —
    *  ⛔ ושומר שני משחרר אותו בעוד הראשון מחזיק. ⚠️ **והמוטציה חלה רק
@@ -827,10 +942,16 @@ t(!capsFails((doc) => {
     if (!bf || !/routeGuard:\s*'/.test(inp) || !act)
       t(true, 'מ54 · ⭕ אין כאן שומר בנקודת הניתוב — ⛔ ואין שומר כפול שאפשר להחזיר');
     else {
-      const head = 'async function ' + act[1] + '() {';
-      t(runGateOn({ 'index.html': idx.replace(head, head + '\n  ' + bf[1] + '(null, true);') },
-                  'test_inputlayer.mjs', () => ({})),
-        'מ54 · שומר בגוף המטפל **מפיל** את «שומר אחד לכל פעולה»');
+      /*  ⛔ שתי צורות ההגדרה ⛔ ולא אחת — ⚠️ המטפל מחזיר גם פונקציה
+       *  שאינה `async` אך מחזירה הבטחה, ⭐ ומוטציה שחיפשה `async` בלבד
+       *  לא נכתבה כלל: ⛔ ובדיוק זו «מוטציה שלא רצה». */
+      const head = ['async function ' + act[1] + '() {', 'function ' + act[1] + '() {']
+                     .find((h) => idx.indexOf(h) >= 0);
+      if (!head) t(true, 'מ54 · ⭕ המטפל אינו מחזיר פונקציה מוגדרת בשם — ⛔ ואין מה למוטט');
+      else
+        t(runGateOn({ 'index.html': idx.replace(head, head + '\n  ' + bf[1] + '(null, true);') },
+                    'test_inputlayer.mjs', () => ({})),
+          'מ54 · שומר בגוף המטפל **מפיל** את «שומר אחד לכל פעולה»');
     }
   }
   /*  ⭐ מוטציית-נגד: שינוי שם עקבי של המגן — הקריאות וההכרזה יחד ⛔ אינו
@@ -886,13 +1007,17 @@ t(!capsFails((doc) => {
    *  מפיל: ⚠️ זה בדיוק השינוי החי שהתקן בא להתיר, ⭐ ושם אחד בארבעתן
    *  אינו «אותו שם לנצח». */
   {
+    /*  ⛔ הצמד מוחלף **יחד** ⛔ ולא חצי ממנו (סבב 135) — ⚠️ המוסכמה
+     *  `--on-X` היא מה שקושר בין השניים, ⭐ ושינוי חצי הוא ניתוק
+     *  הצמד ⛔ ולא שינוי שם. */
     const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    const ren = (s) => s.split('--on-brand').join('--on-ident')
+                        .replace(/--brand(?![-A-Za-z0-9])/g, '--ident');
     if (idx.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
     else
-      t(!runGateOn({ 'index.html': idx.split('--on-brand').join('--brand-on'),
-                     'tools/check-capabilities.mjs': caps.split('--on-brand').join('--brand-on') },
+      t(!runGateOn({ 'index.html': ren(idx), 'tools/check-capabilities.mjs': ren(caps) },
                    'check-capabilities.mjs', () => ({})),
-        'נ30 · ⭐ שינוי שם עקבי של אסימון הדיו ⛔ **אינו** מפיל');
+        'נ30 · ⭐ שינוי שם עקבי של הצמד כולו ⛔ **אינו** מפיל');
   }
   /*  ⛔⛔ מ45 — סימן דחייה בזיכרון (סבב 132): ⚠️ הטענה שנופלת היא «סימן
    *  דחיית הבאנר מתמיד», ⭐ והנימוק המדוד הוא שהסימן מתאפס בטעינה —
