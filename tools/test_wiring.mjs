@@ -134,7 +134,10 @@ export function wiring(src, mapName, globals) {
   const body = mapBody(src, mapName);
   const keys = [...new Set([...body.matchAll(/'([a-z0-9-]+)'\s*:\s*(?:async\s+)?function/g)]
                             .map((m) => m[1]))];
-  const acts = [...new Set([...src.matchAll(/data-act=\\?["']([^"'\\]*)/g)].map((m) => m[1]))];
+  /*  ⛔ וגם כפתור שנבנה ב-JS — ⚠️ `dataset.act = '...'` הוא אותו חיווט
+   *  בדיוק, ⭐ וסורק שמוגבל למקור מדווח «מטפל בלי כפתור» על מטפל חי. */
+  const acts = [...new Set([...src.matchAll(/data-act=\\?["']([^"'\\]*)/g)].map((m) => m[1])
+    .concat([...src.matchAll(/\.dataset\.act\s*=\s*['"]([a-z0-9-]+)['"]/g)].map((m) => m[1])))];
   const called = [...new Set([...src.matchAll(/window\.([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]))];
   const defined = new Set([...src.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=[^=]/g)].map((m) => m[1]));
   for (const m of src.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
