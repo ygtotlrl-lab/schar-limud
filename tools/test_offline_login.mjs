@@ -777,16 +777,16 @@ async function main() {
   sect('ט. אינווריאנטות במקור עצמו');
   {
     ok('⛔ אין select(\'*\') על sl_users', !/from\('sl_users'\)\s*\.\s*select\('\*'\)/.test(SRC));
-    // ⚠️ **עודכן בסבב 26.** `changeAdminPass` היה אתר האכיפה **היחיד** של
-    // `PASS_SIX_RE`, והוא הוסר יחד עם שער סיסמת ההגדרות שהוא שירת; הקבוע
-    // ירד איתו. הטענה המקורית («כן מופיע ב-changeAdminPass») אינה ניתנת
-    // לבדיקה יותר, אבל **הכוונה שלה נשמרת במלואה**: מסלולי הכניסה נשארים
+    // ⚠️ **עודכן בסבב 132.** `PASS_SIX_RE` חזר לקובץ עם מסך שינוי הסיסמה,
+    // ⛔ ואתר האכיפה היחיד שלו הוא מסלול השינוי: מסלולי הכניסה נשארים
     // נקיים מאכיפת פורמט, מאותו נימוק בדיוק (סבב 19 — אכיפה שם נועלת
     // בחוץ סיסמה קיימת ותקפה). ⛔ אין להוסיף שם בדיקת פורמט.
     ok('⛔ אין אכיפת פורמט בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-slVerifyOffline', body('slVerifyOffline').indexOf('PASS_SIX_RE') === -1);
-    ok('⛔ PASS_SIX_RE ירד מהקובץ (סבב 26)', !/^var PASS_SIX_RE\s*=/m.test(SRC));
+    ok('⭐ ואתר האכיפה היחיד הוא מסלול שינוי הסיסמה',
+      /^var PASS_SIX_RE\s*=/m.test(SRC) &&
+      body('slSaveMyPassword').indexOf('PASS_SIX_RE') !== -1);
     ok('⛔ אין קבוע `SESSION_KEY` בקובץ (סבב 53)', !/SESSION_KEY/.test(SRC));
     ok('⛔ אין password ברשימת ההיתר שבמקור', !/SL_USER_COLS\s*=\s*\[[^\]]*password/.test(SRC));
     // ⚠️ תבנית ולא מספר קבוע (סבב 26) — טענה שמקבעת מספר נכשלת על כל
