@@ -720,6 +720,10 @@ var LS_CFG = {
   app: 'schar',
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
+  /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
+   *  המטמון שנדחה, ⛔ **ומה מפיל**: שם בלי תחילית האפליקציה —
+   *  ⭐ ה-origin משותף לארבעתן, וסימן אחד היה נדרס בכל דחייה. */
+  dismissKey: 'sl_sw_dismissed',
 
   // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
   //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
@@ -1614,13 +1618,32 @@ var SYNC_CFG = {
 var SW_APPLY_MS = 10000;
 var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0;
 function swBanner() { return document.getElementById('updater'); }
+/*  ⛔ מזהה הגרסה נקרא משם המטמון החי — ⚠️ ואין לו ליטרל שני בדף: ⭐ הוא
+ *  מסונן בתחילית האפליקציה, ⛔ ובזמן התקנה יש שני שמות — הישן והחדש:
+ *  ⚠️ ולכן הסימן נושא את שניהם, ⭐ והוא משתנה בדיוק כשגרסה נוספת או יורדת. */
+function swVer() {
+  if (typeof caches === 'undefined') return Promise.resolve('');
+  return caches.keys().then(function (ks) {
+    return ks.filter(function (n) { return n.indexOf(LS_CFG.app) === 0; }).sort().join('|');
+  }).catch(function () { return ''; });
+}
+function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); }
+/*  ⛔ סימן הדחייה מתמיד ונושא את הגרסה שנדחתה — ⚠️ סימן בזיכרון מתאפס
+ *  בטעינה, ⭐ והבאנר חוזר בלי שדבר השתנה: ⛔ ועובד ממתין ששרד היה מציג
+ *  אותו בכל טעינה, בלי דרך לצאת. */
 function swShowUpdate() {
   var el = swBanner();
   if (!el) { console.error('[sw] אין מיכל לבאנר העדכון — #updater'); return; }
-  el.classList.add('show');
+  swVer().then(function (v) {
+    if (v && v === lsGet(LS_CFG.dismissKey, '')) return;
+    el.classList.add('show');
+  });
 }
 window.showAppUpdateBanner = swShowUpdate;
-function swHideUpdate() { var el = swBanner(); if (el) el.classList.remove('show'); }
+function swHideUpdate() {
+  swBannerHide();
+  swVer().then(function (v) { if (v) lsSet(LS_CFG.dismissKey, v); });
+}
 /*  ⛔ הרענון אינו כאן — ⚠️ הוא ב-`controllerchange` בלבד: ⭐ טיימר שמרענן
  *  בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting` שורד, הבאנר
  *  חוזר, והלחיצה הבאה חוזרת עליו. */
@@ -1631,10 +1654,13 @@ function swApply(btn) {
   _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   _swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);
 }
+/*  ⛔ עובד ממתין ששרד את הלחיצה הוא כשל ⛔ ולא מצב — ⚠️ הבאנר יורד
+ *  והכשל נאמר, ⭐ ולא נשאר על המסך ומזמין לחיצה נוספת. */
 function swApplyFail(btn) {
   _swWait = 0;
   if (_swReloaded) return;
   if (btn) { btn.disabled = false; btn.textContent = 'עדכן עכשיו'; }
+  swBannerHide();
   toast('⚠️ העדכון לא הושלם — נסה שוב', 6000, 'bad');
 }
 function swRegister() {
