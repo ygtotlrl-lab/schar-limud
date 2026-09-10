@@ -54,7 +54,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 0, app: 94, appWhy: 'מודל ההרשאות — קיים בשלוש שיש בהן כניסה, ובשכר גם רתמת ההרשאות המלאה' };
+const FLOOR = { shared: 0, app: 83, appWhy: 'מודל ההרשאות — קיים בשלוש שיש בהן כניסה, ובשכר גם רתמת ההרשאות המלאה' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -107,7 +107,7 @@ const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
 
 const NAMES_VAR = [
   'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
-  'SL_NEVER_MIRROR_SETTINGS', 'SL_OLD_PASS_HASH_KEY',
+  'SL_NEVER_MIRROR_SETTINGS',
   '_sessUser', '_sessBooted', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
   /*  ⭐ סבב 113 — שם התפקיד המורשה, ⛔ במקום אחד. */
@@ -121,7 +121,7 @@ const NAMES_FN = [
    *  שאינה מחלצת את השכבה מקבלת `ReferenceError` שנבלע ב-`catch`. */
   'mirrorKey', 'mirrorTables', 'mirrorLoadOne', 'mirrorSave',
   'slSanitizeRows', 'slStripMeta', 'slAdoptLegacyId', 'slTs',
-  'slSettingsAccess', 'slIsAdmin', 'slDropLegacyPassHash',
+  'slSettingsAccess', 'slIsAdmin',
   /*  ⭐ סבב 113 — ההשוואה לתפקיד עברה לבלוק המשותף. ⛔ הרתמה מחלצת
    *  אותו, ⚠️ ובלעדיו `slSettingsAccess` נופלת ב-ReferenceError. */
   'isAdminOf', 'isAdmin',
@@ -352,39 +352,8 @@ async function main() {
     eq('⛔ ואינו מרנדר ללא-admin גם כשהפאנל פתוח', h.calls.lists, 1);
   }
 
-  /* ── ג. ניקוי השריד במכשיר ───────────────────────────────────────────── */
-  sect('ג. ⛔ sl_admin_pass_h — ניקוי חד-פעמי');
-  {
-    const h = makeCtx();
-    h.store['sl_admin_pass_h'] = 'a'.repeat(64);
-    h.store['sl_session'] = '{"id":1,"username":"shimon"}';
-    eq('המפתח קיים לפני', 'sl_admin_pass_h' in h.store, true);
-    eq('המיגרציה מדווחת שניקתה', h.ctx.slDropLegacyPassHash(), true);
-    ok('⛔ sl_admin_pass_h אינו קיים באף מפתח localStorage',
-      !Object.keys(h.store).some((k) => k === 'sl_admin_pass_h' ||
-        String(h.store[k]).indexOf('sl_admin_pass_h') !== -1));
-    ok('הפעולה נרשמה ליומן', h.calls.lsLog.length === 1 &&
-      h.calls.lsLog[0].indexOf('sl_admin_pass_h') !== -1);
-    ok('⛔ ולא נגעה במפתחות אחרים', h.store['sl_session'] === '{"id":1,"username":"shimon"}');
-    eq('הרצה שנייה — אין מה לנקות', h.ctx.slDropLegacyPassHash(), false);
-    eq('ואין רישום כפול ליומן', h.calls.lsLog.length, 1);
-  }
-  {
-    const h = makeCtx();
-    eq('מכשיר נקי מלכתחילה ⇒ false', h.ctx.slDropLegacyPassHash(), false);
-    eq('ואין רישום ליומן', h.calls.lsLog.length, 0);
-    /* ⚠️ הטענה חודדה בהשלמת סבב 30 ולא הוחלשה: קודם היא חיפשה את הקריאה
-       **אחרי** המחרוזת `DOMContentLoaded`, וזה נשבר כשהמטפל האנונימי קיבל
-       שם (`slBoot`) והוגדר לפני שורת הרישום. עכשיו נבדק שהקריאה יושבת
-       **בתוך פונקציית העלייה עצמה** — נקודת ההפעלה הקנונית —
-       ושהיא זו שנרשמת ל-`DOMContentLoaded`. */
-    ok('הפונקציה מחווטת בפונקציית העלייה', /slDropLegacyPassHash\(\)/.test(fn('slBoot')));
-    ok('ופונקציית העלייה היא שנרשמת ל-DOMContentLoaded',
-      /addEventListener\(\s*'DOMContentLoaded'\s*,\s*slBoot\s*\)/.test(SRC));
-  }
-
-  /* ── ד. התפקיד — מהמראה, ⛔ ולא מסשן ששרד על הדיסק ────────────────────── */
-  sect('ד. התפקיד זמין גם בכניסה בלי רשת');
+  /* ── ג. התפקיד — מהמראה, ⛔ ולא מסשן ששרד על הדיסק ────────────────────── */
+  sect('ג. התפקיד זמין גם בכניסה בלי רשת');
   {
     /*  ⭐ סבב 53 — `sl_session` הוסר, ולכן «התפקיד שורד עלייה מחדש» כבר
      *  אינו השער. מה שנבדק כאן הוא מה שנשאר נכון: התפקיד מגיע **מהמראה**,
@@ -434,8 +403,8 @@ async function main() {
     ok('⛔ slSelectUsers אינה קיימת עוד', typeof h.ctx.slSelectUsers === 'undefined');
   }
 
-  /* ── ה. המנגנון הישן הוסר לחלוטין ────────────────────────────────────── */
-  sect('ה. ⛔ שער הסיסמה — הוסר, ואין שריד');
+  /* ── ד. המנגנון הישן הוסר לחלוטין ────────────────────────────────────── */
+  sect('ד. ⛔ שער הסיסמה — הוסר, ואין שריד');
   {
     ok('⛔ unlockSettings אינה קיימת', !hasFn('unlockSettings'));
     ok('⛔ changeAdminPass אינה קיימת', !hasFn('changeAdminPass'));
@@ -462,8 +431,8 @@ async function main() {
       h.ctx.SL_NEVER_MIRROR_SETTINGS.indexOf('admin_pass') === -1);
   }
 
-  /* ── ו. הסכימה ───────────────────────────────────────────────────────── */
-  sect('ו. הסכימה — role נוסף, admin_pass לא נזרע');
+  /* ── ה. הסכימה ───────────────────────────────────────────────────────── */
+  sect('ה. הסכימה — role נוסף, admin_pass לא נזרע');
   {
     // ⚠️ הסרת שורות הערה **לפני** הבדיקה. `000` מכיל בהערה דוגמת
     // `INSERT INTO public.sl_users` שהמנהל מריץ ידנית, ובדיקה על הטקסט
@@ -510,8 +479,8 @@ async function main() {
       !/DEFAULT\s*'/i.test(stmts) && /ALTER COLUMN role SET NOT NULL/.test(stmts));
   }
 
-  /* ── ז. מסלולי הכניסה לא נגעו ────────────────────────────────────────── */
-  sect('ז. ⛔ מנגנון הכניסה עצמו לא נגע');
+  /* ── ו. מסלולי הכניסה לא נגעו ────────────────────────────────────────── */
+  sect('ו. ⛔ מנגנון הכניסה עצמו לא נגע');
   {
     const h = makeCtx();
     // כניסה אופליין עדיין עובדת, ומחזירה את התפקיד מהמראה.
@@ -535,14 +504,18 @@ async function main() {
 
     ok('⛔ אין אכיפת פורמט שש ספרות בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
-    ok('⛔ PASS_SIX_RE ירד מהקובץ יחד עם אתר האכיפה היחיד שלו',
-      !/^var PASS_SIX_RE\s*=/m.test(SRC));
+    /*  ⭐ סבב 132 — `PASS_SIX_RE` חזר עם מסך שינוי הסיסמה, ⛔ והטענה
+     *  מודדת את מה שהיא מדדה מלכתחילה: ⚠️ **האכיפה במסלול השינוי בלבד**,
+     *  ⛔ ולא במסלול הכניסה. */
+    ok('⛔ PASS_SIX_RE נאכף במסלול שינוי הסיסמה',
+      /^var PASS_SIX_RE\s*=/m.test(SRC) &&
+      body('slSaveMyPassword').indexOf('PASS_SIX_RE') !== -1);
     ok('שדה הכניסה שומר על רמז הקלט',
       /id="au-pass"[^>]*inputmode="numeric"/.test(SRC) && /id="au-pass"[^>]*maxlength="6"/.test(SRC));
   }
 
-  /* ── ח. גרסת המטמון ──────────────────────────────────────────────────── */
-  sect('ח. service worker');
+  /* ── ז. גרסת המטמון ──────────────────────────────────────────────────── */
+  sect('ז. service worker');
   {
     const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
     // ⚠️ תבנית ולא מספר קבוע — טענה שמקבעת מספר נכשלת על כל קידום עתידי,

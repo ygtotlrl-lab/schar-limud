@@ -475,9 +475,15 @@ body.locked{overflow:hidden}
             <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
           </div>
         </div>
-        <!-- סבב 26: כרטיס «שינוי סיסמת מנהל» הוסר יחד עם השער שהוא שירת.
-             סיסמאות המשתמשים מנוהלות בלוח הבקרה של Supabase — אין כאן מסך
-             ניהול משתמשים, וזו החלטה מתועדת. -->
+        <!-- סבב 132: שינוי הסיסמה של המשתמש המחובר. יצירת משתמש נשארה
+             בלוח הבקרה של Supabase — אין כאן מסך ניהול משתמשים, וזו
+             החלטה מתועדת; שינוי סיסמה אינו יצירה. -->
+        <div class="card">
+          <div class="card-hdr">
+            <h3>&#128273; הסיסמה שלי</h3>
+            <button class="btn sm" data-act="my-pass">שינוי סיסמה</button>
+          </div>
+        </div>
         <div class="card">
           <div class="card-hdr">
             <h3>&#128100; תלמידים</h3>
@@ -3701,23 +3707,6 @@ function slStripMeta(rows) {
   return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === SL_STAMP_KEY); });
 }
 
-/* ═══ ניקוי חד-פעמי במכשיר — טביעת סיסמת השער (סבב 26) ═══════════════════
-   `sl_admin_pass_h` החזיק טביעת PBKDF2 של סיסמת שער ההגדרות. השער בוטל,
-   ולכן אין מי שיקרא אותו — אבל הוא **לא נעלם מעצמו**: localStorage שורד
-   עדכוני קוד, וערך שאין לו קורא הוא בדיוק הסוג של שריד שסשן עתידי מוצא
-   ומנחש לְמה הוא שימש. המפתח נמחק בעלייה הראשונה אחרי העדכון.
-   ⚠️ הפעולה נרשמת ליומן הפינוי (אף כישלון שקט, ואף מחיקה
-   שקטה): מפתח שנעלם בלי עקבות הוא בדיוק מה שהיומן בא למנוע. */
-var SL_OLD_PASS_HASH_KEY = 'sl_admin_pass_h';
-function slDropLegacyPassHash() {
-  try {
-    if (lsGet(SL_OLD_PASS_HASH_KEY, null) == null) return false;
-    lsRemove(SL_OLD_PASS_HASH_KEY);
-    if (typeof lsLog === 'function') lsLog('ניקוי שריד (סבב 26)', SL_OLD_PASS_HASH_KEY + ' — שער ההגדרות בוטל', 0);
-    return true;
-  } catch (e) { console.warn('[migrate] ניקוי ' + SL_OLD_PASS_HASH_KEY + ' נכשל', e); return false; }
-}
-
 /* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users (סבב 24) ═════════════
    **הבעיה שהסבב הזה בא לפתור.** כל שאר האפליקציה עובדת אופליין מסבב 12,
    אבל `doLogin` שלח שאילתה לענן — ולכן **בלי רשת אי אפשר היה להיכנס
@@ -4022,6 +4011,61 @@ async function slEnsurePassFp(u, pass) {
   } catch (e) { console.warn('[pass-fp] השלמה נכשלה', e && e.message); return false; }
 }
 
+/*  ⛔ מסך שינוי הסיסמה קיים כאן אף שהמשתמש יחיד (סבב 132) — ⚠️ משתמש
+ *  שאינו יכול לשנות סיסמה בעצמו תלוי ב-SQL Editor בכל שינוי, ⭐ ושכבת
+ *  הכניסה אחידה בשלוש שיש בהן כניסה. ⛔ **ואין כאן מסך ניהול משתמשים** —
+ *  ⚠️ יצירת משתמש נשארת בלוח הבקרה, ⭐ ואין למי לנהל. */
+function slMyPassword() {
+  var body = ''
+    + '<div class="frm-row"><label for="mp-cur">סיסמה נוכחית</label><input id="mp-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>'
+    + '<div class="frm-row"><label for="mp-new">סיסמה חדשה (שש ספרות)</label><input id="mp-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>'
+    + '<div class="frm-row" style="margin-bottom:6px"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+  var foot = '<button class="btn out" data-act="modal-close">ביטול</button>'
+           + '<button class="btn" data-act="my-pass-save" data-ksave>שמירה</button>';
+  openModal('\u{1F511} שינוי הסיסמה שלי', body, foot);
+  var el = document.getElementById('mp-cur');
+  if (el) el.focus();
+}
+
+async function slSaveMyPassword() {
+  var c1 = document.getElementById('mp-cur');
+  var n1 = document.getElementById('mp-new');
+  var n2 = document.getElementById('mp-new2');
+  if (!c1 || !n1 || !n2) { uiNoDialog('slSaveMyPassword', 'mp-cur'); return; }
+  var cur = c1.value.trim(), p1 = n1.value.trim(), p2 = n2.value.trim();
+  if (!cur || !p1 || !p2) { toast('⚠️ נא למלא את כל השדות', null, 'bad'); return; }
+  if (!PASS_SIX_RE.test(p1)) { toast(MSG_PASS_SIX, null, 'bad'); return; }
+  if (p1 !== p2) { toast('⚠️ הסיסמאות החדשות אינן זהות', null, 'bad'); return; }
+  var u = sessGet();
+  if (!u || u.client_id == null) { toast('⚠️ אין משתמש מחובר — נא להיכנס מחדש', null, 'bad'); return; }
+  if (!SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  /*  ⛔ הסיסמה הנוכחית מאומתת מול הטביעה שבענן — ⚠️ ולא מול המראה: ⭐ מראה
+   *  שהתיישנה הייתה מאשרת סיסמה שכבר הוחלפה במכשיר אחר. */
+  var chk;
+  try { chk = await withTimeout(SB.from('sl_users').select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
+  catch (e) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  if (chk && chk.error) { toast('❌ לא ניתן לאמת את הסיסמה הנוכחית: ' + (chk.error.message || 'שגיאת שרת'), null, 'bad'); return; }
+  var row = chk && Array.isArray(chk.data) && chk.data[0];
+  if (!row) { toast('❌ הסיסמה הנוכחית שגויה', null, 'bad'); return; }
+  var v = await slVerifyOffline(row, cur);
+  if (v === 'no-fp')     { toast('❌ ' + MSG_OFF_NO_FP, null, 'bad'); return; }
+  if (v === 'no-crypto') { toast('❌ ' + MSG_OFF_NO_CRYPTO, null, 'bad'); return; }
+  if (v !== 'ok')        { toast('❌ הסיסמה הנוכחית שגויה', null, 'bad'); return; }
+  var body = await slPassFields(p1);
+  var res;
+  try { res = await writeUser(u.client_id, body); }
+  catch (e2) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  if (!res || res.error) { toast('❌ עדכון הסיסמה נכשל: ' + ((res && res.error && res.error.message) || 'שגיאת שרת'), null, 'bad'); return; }
+  /*  ⛔ המראה מתעדכנת באותו רגע — ⚠️ בלעדיה הכניסה האופליין הבאה מאמתת
+   *  מול הטביעה שזה עתה הוחלפה. */
+  u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
+  try { slUsersSaveOne(u); } catch (e3) { console.warn('[pass] כתיבה למראה נכשלה', e3); }
+  plTouch();
+  closeModal();
+  if (body.pass_fp) toast('✅ הסיסמה עודכנה');
+  else toast('⚠️ הסיסמה עודכנה — אך ללא הכנה לכניסה ללא רשת', null, 'bad');
+}
+
 /* ---- אימות אופליין מול הטביעה ----
    ⚠️ **ארבעה מצבים, ארבע הודעות שונות.** «המשתמש אינו בעותק המקומי»
    ו«אין לו טביעה» **אינם** אומרים שהסיסמה שגויה — הם אומרים שאין כאן במה
@@ -4049,6 +4093,11 @@ var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת �
    ⛔ הודעה שאומרת «קבע סיסמה» הייתה שולחת את המנהל לעמודה שאינה קיימת. */
 var MSG_NO_FP_ONLINE  = '❌ למשתמש הזה אין טביעת סיסמה במערכת — יש לקבוע לו `pass_salt` ו-`pass_fp` ב-SQL Editor של Supabase';
 var MSG_NO_CRYPTO     = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+// סבב 19: סיסמה בת שש ספרות בדיוק. ⛔ נאכף **רק במסלולי יצירה/שינוי**
+// ולא במסלול הכניסה — שם רק משווים מול הטביעה השמורה, ואכיפת פורמט
+// הייתה נועלת בחוץ כל משתמש שסיסמתו נקבעה לפני הסבב הזה.
+var PASS_SIX_RE = /^[0-9]{6}$/;
+var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
 
 // מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
 // ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19) — מסלול כניסה אינו יודע
@@ -5106,6 +5155,8 @@ var DOM_ACTIONS = {
   'student-settings-save':   function () { saveStudentSettings(); },
   'txn-save':                function () { saveTxn(); },
   'tuition-save':            function () { saveDefaultTuition(); },
+  'my-pass':                 function () { slMyPassword(); },
+  'my-pass-save':            function () { slSaveMyPassword(); },
   'login':                   function () { doLogin(); },
   'logout':                  function () { doLogout(); },
   'ls-sweep-now':      function () { lsSweepNow(); },
@@ -5463,9 +5514,6 @@ async function slBoot(){
   // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`
   // ו-`role` (סבב 26).
   try { slUsersLoad(); } catch (e) { console.warn('[users] load', e); }
-  // ניקוי חד-פעמי של שריד שער ההגדרות שבוטל (סבב 26).
-  try { slDropLegacyPassHash(); } catch (e) { console.warn('[migrate] legacy hash', e); }
-
   // ⛔ **אין כאן שחזור סשן (סבב 53)** — כל עלייה מתחילה במסך הכניסה, גם
   //    כשהמשתמש נכנס לפני דקה. ⛔ אין להחזיר: סשן שנשמר בלי תפוגה הוא
   //    כניסה קבועה על מכשיר משותף, ר' «המשתמש המחובר» למעלה.

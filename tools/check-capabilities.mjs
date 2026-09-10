@@ -422,12 +422,14 @@ const APP = {
   enterFields: ['au-user', 'au-pass', 'sd-input-student', 'txn-date', 'txn-amount',
                 'sc-edit-name', 'sc-edit-tuition', 'sc-edit-start', 'sc-edit-end',
                 'sc-edit-debt', 'sc-edit-debt-note', 'set-def-tuition',
-                'new-st-name', 'new-st-tuition', 'new-st-start', 'new-st-end'],
+                'new-st-name', 'new-st-tuition', 'new-st-start', 'new-st-end',
+                'mp-cur', 'mp-new', 'mp-new2'],
   enterExempt: [
     { field: 'sd-input-txnfilter', group: 'no-save', why: 'סינון התנועות — אין בכרטיס כפתור שמירה' },
     { field: 'sd-input-sc', group: 'no-save', why: 'חיפוש תלמיד — אין בכרטיס כפתור שמירה' },
   ],
-  ksaveActs: ['login', 'txn-save', 'student-settings-save', 'tuition-save', 'student-add'],
+  ksaveActs: ['login', 'txn-save', 'student-settings-save', 'tuition-save', 'student-add',
+              'my-pass-save'],
   elemListeners: [],
   docListeners: [
     { arg: 'LK_EVENTS[i]', why: 'מדידת חוסר-פעילות לנעילה — היא מודדת שהמשתמש כאן, ואינה מסלול פעולה' },
