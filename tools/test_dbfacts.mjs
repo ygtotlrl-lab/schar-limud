@@ -331,7 +331,7 @@ async function claimSchema() {
 
 async function claimCfgKeys() {
   const want = [...new Set([...SRC.matchAll(
-    new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))].sort();
+    new RegExp('(?<![\\w$.])' + APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))].sort();
   if (!want.length) { ok('ג. כל מפתח שהקוד מבקש — אין קריאת הגדרה בריפו הזה'); return; }
   const r = await q(`/${APP.cfgTable}?select=key`);
   if (r.status !== 200) throw new Error(`${APP.cfgTable} → ${r.status} ${r.text.slice(0, 120)}`);
@@ -635,7 +635,7 @@ if (RUN_MUT && !SELFTEST) {
   const { spawn } = await import('node:child_process');
 
   const cfgWant = [...new Set([...SRC.matchAll(
-    new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
+    new RegExp('(?<![\\w$.])' + APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
   const allowFirst = 'bk_key_in_the_stub_allowlist';
   const DF = (APP.derivedFields || [])[0];
 

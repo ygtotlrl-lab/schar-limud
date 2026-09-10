@@ -213,14 +213,14 @@ is(!strCmp.test(code), '⛔ ואין השוואת מחרוזות ישירה מו
 for (const [needle, label] of APP.authPaths) {
   const i = code.indexOf(needle);
   const body = i < 0 ? '' : code.slice(i, i + 4000);
-  is(body.length > 0 && new RegExp(`${APP.verifyFn}\\s*\\(`).test(body),
+  is(body.length > 0 && new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`).test(body),
      `${label} מאמת דרך \`${APP.verifyFn}\` (הטביעה)`);
 }
 
 /* ── ג. ההשלמה החד-פעמית הוסרה ─────────────────────────────────────────── */
 is(!new RegExp(`function\\s+${APP.backfillFn}`).test(code),
    `⛔ \`${APP.backfillFn}\` הוסרה — היא הייתה הקורא האחרון של הסיסמה הגלויה`);
-is(!new RegExp(`${APP.backfillFn}\\s*\\(`).test(code), '⛔ ואין לה אף אתר קריאה');
+is(!new RegExp(`(?<![\\w$.])${APP.backfillFn}\\s*\\(`).test(code), '⛔ ואין לה אף אתר קריאה');
 
 /* ── ד. צעד ב — אפס כתיבה ואפס קריאה ───────────────────────────────────── */
 const writes = writeSites(code);
@@ -275,8 +275,8 @@ const m1 = code.replace(/\.eq\(\s*'username'/, `.eq('${COL}', pass).eq('username
 is((m1.match(EQ_PLAIN) || []).length > 0,
    '⛔ מוטציה: החזרת השוואה מול הטקסט הגלוי — טענה 1 הייתה נכשלת');
 
-const m2 = code.replace(new RegExp(`${APP.verifyFn}\\s*\\(`, 'g'), 'noopVerify(');
-is(!new RegExp(`${APP.verifyFn}\\s*\\(`).test(m2),
+const m2 = code.replace(new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`, 'g'), 'noopVerify(');
+is(!new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`).test(m2),
    '⛔ מוטציה: ניתוק האימות מהטביעה — טענות המסלולים היו נכשלות');
 
 /*  ⛔ המוטציה מחזירה **כתיבה** ולא אזכור (סבב 85) — ⚠️ שורת `strip` או

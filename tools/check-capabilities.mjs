@@ -502,6 +502,8 @@ const APP = {
     '15|בודקים — משימה מוצהרת': 'tools',
     '78|דפוס הודעת שגיאה יחיד': 'src',
     '82|`toast` — חתימה, גוף ומחלקות': 'src',
+    '82|סיווג ההודעה נגזר מהמסלול': 'src',
+    '182|מיכל באנר העדכון במקור': 'src',
     '100|רישום כשלי כתיבה': 'src',
     '56|חלון חם במכשיר': 'src',
     '56|שחזור מקומי מהענן': 'src',
@@ -590,7 +592,7 @@ function callArity(text, name) {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [29, 40, 42, 44, 53, 84, 47, 154, 96, 136, 54, 22, 59, 25];
+export const ROWS = [29, 40, 42, 44, 53, 84, 47, 154, 96, 136, 54, 22, 59, 25, 32];
 
 /*  היכולות המשותפות. `block` — הליבה שחייבת להיות זהה בית-לבית.
  *  `hooks` — נקודות ההפעלה: `at:'boot'` = פונקציית העלייה, `at:'settings'`
@@ -637,7 +639,7 @@ const CAPS = {
   schemastale: {
     name: 'מודול האזנת הסכימה',
     docRows: ['באנר עדכון `sw`'],
-    block: { sha: 'f6d52387874c7261', lines: 74,
+    block: { sha: '6465a433db2cff09', lines: 74,
              start: '/* ═══ האזנת הסכימה — מודול משותף (סבב 91)',
              end:   '/* ═══════════════ סוף מודול האזנת הסכימה' },
   },
@@ -1247,7 +1249,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 159, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
+const FLOOR = { shared: 162, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
@@ -2049,6 +2051,112 @@ function writeGateGaps() {
   return out;
 }
 
+/*  ⛔ סיווג ההודעה נגזר מהמסלול (סבב 130) — ⚠️ הנימוק המדוד: שלוש
+ *  אפליקציות סימנו את השגיאה בטקסט ⛔ ולא צבעו אותה, ⭐ ואחת צבעה 23
+ *  הודעות שאין בטקסטן סימן: ⛔ המשתמש ראה ענן שגיאות באדום באחת,
+ *  ואפור בשלוש.
+ *  ⛔ **והמדידה בשני הכיוונים** — ⚠️ הודעת שגיאה בלי `'bad'`, ⛔ ו-`'bad'`
+ *  על הודעה שאינה שגיאה: ⭐ כיוון אחד לבדו מאשר את ההיפוך.
+ *  ⛔ **וההודעה שמערבת שני סיווגים מפוצלת** — ⚠️ שלישוב שבו ענף אחד
+ *  שגיאה והשני הצלחה צובע את שניהם באותו צבע. */
+const TOAST_MARK = /^(?:📴|⚠️|❌|🚫|שגיאה)/;
+const TOAST_CALL = /(?<![\w$.])toast\(/g;
+function tkArgEnd(t, i) {
+  let d = 1, j = i;
+  while (j < t.length && d > 0) { const c = t[j]; if (c === '(') d++; else if (c === ')') d--; j++; }
+  return j - 1;
+}
+function tkSplit(a, seps) {
+  const out = []; let d = 0, q = null, s = 0;
+  for (let i = 0; i < a.length; i++) {
+    const c = a[i];
+    if (q) { if (c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+    if (c === "'" || c === '"' || c === '`') { q = c; continue; }
+    if ('([{'.indexOf(c) >= 0) d++;
+    else if (')]}'.indexOf(c) >= 0) d--;
+    else if (seps.indexOf(c) >= 0 && d === 0) { out.push(a.slice(s, i)); s = i + 1; }
+  }
+  out.push(a.slice(s));
+  return out;
+}
+function tkFirstLit(x) {
+  let q = null, s = -1;
+  for (let i = 0; i < x.length; i++) {
+    const c = x[i];
+    if (q) { if (c === '\\') { i++; continue; } if (c === q) return x.slice(s + 1, i); continue; }
+    if (c === "'" || c === '"' || c === '`') { q = c; s = i; }
+  }
+  return null;
+}
+function toastKindGaps() {
+  const t = src;
+  const consts = new Map();
+  for (const m of t.matchAll(/(?:var|const|let)\s+(MSG_[A-Z_0-9]+)\s*=\s*(['"])((?:[^\\]|\\.)*?)\2/g))
+    consts.set(m[1], m[3]);
+  const out = [];
+  let seen = 0;
+  for (const m of t.matchAll(TOAST_CALL)) {
+    const s = m.index + m[0].length;
+    const a = t.slice(s, tkArgEnd(t, s));
+    const parts = tkSplit(a, ',');
+    let br = tkSplit(parts[0] || '', '?:').map((b) => b.trim()).filter((b) => b !== '');
+    if (br.length > 1) br = br.slice(1);
+    const heads = [];
+    for (const b of br) {
+      const id = /^(MSG_[A-Z_0-9]+)/.exec(b);
+      if (id && consts.has(id[1])) { heads.push(consts.get(id[1])); continue; }
+      const l = tkFirstLit(b);
+      if (l !== null) heads.push(l);
+    }
+    if (!heads.length) continue;             /* הודעה דינמית — אין טקסט לסווג */
+    seen++;
+    const line = t.slice(0, m.index).split('\n').length;
+    const kindArg = (parts[2] || '').trim();
+    if (/^kind$/.test(kindArg)) continue;    /* המודול עצמו מעביר את הסיווג הלאה */
+    const bad = /'bad'/.test(kindArg);
+    /*  ⛔ מונה ⛔ ולא `every` — ⚠️ `[].every()` הוא `true`, ⭐ וטענה
+     *  שנשענת עליו אינה יכולה להיכשל על הודעה בלי טקסט. */
+    const nMark = heads.filter((h) => TOAST_MARK.test(h)).length;
+    if (nMark > 0 && nMark < heads.length)
+      out.push('שורה ' + line + ': הודעה שמערבת שגיאה והצלחה — מפצלים לשתי קריאות');
+    else if (nMark === heads.length && !bad)
+      out.push('שורה ' + line + ': הודעת שגיאה בלי ' + "'bad'");
+    else if (nMark === 0 && bad)
+      out.push("שורה " + line + ": 'bad' על הודעה שאינה שגיאה");
+  }
+  if (!seen) return ['אין קריאות `toast` עם טקסט — אין מה לסווג'];
+  return out;
+}
+
+/*  ⛔ `RegExp` שנבנה משם מוצהר נושא גבול משני הצדדים (סבב 130) —
+ *  ⚠️ הנימוק המדוד: הדפוס נפתח בשם המפה, ⭐ ולכן `ACTIONS[act]` התאים
+ *  כשהמפה נקראה `DOM_ACTIONS`: ⛔ המדידה אישרה שם שאינו קיים, והבאג חי
+ *  חמישה סבבים.
+ *  ⛔ **והנמדד הוא השם המוצהר** — ⚠️ `APP.<שדה>` הוא מה שנבדל בין
+ *  הריפו, ⭐ ואינו נראה בקריאת התבנית: ⛔ קבוע תבנית מקומי אינו שם. */
+/*  ⛔ התבנית נבנית ממחרוזת ⛔ ולא מליטרל — ⚠️ היא תופסת סוגר פותח
+ *  שאין לו סוגר, ⭐ וכליטרל היא הייתה נספרת כתבנית לא-מאוזנת. */
+const RX_HEAD = new RegExp('new RegExp\\(\\s*(?:`\\s*\\$\\{\\s*(APP\\.[\\w$]+)|(APP\\.[\\w$]+))', 'g');
+function regexBoundSites(text) {
+  const out = [];
+  for (const m of text.matchAll(RX_HEAD))
+    out.push({ name: m[1] || m[2], line: text.slice(0, m.index).split('\n').length });
+  return out;
+}
+function regexBoundGaps() {
+  let files = [];
+  /*  ⛔ הכשל אינו נבלע — ⚠️ `catch` ריק סביב איסוף הקבצים מחזיר רשימה
+   *  ריקה, ⭐ ו-probe שסופר אפס על אוסף ריק אינו יכול להיכשל. */
+  try { files = fs.readdirSync('tools').filter((f) => f.endsWith('.mjs')).sort(); }
+  catch (e) { return ['tools/: ' + e.message]; }
+  if (!files.length) return ['tools/: אין קובצי כלים'];
+  const out = [];
+  for (const f of files)
+    for (const s of regexBoundSites(readOnce('tools/' + f)))
+      out.push(f + ':' + s.line + ' — ' + s.name + ' פותח את הדפוס בלי גבול משמאל');
+  return out;
+}
+
 /*  ⛔ שם החודש נכתב בצורה אחת (סבב 108) — ⚠️ גרש עברי `׳` ולא אפוסטרוף
  *  ולא מרכאה: ⭐ שתי צורות הן שני דליים בארכיון, ⛔ ומיפוי ביניהן הוא
  *  מקור אמת שני שמתיישן.
@@ -2092,6 +2200,12 @@ function monthFormGaps() {
 const PROC_CALL = /\b(?:spawnSync|execFileSync|execSync)\s*\(/;
 const NET_CALL = /\bfetch\s*\(/;
 const KIND_HEAD = 'behavior — ';
+/*  ⛔ שער שמריץ את הסט האמיתי (סבב 130) — ⚠️ הוא מודד שהסט **נופל**,
+ *  ⭐ ובזיכרון הוא היה מודד את עצמו: ⛔ ולכן אינו מומר לעולם.
+ *  ⚠️ **הסימן הוא שם הסט לצד תהליך** — ⛔ ולא עצם פתיחת העותק:
+ *  ⭐ שערים רבים פותחים עותק לרתמת המוטציות שלהם, והם `text`
+ *  לכל דבר, ⚠️ ומי שרק **קורא** את הקובץ אינו מריץ אותו. */
+const RUNS_SET = /['"]check-js\.mjs['"]/;
 function gateKindGaps() {
   const kinds = APP.gateKind || {};
   let files = [];
@@ -2108,8 +2222,17 @@ function gateKindGaps() {
     if (!kind) continue;
     const code = gateCode(n + '.mjs');
     const heavy = PROC_CALL.test(code) || NET_CALL.test(code);
+    /*  ⛔ ושער שמריץ את הסט על עותק אינו מומר לעולם (סבב 130) — ⚠️ הוא
+     *  מודד שהסט **נופל**, ⭐ ובזיכרון הוא היה מודד את עצמו: ⛔ ההמרה
+     *  לטקסט הופכת אותו לבדיקה שאינה יכולה להיכשל.
+     *  ⛔ **והמדידה משני צדדיה** — ⚠️ הצהרת `text` על שער שפותח עותק,
+     *  ⛔ והצהרה שאומרת «מריץ את הסט» בשער שאינו פותח אותו. */
+    const runsSet = heavy && RUNS_SET.test(readOnce('tools/' + n + '.mjs'));
     if (kind === 'text') {
       if (heavy) out.push(n + ': מוכרז text ומריץ תהליך או רשת');
+      if (runsSet) out.push(n + ': מריץ את הסט האמיתי ומוכרז text');
+    } else if (kind.indexOf(KIND_HEAD) === 0 && /מריץ את הסט/.test(kind) && !runsSet) {
+      out.push(n + ': מצהיר שהוא מריץ את הסט, ואינו מריץ אותו');
     } else if (kind.indexOf(KIND_HEAD) !== 0) {
       out.push(n + ': סוג שאינו text ואינו «behavior — נימוק»');
     } else if (kind.slice(KIND_HEAD.length).trim().split(/\s+/).length < 4) {
@@ -2215,7 +2338,7 @@ function gateSealGaps() {
    *  ⭐ והלבנה הייתה מוחקת את הערכים עצמם. */
   const jsTxt = readOnce('tools/check-js.mjs');
   const pick = (k) => {
-    const m = new RegExp(k + ':\\s*\\{([^}]*)\\}').exec(jsTxt);
+    const m = new RegExp('(?<![\\w$])' + k + ':\\s*\\{([^}]*)\\}').exec(jsTxt);
     const o = {};
     if (m) for (const e of m[1].matchAll(/([A-Za-z_][\w-]*)\s*:\s*'([^']*)'/g)) o[e[1]] = e[2];
     return o;
@@ -4202,7 +4325,7 @@ function mirrorKeyOf(tbl) {
   return prefix + (app && s2.indexOf(app) === 0 ? s2.slice(app.length) : s2);
 }
 function listIn(text, name) {
-  const m = new RegExp(name + ':?\\s*=?\\s*\\[([^\\]]*)\\]').exec(text || '');
+  const m = new RegExp('(?<![\\w$])' + name + ':?\\s*=?\\s*\\[([^\\]]*)\\]').exec(text || '');
   return m ? m[1].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean) : [];
 }
 /*  ⛔ `noPush` — ⚠️ **מה נכנס**: `{t, via, adds}` לכל טבלת מראה שאינה
@@ -4267,6 +4390,11 @@ function localMigrationGaps() {
     seen.add(s.name);
     if (Object.prototype.hasOwnProperty.call(keep, s.name)) {
       if (!String(keep[s.name]).trim()) out.push('הגירה מוכרזת בלי נימוק: ' + s.name);
+      /*  ⛔ וההכרזה נושאת את הסבב שבו רצה (סבב 130) — ⚠️ נימוק בלי סבב
+       *  אינו אומר מתי נמדד שהמכשירים עברו, ⭐ ואי אפשר לדעת אם הוא
+       *  עדיין מתקיים: ⛔ ההצהרה נקראת כקבועה, והיא מדידה שחלפה. */
+      else if (!/\(סבב \d+\)/.test(String(keep[s.name])))
+        out.push('הגירה מוכרזת בלי הסבב שבו רצה: ' + s.name);
       continue;
     }
     /*  ⛔ הסבב מוצהר בהערה הצמודה ⛔ ולא בפרק הסבב — ⚠️ פרק סבב נגזם,
@@ -4908,6 +5036,10 @@ const MATRIX = [
    *  בשלוש ושם מחלקה בגיוס, ⛔ ואותה שורה משותפת ייצרה `class="toast 6000"`
    *  במקום שש שניות. ⛔ ו-`div` **לכל הודעה** ⛔ ולא אלמנט קבוע אחד —
    *  ⚠️ הודעה שנייה דרסה את הראשונה, ⭐ ומי שקרא את המסך לא ידע שהייתה שנייה. */
+  /*  ⛔ וסיווג ההודעה נגזר מהמסלול (סבב 130) — ⚠️ הסימן שבטקסט הוא
+   *  המסלול, ⭐ והצבע חייב להסכים איתו: ⛔ בשני הכיוונים. */
+  { row: 82, name: 'סיווג ההודעה נגזר מהמסלול',
+    probe: () => toastKindGaps().length === 0 },
   { row: 82, name: '`toast` — חתימה, גוף ומחלקות',
     /*  ⛔ הגוף נמדד ב-`src` ⛔ ולא ב-`code` — ⚠️ המחרוזות מולבנות שם,
      *  ⭐ ו-`createElement('div')` הוא בדיוק מה שנמדד כאן. */
@@ -5129,6 +5261,13 @@ const MATRIX = [
   /*  ⛔ מנגנון זיהוי אחד (סבב 90ג) — ⚠️ הענף השני נמדד ואינו קיים באף אחת
    *  מהארבע: ⭐ ביומן ירדה משיכת `raw.githubusercontent` השעתית, ⛔ ורשימת
    *  היתר שאין לה מקרה בפועל היא בעצמה השארית שהשורה באה לסלק. */
+  /*  ⛔ ומיכל באנר העדכון במקור (סבב 130) — ⚠️ מיכל שנבנה ב-JS קיים רק
+   *  אחרי שהקוד רץ, ⭐ והבאנר נחוץ בדיוק כשהקוד שרץ הוא הישן: ⛔ ובלי
+   *  שורה שמצהירה עליו הוא מיכל שאיש אינו מחפש. */
+  { row: 182, name: 'מיכל באנר העדכון במקור',
+    probe: () => /<div id="updater">/.test(src) &&
+                 !/\.id\s*=\s*['"]updater['"]/.test(code) &&
+                 !/createElement\([^)]*\)[^;]{0,80}updater/.test(code) },
   { row: 182, name: 'עדכון אוטומטי — בדיקה מחזורית',
     probe: () => /setInterval\s*\(\s*checkForUpdates?\s*,/.test(code) &&
                  /reg\.update\s*\(/.test(code) && !hasCode(/\bRAW_URL\b/) &&
@@ -5322,7 +5461,11 @@ const GATES = {
   22: { claims: { test_readonly: 'drift', 'check-capabilities': 'writeGateGaps' } },
   28: { claim: 'measure-gap',
         manual: 'הצד השני של השורה — ⛔ «אותה טענה» היא קריאת משמעות, ונסרק ידנית בכל סבב שנוגע' },
-  32: { claim: 'תווית מוטציה מודפסת' },
+  /*  ⛔ שני בודקים לשורה אחת — ⚠️ `check-comments` מודד את תווית המוטציה,
+   *  ⛔ ו-`check-capabilities` מודד את הגבול בדפוס שנבנה משם מוצהר:
+   *  ⭐ probe שמותאם לשם שאינו קיים הוא probe שאינו יכול להיכשל. */
+  32: { claims: { 'check-comments': 'תווית מוטציה מודפסת',
+                  'check-capabilities': 'regexBoundGaps' } },
   19: { claim: 'תקן הבאנר' },
   16: { claim: 'דפוס הבודקים' },
   37: { claim: 'מספרי הבאנר' },
@@ -5487,6 +5630,15 @@ const COUNT_NOTE = /^[\s*⛔⚠️⭐️\uFE0F]*נמדד/;
          `מוסיפים שורת «${DECL_MARK} <נימוק>» מעל הכתיבה, או מסירים את ההצהרה`);
   else
     pass(`שער אינו משנה קבצים — כל שער שכותב נושא הצהרה עם נימוקה`);
+
+  /*  ⛔ וגבול לשם שנשתל בדפוס (סבב 130) — ⚠️ שם בלי גבול משמאל מותאם גם
+   *  כשהוא סיומת של שם אחר, ⭐ והשער מאשר קוד שאינו קיים. */
+  const rbg = regexBoundGaps();
+  if (rbg.length)
+    fail(`RegExp מהצהרה בלי גבול: ${rbg.join(' · ')} — נמדדו ${rbg.length} ` +
+         'והצפוי אפס. מוסיפים גבול בפתיחת הדפוס — `(?<![\\w$.])` לפני השם');
+  else
+    pass(`גבול ב-RegExp — כל דפוס שנבנה משם מוצהר נפתח בגבול`);
 
   /*  ⛔ ושם החודש בצורה אחת (סבב 108) — ⚠️ ובאפליקציה שאין בה מנוע תאריך
    *  עברי אין שם חודש למדוד: ⛔ ההיעדר מוצהר ב-`APP.skipCaps` ומנומק שם,

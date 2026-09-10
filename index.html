@@ -1496,7 +1496,7 @@ function staleSchemaHalt(e) {
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
-    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
+    try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
 }
@@ -4569,7 +4569,7 @@ async function doLoginOffline(u,p){
   sessSet(slUserPub(cu));
   document.getElementById('auth-spinner').style.display='none';
   enterApp();
-  toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
+  toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000, 'bad');
 }
 function doLogout(){ctxSwitch();sessClear();lkStop();document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת.
@@ -4732,7 +4732,7 @@ async function syncAll(){
     // אזהרה פעם אחת ולא כל 3 שניות, וטוסט התאוששות כשהחיבור חוזר
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
-      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג הוא העותק שבמכשיר',4000);}
+      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג הוא העותק שבמכשיר',4000, 'bad');}
     }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK);}
   }catch(e){
     _lastSyncOk=false;
@@ -4996,7 +4996,7 @@ async function saveTxn(){
   var row={client_id:cid,student_client_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
   // מסלול קריטי: כשל כתיבה מקומית עוצר כאן ברעש. בכסף אסור
   // בשום מצב להציג "נשמר" על משהו שלא נכתב לשום מקום.
-  if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000);return;}
+  if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   releaseCid('txn');
   document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'';
@@ -5100,9 +5100,9 @@ document.addEventListener('keydown', function (e) {
 
 function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
-  if(!t){toast('⚠️ התשלום לא נמצא');return;}
+  if(!t){toast('⚠️ התשלום לא נמצא', null, 'bad');return;}
   var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-  if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   refreshUI();
   toast(navigator.onLine?'✅ תשלום נמחק':MSG_SAVED_LOCAL,4000);
@@ -5180,7 +5180,7 @@ async function scPastShow(){
 }
 function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
-  if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000, 'bad');return;}
   pendMark(pendStuKey(row));refreshUI();
   toast(row.active?'✅ תלמיד הופעל':'✅ תלמיד הושהה');schedulePush();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
@@ -5188,31 +5188,31 @@ function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.cli
 function readMonthRange(startId,endId){
   var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
   var sm=normMonth(rawS),em=normMonth(rawE);
-  if(rawS&&!sm){toast('❌ חודש הצטרפות לא תקין — פורמט YYYY-MM');return null;}
-  if(rawE&&!em){toast('❌ חודש עזיבה לא תקין — פורמט YYYY-MM');return null;}
-  if(sm&&em&&em<sm){toast('❌ חודש העזיבה מוקדם מחודש ההצטרפות');return null;}
+  if(rawS&&!sm){toast('❌ חודש הצטרפות לא תקין — פורמט YYYY-MM', null, 'bad');return null;}
+  if(rawE&&!em){toast('❌ חודש עזיבה לא תקין — פורמט YYYY-MM', null, 'bad');return null;}
+  if(sm&&em&&em<sm){toast('❌ חודש העזיבה מוקדם מחודש ההצטרפות', null, 'bad');return null;}
   return {start_month:sm||null,end_month:em||null};
 }
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
   if(!name){toast('שם חובה');return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
-  var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast('⚠️ התלמיד לא נמצא', null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // ⛔ אימות מפורש ולא הסתמכות על הדפדפן (סבב 67) — `type=number` החזיר
   // מחרוזת ריקה על קלט פגום ולכן התנאי דילג עליו; בשדה טקסט אותו קלט
   // מגיע כמות שהוא, ו-`parseInt` היה כותב `NaN` לתוך `card_settings`.
   var tuitionVal=parseInt(tuition,10);
-  if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}
+  if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי', null, 'bad');return;}
   if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
   var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
   var debtVal=parseInt(debtRaw);
-  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast('❌ חוב קודם חייב להיות מספר חיובי');return;}
+  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast('❌ חוב קודם חייב להיות מספר חיובי', null, 'bad');return;}
   if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
   var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
-  if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000, 'bad');return;}
   pendMark(pendStuKey(row));refreshUI();
   toast(navigator.onLine?'✅ הגדרות נשמרו':MSG_SAVED_LOCAL,4000);schedulePush();
 }
@@ -5280,7 +5280,7 @@ function saveDefaultTuition(){
   if(!v||isNaN(v)){toast('ערך לא תקין');return;}
   var cur=(MIRROR.sl_settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
-  if(!slLocalWrite('sl_settings',row)){toast('❌ השמירה במכשיר נכשלה — הערך לא נשמר',5000);return;}
+  if(!slLocalWrite('sl_settings',row)){toast('❌ השמירה במכשיר נכשלה — הערך לא נשמר',5000, 'bad');return;}
   pendMark(pendSetKey(row));
   refreshUI();
   toast(navigator.onLine?MSG_SAVED:MSG_SAVED_LOCAL,4000);
@@ -5320,9 +5320,9 @@ function addListItem(cat){
   /*  ⛔ ערך שכבר ברשימה אינו נוסף שוב — ⚠️ **וההשוואה על הערך** ⛔ ולא על
    *  ה-`client_id`: ⭐ הרשימה מזינה בוררים, ⛔ ושתי אפשרויות באותו טקסט
    *  אינן ניתנות להבחנה — ⚠️ ומחיקת אחת מהן משאירה את השנייה. */
-  if(uniqHas(LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast('⚠️ הערך כבר קיים ברשימה',4000);return;}
+  if(uniqHas(LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast('⚠️ הערך כבר קיים ברשימה',4000, 'bad');return;}
   var row={client_id:newClientId(),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
-  if(!slLocalWrite('sl_lists',row)){toast('❌ השמירה במכשיר נכשלה — הפריט לא נוסף',5000);return;}
+  if(!slLocalWrite('sl_lists',row)){toast('❌ השמירה במכשיר נכשלה — הפריט לא נוסף',5000, 'bad');return;}
   pendMark(pendLstKey(row));
   refreshUI();
   toast(navigator.onLine?'✅ נוסף':MSG_SAVED_LOCAL,4000);
@@ -5333,12 +5333,12 @@ function addListItem(cat){
 function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט: גם אם הכפתור הוצג מרינדור ישן.
   var it=findListItem(key);
-  if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
+  if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200, 'bad');return;}
   showConfirm('מחיקה','למחוק פריט זה?',function(){
     var r0=(MIRROR.sl_lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
-    if(!r0){toast('⚠️ הפריט לא נמצא');return;}
+    if(!r0){toast('⚠️ הפריט לא נמצא', null, 'bad');return;}
     var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-    if(!slLocalWrite('sl_lists',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+    if(!slLocalWrite('sl_lists',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000, 'bad');return;}
     pendMark(pendLstKey(row));
     refreshUI();
     toast(navigator.onLine?'✅ נמחק':MSG_SAVED_LOCAL,4000);
@@ -5361,10 +5361,10 @@ function openAddStudent(){
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal('הוספת תלמיד', body, foot);
 }
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי', null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
-  if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000, 'bad');return;}
   pendMark(pendStuKey(row));
   releaseCid('student');
   closeModal();
@@ -5375,9 +5375,9 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
 function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return slKey(x)===String(key);})[0];
  showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',function(){
-  if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  if(!s){toast('⚠️ התלמיד לא נמצא', null, 'bad');return;}
   var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-  if(!slLocalWrite('sl_students',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000, 'bad');return;}
   pendMark(pendStuKey(row));
   if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
