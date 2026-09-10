@@ -10,10 +10,10 @@
  *  במקום אחר בכל אחת מהן, ובגיוס הוא בכלל היה קוד מת. הבדיקה הזו רצה עם
  *  שערי התחביר לפני כל דחיפה, ונכשלת על שלושת סוגי הסטייה:
  *
- *    א. `#sync-status-box` ו-`#tech-info-box` אינם שני האלמנטים האחרונים
- *       במסך ההגדרות, בסדר הזה.
- *    ב. אחד משלושת הבלוקים המשותפים (CSS, "מידע טכני", "☁️ סנכרון") אינו
- *       זהה לחתימה הקנונית שרשומה כאן.
+ *    א. `#sync-status-box` ו-`#status-extra-box` אינם שני האלמנטים
+ *       האחרונים במסך ההגדרות, בסדר הזה.
+ *    ב. אחד משני הבלוקים המשותפים (CSS, "☁️ סנכרון") אינו זהה לחתימה
+ *       הקנונית שרשומה כאן.
  *    ג. `statusAreaMount()` אינו נקרא מקוד חי — כלומר הרכיב קיים אך לא
  *       מחווט, בדיוק התקלה של gius בסבב 15.
  *
@@ -62,13 +62,10 @@ const CANON = {
    *  המחלקות והצבעים אחד בארבעתן. */
   toast: { name: 'CSS שכבת הטוסט',       sha: '53a6aa03d82fd7dc', lines: 14,
           start: '/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב)', end: '/* ═══ סוף CSS שכבת הטוסט' },
-  css:  { name: 'CSS אזור המצב',        sha: 'd569f507cf3bdd8f', lines: 24,
+  css:  { name: 'CSS אזור המצב',        sha: '89960c4a25a2b867', lines: 19,
           start: '/* ═══ אזור מצב — CSS משותף (סבב 15/17)', end: '/* ═══ סוף CSS אזור המצב' },
-  /*  ⛔ שלושת הבלוקים האלה מוצהרים גם ב-`check-capabilities` — ⚠️ ולכן
+  /*  ⛔ שני הבלוקים האלה מוצהרים גם ב-`check-capabilities` — ⚠️ ולכן
    *  החתימה ומספר השורות נקראים משם, ⛔ ואינם מוקלדים כאן פעם שנייה. */
-  tech: Object.assign({ name: 'בלוק "מידע טכני"',
-          start: '/* ═══ מידע טכני — מודול משותף (סבב 91)', end: '/* ═══════════════ סוף מודול מידע טכני' },
-          capsBlock('/* ═══ מידע טכני — מודול משותף (סבב 91)')),
   sync: Object.assign({ name: 'בלוק "☁️ סנכרון"',
           start: '/* ═══ אזור מצב — בלוק "☁️ סנכרון" — מודול משותף (סבב 17)', end: '/* ═══ סוף בלוק "☁️ סנכרון"' },
           capsBlock('/* ═══ אזור מצב — בלוק "☁️ סנכרון" — מודול משותף (סבב 17)')),
@@ -90,7 +87,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const FLOOR = { shared: 7, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -203,10 +200,10 @@ if (APP.mode === 'html') {
     const last2 = kids.slice(-2);
     const ok = last2.length === 2 &&
                last2[0].includes('id="sync-status-box"') &&
-               last2[1].includes('id="tech-info-box"');
-    if (ok) pass('אזור המצב: sync-status-box ואחריו tech-info-box הם שני האלמנטים האחרונים');
+               last2[1].includes('id="status-extra-box"');
+    if (ok) pass('אזור המצב: sync-status-box ואחריו status-extra-box הם שני האלמנטים האחרונים');
     else fail('אזור המצב: שני האלמנטים האחרונים ב-' + APP.settingsContainerId +
-              ' אינם sync-status-box ואז tech-info-box. נמדד: ' +
+              ' אינם sync-status-box ואז status-extra-box. נמדד: ' +
               last2.map(t => t.slice(0, 60)).join(' | ') +
               ' — מעדכנים את סדר שני האלמנטים האחרונים במיכל');
   }
@@ -214,10 +211,10 @@ if (APP.mode === 'html') {
   // מסך ההגדרות של gius נבנה כמחרוזת ומוחזר; הבדיקה היא על זנב הבנייה.
   const re = new RegExp(
     "h \\+= '<div id=\"sync-status-box\"></div>';\\s*\\n\\s*" +
-    "h \\+= '<div id=\"tech-info-box\"></div>';\\s*\\n\\s*return h;");
+    "h \\+= '<div id=\"status-extra-box\"></div>';\\s*\\n\\s*return h;");
   if (re.test(src)) pass('אזור המצב: שני העוגנים נבנים אחרונים ב-' + APP.settingsFn);
   else fail('אזור המצב: ' + APP.settingsFn + ' אינה מסתיימת בעוגן sync-status-box ' +
-              'ואז tech-info-box — נמדד סדר אחר והצפוי הסדר הזה. מעדכנים את סוף הפונקציה');
+              'ואז status-extra-box — נמדד סדר אחר והצפוי הסדר הזה. מעדכנים את סוף הפונקציה');
 }
 
 // העוגן הישן של מסך ה-⏳ אינו אמור להתקיים יותר — תוכנו חי בתוך אזור המצב.
