@@ -37,10 +37,11 @@ const APP = {
   plainCol: 'password',
   verifyFn: 'slVerifyOffline',
   backfillFn: 'slBackfillPassFp',
-  /*  ⛔ מסלול אימות אחד בלבד — ⚠️ אין כאן מסך ניהול משתמשים ואין מעבר
-      משתמש: ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר
-      לו טביעה בעצמו (הנוסח בבאנר המיגרציה). */
-  authPaths: [['async function doLogin', 'הכניסה המקוונת']],
+  /*  ⛔ שני מסלולי אימות ואין מעבר משתמש — ⚠️ אין כאן מסך ניהול משתמשים:
+      ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר לו טביעה
+      בעצמו (הנוסח בבאנר המיגרציה). */
+  authPaths: [['async function doLogin', 'הכניסה המקוונת'],
+              ['async function slSaveMyPassword', 'שינוי סיסמה עצמי']],
   migrationA: '015_users_drop_plaintext_password.sql',
   migrationB: '016_drop_sl_users_password.sql',
 };
@@ -102,7 +103,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 5, app: 10, appWhy: 'מסלולי הסיסמה — גזירת הטביעה, האימות והמראה קיימים בשלוש שיש בהן כניסה' };
+const FLOOR = { shared: 5, app: 11, appWhy: 'מסלולי הסיסמה — גזירת הטביעה, האימות והמראה קיימים בשלוש שיש בהן כניסה' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;

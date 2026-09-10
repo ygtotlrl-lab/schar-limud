@@ -54,7 +54,7 @@ const APP = {
     ensure: { name: 'slEnsurePassFp',
               why: 'השלמת טביעה בכניסה מקוונת — משתמש שנוצר ב-INSERT ידני מגיע בלעדיה' },
   },
-  passScreen: { open: 'slMyPassword', act: 'my-pass-save' },
+  passScreen: { open: 'slMyPassword', open_act: 'my-pass', act: 'my-pass-save' },
   /*  ⛔ אין כאן מסך ניהול משתמשים — ⚠️ משתמש יחיד, ⭐ ואין למי לנהל:
    *  ⛔ ומוצהר ריק ⛔ ואינו נשמט. */
   usersScreen: '',
@@ -107,7 +107,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 37, app: 0, appWhy: '' };
+const FLOOR = { shared: 38, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -389,6 +389,7 @@ if (!APP.userTables.length) {
   pass('10ה2. מסך שינוי הסיסמה — אין כאן כניסה, ואין מה לאכוף');
   pass('10ה3. מסך ניהול המשתמשים — אין כאן כניסה, ואין מה לאכוף');
   pass('10ה4. עזר שקיים כאן בלבד — אין כאן כניסה, ואין מה לאכוף');
+  pass('10ה5. נפילת דיאלוג — אין כאן מסך סיסמה, ואין מה לאכוף');
 } else {
   const c = codeOnly(src);
   const fns = APP.passFns || {};
@@ -401,19 +402,35 @@ if (!APP.userTables.length) {
 
   /*  ⛔ המסך נמדד בשני צדדיו — ⚠️ הפותח **והפעולה שבמפה**: ⭐ מסך שנפתח
    *  ואין לו שמירה הוא חצי יכולת, ⛔ ופעולה בלי מסך היא מטפל שאיש אינו
-   *  מגיע אליו. */
+   *  מגיע אליו.
+   *  ⛔ **ושתי פעולות ולא אחת** (סבב 133) — ⚠️ `my-pass` פותח
+   *  ו-`my-pass-save` שומר, ⭐ **ושמותיהן אחידים בשלוש שיש בהן כניסה**:
+   *  ⛔ שם שנבדל בין השלוש הוא אותה יכולת בשלושה חיפושים. */
   const scr = APP.passScreen || {};
-  const actLive = !!scr.act && new RegExp("'" + scr.act + "'\\s*:").test(c);
-  if (!scr.open || !scr.act)
-    fail('10ה2. מסך שינוי הסיסמה — נמדדו 0 הצהרות שלמות והצפוי `open` ו-`act`. ' +
-         'משלימים את `APP.passScreen`');
+  const actIn = (a) => !!a && new RegExp("'" + a + "'\\s*:").test(c);
+  if (!scr.open || !scr.act || !scr.open_act)
+    fail('10ה2. מסך שינוי הסיסמה — נמדדו 0 הצהרות שלמות והצפוי `open` · ' +
+         '`open_act` · `act`. משלימים את `APP.passScreen`');
+  else if (scr.open_act !== 'my-pass' || scr.act !== 'my-pass-save')
+    fail('10ה2. מסך שינוי הסיסמה — נמדדו «' + scr.open_act + '»/«' + scr.act +
+         '» והצפוי «my-pass»/«my-pass-save». מיישרים את שמות הפעולות');
   else if (!has(scr.open))
     fail('10ה2. מסך שינוי הסיסמה — הפותח «' + scr.open + '» מוצהר ואינו בקוד, ' +
          'והצפוי פונקציה חיה. כותבים אותה או מוחקים את ההצהרה');
-  else if (!actLive)
-    fail('10ה2. מסך שינוי הסיסמה — הפעולה «' + scr.act + '» מוצהרת ואינה במפת ' +
-         'הפעולות, והצפוי מטפל אחד. מחווטים אותה');
-  else pass('10ה2. מסך שינוי הסיסמה — «' + scr.open + '» ו-«' + scr.act + '» חיים');
+  else if (!actIn(scr.open_act) || !actIn(scr.act))
+    fail('10ה2. מסך שינוי הסיסמה — נמדדה פעולה מוצהרת שאינה במפת הפעולות ' +
+         'והצפוי שתיהן. מחווטים את «' + scr.open_act + '» ואת «' + scr.act + '»');
+  else pass('10ה2. מסך שינוי הסיסמה — «' + scr.open + '», «' + scr.open_act +
+            '» ו-«' + scr.act + '» חיים');
+
+  /*  ⛔ וכל דיאלוג נופל ל-`uiNoDialog` כשהמיכל אינו ב-DOM — ⚠️ ארבעת
+   *  קוראי שכבת המודאל ועוד אחד ממסך הסיסמה: ⭐ שומר שקורא ערך משדה
+   *  שאינו קיים זורק, ⛔ והמסלול נגמר בלי שהמשתמש יודע למה. */
+  const noDlg = (c.match(/uiNoDialog\(/g) || []).length - 1;
+  if (noDlg !== 5)
+    fail('10ה5. נפילת דיאלוג — נמדדו ' + noDlg + ' קוראי `uiNoDialog` והצפוי 5: ' +
+         'ארבעת קוראי שכבת המודאל ושומר מסך הסיסמה. מוסיפים את החסר');
+  else pass('10ה5. נפילת דיאלוג — 5 קוראי `uiNoDialog`, ובהם שומר מסך הסיסמה');
 
   if (!Object.prototype.hasOwnProperty.call(APP, 'usersScreen'))
     fail('10ה3. מסך ניהול המשתמשים — נמדדו 0 הצהרות והצפוי אחת (ריקה כשאין). ' +

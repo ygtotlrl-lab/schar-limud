@@ -736,6 +736,111 @@ t(!capsFails((doc) => {
         'נ28 · ⭐ שם עזר שהוחלף בעקביות ⛔ **אינו** מפיל');
     }
   }
+  /*  ⛔⛔ מ51 — שם פעולה שנבדל (סבב 133): ⚠️ **מה נכנס**: שתי הפעולות
+   *  שב-`APP.passScreen`, ⛔ **ומה מפיל**: שם שנבדל מ-«my-pass»/«my-pass-save»:
+   *  ⭐ אותה יכולת בשלושה שמות היא שלושה חיפושים, ⚠️ ומי שמיישר את השלוש
+   *  אינו מוצא את השלישית. */
+  {
+    const push = rd('tools/test_push.mjs');
+    const scr = /passScreen: \{ open: '[A-Za-z_$][\w$]*', open_act: '([a-z-]+)'/.exec(push);
+    if (!scr) t(true, 'מ51 · ⭕ אין כאן מסך שינוי סיסמה — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'tools/test_push.mjs': push.replace("open_act: '" + scr[1] + "'",
+                                                        "open_act: 'mypass-open'") },
+                  'test_push.mjs', () => ({})),
+        'מ51 · שם פעולה שנבדל **מפיל** את «מסך שינוי הסיסמה»');
+  }
+  /*  ⛔⛔ מ52 — שומר בלי נפילת דיאלוג (סבב 133): ⚠️ הטענה שנופלת היא
+   *  «נפילת דיאלוג», ⭐ והנימוק המדוד הוא ששומר שקורא ערך משדה שאינו
+   *  ב-DOM זורק: ⛔ והמסלול נגמר בלי שהמשתמש יודע למה. */
+  {
+    const idx = rd('index.html');
+    const hit = /\n(\s*)if \(![a-z]\d? \|\| ![a-z]\d? \|\| ![a-z]\d?\) \{ uiNoDialog\('[A-Za-z_$][\w$]*', 'm[pw]-[a-z]+'\); return; \}/.exec(idx);
+    if (!hit) t(true, 'מ52 · ⭕ אין כאן שומר מסך סיסמה — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html': idx.replace(hit[0], '') }, 'test_push.mjs', () => ({})),
+        'מ52 · שומר בלי `uiNoDialog` **מפיל** את «נפילת דיאלוג»');
+  }
+  /*  ⭐ מוטציית-נגד: שינוי שם עקבי של השומר — הפונקציה, אתר הקריאה שבמפה
+   *  והתווית שב-`uiNoDialog` יחד ⛔ אינו מפיל: ⚠️ המנגנון לא נגע, ⭐ ושמות
+   *  הפעולות הם מה שאחיד ⛔ ולא שמות הפונקציות. */
+  {
+    const idx = rd('index.html');
+    const hit = /uiNoDialog\('([A-Za-z_$][\w$]*)', 'm[pw]-[a-z]+'\)/.exec(idx);
+    if (!hit) t(true, 'נ31 · ⭕ אין כאן שומר מסך סיסמה — ⛔ ואין מה להחליף');
+    else {
+      const re = new RegExp('(?<![\\w$.])' + hit[1] + '(?![\\w$])', 'g');
+      const push = rd('tools/test_push.mjs');
+      t(!runGateOn({ 'index.html': idx.replace(re, hit[1] + 'X'),
+                     'tools/test_push.mjs': push.replace(re, hit[1] + 'X') },
+                   'test_push.mjs', () => ({})),
+        'נ31 · ⭐ שם השומר שהוחלף בעקביות ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ48 · מ49 — כתובות CDN (סבב 133): ⚠️ **מה נכנס**: כתובת ה-CDN
+   *  הראשונה שב-`index.html`, ⛔ **ומה מפיל**: כתובת בלי נתיב מלא ⛔ וגרסה
+   *  שנבדלת בין שני הקבצים. ⭐ **ולמה שתיים**: הן שני צדדיו של אותו תקן —
+   *  ⚠️ נתיב שאבד הוא תוכן שאינו נעוץ, ⛔ וגרסה שנבדלת היא מטמון שאינו
+   *  נמשך ואופליין שנשבר. */
+  {
+    const idx = rd('index.html'), sw = rd('sw.js');
+    const hit = /<script[^>]*\ssrc="(https:\/\/[^"]+@\d+\.\d+\.\d+\/[^"]+)"/.exec(idx);
+    if (!hit) { t(true, 'מ48 · ⭕ אין כאן כתובת jsdelivr עם נתיב — ⛔ ואין מה למוטט');
+                t(true, 'מ49 · ⭕ אין כאן כתובת jsdelivr עם נתיב — ⛔ ואין מה למוטט'); }
+    else {
+      const full = hit[1], bare = full.replace(/(@\d+\.\d+\.\d+)\/.*$/, '$1');
+      t(runGateOn({ 'index.html': idx.split(full).join(bare),
+                    'sw.js': sw.split(full).join(bare) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ48 · כתובת בלי נתיב מלא **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
+      const verOne = full.replace(/@(\d+)\.(\d+)\.(\d+)\//,
+        (m, a, b, c) => '@' + a + '.' + b + '.' + (Number(c) + 1) + '/');
+      t(runGateOn({ 'sw.js': sw.split(full).join(verOne) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ49 · גרסה שנבדלת בין הקבצים **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: קידום גרסה עקבי בשני הקבצים ובהצהרה ⛔ אינו מפיל —
+   *  ⚠️ זה בדיוק השינוי החי שהתקן בא להתיר. */
+  {
+    const idx = rd('index.html'), sw = rd('sw.js'), caps = rd('tools/check-capabilities.mjs');
+    const hit = /<script[^>]*\ssrc="(https:\/\/[^"]+@(\d+)\.(\d+)\.(\d+)\/[^"]+)"/.exec(idx);
+    if (!hit) t(true, 'נ29 · ⭕ אין כאן כתובת jsdelivr עם נתיב — ⛔ ואין מה להחליף');
+    else {
+      const from = hit[2] + '.' + hit[3] + '.' + hit[4];
+      const to = hit[2] + '.' + hit[3] + '.' + (Number(hit[4]) + 1);
+      const ok = { 'index.html': idx.split('@' + from + '/').join('@' + to + '/'),
+                   'sw.js': sw.split('@' + from + '/').join('@' + to + '/'),
+                   'tools/check-capabilities.mjs': caps.split("': '" + from + "'").join("': '" + to + "'") };
+      t(!runGateOn(ok, 'check-capabilities.mjs', () => ({})),
+        'נ29 · ⭐ קידום גרסה עקבי בשני הקבצים ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ50 — צבע הזהות (סבב 133): ⚠️ **מה נכנס**: כלל `#updater .in`,
+   *  ⛔ **ומה מפיל**: משטח הבאנר שנגזר מדיו הטקסט במקום מ-`--brand`:
+   *  ⭐ ארבעה גווני טקסט הם אותו כהה, ⚠️ וארבעת הבאנרים נראו זהים. */
+  {
+    const idx = rd('index.html');
+    const hit = /#updater \.in\{\s*background:var\(--brand\)/.exec(idx);
+    if (!hit) t(true, 'מ50 · ⭕ אין כאן כלל `#updater .in` — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html': idx.replace('#updater .in{\n  background:var(--brand)',
+                                              '#updater .in{\n  background:var(--text)') },
+                  'check-capabilities.mjs', () => ({})),
+        'מ50 · משטח הבאנר מדיו הטקסט **מפיל** את «ערכת נושא — בהיר וכהה»');
+  }
+  /*  ⭐ מוטציית-נגד: שינוי שם עקבי — האסימון, ההכרזה והכלל יחד ⛔ אינו
+   *  מפיל: ⚠️ זה בדיוק השינוי החי שהתקן בא להתיר, ⭐ ושם אחד בארבעתן
+   *  אינו «אותו שם לנצח». */
+  {
+    const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    if (idx.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
+    else
+      t(!runGateOn({ 'index.html': idx.split('--on-brand').join('--brand-on'),
+                     'tools/check-capabilities.mjs': caps.split('--on-brand').join('--brand-on') },
+                   'check-capabilities.mjs', () => ({})),
+        'נ30 · ⭐ שינוי שם עקבי של אסימון הדיו ⛔ **אינו** מפיל');
+  }
   /*  ⛔⛔ מ45 — סימן דחייה בזיכרון (סבב 132): ⚠️ הטענה שנופלת היא «סימן
    *  דחיית הבאנר מתמיד», ⭐ והנימוק המדוד הוא שהסימן מתאפס בטעינה —
    *  ⛔ ואז הבאנר חוזר בכל טעינה, בלי שדבר השתנה.
