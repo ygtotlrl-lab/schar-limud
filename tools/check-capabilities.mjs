@@ -230,7 +230,8 @@ const APP = {
     'check-capabilities.mjs:domEntry': 'עוזר זהה בארבעת עותקי השער — ⛔ הוא נקרא בהנהלה בלבד, ⚠️ ששם יש שכבת כניסה: ⭐ עוזר שנגזם באחת מפסיק להיות זהה',
   },
   dualRoleAllow: {
-    '--text': 'המשטח ההפוך של באנר העדכון — ⚠️ המשטח והדיו מתחלפים בתפקידם יחד, ⭐ והצמד נמדד עובר בשני המצבים',
+    '--brand': 'המשטח ההפוך של באנר העדכון — ⚠️ המשטח והדיו מתחלפים בתפקידם יחד, ⭐ והצמד נמדד עובר בשני המצבים',
+    '--on-brand': 'הדיו ההפוך של באנר העדכון — ⚠️ המשטח והדיו מתחלפים בתפקידם יחד, ⭐ והצמד נמדד עובר בשני המצבים',
     '--card': 'הדיו ההפוך על מילוי `--navy` — ⚠️ שני האסימונים מתהפכים יחד עם הערכה, ⭐ והצמד נמדד עובר בשני המצבים',
   },
   contrastAllow: {
@@ -3073,7 +3074,12 @@ function untaggedLogs(s) {
  *  אלא **שכל תג נושא מספר גרסה מפורש ומוצהר ב-`APP.cdnLibs`**: ⭐ קישור
  *  בלי גרסה מקבל בכל טעינה מה שהספרייה פרסמה אתמול, ⛔ ושדרוג שובר מגיע
  *  בלי שאיש דחף דבר. ⛔ **והמדידה משני צדדיה** — ⚠️ תג בלי הצהרה ⛔ והצהרה
- *  בלי תג: ⭐ רשימה שהתיישנה היא בעצמה השארית שהשורה באה לסלק. */
+ *  בלי תג: ⭐ רשימה שהתיישנה היא בעצמה השארית שהשורה באה לסלק.
+ *  ⛔ **וכתובת נושאת נתיב מלא** (סבב 133) — ⚠️ בלי נתיב, הקובץ שמוגש נקבע
+ *  בשדה שבחבילה ⛔ ולא בכתובת: ⭐ הגרסה נעוצה והתוכן אינו, ⚠️ והספק רשאי
+ *  להפנות מחדש — ⛔ ותגובת הפניה אינה נכנסת למטמון.
+ *  ⛔ **ואותה גרסה בשני הקבצים** — ⚠️ גרסה שהדף אינו מבקש היא מטמון
+ *  מבוזבז, ⛔ וגרסה שאינה במטמון שוברת את האופליין. */
 function cdnTags(s) {
   const out = [];
   for (const m of s.matchAll(/<script[^>]*\ssrc="(https:\/\/[^"]+)"/g)) {
@@ -3083,10 +3089,24 @@ function cdnTags(s) {
     const at   = /@(\d+\.\d+\.\d+)(?:\/|$)/.exec(u);
     const path = /\/libs\/[^/]+\/(\d+\.\d+\.\d+)\//.exec(u);
     const name = /\/libs\/([^/]+)\//.exec(u) || /\/npm\/(?:@[^/]+\/)?([^@/]+)/.exec(u);
+    /*  ⛔ הנתיב נמדד כמה שאחרי הגרסה — ⚠️ קטע ריק הוא כתובת בלי נתיב,
+     *  ⭐ ובשתי תבניות הגרסה כאחת. */
+    const tail = /@\d+\.\d+\.\d+(\/[^?#]*)?$/.exec(u) ||
+                 /\/libs\/[^/]+\/\d+\.\d+\.\d+(\/[^?#]*)?$/.exec(u);
     out.push({ url: u, ver: (at && at[1]) || (path && path[1]) || null,
-               name: name ? name[1] : null });
+               name: name ? name[1] : null,
+               full: !!(tail && tail[1] && tail[1].length > 1) });
   }
   return out;
+}
+/*  ⛔ רשימת ה-CDN שה-service worker מקדים למטמון (סבב 133) — ⚠️ נקראת
+ *  מ-`sw.js` ⛔ ולא מוקלדת כאן: ⭐ רשימה שנייה הייתה מקור אמת שני. */
+function swCdnAssets() {
+  let sw;
+  try { sw = readOnce('sw.js'); } catch (e) { return null; }
+  const m = /var\s+CDN_ASSETS\s*=\s*\[([\s\S]*?)\];/.exec(sw);
+  if (!m) return null;
+  return [...m[1].matchAll(/'(https:\/\/[^']+)'/g)].map((x) => x[1]);
 }
 function cdnGaps() {
   const tags = cdnTags(src), decl = APP.cdnLibs || {};
@@ -3095,10 +3115,19 @@ function cdnGaps() {
     if (!t.ver) gaps.push('קישור בלי גרסה: ' + t.url);
     else if (!t.name || decl[t.name] !== t.ver)
       gaps.push('תג שאינו מוצהר ב-APP.cdnLibs: ' + t.name + '@' + t.ver);
+    if (!t.full) gaps.push('כתובת בלי נתיב מלא: ' + t.url);
   }
   for (const k of Object.keys(decl))
     if (!tags.some((t) => t.name === k && t.ver === decl[k]))
       gaps.push('הצהרה בלי תג: ' + k + '@' + decl[k]);
+  const swUrls = swCdnAssets();
+  if (swUrls === null) gaps.push('`CDN_ASSETS` אינו נקרא מ-`sw.js`');
+  else {
+    for (const t of tags)
+      if (swUrls.indexOf(t.url) < 0) gaps.push('תג שאינו ב-CDN_ASSETS: ' + t.url);
+    for (const u of swUrls)
+      if (!tags.some((t) => t.url === u)) gaps.push('CDN_ASSETS בלי תג: ' + u);
+  }
   return gaps;
 }
 
@@ -4006,6 +4035,26 @@ function updaterLiteralGaps() {
   if (!seen) out.push('אפס כללי `#updater` ⛔ — מוסיפים את כללי הבאנר');
   return out;
 }
+/*  ⛔ צבע הזהות הוא אסימון אחד בשם אחד (סבב 133) — ⚠️ **מה נכנס**: הערכה
+ *  הבהירה וכללי `#updater`, ⛔ **ומה מפיל**: `--brand` או `--on-brand` שאינם
+ *  מוגדרים, ⛔ ורכיב זהות שנגזר מדיו הטקסט: ⭐ ארבעה באנרים שאינם
+ *  נגזרים מהזהות נראים זהים, ⚠️ שארבעת גווני הטקסט הם אותו כהה. */
+function brandTokenGaps() {
+  const out = [];
+  const li = src.indexOf(':root');
+  const light = src.slice(li, src.indexOf('}', li));
+  for (const t of ['--brand', '--on-brand'])
+    if (light.indexOf(t + ':') < 0) out.push('אסימון זהות שאינו מוגדר: ' + t);
+  const css = cssText();
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim().replace(/\s+/g, ' ');
+    if (sel.indexOf('#updater') !== 0) continue;
+    for (const d of m[2].matchAll(/(?<![\w-])(background(?:-color)?|color)\s*:\s*([^;}]+)/g))
+      if (/var\(--(?:text|ink|bg|card)\b/.test(d[2]))
+        out.push(`רכיב זהות שנגזר מדיו הטקסט ב-${sel}: ${d[1]}:${d[2].trim()} ⛔ — מחליפים ל-\`--brand\`/\`--on-brand\``);
+  }
+  return out;
+}
 function themeGaps() {
   const out = [];
   const n = (src.match(/@media\s*\(prefers-color-scheme/g) || []).length;
@@ -4021,7 +4070,7 @@ function themeGaps() {
   for (const [k, v] of L)
     if (/#|rgba?\(/.test(v) && !D.has(k)) out.push(`אסימון בהיר בלי מקבילה כהה: ${k}`);
   for (const k of D.keys()) if (!L.has(k)) out.push(`אסימון כהה שאינו בערכה הבהירה: ${k}`);
-  return out.concat(dualRoleGaps(), contrastGaps(), updaterLiteralGaps());
+  return out.concat(dualRoleGaps(), contrastGaps(), updaterLiteralGaps(), brandTokenGaps());
 }
 /*  ⛔ הערה שמתארת מצב שחלף (סבב 97) — ⚠️ הנמדד הוא **דפוס המצבה**
  *  בלבד: ⭐ שבע הצורות שברשימה שמתחת, ⛔ ושלושת הדפוסים
@@ -4913,7 +4962,8 @@ const MATRIX = [
   { row: 176, name: 'שאילתת `@media` מתה',
     probe: () => deadMediaSites().length === 0 },
   /*  ⛔ ספרייה חיצונית — גרסה מוצהרת (סבב 91) — ⚠️ קישור בלי גרסה, תג בלי
-   *  הצהרה, והצהרה בלי תג — ⭐ שלושתם אותה טענה משני צדדיה. */
+   *  הצהרה, והצהרה בלי תג — ⭐ שלושתם אותה טענה משני צדדיה.
+   *  ⛔ ומסבב 133 גם הנתיב המלא, ⚠️ והצלבת התג מול `CDN_ASSETS`. */
   { row: 103, name: 'ספרייה חיצונית — גרסה מוצהרת',
     probe: () => cdnGaps().length === 0 },
   /*  ⛔ ייצוא והנפקה — דרך מוצהרת (סבב 91) — ⚠️ דרך אחת בלבד באפליקציה,
