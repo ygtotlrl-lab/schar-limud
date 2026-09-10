@@ -259,8 +259,11 @@ else fail('9. סשן נשמר במכשיר: הקוד אומר ' + (hasSession ? 
    רתמת ההתנהגות — הליבה האמיתית, DOM מזויף ושעון מזויף
    ══════════════════════════════════════════════════════════════════════════ */
 function fakeEl(id) {
+  /*  ⛔ `dataset` הוא חלק מהאלמנט המזויף — ⚠️ מסבב 128 הכפתור מסומן
+   *  `dataset.act` במקום מאזין ישיר, ⭐ ואלמנט בלי `dataset` היה מפיל
+   *  את הרתמה על המנגנון שהיא נועדה למדוד. */
   return { id, className: '', textContent: '', type: '', onclick: null, style: {},
-           children: [], appendChild(c) { this.children.push(c); return c; } };
+           dataset: {}, children: [], appendChild(c) { this.children.push(c); return c; } };
 }
 function harness(moduleSrc) {
   const els = {};

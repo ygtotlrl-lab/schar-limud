@@ -618,7 +618,7 @@ const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
     docRows: ['אחסון מקומי', 'אסטרטגיית `localStorage`'],
-    block: { sha: 'c92f39ed0318e376', lines: 693,
+    block: { sha: '6aa05ea913cd53f3', lines: 693,
              start: '   עמידות אחסון מקומי — מודול משותף (סבב 11).',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -651,7 +651,7 @@ const CAPS = {
   pending: {
     name: 'מודול "ממתין לסנכרון"',
     docRows: ['`pend` — ממתין לסנכרון'],
-    block: { sha: '43b95fc7165f0cff', lines: 303,
+    block: { sha: '6898186f2c671122', lines: 303,
              start: '/* ═══ ממתין לסנכרון — מודול משותף (סבב 12)',
              end:   '/* ═══════════════ סוף מודול "ממתין לסנכרון"' },
     hooks: [{ fn: 'pendBoot', at: 'boot' }],
@@ -826,7 +826,7 @@ const CAPS = {
   lock: {
     name: 'נעילת חוסר-פעילות',
     docRows: ['`lock` — נעילת חוסר-פעילות'],
-    block: { sha: '31a750f7604b5c54', lines: 109,
+    block: { sha: 'a152b3bc1ae62d1d', lines: 109,
              start: '/* ═══ נעילת חוסר-פעילות — מודול משותף (סבב 52)',
              end:   '/* ═══════════════ סוף מודול נעילת חוסר-הפעילות' },
     hooks: [{ fn: 'lkBoot', at: 'boot' }],
@@ -915,6 +915,13 @@ const CAPS = {
              start: '/* ═══ ערך מפתח-ערך — מודול משותף (סבב 126)',
              end:   '/* ═══════════════ סוף מודול ערך מפתח-ערך' },
   },
+  swreg: {
+    name: 'מודול הרשמת ה-service worker',
+    docRows: ['עדכון אוטומטי — בדיקה מחזורית'],
+    block: { sha: 'b187f9acdef4ecc0', lines: 69,
+             start: '/* ═══ הרשמת service worker — מודול משותף (סבב 128)',
+             end:   '/* ═══════════════ סוף מודול הרשמת service worker' },
+  },
   swcore: {
     name: 'מודול ה-service worker',
     docRows: ['ליבת `sw.js`'],
@@ -964,7 +971,7 @@ function orderGaps() {
     .concat(BLOCK_ORDER.filter((k) => inFile.indexOf(k) < 0).map((k) => 'בסדר ואינו חתום: ' + k));
 }
 
-const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'schemastale', 'techinfo', 'status', 'backup',
+const BLOCK_ORDER = ['bp', 'neterr', 'rowswin', 'guardonline', 'storage', 'schemastale', 'techinfo', 'swreg', 'status', 'backup',
                      'pending', 'ids', 'retry', 'lock', 'sess', 'isAdmin', 'ctxguard', 'pull', 'push', 'hotwin', 'mirror',
                      'devid', 'mergecore', 'tomb', 'writeUser', 'hebdate', 'uihelp', 'readnum', 'uniq', 'keysave', 'kvval'];
 
@@ -1236,7 +1243,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 157, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
+const FLOOR = { shared: 158, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
@@ -4441,6 +4448,18 @@ function ksActlessButtons(text) {
     const end = Math.min(gt < 0 ? w.length : gt, lt < 0 ? w.length : lt);
     const tag = w.slice(0, end);
     if (!/data-act/.test(tag)) out.push(tag.replace(/\s+/g, ' ').trim());
+  }
+  /*  ⛔ וכפתור שנבנה ב-JS נמדד אף הוא — ⚠️ **מה נכנס**: כל
+   *  `createElement('button')`, ⭐ **ומה מפיל**: משתנה שלא נכתב לו
+   *  `dataset.act` עד סוף הבלוק שבו נוצר. ⛔ **ולמה**: סורק שמוגבל
+   *  למקור מדווח על מה שנסרק בלבד, ⚠️ והמאזין הישיר נשאר בלי שאיש
+   *  רואה אותו. ⛔ **ומה אינו נמדד כאן**: כפתור שנבנה ב-`innerHTML` —
+   *  ⚠️ הוא `<button>` שבמקור, והלולאה שמעל תופסת אותו. */
+  for (const m of text.matchAll(/(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.createElement\((['"])button\2\)/g)) {
+    const name = m[1];
+    const w = text.slice(m.index, m.index + 1400);
+    if (!new RegExp('(?<![\\w$.])' + name + '\\.dataset\\.act\\s*=').test(w))
+      out.push('כפתור שנבנה ב-JS: ' + name + ', בשורה ' + text.slice(0, m.index).split('\n').length);
   }
   return out;
 }

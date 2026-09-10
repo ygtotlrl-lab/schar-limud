@@ -216,6 +216,25 @@ body.locked{overflow:hidden}
 .toast.good{background:#15803d;color:#fff}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
+/* ================================================================= מעדכן */
+#updater{
+  position:fixed;inset-inline:0;z-index:10001;
+  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
+  display:none;justify-content:center;padding:10px 14px
+}
+#updater.show{display:flex}
+#updater .in{
+  background:#1a1a1a;color:#fff;border-radius:14px;padding:11px 12px 11px 16px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.28);
+  font-size:14px;font-weight:700;max-width:520px;width:100%
+}
+#updater button{
+  margin-inline-start:auto;background:#fff;color:#1a1a1a;border:0;border-radius:9px;
+  padding:7px 14px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13.5px;flex:none
+}
+#updater button.x{
+  margin-inline-start:0;background:none;color:rgba(255,255,255,.7);padding:0 4px;font-size:15px
+}
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
    הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים יורשים צבע
@@ -526,7 +545,15 @@ body.locked{overflow:hidden}
   </div>
 </div>
 
-<div id="toasts"></div><script>
+<div id="toasts"></div>
+<div id="updater">
+  <div class="in">
+    <span>🔄 גרסה חדשה זמינה</span>
+    <button data-act="sw-apply">עדכן עכשיו</button>
+    <button class="x" data-act="sw-dismiss" aria-label="סגור">✕</button>
+  </div>
+</div>
+<script>
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -867,7 +894,7 @@ function lsAlert(msg) {
     b.setAttribute('aria-label', 'סגור');
     b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:#fff;' +
       'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
-    b.addEventListener('click', function () { el.style.display = 'none'; });
+    b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
     (document.body || document.documentElement).appendChild(el);
   }
@@ -1569,6 +1596,75 @@ var SYNC_CFG = {
   lastSync: function () { return Math.max(_slLastPullOk || 0, _slLastSeenOk || 0); },
   sync: function () { return syncAll(); }
 };
+/* ═══ הרשמת service worker — מודול משותף (סבב 128) ══════════════════════
+   ⛔ מנגנון זיהוי אחד — `reg.update()`: ⚠️ ואין מנגנון שני לאותה שאלה.
+   ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר, ⭐ ו-`claim()`
+      של העובד הראשון יורה `controllerchange` על דף שכבר מריץ את החדש.
+   ⛔ ודף שאיש לא נגע בו נטען מחדש מיד — ⚠️ ואחרי מגע מוצג הבאנר, ⭐ שרענון
+      באמצע עבודה מאבד את מה שהוקלד.
+   ⛔ ו-`updateViaCache: 'none'` — ⚠️ ברירת המחדל מתירה לדפדפן לענות מתוך
+      מטמון ה-HTTP, ⛔ כלומר להשוות את `sw.js` מול עותק ישן של עצמו.
+   ⛔ והכפתורים במפת הפעולות — ⚠️ המיכל `#updater` יושב במקור, ⭐ ואין כאן
+      מאזין ישיר שאיש אינו רואה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+var _swReg = null, _swAccepted = false, _swReloaded = false;
+function swBanner() { return document.getElementById('updater'); }
+function swShowUpdate() {
+  var el = swBanner();
+  if (!el) { console.error('[sw] אין מיכל לבאנר העדכון — #updater'); return; }
+  el.classList.add('show');
+}
+window.showAppUpdateBanner = swShowUpdate;
+function swHideUpdate() { var el = swBanner(); if (el) el.classList.remove('show'); }
+function swReload() {
+  if (_swReloaded) return;
+  _swReloaded = true;
+  location.reload();
+}
+function swApply(btn) {
+  _swAccepted = true;
+  if (btn) { btn.disabled = true; btn.textContent = 'מעדכן…'; }
+  if (_swReg && _swReg.waiting) {
+    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    setTimeout(swReload, 1500);
+    return;
+  }
+  swReload();
+}
+function swRegister() {
+  if (!('serviceWorker' in navigator)) return;
+  /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
+   *  מפיל**: את הרענון האוטומטי שבהשתלטות. */
+  var touched = false;
+  ['pointerdown', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { touched = true; }, { once: true, capture: true });
+  });
+  var hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (_swReloaded || !hadController) return;
+    if (!_swAccepted && touched) { swShowUpdate(); return; }
+    _swReloaded = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+    console.log('[sw] registered:', reg.scope);
+    _swReg = reg;
+    if (reg.waiting && navigator.serviceWorker.controller) swShowUpdate();
+    reg.addEventListener('updatefound', function () {
+      var nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', function () {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) swShowUpdate();
+      });
+    });
+    function checkForUpdate() { try { reg.update().catch(function () {}); } catch (e) {} }
+    checkForUpdate();
+    setInterval(checkForUpdate, 30 * 60 * 1000);
+  }).catch(function (err) { console.warn('[sw] registration failed:', err); });
+}
+window.addEventListener('load', swRegister);
+/* ═══════════════ סוף מודול הרשמת service worker ═════════════════════════ */
 /* ═══ אזור מצב — בלוק "☁️ סנכרון" — מודול משותף (סבב 17) ══════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -2270,7 +2366,7 @@ function pendRenderAlert() {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'הבנתי';
-  btn.onclick = function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); };
+  btn.dataset.act = 'pend-alert-ok';
   el.appendChild(span);
   el.appendChild(btn);
   document.body.appendChild(el);
@@ -2496,7 +2592,7 @@ function _lkWarnEl() {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'אני כאן ✋';
-  btn.onclick = function () { lkReset(); };
+  btn.dataset.act = 'lk-stay';
   box.appendChild(ico); box.appendChild(ttl); box.appendChild(txt); box.appendChild(btn);
   el.appendChild(box);
   document.body.appendChild(el);
@@ -4927,6 +5023,13 @@ function txnMethodPill(t){
    נבנות מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם.
    ══════════════════════════════════════════════════════════════════════════ */
 var DOM_ACTIONS = {
+  'sw-apply':            function (el) { swApply(el); },
+  'sw-dismiss':          function () { swHideUpdate(); },
+  /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
+   *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'pend-alert-ok':       function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); },
+  'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
   'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
@@ -5316,119 +5419,6 @@ async function slBoot(){
   setTimeout(function(){document.getElementById('au-user').focus();},50);
 }
 document.addEventListener('DOMContentLoaded', slBoot);
-/* ══════════════════════════════════════════════════════════════════════════
-   עדכון גרסה ואתחול האפליקציה
-   ══════════════════════════════════════════════════════════════════════════ */
-// ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
-// דפוס משותף לשלושת הפרויקטים (סבב 8), לפי המימוש של hanhala-ruchanit:
-// הבאנר נבנה ב-JS (לא HTML סטטי), מזהה 'sw-update-banner', שמירה על עותק
-// יחיד, והתנאי הוא **state === 'installed' בלבד**. 'activated' היה מיותר —
-// statechange עובר תמיד דרך 'installed' לפני 'activating'/'activated',
-// והמאזין מחובר כבר ב-updatefound, כך שהוא תופס את המעבר הראשון.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    var userAccepted = false;
-    var reloaded = false;
-
-    /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
-     *  מפיל**: את הרענון האוטומטי שבהשתלטות. ⛔ **ולמה הוא קיים**: רענון
-     *  באמצע הקלדה מאבד את מה שהוקלד, ⚠️ ורענון על דף שאיש לא נגע בו
-     *  אינו מאבד דבר. */
-    var touched = false;
-    function markTouched() { touched = true; }
-    ['pointerdown', 'keydown'].forEach(function(ev) {
-      window.addEventListener(ev, markTouched, { once: true, capture: true });
-    });
-
-    /*  ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר,
-     *  ⭐ וה-`clients.claim()` של העובד הראשון יורה `controllerchange`
-     *  על דף שכבר מריץ את הקוד החדש: ⛔ רענון שם הוא טעינה שנייה
-     *  שאינה משנה דבר. */
-    var hadController = !!navigator.serviceWorker.controller;
-
-    /*  ⛔ ההשתלטות אינה שלמה בלי הרענון — ⚠️ **הנימוק המדוד**: `skipWaiting`
-     *  ו-`clients.claim()` שניהם רצים, ⭐ וה-service worker אכן מתחלף
-     *  ומכניס `index.html` חדש למטמון — ⛔ אבל הלשונית ממשיכה להריץ את
-     *  ה-JS **שכבר בזיכרון**: ⚠️ המכשיר קיבל את הקוד החדש והמשיך להריץ
-     *  את הישן, ⭐ עד שמישהו יילחץ על הבאנר. ⛔ **ודף שאיש לא נגע בו
-     *  נטען מחדש מיד** — ⚠️ ואחרי מגע חוזרים לבאנר, ⭐ שרענון באמצע
-     *  עבודה מאבד אותה. */
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (reloaded || !hadController) return;
-      if (!userAccepted && touched) { showUpdateBanner(null); return; }
-      reloaded = true;
-      location.reload();
-    });
-
-    /*  ⛔ שם אחד שמתפרסם החוצה — ⚠️ המימוש פרטי, ⭐ והקורא היחיד
-     *  מבחוץ הוא זיהוי הקוד המיושן. */
-    window.showAppUpdateBanner = function () { showUpdateBanner(null); };
-    function showUpdateBanner(reg) {
-      if (document.getElementById('sw-update-banner')) return;
-      var bar = document.createElement('div');
-      bar.id = 'sw-update-banner';
-      bar.setAttribute('dir', 'rtl');
-      bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:16px;font-family:Heebo,sans-serif;font-size:.86rem;font-weight:600;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.15);direction:rtl;white-space:nowrap;max-width:calc(100vw - 24px)';
-      var txt = document.createElement('span');
-      txt.textContent = '🔄 גרסה חדשה זמינה';
-      var btn = document.createElement('button');
-      btn.textContent = 'עדכן עכשיו';
-      btn.style.cssText = 'background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer';
-      btn.onclick = function() {
-        userAccepted = true;
-        btn.disabled = true;
-        btn.textContent = 'מעדכן...';
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({type: 'SKIP_WAITING'});
-          // גיבוי: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
-          setTimeout(function() {
-            if (!reloaded) { reloaded = true; location.reload(); }
-          }, 1500);
-        } else {
-          // ה-sw מפעיל skipWaiting ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
-          reloaded = true;
-          location.reload();
-        }
-      };
-      var close = document.createElement('button');
-      close.textContent = '✕';
-      close.setAttribute('aria-label', 'סגור');
-      close.style.cssText = 'background:none;border:none;color:#8a97b0;font-size:1rem;cursor:pointer;padding:2px 6px;font-family:Heebo,sans-serif;line-height:1';
-      close.onclick = function() { if (bar.parentNode) bar.parentNode.removeChild(bar); };
-      bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
-      document.body.appendChild(bar);
-    }
-
-    /*  ⛔ `updateViaCache: 'none'` — ⚠️ ברירת המחדל `'imports'` מתירה
-     *  לדפדפן לענות ל-`reg.update()` מתוך מטמון ה-HTTP: ⭐ GitHub Pages
-     *  מגיש את `sw.js` עם `max-age`, ⛔ והבדיקה משווה את הקובץ מול עותק
-     *  ישן של עצמו ⛔ ומסיקה «לא השתנה» — ⚠️ כלומר מנגנון הזיהוי היחיד
-     *  שיש נשאל ומשיב על נתון שאינו הפריסה. */
-    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg) {
-      console.log('[sw] registered:', reg.scope);
-
-      if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
-
-      reg.addEventListener('updatefound', function() {
-        var nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', function() {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner(reg);
-          }
-        });
-      });
-
-      function checkForUpdate() {
-        try { reg.update().catch(function() {}); } catch (e) {}
-      }
-      checkForUpdate();
-      setInterval(checkForUpdate, 30 * 60 * 1000);
-    }).catch(function(err) {
-      console.warn('[sw] registration failed:', err);
-    });
-  });
-}
 </script>
 </body>
 </html>
