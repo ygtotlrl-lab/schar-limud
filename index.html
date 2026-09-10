@@ -224,16 +224,16 @@ body.locked{overflow:hidden}
 }
 #updater.show{display:flex}
 #updater .in{
-  background:#1a1a1a;color:#fff;border-radius:14px;padding:11px 12px 11px 16px;
-  display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.28);
+  background:var(--text);color:var(--card);border-radius:14px;padding:11px 12px 11px 16px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
   font-size:14px;font-weight:700;max-width:520px;width:100%
 }
 #updater button{
-  margin-inline-start:auto;background:#fff;color:#1a1a1a;border:0;border-radius:9px;
+  margin-inline-start:auto;background:var(--card);color:var(--text);border:0;border-radius:9px;
   padding:7px 14px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13.5px;flex:none
 }
 #updater button.x{
-  margin-inline-start:0;background:none;color:rgba(255,255,255,.7);padding:0 4px;font-size:15px
+  margin-inline-start:0;background:none;color:var(--card);opacity:.7;padding:0 4px;font-size:15px
 }
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
@@ -1608,7 +1608,11 @@ var SYNC_CFG = {
       מאזין ישיר שאיש אינו רואה.
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
       החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
-var _swReg = null, _swAccepted = false, _swReloaded = false;
+/*  ⛔ תקרת ההמתנה להשתלטות — ⚠️ **מה נכנס**: המתנה אחת אחרי
+ *  `SKIP_WAITING`, ⛔ **ומה מפיל**: ערך קצר, שיורה לפני ההשתלטות
+ *  ויהפוך לרענון שני. */
+var SW_APPLY_MS = 10000;
+var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0;
 function swBanner() { return document.getElementById('updater'); }
 function swShowUpdate() {
   var el = swBanner();
@@ -1617,20 +1621,21 @@ function swShowUpdate() {
 }
 window.showAppUpdateBanner = swShowUpdate;
 function swHideUpdate() { var el = swBanner(); if (el) el.classList.remove('show'); }
-function swReload() {
-  if (_swReloaded) return;
-  _swReloaded = true;
-  location.reload();
-}
+/*  ⛔ הרענון אינו כאן — ⚠️ הוא ב-`controllerchange` בלבד: ⭐ טיימר שמרענן
+ *  בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting` שורד, הבאנר
+ *  חוזר, והלחיצה הבאה חוזרת עליו. */
 function swApply(btn) {
   _swAccepted = true;
   if (btn) { btn.disabled = true; btn.textContent = 'מעדכן…'; }
-  if (_swReg && _swReg.waiting) {
-    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    setTimeout(swReload, 1500);
-    return;
-  }
-  swReload();
+  if (!(_swReg && _swReg.waiting)) { swApplyFail(btn); return; }
+  _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  _swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);
+}
+function swApplyFail(btn) {
+  _swWait = 0;
+  if (_swReloaded) return;
+  if (btn) { btn.disabled = false; btn.textContent = 'עדכן עכשיו'; }
+  toast('⚠️ העדכון לא הושלם — נסה שוב', 6000, 'bad');
 }
 function swRegister() {
   if (!('serviceWorker' in navigator)) return;
@@ -1642,6 +1647,7 @@ function swRegister() {
   });
   var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (_swWait) { clearTimeout(_swWait); _swWait = 0; }
     if (_swReloaded || !hadController) return;
     if (!_swAccepted && touched) { swShowUpdate(); return; }
     _swReloaded = true;
@@ -3902,7 +3908,7 @@ var USER_CFG = {
   /*  ⛔ ההודעה נקראת בזמן הקריאה ⛔ ולא בזמן ההשמה — ⚠️ הקבוע מוצהר
    *  במקום אחר בקובץ בכל אפליקציה, ⭐ וקריאה בהשמה נותנת `undefined`
    *  באחת מהן בשקט. */
-  offMsg: function () { return MSG_OFFLINE; },
+  offMsg: function () { return MSG_OFF_USER_WRITE; },
   from: function () { return SB.from('sl_users'); },
   run: function (q) { return withTimeout(q); },
   /*  ⛔ אין כאן נפילה-חזרה על עמודות הטביעה — ⚠️ הן קיימות בטבלה מאז
@@ -4004,6 +4010,10 @@ async function slEnsurePassFp(u, pass) {
 var MSG_OFF_UNKNOWN   = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
 var MSG_OFF_NO_FP     = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
 var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+/*  ⛔ הודעה משלה לחסימת כתיבת המשתמש — ⚠️ `MSG_OFFLINE` הכללית אינה
+ *  אומרת **מה** נחסם, ⭐ וכתיבת משתמש היא המסלול היחיד שאין לו
+ *  «יסונכרן כשתחזור הרשת». */
+var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
 var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת — יש ליצור משתמש ראשון ב-SQL Editor של Supabase';
 // ⭐ שתי הודעות חדשות (סבב 40) — מאז שהאימות המקוון עובר דרך הטביעה, שני
 // מצבי הכישלון האלה קיימים גם **עם** רשת. ⛔ אין לאחד אותם עם

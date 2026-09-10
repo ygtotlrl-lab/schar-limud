@@ -28,6 +28,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -616,6 +617,86 @@ t(!capsFails((doc) => {
   t(runGateOn({ [CAPS]: caps.replace(/^(\s*'test_readonly':\s*)'behavior[^']*'/m, "$1'text'") },
               'check-capabilities.mjs', () => ({})),
     'מ40 · שער שמריץ את הסט ומוכרז text **מפיל** את «סוג השער מוצהר»');
+  /*  ⛔⛔ מ41 — טיימר קצר שמרענן בעצמו (סבב 131): ⚠️ הטענה שנופלת היא
+   *  «הרענון מ-controllerchange בלבד», ⭐ והנימוק המדוד הוא הלולאה —
+   *  ⛔ הרענון קדם להשתלטות, `reg.waiting` שרד, הבאנר חזר, והלחיצה
+   *  הבאה חזרה עליו.
+   *  ⛔ **והמוטציה נושאת איתה את החתימה** — ⚠️ הבלוק חתום, ⭐ ובלי
+   *  חתימה מחדש הייתה נופלת הליבה ⛔ ולא הטענה שנמדדת. */
+  const SW_A = '/* ═══ הרשמת service worker';
+  const SW_Z = '/* ═══════════════ סוף מודול הרשמת service worker';
+  const swResign = (h) => {
+    const i = h.indexOf(SW_A), k = h.indexOf(SW_Z, i), e = h.indexOf('*/', k) + 2;
+    const sha = crypto.createHash('sha256').update(h.slice(i, e)).digest('hex').slice(0, 16);
+    return caps.replace(/(swreg:[\s\S]*?block: \{ sha: ')[0-9a-f]{16}/, '$1' + sha);
+  };
+  {
+    const bad = rd('index.html').replace(
+      '_swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);',
+      'setTimeout(function () { _swReloaded = true; location.reload(); }, 1500);');
+    t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'check-capabilities.mjs', () => ({})),
+      'מ41 · טיימר קצר שמרענן בעצמו **מפיל** את «הרענון מ-controllerchange בלבד»');
+  }
+  /*  ⭐ מוטציית-נגד: תקרה ארוכה יותר ⛔ אינה מפילה — ⚠️ המנגנון לא נגע,
+   *  ⭐ ורק הערך קודם. */
+  {
+    const ok = rd('index.html').replace('var SW_APPLY_MS = 10000;', 'var SW_APPLY_MS = 15000;');
+    t(!runGateOn({ 'index.html': ok, [CAPS]: swResign(ok) }, 'check-capabilities.mjs', () => ({})),
+      'נ24 · ⭐ תקרת המתנה ארוכה יותר ⛔ **אינה** מפילה');
+  }
+  /*  ⛔⛔ מ42 — ליטרל צבע בכללי הבאנר (סבב 131): ⚠️ הטענה שנופלת היא
+   *  «ערכת נושא — בהיר וכהה», ⭐ והנימוק המדוד הוא ארבעה באנרים שנראו
+   *  זהים — ⛔ הליטרל מבטל את הזהות הפר-אפליקציה.
+   *  ⛔ **והמוטציה נכתבת כתבנית ולא כשם אסימון** — ⚠️ שם האסימון נבדל
+   *  בין הארבע, ⭐ והמנגנון אחד. */
+  {
+    const bad = rd('index.html').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
+                                         '$1#1a1a1a');
+    t(runGateOn({ 'index.html': bad, [CAPS]: caps }, 'check-capabilities.mjs', () => ({})),
+      'מ42 · ליטרל צבע בכללי הבאנר **מפיל** את «ערכת נושא — בהיר וכהה»');
+  }
+  /*  ⭐ מוטציית-נגד: ערך שאינו צבע באותו כלל ⛔ אינו מפיל — ⚠️ המנגנון
+   *  לא נגע, ⭐ ורק העיגול השתנה. */
+  {
+    const ok = rd('index.html').replace(/(#updater \.in\{[\s\S]{0,80}?border-radius:)14px/, '$112px');
+    t(!runGateOn({ 'index.html': ok, [CAPS]: caps }, 'check-capabilities.mjs', () => ({})),
+      'נ25 · ⭐ ערך שאינו צבע בכלל הבאנר ⛔ **אינו** מפיל');
+  }
+  /*  ⛔⛔ מ43 — נוסח אחר לחסימת כתיבת המשתמש (סבב 131): ⚠️ הטענה שנופלת
+   *  היא «הודעת החסימה», ⭐ והנימוק המדוד הוא ששני ניסוחים לאותה חסימה
+   *  הם שני מסלולים בעיני הקורא.
+   *  ⛔ **והדילוג נושא נימוק** ⛔ ואינו שקט — ⚠️ אפליקציה בלי טבלת
+   *  משתמשים אין לה מה למוטט כאן. */
+  {
+    const html = rd('index.html');
+    if (html.indexOf('MSG_OFF_USER_WRITE') < 0) {
+      t(true, 'מ43 · ⭕ אין כאן טבלת משתמשים — ⛔ ואין מה למוטט');
+      t(true, 'מ44 · ⭕ אין כאן אתר אימות שש ספרות — ⛔ ואין מה למוטט');
+    } else {
+      const bad = html.replace(/(var MSG_OFF_USER_WRITE = ')[^']*/,
+                               '$1📴 אין חיבור — הפעולה לא בוצעה');
+      t(runGateOn({ 'index.html': bad }, 'test_push.mjs', () => ({})),
+        'מ43 · נוסח אחר לחסימת כתיבת המשתמש **מפיל** את «הודעת החסימה»');
+      /*  ⛔⛔ מ44 — מחרוזת שנכתבת באתר האימות: ⚠️ הטענה שנופלת היא
+       *  «הודעת שש הספרות», ⭐ וזה בדיוק המצב שהיה — שני אתרים, שני
+       *  ניסוחים. */
+      if (html.indexOf('PASS_SIX_RE') < 0) {
+        t(true, 'מ44 · ⭕ אין כאן אתר אימות שש ספרות — ⛔ ואין מה למוטט');
+      } else {
+        const bare = html.replace(/(PASS_SIX_RE\.test\([^)]*\)\) \{ [a-zA-Z.]+ ?= ?|PASS_SIX_RE\.test\([^)]*\)\) \{ toast\()MSG_PASS_SIX/,
+                                  "$1'סיסמה שגויה'");
+        t(runGateOn({ 'index.html': bare }, 'test_push.mjs', () => ({})),
+          'מ44 · מחרוזת באתר האימות **מפילה** את «הודעת שש הספרות»');
+      }
+    }
+  }
+  /*  ⭐ מוטציית-נגד: נוסח אחר להודעה **אחרת** ⛔ אינו מפיל — ⚠️ הטענות
+   *  מודדות את ההודעה הייעודית, ⭐ ולא כל הודעת אופליין. */
+  {
+    const other = rd('index.html').replace(/(var MSG_OFFLINE\s*= ')[^']*/, '$1אין חיבור כרגע');
+    t(!runGateOn({ 'index.html': other }, 'test_push.mjs', () => ({})),
+      'נ26 · ⭐ נוסח אחר להודעה אחרת ⛔ **אינו** מפיל');
+  }
   /*  ⛔ מוטציה: זוג-רשומה שמעתיק את שדות הבסיס בלבד (סבב 99) — ⚠️ בדיוק
    *  המנוע שהוחלף: ⭐ הטענה שנופלת היא «מיזוג מכל».
    *  ⛔ **והזוג מוזרק ומוצהר** ⛔ ולא נחתך מהקיים — ⚠️ בשתיים מהארבע אין
