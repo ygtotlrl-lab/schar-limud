@@ -2657,7 +2657,7 @@ var PL_CFG = {
     return withTimeout(SB.from('sl_settings').select('value').eq('key', SL_STAMP_KEY).maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(r.data.value) : null };
+        return { ok: true, ts: r.data ? plNum(kvParse(SL_STAMP_KEY, r.data.value).value) : null };
       }, function () { return { ok: false, ts: null }; });
   },
 };
@@ -3941,7 +3941,12 @@ function slApplyMirror() {
   TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   SETTINGS = {};
-  (MIRROR.sl_settings || []).forEach(function (r) { if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = r.value; });
+  /*  ⛔ הערך שבעמודה הוא JSON — ⚠️ אילוץ במסד מבטיח זאת, ⭐ וקורא
+   *  שמתייחס אליו כטקסט הוא הנחה שנייה על אותה עמודה: ⛔ `"5"` היה נקרא
+   *  עם הגרשיים, ⛔ ולא כחמש. */
+  (MIRROR.sl_settings || []).forEach(function (r) {
+    if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = kvParse(r.key, r.value).value;
+  });
   LISTS = {};
   // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
   // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
@@ -4322,6 +4327,30 @@ document.addEventListener('keydown', function (e) {
   if (ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) e.preventDefault();
 });
 /* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
+
+/* ═══ ערך מפתח-ערך — מודול משותף (סבב 126) ══════════════════════════════
+   ⛔ «אין ערך» ו«ערך פגום» אינן אותה תשובה — ⚠️ שתיהן חזרו «נכשל», ⭐ והמשתמש
+      חיפש רשת שלא נפלה.
+   ⛔ ולכן `null` הוא ערך שאינו קיים ⛔ ואינו כשל, ⚠️ וערך שאינו JSON הוא כשל
+      שנוקב בשם המפתח.
+   ⛔ והנוסח אחד בארבעתן — ⚠️ הודעה שנבדלת בין האפליקציות היא ארבעה חיפושים
+      לאותה תקלה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+var KV_BAD = 'ערך פגום בענן';
+function kvParse(key, raw) {
+  if (raw === null || raw === undefined || raw === '') return { ok: true, value: null, bad: false };
+  try { return { ok: true, value: JSON.parse(raw), bad: false }; }
+  catch (e) {
+    /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
+     *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
+    console.error('[sync] ' + KV_BAD + ' [' + key + ']:', e);
+    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
+    return { ok: false, value: null, bad: true };
+  }
+}
+function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
+/* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
@@ -5125,7 +5154,7 @@ function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
   if(!v||isNaN(v)){toast('ערך לא תקין');return;}
   var cur=(MIRROR.sl_settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
-  var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:String(v)});
+  var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
   if(!slLocalWrite('sl_settings',row)){toast('❌ השמירה במכשיר נכשלה — הערך לא נשמר',5000);return;}
   pendMark(pendSetKey(row));
   refreshUI();
