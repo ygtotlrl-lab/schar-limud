@@ -4451,6 +4451,7 @@ function ksActionKeys() {
   return [...src.slice(i, j < 0 ? i + 20000 : j).matchAll(/'([\w-]+)'\s*:/g)].map((m) => m[1]);
 }
 const KS_GROUPS = ['no-save', 'native-enter'];
+const KS_PLACE_WORDS = ['בתוך', 'במודול', 'בבלוק', 'בקובץ', 'יושב', 'נמצא', 'מחווט ב'];
 function keySaveGaps() {
   const out = [];
   const seen = new Set(ksInputKeys(src));
@@ -4480,6 +4481,12 @@ function keySaveGaps() {
       out.push('כפתור שאינו במפת הפעולות: ' + t);
   for (const e of aex) {
     if (!e.why || !String(e.why).trim()) out.push('כפתור מוכרז בלי נימוק: ' + e.btn);
+    /*  ⛔ נימוק שהוא מיקום מפיל — ⚠️ «הוא במודול המשותף» אומר איפה הכפתור
+     *  יושב ⛔ ולא מה הוא עושה שהמפה אינה יכולה: ⭐ **ומה שנמדד הוא הצד
+     *  השלילי** — ⚠️ רשימת סימני מיקום סגורה, ⛔ והצד החיובי הוא מה
+     *  שהקורא כותב. */
+    else if (KS_PLACE_WORDS.some((w) => String(e.why).indexOf(w) >= 0))
+      out.push('נימוק שהוא מיקום ולא התנהגות: ' + e.btn);
     if (!actless.some((t) => t.indexOf(e.btn) >= 0))
       out.push('כפתור מוכרז שאין לו אתר: ' + e.btn);
   }
