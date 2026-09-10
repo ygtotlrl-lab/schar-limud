@@ -63,9 +63,7 @@ const APP = {
    *  `value` שלה נושאת JSON; ⛔ **ומה מפיל**: ערך שאינו מתפרש, ⭐ ורשימה
    *  ריקה. ⚠️ **ולמה היא קיימת**: הבעלות היא של ריפו אחד, ⛔ והמדידה
    *  רצה שם ⛔ ולא בשלושה. */
-  kvReadFn: '',
-  kvBadMark: '',
-  kvReadWhy: 'ערכי ההגדרות כאן הם מספרים שנקראים כטקסט — ואין בקוד מנתח JSON לערך שבמסד',
+  kvReadFn: 'slApplyMirror',
   kvTables: ['sl_settings'],
   backupTable: 'kv_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
@@ -268,30 +266,36 @@ async function claimKvJson() {
 /*  ⛔ הקורא מבחין בין «אין ערך» ל«ערך פגום» (סבב 125) — ⚠️ שניהם חזרו
  *  אותה תשובה, ⭐ והמפתח נספר ככשל בלי לומר מה קרה בו: ⛔ ומי שראה את
  *  ההודעה חיפש רשת שלא נפלה. */
+/*  ⛔ נקודת הקריאה אחת ומשותפת — ⚠️ **מה נכנס**: גוף `kvParse` והשימוש בו,
+ *  ⭐ **ומה מפיל**: פירוש שאינו עובר בו · כשל שאינו נתפס · כשל שאינו מגיע
+ *  למשתמש · או מנתח שני. ⛔ **ולמה המבנה קיים**: כשל שאינו אומר מה קרה
+ *  שקול לכשל שקט, ⚠️ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד.
+ *  ⛔ **ומה אינו נמדד כאן**: תוכן הערכים שבמסד — הוא בטענה שמעל. */
 function kvReaderGaps() {
   const out = [];
+  const i = SRC.indexOf('function kvParse(');
+  if (i < 0) { out.push('המודול המשותף אינו קיים: kvParse'); return out; }
+  const body = SRC.slice(i, i + 900);
+  if (!/JSON\.parse/.test(body)) out.push('kvParse אינו מפרש JSON');
+  if (!/catch/.test(body)) out.push('kvParse אינו תופס ערך פגום');
+  if (body.indexOf('KV_BAD') < 0) out.push('kvParse אינו נושא את סימון הערך הפגום');
+  if (!/catch\s*\([\s\S]{0,500}?toast\(/.test(body)) out.push('הכשל אינו מגיע לטוסט');
+  if (SRC.indexOf('function kvBadLabel(') < 0) out.push('אין ניסוח אחיד לערך פגום: kvBadLabel');
   const fn = APP.kvReadFn;
-  if (!fn) {
-    if (!APP.kvReadWhy || !String(APP.kvReadWhy).trim()) out.push('אין נקודת קריאה ואין נימוק');
-    if (/JSON\.parse\([^)]*\.value/.test(SRC)) out.push('יש מנתח לערך שבמסד, וההצהרה ריקה');
-    return out;
-  }
-  const i = SRC.indexOf('function ' + fn + '(');
-  if (i < 0) { out.push('נקודת הקריאה המוצהרת אינה קיימת: ' + fn); return out; }
-  const body = SRC.slice(i, i + 1200);
-  if (!/JSON\.parse/.test(body)) out.push('נקודת הקריאה אינה מפרשת JSON: ' + fn);
-  if (!/catch/.test(body)) out.push('נקודת הקריאה אינה תופסת ערך פגום: ' + fn);
-  const bad = APP.kvBadMark;
-  if (!bad) { out.push('אין סימון מוצהר לערך פגום'); return out; }
-  if (body.indexOf(bad) < 0) out.push('הסימון לערך פגום אינו בגוף הקריאה: ' + bad);
-  const uses = (SRC.match(new RegExp('(?<![\\w$.])' + bad + '(?![\\w$])', 'g')) || []).length;
-  if (uses < 2) out.push('הסימון לערך פגום אינו נקרא בשום מקום: ' + bad);
+  if (!fn) { out.push('אין נקודת קריאה מוצהרת'); return out; }
+  const j = SRC.indexOf('function ' + fn + '(');
+  if (j < 0) { out.push('נקודת הקריאה המוצהרת אינה קיימת: ' + fn); return out; }
+  if (SRC.slice(j, j + 1600).indexOf('kvParse(') < 0)
+    out.push('נקודת הקריאה אינה עוברת במודול המשותף: ' + fn);
+  for (const m of SRC.matchAll(/JSON\.parse\([^)]{0,40}\.value/g))
+    if (m.index < i || m.index > i + 900)
+      out.push('מנתח שני לערך שבמסד, בשורה ' + SRC.slice(0, m.index).split('\n').length);
   return out;
 }
 async function claimKvReader() {
   const g = kvReaderGaps();
   if (g.length) bad('יא. ערך פגום נבדל מ«אין ערך» — ' + g.join(' · ') + '. נמדדו ' + g.length + ' פערים והצפוי אפס. מיישרים את נקודת הקריאה, או את ההצהרה');
-  else ok('יא. ערך פגום נבדל מ«אין ערך» — ' + (APP.kvReadFn ? 'נקודת הקריאה `' + APP.kvReadFn + '` תופסת ומסמנת' : 'אין כאן מנתח לערך שבמסד, וההצהרה ריקה ומנומקת'));
+  else ok('יא. ערך פגום נבדל מ«אין ערך» — `kvParse` תופס, מסמן ומגיע לטוסט, ונקודת הקריאה `' + APP.kvReadFn + '` עוברת בו');
 }
 
 async function claimStamp() {

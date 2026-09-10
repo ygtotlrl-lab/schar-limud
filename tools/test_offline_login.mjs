@@ -161,6 +161,9 @@ const NAMES_VAR = [
    *  הפר-אפליקציה של הבלוק החתום, ⭐ ו-`MSG_OFFLINE` הוא ההודעה שהוא
    *  קורא: ⛔ רתמה שאינה מחלצת אותם מקבלת `false` שקט מכל השלמת טביעה. */
   'MSG_OFFLINE', 'USER_CFG',
+  /*  ⛔ המודול המשותף לערך מפתח-ערך (סבב 126) — ⚠️ הקריאה להגדרות עוברת
+   *  בו, ⭐ ורתמה שאינה מחלצת אותו נופלת על `kvParse is not defined`. */
+  'KV_BAD',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
@@ -179,6 +182,7 @@ const NAMES_FN = [
    *  את הפונקציות **האמיתיות** שלו ולא בדל. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
+  'kvParse', 'kvBadLabel',
 ];
 
 /* ── הרתמה ─────────────────────────────────────────────────────────────── */
@@ -442,7 +446,9 @@ async function main() {
     h.ctx.slApplyMirror();
     eq('⚠️ הנתונים נקראים — תלמידים', h.ctx.STUDENTS.length, 1);
     eq('⚠️ ותנועות', h.ctx.TRANSACTIONS.length, 1);
-    eq('⚠️ והגדרות', h.ctx.SETTINGS.default_tuition, '2000');
+    /*  ⛔ הערך מפורש כ-JSON ⛔ ולא נקרא כטקסט — ⚠️ אילוץ במסד מבטיח JSON,
+     *  ⭐ וקורא שמתייחס לטקסט היה מחזיר `"2000"` עם הגרשיים. */
+    eq('⚠️ והגדרות — הערך מפורש כ-JSON ולא כטקסט', h.ctx.SETTINGS.default_tuition, 2000);
     eq('⚠️ ורשימות', (h.ctx.LISTS.payment_method || []).length, 1);
 
   }
