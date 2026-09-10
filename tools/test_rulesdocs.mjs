@@ -816,6 +816,59 @@ t(!capsFails((doc) => {
         'נ29 · ⭐ קידום גרסה עקבי בשני הקבצים ⛔ **אינו** מפיל');
     }
   }
+  /*  ⛔⛔ מ54 — שומר כפול (סבב 134): ⚠️ הטענה שנופלת היא «שומר אחד לכל
+   *  פעולה», ⭐ והנימוק המדוד הוא שהניתוב כבר מנטרל את הכפתור —
+   *  ⛔ ושומר שני משחרר אותו בעוד הראשון מחזיק. ⚠️ **והמוטציה חלה רק
+   *  כשיש שומר בניתוב** — ⭐ ובשלוש שאין בהן, אין שומר כפול שאפשר להחזיר. */
+  {
+    const inp = rd('tools/test_inputlayer.mjs'), idx = rd('index.html');
+    const bf = /busyFn:\s*'([A-Za-z_$][\w$]*)'/.exec(inp);
+    const act = /'[a-z0-9-]+':\s*function \(\) \{ return ([A-Za-z_$][\w$]*)\(\); \},/.exec(idx);
+    if (!bf || !/routeGuard:\s*'/.test(inp) || !act)
+      t(true, 'מ54 · ⭕ אין כאן שומר בנקודת הניתוב — ⛔ ואין שומר כפול שאפשר להחזיר');
+    else {
+      const head = 'async function ' + act[1] + '() {';
+      t(runGateOn({ 'index.html': idx.replace(head, head + '\n  ' + bf[1] + '(null, true);') },
+                  'test_inputlayer.mjs', () => ({})),
+        'מ54 · שומר בגוף המטפל **מפיל** את «שומר אחד לכל פעולה»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: שינוי שם עקבי של המגן — הקריאות וההכרזה יחד ⛔ אינו
+   *  מפיל: ⚠️ הנמדד הוא **מיקום** השומר ⛔ ולא שמו. */
+  {
+    const inp = rd('tools/test_inputlayer.mjs'), idx = rd('index.html');
+    const bf = /busyFn:\s*'([A-Za-z_$][\w$]*)'/.exec(inp);
+    if (!bf || !/routeGuard:\s*'/.test(inp))
+      t(true, 'נ33 · ⭕ אין כאן שומר בנקודת הניתוב — ⛔ ואין מה להחליף');
+    else
+      t(!runGateOn({ 'index.html': idx.split(bf[1]).join(bf[1] + 'Wait'),
+                     'tools/test_inputlayer.mjs': inp.split(bf[1]).join(bf[1] + 'Wait') },
+                   'test_inputlayer.mjs', () => ({})),
+        'נ33 · ⭐ שינוי שם עקבי של מגן השליחה הכפולה ⛔ **אינו** מפיל');
+  }
+  /*  ⛔⛔ מ53 — שם שירד חוזר לחיים (סבב 134): ⚠️ הטענה שנופלת היא «ערכת
+   *  נושא — בהיר וכהה», ⭐ והנימוק המדוד הוא שאוצר מילים שנבדל מכריח כלל
+   *  CSS פרטי — ⛔ וכלל משותף אינו יכול לנקוב בשם שקיים באחת בלבד. */
+  {
+    const idx = rd('index.html');
+    if (idx.indexOf('--border') < 0) t(true, 'מ53 · ⭕ אין כאן `--border` — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html': idx.split('--border').join('--line') },
+                  'check-capabilities.mjs', () => ({})),
+        'מ53 · `--line` במקום `--border` **מפיל** את «ערכת נושא — בהיר וכהה»');
+  }
+  /*  ⭐ מוטציית-נגד: שינוי שם עקבי — האסימון והמרשם יחד ⛔ אינו מפיל:
+   *  ⚠️ אוצר מילים אחד אינו «אותו שם לנצח», ⭐ והוא נמדד מול המרשם
+   *  ⛔ ולא מול מחרוזת קפואה. */
+  {
+    const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    if (idx.indexOf('--text2') < 0) t(true, 'נ32 · ⭕ אין כאן `--text2` — ⛔ ואין מה להחליף');
+    else
+      t(!runGateOn({ 'index.html': idx.split('--text2').join('--text-2'),
+                     'tools/check-capabilities.mjs': caps.split("'--text2'").join("'--text-2'") },
+                   'check-capabilities.mjs', () => ({})),
+        'נ32 · ⭐ שינוי שם עקבי של אסימון הטקסט המשני ⛔ **אינו** מפיל');
+  }
   /*  ⛔⛔ מ50 — צבע הזהות (סבב 133): ⚠️ **מה נכנס**: כלל `#updater .in`,
    *  ⛔ **ומה מפיל**: משטח הבאנר שנגזר מדיו הטקסט במקום מ-`--brand`:
    *  ⭐ ארבעה גווני טקסט הם אותו כהה, ⚠️ וארבעת הבאנרים נראו זהים. */
