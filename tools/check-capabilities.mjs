@@ -230,6 +230,7 @@ const APP = {
     'check-capabilities.mjs:domEntry': 'עוזר זהה בארבעת עותקי השער — ⛔ הוא נקרא בהנהלה בלבד, ⚠️ ששם יש שכבת כניסה: ⭐ עוזר שנגזם באחת מפסיק להיות זהה',
   },
   dualRoleAllow: {
+    '--text': 'המשטח ההפוך של באנר העדכון — ⚠️ המשטח והדיו מתחלפים בתפקידם יחד, ⭐ והצמד נמדד עובר בשני המצבים',
     '--card': 'הדיו ההפוך על מילוי `--navy` — ⚠️ שני האסימונים מתהפכים יחד עם הערכה, ⭐ והצמד נמדד עובר בשני המצבים',
   },
   contrastAllow: {
@@ -504,6 +505,7 @@ const APP = {
     '82|`toast` — חתימה, גוף ומחלקות': 'src',
     '82|סיווג ההודעה נגזר מהמסלול': 'src',
     '182|מיכל באנר העדכון במקור': 'src',
+    '182|הרענון מ-controllerchange בלבד': 'src',
     '100|רישום כשלי כתיבה': 'src',
     '56|חלון חם במכשיר': 'src',
     '56|שחזור מקומי מהענן': 'src',
@@ -924,7 +926,7 @@ const CAPS = {
   swreg: {
     name: 'מודול הרשמת ה-service worker',
     docRows: ['עדכון אוטומטי — בדיקה מחזורית'],
-    block: { sha: 'b187f9acdef4ecc0', lines: 69,
+    block: { sha: '05fb5278c9f10d84', lines: 75,
              start: '/* ═══ הרשמת service worker — מודול משותף (סבב 128)',
              end:   '/* ═══════════════ סוף מודול הרשמת service worker' },
   },
@@ -1249,7 +1251,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 162, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
+const FLOOR = { shared: 163, app: 9, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליו שער מצב הרשת' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
@@ -3467,6 +3469,44 @@ function swCfgGaps() {
     if (!(k in got)) out.push(`ידית שבבסיס ואינה ב-SW_CFG: ${k}`);
   return out;
 }
+/*  ⛔ הרצפה של הנפילה-חזרה — ⚠️ **מה נכנס**: מספר המילישניות שמתחתיו
+ *  הטיימר מתחרה בהשתלטות, ⛔ **ומה מפיל**: תקרה קצרה ממנו. */
+const SW_APPLY_MIN = 10000;
+/*  ⛔ הרענון יורה מ-`controllerchange` בלבד (סבב 131) — ⚠️ **מה נכנס**: כל
+ *  `location.reload()` ו-`setTimeout` שבמודול ההרשמה, ⛔ **ומה מפיל**: רענון
+ *  שאינו במאזין, או השהיה שאינה התקרה המוצהרת: ⭐ טיימר קצר יורה לפני
+ *  ההשתלטות, ⛔ ואז `reg.waiting` שורד, הבאנר חוזר, והלחיצה הבאה חוזרת
+ *  עליו — זו הלולאה. */
+function swReloadGaps() {
+  const blk = grab(CAPS.swreg.block);
+  if (!blk) return ['מודול הרשמת ה-service worker לא נמצא'];
+  const txt = blk.text;
+  const out = [];
+  const hs = [...txt.matchAll(/addEventListener\s*\(\s*'controllerchange'/g)];
+  if (hs.length !== 1) return [`מטפלי \`controllerchange\`: ${hs.length} ⛔ והצפוי אחד`];
+  const body = balAt(txt, txt.indexOf(OPEN_OBJ, hs[0].index)) || '';
+  const RELOAD = /location\s*\.\s*reload\s*\(/g;
+  const all = (txt.match(RELOAD) || []).length;
+  const inCc = (body.match(RELOAD) || []).length;
+  if (all !== inCc)
+    out.push(`רענון שאינו מ-\`controllerchange\`: ${all - inCc} ⛔ והצפוי אפס`);
+  if (!/clearTimeout\s*\(/.test(body))
+    out.push('מטפל `controllerchange` שאינו מבטל את הנפילה-חזרה ⛔ — הטיימר יורה אחרי ההשתלטות');
+  if (!/toast\s*\(/.test(txt))
+    out.push('נפילה-חזרה בלי הודעה ⛔ — מוסיפים `toast` שאומר שהעדכון לא הושלם');
+  const ms = /SW_APPLY_MS\s*=\s*(\d+)/.exec(txt);
+  if (!ms) out.push('תקרת ההמתנה `SW_APPLY_MS` אינה מוצהרת ⛔ — מוסיפים אותה למודול');
+  else if (Number(ms[1]) < SW_APPLY_MIN)
+    out.push(`תקרת ההמתנה ${ms[1]} מ״ש ⛔ והצפוי ${SW_APPLY_MIN} ומעלה — מקדמים אותה`);
+  for (const m of txt.matchAll(/setTimeout\s*\(/g)) {
+    const a = balAt(txt, m.index + m[0].length - 1);
+    if (a === null) { out.push('`setTimeout` בלי סוגר סוגר ⛔ — סוגרים אותו'); continue; }
+    if (!/,\s*SW_APPLY_MS\s*$/.test(a))
+      out.push(`\`setTimeout\` בהשהיה שאינה התקרה המוצהרת: ${a.split(',').pop().trim()} ` +
+               '⛔ — מחליפים ל-`SW_APPLY_MS`');
+  }
+  return out;
+}
 function swUpdateGaps() {
   const out = [];
   const regs = [...src.matchAll(/serviceWorker\s*\.\s*register\s*\(/g)];
@@ -3899,6 +3939,26 @@ function contrastGaps() {
   for (const k of allow) if (found.indexOf(k) < 0) out.push('מוכרז ואינו מתחת ל-4.5: ' + k);
   return out;
 }
+/*  ⛔ כללי באנר העדכון נגזרים ממשתני הערכה (סבב 131) — ⚠️ **מה נכנס**: כל
+ *  הצהרת רקע · דיו · וצל בכלל שסלקטורו נפתח ב-`#updater`, ⛔ **ומה מפיל**:
+ *  ליטרל צבע במקום `var(...)`: ⭐ הבאנר נכתב פעם אחת בארבעתן, ⛔ וליטרל
+ *  מוטבע בו מבטל את הזהות הפר-אפליקציה — ⚠️ ארבעה באנרים בארבעה גוונים
+ *  נראו זהים. */
+function updaterLiteralGaps() {
+  const css = cssText();
+  const out = [];
+  let seen = 0;
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim().replace(/\s+/g, ' ');
+    if (sel.indexOf('#updater') !== 0) continue;
+    seen++;
+    for (const d of m[2].matchAll(/(?<![\w-])(background(?:-color)?|color|box-shadow)\s*:\s*([^;}]+)/g))
+      if (/#[0-9a-fA-F]{3,8}|rgba?\s*\(/.test(d[2]))
+        out.push(`ליטרל צבע ב-${sel}: ${d[1]}:${d[2].trim()} ⛔ — מחליפים למשתנה ערכה`);
+  }
+  if (!seen) out.push('אפס כללי `#updater` ⛔ — מוסיפים את כללי הבאנר');
+  return out;
+}
 function themeGaps() {
   const out = [];
   const n = (src.match(/@media\s*\(prefers-color-scheme/g) || []).length;
@@ -3914,7 +3974,7 @@ function themeGaps() {
   for (const [k, v] of L)
     if (/#|rgba?\(/.test(v) && !D.has(k)) out.push(`אסימון בהיר בלי מקבילה כהה: ${k}`);
   for (const k of D.keys()) if (!L.has(k)) out.push(`אסימון כהה שאינו בערכה הבהירה: ${k}`);
-  return out.concat(dualRoleGaps(), contrastGaps());
+  return out.concat(dualRoleGaps(), contrastGaps(), updaterLiteralGaps());
 }
 /*  ⛔ הערה שמתארת מצב שחלף (סבב 97) — ⚠️ הנמדד הוא **דפוס המצבה**
  *  בלבד: ⭐ שבע הצורות שברשימה שמתחת, ⛔ ושלושת הדפוסים
@@ -5268,6 +5328,8 @@ const MATRIX = [
     probe: () => /<div id="updater">/.test(src) &&
                  !/\.id\s*=\s*['"]updater['"]/.test(code) &&
                  !/createElement\([^)]*\)[^;]{0,80}updater/.test(code) },
+  { row: 182, name: 'הרענון מ-controllerchange בלבד',
+    probe: () => swReloadGaps().length === 0 },
   { row: 182, name: 'עדכון אוטומטי — בדיקה מחזורית',
     probe: () => /setInterval\s*\(\s*checkForUpdates?\s*,/.test(code) &&
                  /reg\.update\s*\(/.test(code) && !hasCode(/\bRAW_URL\b/) &&
@@ -5403,7 +5465,9 @@ const GATES = {
   /*  ⭐ סבב 102 — שכבת הדחיפה. ⚠️ שער אחד לשתי השורות: ⛔ שתיהן מודדות
    *  את **אותו** קובץ מכיוון אחד — ⭐ מה עולה לענן, ומאיזה מסלול. */
   63:  { claim: 'שכבת הדחיפה' },
-  64: { claim: 'כתיבת משתמש' },
+  /*  ⛔ שלוש טענות באותו שער (סבב 131) — ⚠️ המשפך, הודעת החסימה שהוא
+   *  מחזיר, והקבוע שאתרי האימות מפנים אליו: ⭐ שלושתן על אותו מסלול. */
+  64: { claims: { test_push: ['כתיבת משתמש', 'הודעת החסימה', 'הודעת שש הספרות'] } },
   135: { claim: 'בעלות הסכימה המשותפת' },
   147: { claim: '`kv_rishon`' },
   /*  ⛔ שתי הטענות באותו שער — ⚠️ הערכים במסד החי, ⭐ ונקודת הקריאה
