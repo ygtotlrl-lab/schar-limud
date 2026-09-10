@@ -25,6 +25,9 @@ const APP = {
    *  לענן היא `upsert` על `client_id`, כלומר אידמפוטנטית בהגדרה. */
   busyFn: null,
   guardReason: 'כתיבה מקומית-תחילה, ודחיפה אידמפוטנטית על client_id',
+  /*  ⛔ שומר שיושב בנקודת הניתוב — ⚠️ ריק כאן: ⭐ המנתב קורא `fn(el)`
+   *  ⛔ ואינו ממתין להבטחה, ⚠️ ולכן השומר היחיד הוא זה שבאתר הכתיבה. */
+  routeGuard: null,
   guarded: [],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -56,7 +59,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -221,20 +224,58 @@ lv.length === 0
   : bad('3 · ' + lv.length + ' שדות בלי קישור: ' + lv.slice(0, 8).join(', '));
 
 sec('ג · פעולה שדורשת רשת — כפתור מושבת עד שהסתיימה');
+/*  ⛔ הגדרה מאותרת בכל צורותיה — ⚠️ `function X` · `window.X = function` ·
+ *  `const X =` · `X: function`: ⭐ חיפוש שמכיר צורה אחת מאשר «אין מגן»
+ *  לפונקציה שנושאת אותו, ⛔ ומדווח חסר על קוד תקין. */
+const GSRC = stripComments(SRC);
+const defAt = (name) => {
+  for (const form of ['function ' + name + '(', 'window.' + name + ' =',
+                      'const ' + name + ' =', name + ': function'])
+    if (GSRC.indexOf(form) >= 0) return GSRC.indexOf(form);
+  return -1;
+};
+/*  ⛔ הגוף נחתך בהתאמת סוגריים ⛔ ולא בחלון תווים קבוע — ⚠️ חלון שנמתח
+ *  אל הפונקציה הבאה מאשר מגן שאינו בגוף הזה, ⭐ וחלון שנקטע מדווח חסר
+ *  על פונקציה שנושאת אותו. */
+const bodyOf = (name) => {
+  const i = defAt(name);
+  if (i < 0) return null;
+  const s = GSRC.indexOf('{', i);
+  if (s < 0) return null;
+  let d = 0;
+  for (let j = s; j < GSRC.length; j++) {
+    if (GSRC[j] === '{') d++;
+    else if (GSRC[j] === '}' && --d === 0) return GSRC.slice(s, j + 1);
+  }
+  return null;
+};
+const hasBusy = (body) => !!body && new RegExp('\\b' + APP.busyFn + '\\s*\\(').test(body);
 if (!APP.busyFn) {
   APP.guardReason
     ? ok('4 · ⚠️ אין כאן מגן שליחה כפולה, והנימוק כתוב: ' + APP.guardReason)
     : bad('4 · ⛔ אין `busyFn` ואין נימוק כתוב — «אין כאן כזה» חייב להיאמר');
 } else {
-  const missing = APP.guarded.filter((fn) => {
-    const i = SRC.indexOf('function ' + fn + '(');
-    if (i < 0) return true;
-    return !new RegExp('\\b' + APP.busyFn + '\\s*\\(').test(SRC.slice(i, i + 1200));
-  });
+  const missing = APP.guarded.filter((fn) => !hasBusy(bodyOf(fn)));
   missing.length === 0
     ? ok('4 · ' + APP.guarded.length + ' פונקציות כתיבה עוברות ב-`' + APP.busyFn + '`')
-    : bad('4 · פונקציות כתיבה בלי מגן: ' + missing.join(', '));
+    : bad('4 · פונקציות כתיבה בלי מגן: ' + missing.join(', ') + '. נמדדו ' + missing.length +
+          ' והצפוי 0. מוסיפים את הקריאה ל-`' + APP.busyFn + '` בגוף הפונקציה');
 }
+/*  ⛔ שומר אחד לכל פעולה (סבב 134) — ⚠️ **מה נכנס**: מפת הפעולות והמטפלים
+ *  שהיא מנתבת אליהם, ⛔ **ומה מפיל**: מטפל שמחזיר את ההבטחה — ⭐ ולכן
+ *  הניתוב מנטרל את הכפתור — ⛔ וגופו קורא שוב לאותו מגן: ⚠️ שני שומרים
+ *  לאותה פעולה הם שתי הכרעות על אותה ראיה, ⭐ והשני משחרר כפתור
+ *  שהראשון עוד מחזיק. ⛔ **והמדידה חלה רק כשהניתוב מנטרל** — ⚠️ ובשלוש
+ *  שאין בהן שומר בניתוב, השומר שבאתר הכתיבה הוא היחיד. */
+const dbl = [];
+if (APP.busyFn && APP.routeGuard)
+  for (const m of GSRC.matchAll(/'([a-z0-9-]+)'\s*:\s*function\s*\([^)]*\)\s*\{\s*return\s+([A-Za-z_$][\w$]*)\s*\(/g))
+    if (hasBusy(bodyOf(m[2]))) dbl.push(m[1] + ' → ' + m[2]);
+dbl.length === 0
+  ? ok('4ב · שומר אחד לכל פעולה — ' + (APP.routeGuard
+        ? 'הניתוב מנטרל, ⛔ ואין מטפל שמנטרל שוב' : 'אין שומר בניתוב, ⭐ והשומר יושב באתר הכתיבה'))
+  : bad('4ב · שומר כפול — הניתוב מנטרל וגם המטפל: ' + dbl.join(', ') + '. נמדדו ' + dbl.length +
+        ' והצפוי 0. מסירים את הקריאה ל-`' + APP.busyFn + '` מגוף המטפל');
 
 sec('ד · יכולת ✅ מחייבת נקודת כניסה חיה');
 const CAP = fs.readFileSync('tools/check-capabilities.mjs', 'utf8');

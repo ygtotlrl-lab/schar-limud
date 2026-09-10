@@ -4055,6 +4055,34 @@ function brandTokenGaps() {
   }
   return out;
 }
+/*  ⛔ אוצר מילים אחד לאסימוני העיצוב (סבב 134) — ⚠️ **מה נכנס**: הערכה
+ *  הבהירה וגוף ה-CSS, ⛔ **ומה מפיל**: שם מחמשת השמות שאינו מוגדר · שם
+ *  שירד שעדיין חי · ⛔ ואסימון שהוגדר ואין לו קורא: ⭐ **שם שנבדל מכריח
+ *  כלל CSS פרטי**, ⚠️ וכלל משותף אינו יכול לנקוב בשם שקיים באחת בלבד.
+ *  ⛔ **והקורא נמדד בכל הקובץ** ⛔ ולא ב-CSS בלבד — ⚠️ אסימון שנקרא
+ *  מ-JS הוא קורא חי לכל דבר. */
+const VOCAB = ['--bg', '--text', '--border', '--text2', '--radius'];
+/*  ⛔ שם שירד, והשם שבא במקומו — ⚠️ **מה נכנס**: שם שנמדד כמת בארבעתן,
+ *  ⛔ **ומה מפיל**: הופעתו בגוף ה-CSS. ⭐ **ו-`--card` אינו כאן** —
+ *  ⚠️ נמדד שהוא **משטח הכרטיס** בשכר ובגיוס ⛔ ולא רקע הדף, ⭐ ושני
+ *  המושגים חיים זה לצד זה. */
+const VOCAB_RETIRED = { '--ink': '--text', '--line': '--border', '--textmid': '--text2', '--muted': '--text2', '--r': '--radius' };
+function tokenVocabGaps() {
+  const out = [];
+  const li = src.indexOf(':root');
+  const light = src.slice(li, src.indexOf('}', li));
+  for (const t of VOCAB)
+    if (light.indexOf(t + ':') < 0)
+      out.push(`אסימון מאוצר המילים שאינו מוגדר: ${t} ⛔ — מוסיפים אותו ל-\`:root\` הבהירה`);
+  const css = cssText();
+  for (const old of Object.keys(VOCAB_RETIRED))
+    if (new RegExp(old + '(?![-A-Za-z0-9])').test(css))
+      out.push(`שם שירד ועדיין חי ב-CSS: ${old} ⛔ — מחליפים ל-${VOCAB_RETIRED[old]}`);
+  for (const m of light.matchAll(/(--[a-z0-9-]+)\s*:/gi))
+    if (!new RegExp('var\\(' + m[1] + '(?![-A-Za-z0-9])').test(src))
+      out.push(`אסימון שהוגדר ואין לו קורא: ${m[1]} ⛔ — מוחקים אותו משתי הערכות`);
+  return out;
+}
 function themeGaps() {
   const out = [];
   const n = (src.match(/@media\s*\(prefers-color-scheme/g) || []).length;
@@ -4070,7 +4098,7 @@ function themeGaps() {
   for (const [k, v] of L)
     if (/#|rgba?\(/.test(v) && !D.has(k)) out.push(`אסימון בהיר בלי מקבילה כהה: ${k}`);
   for (const k of D.keys()) if (!L.has(k)) out.push(`אסימון כהה שאינו בערכה הבהירה: ${k}`);
-  return out.concat(dualRoleGaps(), contrastGaps(), updaterLiteralGaps(), brandTokenGaps());
+  return out.concat(dualRoleGaps(), contrastGaps(), updaterLiteralGaps(), brandTokenGaps(), tokenVocabGaps());
 }
 /*  ⛔ הערה שמתארת מצב שחלף (סבב 97) — ⚠️ הנמדד הוא **דפוס המצבה**
  *  בלבד: ⭐ שבע הצורות שברשימה שמתחת, ⛔ ושלושת הדפוסים
