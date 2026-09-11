@@ -154,10 +154,15 @@ function snapshot(dir) {
 
 /*  מריץ כלי אחד בעותק, ומחזיר את קוד היציאה.
  *  ⛔ `R33_INNER` נדרש כאן — ⚠️ בלעדיו הריצה הפנימית פותחת עותק משלה. */
+/*  ⛔ הריצה הפנימית אינה יורשת `GATE_MUT` (סבב 136) — ⚠️ הטענה כאן היא
+ *  ש**הסט עובר על עותק ואינו כותב בו**, ⛔ ולא מה שכל שער מודד: ⭐ המוטציות
+ *  של כל שער רצות בריצה החיצונית, ⛔ והרצתן שוב בתוך העותק היא אותה עבודה
+ *  פעמיים — ⚠️ נמדד: הן החזיקו את רוב תקציב הזמן של הסט. */
 function runGate(dir, tool, extraEnv) {
+  const env = { ...process.env, R33_INNER: '1', ...extraEnv };
+  delete env.GATE_MUT;
   const r = spawnSync(process.execPath, [path.join(dir, 'tools', tool)],
-                      { cwd: dir, env: { ...process.env, R33_INNER: '1', ...extraEnv },
-                        encoding: 'utf8' });
+                      { cwd: dir, env, encoding: 'utf8' });
   return r.status;
 }
 
