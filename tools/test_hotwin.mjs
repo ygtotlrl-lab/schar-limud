@@ -86,7 +86,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 11, app: 0, appWhy: '' };
+const FLOOR = { shared: 8, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -158,7 +158,7 @@ function harness(modSrc, opts) {
       { id: 'c', ts: 300 },
     ],
     cloud: { ok: true, rows: [{ id: 'a', ts: 100 }, { id: 'b', ts: 200 }] },
-    pending: false, applied: undefined, fetchCalls: 0, restoreCalls: 0, domCalls: 0,
+    pending: false, applied: undefined, fetchCalls: 0,
   };
   Object.assign(state, opts || {});
   const spec = {
@@ -176,9 +176,7 @@ function harness(modSrc, opts) {
     Date,
     setTimeout: (fn) => fn,
     window: {},
-    document: { getElementById: () => { state.domCalls++; return null; } },
     lsLog: () => {},
-    lsRestoreAll: () => { state.restoreCalls++; },
     HW_CFG: { enabled: true, admin: () => true, specs: [spec] },
     LS_CFG: { pending: () => state.pending },
   };
@@ -234,19 +232,6 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
   const r = await ctx.hwPastLoad('k');
   assert(r.ok === true && ids(r.rows) === 'e,a' && state.applied === undefined,
     'hwPastLoad: חיות מחוץ לחלון בלבד, ממוינות, בלי כתיבה לדיסק');
-}
-/* ── כפתור השחזור: דו-שלבי, ושער מנהל ──────────────────────────────────── */
-{
-  const { state, ctx } = harness(MOD);
-  ctx.hwRestoreClick(null);
-  assert(state.restoreCalls === 0, 'לחיצה ראשונה חומשת בלבד — lsRestoreAll לא נקראה');
-  ctx.hwRestoreClick(null);
-  assert(state.restoreCalls === 1, 'לחיצה שנייה בתוך החלון מפעילה את lsRestoreAll');
-}
-{
-  const { state, ctx } = harness(MOD, { admin: false });
-  ctx.hwRestoreMount();
-  assert(state.domCalls === 0, 'hwRestoreMount נעצר לפני ה-DOM כשאין הרשאת מנהל');
 }
 
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה

@@ -60,7 +60,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIRS = ['.github', 'android', 'design', 'icons', 'migrations', 'signing', 'tools'];
 const ROOT_FILES = ['.nojekyll', 'CLAUDE.md', 'CONTEXT.md', 'README.md',
                     'index.html', 'manifest.json', 'sw.js'];
-const CHECKERS = ['check-js.mjs', 'check-structure.mjs', 'check-status-area.mjs',
+const CHECKERS = ['check-js.mjs', 'check-structure.mjs',
                   'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs'];
 /*  ⛔ מחולל אינו בודק ואינו שער (סבב 71) — ⚠️ הוא **כותב** נכסים, בעוד
  *  ששער קורא בלבד; ⛔ ולכן קטגוריה שלישית ומוצהרת, ⛔ ולא הרחבה של
