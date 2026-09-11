@@ -48,7 +48,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [106, 107];
+export const ROWS = [108, 109];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -460,8 +460,11 @@ else {
  *  ודורשת שלא ייפול — כלומר נמדד **מה** מוטבע ולא **שהתיקייה ריקה**. */
 {
   const ASSETS = 'android/app/src/main/assets';
+  /*  ⛔ החלק שמודד את שורת «אין נכסים מוטבעים» (סבב 137) — ⚠️ הבודק
+   *  מפוצל לשערים לפי נושא, ⭐ והשורה יושבת בקטגוריית המעטפת והמסד:
+   *  ⛔ חלק אחר אינו מריץ את ה-probe כלל. */
   const run = (dir) => execFileSync(process.execPath,
-      [join(dir, 'tools', 'check-capabilities.mjs')],
+      [join(dir, 'tools', 'test_caps_build.mjs')],
       { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
   const assetMut = (label, rel, wantFail) => {
     const d = fs.mkdtempSync(join(os.tmpdir(), 'r72-assets-'));

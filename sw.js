@@ -5,7 +5,7 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בארבע האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v126';
+var CACHE_NAME = 'schar-limud-v127';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -19,8 +19,7 @@ var CORE = [
 // ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף (כלל קריטי 2, סבב 6) —
 // שחרור מצד הספק היה שובר את האפליקציה בלי שום שינוי קוד כאן.
 var CDN_ASSETS = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js'
 ];
 
 /*  ⭐ דף אופליין — נוסף כאן בסבב 42ג. עד אז schar הייתה היחידה בלי אחד,

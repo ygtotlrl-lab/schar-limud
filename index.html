@@ -14,7 +14,6 @@
      לאפליקציה בלי שינוי קוד ובלי בדיקה — ושבירה כזו אינה ניתנת לשחזור
      (הקוד בריפו לא השתנה). @2.39.3 הוא בדיוק מה שרץ בייצור ב-hanhala. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:14px}
@@ -221,6 +220,24 @@ body.locked{overflow:hidden}
 .toast.good{background:#15803d;color:#fff}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
+/* ═══ CSS גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════
+   ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
+      כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.
+   ⛔ הצבעים מהאסימונים ⛔ ואין כאן ליטרל — ⚠️ `--brand` למה שנגבה,
+      ⭐ ו-`--card-2` למסלול שמאחוריו: ⛔ ליטרל מוטבע כאן היה נשאר בהיר
+      במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
+   ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
+      לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
+.bchart{display:grid;gap:8px;padding:4px 0}
+.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:8px;font-size:.8rem}
+.blab{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbars{display:grid;gap:3px}
+.btrack{display:block;height:8px;border-radius:99px;background:var(--card-2);overflow:hidden}
+.btrack i{display:block;height:100%;border-radius:99px;background:var(--brand)}
+.btrack.tgt{height:4px}
+.btrack.tgt i{opacity:.38}
+.bval{color:var(--text2);text-align:end;white-space:nowrap}
+/* ═══ סוף CSS גרף העמודות ════════════════════════════════════════════════ */
 /* ================================================================= מעדכן */
 #updater{
   position:fixed;inset-inline:0;z-index:10001;
@@ -293,7 +310,7 @@ body.locked{overflow:hidden}
       </div>
       <div class="card">
         <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
-        <div class="card-body"><canvas id="dash-chart" height="160"></canvas></div>
+        <div class="card-body"><div id="dash-chart"></div></div>
       </div>
       <div class="card" id="dash-month-card" style="display:none">
         <div class="card-hdr">
@@ -550,7 +567,6 @@ var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 //    ⛔ אין להזין מהן את עֵד הפינוי (סבב 51) — ר' `_slPushedAt`.
 var _slSeenTs=0,_slLastSeenOk=0;
 var SL_STAMP_KEY='sl_last_changed';
-var _dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
@@ -760,7 +776,6 @@ function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
 
 /*  ⛔ שם המפתח הישן פר-אפליקציה — ⚠️ וההגירה שמוחקת אותו משותפת:
  *  ⭐ הקבוע כאן הוא מה שמפריד בין הגוף הזהה לערך שנבדל. */
-var BK_AT_LEGACY_KEY = 'sl_last_backup_at';
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
@@ -1332,19 +1347,11 @@ function lsBootDeferred() {
   return p.then(finish, function () { return finish(0); });
 }
 
-/*  ⛔ הגירה מקומית חד-פעמית (סבב 136) — ⚠️ חותמת «גובה לאחרונה»
- *  הייתה נקראת בשורת המצב בלבד, ⛔ והשורה ירדה: ⭐ מפתח שנכתב
- *  ואין לו קורא צורך את תקציב האחסון ⛔ ומאכיל את הפינוי האוטומטי.
- *  ⛔ **והיא אידמפוטנטית** — ⚠️ מחיקה בלבד, ⭐ וריצה שנייה אינה משנה דבר. */
-function migrateBackupAtKey() {
-  try { lsRemove(BK_AT_LEGACY_KEY); } catch (e) { }
-}
 /* ── בדיקת העלייה ───────────────────────────────────────────────────────
    נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו.
    **סינכרונית בכוונה** — היא חייבת לרוץ לפני הטעינה. כשיש מפתחות שניתן
    לאמת מול הענן, ההתרעה נדחית יחד עם האימות (`lsBootDeferred`). */
 function lsBoot(opts) {
-  migrateBackupAtKey();
   var u = lsUsage(), swept = 0;
   if (u.total >= u.quota * LS_SWEEP_PCT) {
     swept = lsSweepGuarded('פינוי יזום בעלייה — ' + Math.round(u.pct * 100) + '% מהמכסה',
@@ -4350,6 +4357,32 @@ function kvParse(key, raw) {
 }
 function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
 /* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
+/* ═══ גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════════
+   ⛔ סדרה מוצגת ברוחב יחסי ⛔ ולא בספריית גרפים — ⚠️ הרוחב הוא התכונה
+      היחידה שנגזרת מהנתון, ⭐ והוא החריג היחיד לסגנון מוטבע.
+   ⛔ פחות משתי נקודות אינו גרף — ⚠️ עמודה אחת אינה משווה דבר, ⭐ והמסך
+      מציג את הטבלה בלבד: ⛔ המחזירה מחרוזת ריקה ⛔ ואינה מציירת מסגרת.
+   ⛔ וכל שורה נושאת `aria-label` עם המספרים — ⚠️ גרף בלי טקסט חלופי אינו
+      נגיש, ⭐ והוא כל מה שקורא-מסך רואה.
+   ⛔ **מה נכנס**: `lab` תווית · `val` הערך · `tgt` היעד · `txt` הטקסט
+      החלופי · `end` מה שנכתב בסוף השורה. */
+function barChart(rows, label) {
+  if (!Array.isArray(rows) || rows.length < 2) return '';
+  var max = 0, i;
+  for (i = 0; i < rows.length; i++) max = Math.max(max, rows[i].val || 0, rows[i].tgt || 0);
+  if (!(max > 0)) return '';
+  var pct = function (v) { return Math.round(((v || 0) / max) * 1000) / 10; };
+  var h = '<div class="bchart" role="img" aria-label="' + esc(label) + '">';
+  for (i = 0; i < rows.length; i++) {
+    h += '<div class="brow" aria-label="' + esc(rows[i].txt) + '">' +
+      '<span class="blab">' + esc(rows[i].lab) + '</span>' +
+      '<span class="bbars"><span class="btrack"><i style="width:' + pct(rows[i].val) + '%"></i></span>' +
+      '<span class="btrack tgt"><i style="width:' + pct(rows[i].tgt) + '%"></i></span></span>' +
+      '<span class="bval">' + esc(rows[i].end) + '</span></div>';
+  }
+  return h + '</div>';
+}
+/* ═══════════════ סוף מודול גרף העמודות ══════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
@@ -4792,25 +4825,14 @@ function renderDash(){
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
 
-  if(_dashChart)_dashChart.destroy();
-  var ctx=document.getElementById('dash-chart').getContext('2d');
-  // הגרף מציג בדיוק את נתוני הטבלה: עמודה = התנועות שנרשמו בחודש, וקו
-  // היעד לצידה כדי שיהיה ברור מאיפה אחוז הגבייה מגיע.
-  var cD=YEAR_MONTHS.map(function(m){return colT[m]||0;}),cT=YEAR_MONTHS.map(function(m){return tgt[m];});
-  _dashChart=new Chart(ctx,{
-    type:'bar',
-    data:{labels:YEAR_MONTHS.map(function(m){return MONTH_HE_SHORT[m];}),datasets:[
-      {label:'נגבה בפועל',data:cD,backgroundColor:'rgba(30,58,95,0.75)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:4},
-      {label:'יעד',type:'line',data:cT,borderColor:'#c62828',backgroundColor:'#c62828',borderWidth:2,borderDash:[5,4],pointRadius:2,fill:false,tension:.15}
-    ]},
-    options:{responsive:true,plugins:{
-      legend:{labels:{font:{family:'Heebo'}}},
-      tooltip:{callbacks:{afterBody:function(items){
-        var i=items&&items[0]?items[0].dataIndex:-1;if(i<0)return'';
-        return 'אחוז גבייה: '+pctText(cD[i],cT[i]);
-      }}}
-    },scales:{y:{ticks:{font:{family:'Heebo'},callback:function(v){return String.fromCharCode(8362)+v.toLocaleString();}}},x:{ticks:{font:{family:'Heebo'},maxRotation:45}}}}
-  });
+  // הגרף מציג בדיוק את נתוני הטבלה: פס הגבייה של החודש ומתחתיו פס היעד,
+  // כדי שיהיה ברור מאיפה אחוז הגבייה מגיע. ⛔ אין כאן ספריית גרפים —
+  // ⚠️ הרוחב היחסי הוא כל מה שהנתון דורש.
+  document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
+    var v=colT[m]||0,t=tgt[m]||0;
+    return {lab:MONTH_HE_SHORT[m],val:v,tgt:t,end:pctText(v,t),
+            txt:MONTH_HE_SHORT[m]+': נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
+  }),'גבייה חודשית מול היעד')
 }
 function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=monthLabel(year,month);

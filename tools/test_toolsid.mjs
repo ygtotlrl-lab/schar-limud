@@ -33,7 +33,8 @@ const APP = {
    *  הריפו, ⭐ ולכן הוא חייב להיות זהה בית-לבית: ⛔ והרשימה נמדדת משני
    *  צדדיה — שם שאין לו קובץ, וקובץ שאינו ברשימה. */
   pureTools: [
-    '_capability-notes.md', 'test_budget.mjs', 'test_icons.mjs',
+    '_capability-notes.md', 'test_budget.mjs', 'test_caps_build.mjs',
+    'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
     'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
     'test_readonly.mjs', 'whiten.mjs',
   ],

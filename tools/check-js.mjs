@@ -85,6 +85,7 @@ const APP = {
           'test_session.mjs',
           'check-structure.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs',
+          'test_caps_ui.mjs', 'test_caps_build.mjs', 'test_caps_guard.mjs',
           'test_pull.mjs',
           'test_push.mjs',
           'test_budget.mjs', 'test_icons.mjs',
