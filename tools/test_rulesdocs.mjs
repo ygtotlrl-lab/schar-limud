@@ -53,7 +53,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 39, 173, 95];
+export const ROWS = [5, 8, 39, 175, 97];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -544,7 +544,7 @@ t(!capsFails((doc) => {
     t(true, `מ24 · ⭕ בשורה ${rowNo24} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
   } else {
     t(runGateOn({ [CAPS]: caps.replace(/mergePoints: \[/, "mergePoints: ['mergeNothing', ") },
-                'check-capabilities.mjs', () => ({})),
+                'test_caps_build.mjs', () => ({})),
       'מ24 · הצהרת נקודת-מיזוג בלי אתר בפועל **מפילה** את «מיזוג מכל»');
   }
   /*  ⭐ מוטציית-נגד: שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ אינו מפיל —
@@ -554,7 +554,7 @@ t(!capsFails((doc) => {
       .replace('for (const f of maps) {', 'for (const f of found) {')
       .replace('const found = maps.concat(pairs);', 'const all = found.concat(pairs);')
       .replace('if (!found.some((f) => f.name === n))', 'if (!all.some((f) => f.name === n))') },
-              'check-capabilities.mjs', () => ({})),
+              'test_caps_build.mjs', () => ({})),
     'נ15 · ⭐ שם מקומי שהוחלף בעקביות בגוף ה-probe ⛔ **אינו** מפיל');
   /*  ⛔⛔ מ32 — שער שקורא את המקור ואינו מוצהר ב-`scanKind` (סבב 111):
    *  ⚠️ הטענה שנופלת היא «שער סורק קוד מולבן», ⭐ וההצהרה היא כל מה
@@ -584,7 +584,7 @@ t(!capsFails((doc) => {
    *  אינו עובר במפת הפעולות», ⭐ וזו המדידה שהגבול הפך לאפשרית: ⛔ בלי
    *  הגבול `ACTIONS[act]` היה נמצא בתוך `DOM_ACTIONS[act]`. */
   t(runGateOn({ [CAPS]: caps.replace(/^(  actMap: ')[A-Za-z_$][\w$]*'/m, "$1ACTIONS'") },
-              'check-capabilities.mjs', () => ({})),
+              'test_caps_ui.mjs', () => ({})),
     'מ37 · שם מפה שהוא סיומת של השם החי **מפיל** את «מפת הפעולות»');
   /*  ⭐ מוטציית-נגד: גבול שנכתב בצורה שקולה ⛔ אינו מפיל — ⚠️ המנגנון
    *  לא נגע, ⭐ ורק ניסוח הגבול השתנה: ⛔ ושם המפה עצמו אינו ניתן
@@ -594,7 +594,7 @@ t(!capsFails((doc) => {
                  'tools/test_dbfacts.mjs': rd('tools/test_dbfacts.mjs')
                    .replace("new RegExp('(?<![\\\\w$.])' + APP.cfgReader",
                             "new RegExp('(?<![\\\\w$.])(?:)' + APP.cfgReader") },
-               'check-capabilities.mjs', () => ({})),
+               'test_caps_ui.mjs', () => ({})),
     'נ23 · ⭐ גבול שנכתב בצורה שקולה ⛔ **אינו** מפיל');
   /*  ⛔⛔ מ38 — הכרזת הגירה בלי הסבב שבו רצה (סבב 130): ⚠️ הטענה
    *  שנופלת היא «הגירה מקומית שהושלמה», ⭐ והנימוק המדוד הוא שההכרזה
@@ -606,7 +606,7 @@ t(!capsFails((doc) => {
   } else {
     t(runGateOn({ [CAPS]: caps.replace(/(migrateKeep: \{[\s\S]*?\n  \},)/,
                                        (b) => b.replace(/ \(סבב \d+\)/g, '')) },
-                'check-capabilities.mjs', () => ({})),
+                'test_caps_guard.mjs', () => ({})),
       'מ38 · הכרזת הגירה בלי הסבב שבו רצה **מפילה** את «הגירה מקומית שהושלמה»');
   }
   /*  ⛔⛔ מ39 — מיכל באנר העדכון שאינו במקור (סבב 130): ⚠️ הטענה שנופלת
@@ -615,7 +615,7 @@ t(!capsFails((doc) => {
    *  שהקוד רץ. */
   t(runGateOn({ [CAPS]: caps,
                 'index.html': rd('index.html').replace('<div id="updater">', '<div id="updaterX">') },
-              'check-capabilities.mjs', () => ({})),
+              'test_caps_guard.mjs', () => ({})),
     'מ39 · מיכל באנר העדכון שאינו במקור **מפיל** את «מיכל באנר העדכון במקור»');
   /*  ⛔⛔ מ40 — שער שמריץ את הסט ומוכרז `text` (סבב 130): ⚠️ הטענה
    *  שנופלת היא «שער אינו מריץ את check-js המלא», ⭐ וההמרה הופכת אותו
@@ -640,14 +640,14 @@ t(!capsFails((doc) => {
     const bad = rd('index.html').replace(
       '_swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);',
       'setTimeout(function () { _swReloaded = true; location.reload(); }, 1500);');
-    t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'check-capabilities.mjs', () => ({})),
+    t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'test_caps_guard.mjs', () => ({})),
       'מ41 · טיימר קצר שמרענן בעצמו **מפיל** את «הרענון מ-controllerchange בלבד»');
   }
   /*  ⭐ מוטציית-נגד: תקרה ארוכה יותר ⛔ אינה מפילה — ⚠️ המנגנון לא נגע,
    *  ⭐ ורק הערך קודם. */
   {
     const ok = rd('index.html').replace('var SW_APPLY_MS = 10000;', 'var SW_APPLY_MS = 15000;');
-    t(!runGateOn({ 'index.html': ok, [CAPS]: swResign(ok) }, 'check-capabilities.mjs', () => ({})),
+    t(!runGateOn({ 'index.html': ok, [CAPS]: swResign(ok) }, 'test_caps_guard.mjs', () => ({})),
       'נ24 · ⭐ תקרת המתנה ארוכה יותר ⛔ **אינה** מפילה');
   }
   /*  ⛔⛔ מ42 — ליטרל צבע בכללי הבאנר (סבב 131): ⚠️ הטענה שנופלת היא
@@ -658,14 +658,14 @@ t(!capsFails((doc) => {
   {
     const bad = rd('index.html').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
                                          '$1#1a1a1a');
-    t(runGateOn({ 'index.html': bad, [CAPS]: caps }, 'check-capabilities.mjs', () => ({})),
+    t(runGateOn({ 'index.html': bad, [CAPS]: caps }, 'test_caps_ui.mjs', () => ({})),
       'מ42 · ליטרל צבע בכללי הבאנר **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
   /*  ⭐ מוטציית-נגד: ערך שאינו צבע באותו כלל ⛔ אינו מפיל — ⚠️ המנגנון
    *  לא נגע, ⭐ ורק העיגול השתנה. */
   {
     const ok = rd('index.html').replace(/(#updater \.in\{[\s\S]{0,80}?border-radius:)14px/, '$112px');
-    t(!runGateOn({ 'index.html': ok, [CAPS]: caps }, 'check-capabilities.mjs', () => ({})),
+    t(!runGateOn({ 'index.html': ok, [CAPS]: caps }, 'test_caps_ui.mjs', () => ({})),
       'נ25 · ⭐ ערך שאינו צבע בכלל הבאנר ⛔ **אינו** מפיל');
   }
   /*  ⛔⛔ מ43 — נוסח אחר לחסימת כתיבת המשתמש (סבב 131): ⚠️ הטענה שנופלת
@@ -797,12 +797,12 @@ t(!capsFails((doc) => {
       const full = hit[1], bare = full.replace(/(@\d+\.\d+\.\d+)\/.*$/, '$1');
       t(runGateOn({ 'index.html': idx.split(full).join(bare),
                     'sw.js': sw.split(full).join(bare) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ48 · כתובת בלי נתיב מלא **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
       const verOne = full.replace(/@(\d+)\.(\d+)\.(\d+)\//,
         (m, a, b, c) => '@' + a + '.' + b + '.' + (Number(c) + 1) + '/');
       t(runGateOn({ 'sw.js': sw.split(full).join(verOne) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ49 · גרסה שנבדלת בין הקבצים **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
     }
   }
@@ -822,7 +822,7 @@ t(!capsFails((doc) => {
                    'sw.js': sw.split('@' + from + '/').join('@' + to + '/'),
                    'tools/check-capabilities.mjs': caps.split('@' + from + '/').join('@' + to + '/')
                                                        .split("ver: '" + from + "'").join("ver: '" + to + "'") };
-      t(!runGateOn(ok, 'check-capabilities.mjs', () => ({})),
+      t(!runGateOn(ok, 'test_caps_ui.mjs', () => ({})),
         'נ29 · ⭐ קידום גרסה עקבי בשני הקבצים ⛔ **אינו** מפיל');
     }
   }
@@ -843,7 +843,7 @@ t(!capsFails((doc) => {
        *  נופל משני צדדיו: ⭐ תג בלי הצהרה, והצהרה בלי תג. */
       t(runGateOn({ 'tools/check-capabilities.mjs':
                       caps.replace("{ url: '" + one[1], "{ url: 'X" + one[1]) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ59 · כתובת שאינה מוצהרת **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
       /*  ⛔ מ60 · רשומה שנייה לאותה כתובת עם סמל שאיש אינו קורא —
        *  ⚠️ הכיוון הראשון עובר (לכל רשומה יש תג), ⭐ והשני נופל. */
@@ -851,7 +851,7 @@ t(!capsFails((doc) => {
                       caps.replace("cdnLibs: [\n",
                         "cdnLibs: [\n    { url: '" + one[1] + "',\n      ver: '" + one[2] +
                         "', sym: 'ZzTest' },\n") },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ60 · סמל מוצהר שאין לו קורא **מפיל** את «ספרייה חיצונית — גרסה מוצהרת»');
       /*  ⛔ מ61 · קריאה לסמל שאינו מוצהר — ⚠️ הנבחר הוא הראשון
        *  ב-`LIB_SYMS` שאינו מוצהר כאן, ⛔ ואינו מוקלד. */
@@ -863,7 +863,7 @@ t(!capsFails((doc) => {
       else
         t(runGateOn({ 'index.html': idx.replace('var MSG_SAVED_LOCAL',
                         'var _mutLib = ' + pick + '.x;\nvar MSG_SAVED_LOCAL') },
-                    'check-capabilities.mjs', () => ({})),
+                    'test_caps_ui.mjs', () => ({})),
           'מ61 · סמל שנקרא בלי ספרייה מוצהרת **מפיל** את «ספרייה חיצונית — גרסה מוצהרת»');
     }
   }
@@ -878,7 +878,7 @@ t(!capsFails((doc) => {
       t(runGateOn({ 'index.html': idx.slice(0, at) +
                       "window.addEventListener('online', function () { mutNetProbe(); });\n" +
                       'function mutNetProbe() { return 1; }\n' + idx.slice(at) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ65 · מאזין רשת שאינו מוצהר **מפיל** את «`pull` — מנגנון המשיכה»');
   }
   /*  ⭐ מוטציית-נגד: מאזין נוסף שמוצהר יחד איתו ⛔ אינו מפיל —
@@ -897,7 +897,7 @@ t(!capsFails((doc) => {
                      'tools/check-capabilities.mjs': caps.slice(0, e) +
                        "\n    mutNetProbe: 'מוטציית-נגד — ⛔ מאזין שמוצהר יחד עם הוספתו'," +
                        caps.slice(e) },
-                   'check-capabilities.mjs', () => ({})),
+                   'test_caps_ui.mjs', () => ({})),
         'נ41 · ⭐ מאזין נוסף שמוצהר יחד איתו ⛔ **אינו** מפיל');
     }
   }
@@ -916,7 +916,7 @@ t(!capsFails((doc) => {
       /*  ⛔ השמירה נקראת ישירות — ⚠️ והשורה נשארת תקינה תחבירית. */
       const broke = '{ ' + hit[1] + '(); },';
       t(runGateOn({ 'index.html': idx.replace(tail, broke) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ64 · שמירה שאינה עוברת בצינור **מפילה** את «פעולה מגיבה מיד»');
     }
   }
@@ -935,7 +935,7 @@ t(!capsFails((doc) => {
       const re = new RegExp('\\b' + hit[1] + '\\b', 'g');
       t(!runGateOn({ 'index.html': idx.replace(re, hit[1] + 'Zz'),
                      'tools/check-capabilities.mjs': rd('tools/check-capabilities.mjs').replace(re, hit[1] + 'Zz') },
-                   'check-capabilities.mjs', () => ({})),
+                   'test_caps_ui.mjs', () => ({})),
         'נ40 · ⭐ שם שמירה שהוחלף בעקביות בשני הצדדים ⛔ **אינו** מפיל');
     }
   }
@@ -948,7 +948,7 @@ t(!capsFails((doc) => {
     const hit = /\n(\s*)try \{ lsHorizonRelease\(\); \} catch \(e0\) \{ \}\n/.exec(idx);
     if (!hit) t(true, 'מ66 · ⭕ אין כאן קריאה לשחרור האופק — ⛔ ואין מה למוטט');
     else t(runGateOn({ 'index.html': idx.replace(hit[0], '\n') },
-                     'check-capabilities.mjs', () => ({})),
+                     'test_caps_ui.mjs', () => ({})),
            'מ66 · הסרת שחרור האופק מהמשיכה **מפילה** את «אסטרטגיית localStorage»');
   }
   /*  ⛔⛔ מ67 — שדה מצב שהוחזר (סבב 136): ⚠️ **מה נכנס**: אזור המצב
@@ -976,7 +976,7 @@ t(!capsFails((doc) => {
     else
       t(runGateOn({ 'index.html': idx.replace(hv[0],
                       hv[0].replace('background:var(--card-2)', 'background:var(--bg)')) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ62 · רקע ריחוף מ-`--bg` **מפיל** את «ערכת נושא — בהיר וכהה»');
     /*  ⛔ הרמה השלישית יורדת מהערכה הבהירה בלבד — ⚠️ וכללי
      *  הריחוף נשארים במקומם: ⭐ זה בדיוק המצב שהטענה תופסת. */
@@ -986,7 +986,7 @@ t(!capsFails((doc) => {
     else {
       const e = idx.indexOf(';', j) + 1;
       t(runGateOn({ 'index.html': idx.slice(0, j) + idx.slice(e) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ63 · רמה חסרה במשפחת הרקע **מפילה** את «ערכת נושא — בהיר וכהה»');
     }
   }
@@ -1000,7 +1000,7 @@ t(!capsFails((doc) => {
     else {
       let out = idx;
       for (const m of all) out = out.split(m[0]).join('--card-2:' + shiftHex(m[1]));
-      t(!runGateOn({ 'index.html': out }, 'check-capabilities.mjs', () => ({})),
+      t(!runGateOn({ 'index.html': out }, 'test_caps_ui.mjs', () => ({})),
         'נ39 · ⭐ גוון אחר לרמה השלישית בשתי הערכות ⛔ **אינו** מפיל');
     }
   }
@@ -1016,7 +1016,7 @@ t(!capsFails((doc) => {
     else {
       const end = idx.indexOf(';', j) + 1;
       t(runGateOn({ 'index.html': idx.slice(0, j) + '--on-brand:var(--brand);' + idx.slice(end) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ56 · דיו שאינו עומד ביחס במצב הכהה **מפיל** את «ערכת נושא — בהיר וכהה»');
     }
   }
@@ -1032,7 +1032,7 @@ t(!capsFails((doc) => {
       const was = idx.slice(j, end);
       const to = /#f|#e|#d|#c|#b|#a|#9|#8/i.test(was) ? '--on-brand:#fdfdfd;' : '--on-brand:#0b1220;';
       t(!runGateOn({ 'index.html': idx.slice(0, j) + to + idx.slice(end) },
-                   'check-capabilities.mjs', () => ({})),
+                   'test_caps_ui.mjs', () => ({})),
         'נ35 · ⭐ גוון דיו אחר שעומד ביחס ⛔ **אינו** מפיל');
     }
   }
@@ -1054,12 +1054,12 @@ t(!capsFails((doc) => {
       t(true, 'מ57 · ⭕ אין כאן פעולה שממתינה לכתיבה ברשת — ⛔ והשומר אינו נמדד');
     else {
       const bad = idx.replace('\n  actRun(el, fn);', '\n  fn(el);');
-      t(runGateOn({ 'index.html': bad, [CAPS]: bzResign(bad) }, 'check-capabilities.mjs', () => ({})),
+      t(runGateOn({ 'index.html': bad, [CAPS]: bzResign(bad) }, 'test_caps_ui.mjs', () => ({})),
         'מ57 · ניתוב שאינו עובר בשומר **מפיל** את «כפתור שכותב מושבת בזמן הכתיבה»');
       /*  ⭐ מוטציית-נגד: שינוי שם עקבי של דגל השומר ⛔ אינו מפיל — ⚠️ הנמדד
        *  הוא הצורה «דגל על האלמנט שיוצא מוקדם», ⛔ ולא השם. */
       const okS = idx.split('_actBusy').join('_actPending');
-      t(!runGateOn({ 'index.html': okS, [CAPS]: bzResign(okS) }, 'check-capabilities.mjs', () => ({})),
+      t(!runGateOn({ 'index.html': okS, [CAPS]: bzResign(okS) }, 'test_caps_ui.mjs', () => ({})),
         'נ36 · ⭐ שינוי שם עקבי של דגל השומר ⛔ **אינו** מפיל');
     }
   }
@@ -1075,7 +1075,7 @@ t(!capsFails((doc) => {
       const idx = rd('index.html');
       const re = new RegExp("('" + names[0] + "'\\s*:\\s*function\\s*\\([^)]*\\)\\s*\\{\\s*)return\\s+");
       const bad = idx.replace(re, '$1');
-      t(bad !== idx && runGateOn({ 'index.html': bad }, 'check-capabilities.mjs', () => ({})),
+      t(bad !== idx && runGateOn({ 'index.html': bad }, 'test_caps_ui.mjs', () => ({})),
         'מ58 · פעולה מוצהרת שאינה מחזירה את ההבטחה **מפילה** את «כפתור שכותב מושבת בזמן הכתיבה»');
       /*  ⭐ מוטציית-נגד: שורת שמירה שנוספה לפני ה-`return` ⛔ אינה
        *  מפילה — ⚠️ הנמדד הוא ש**המטפל מחזיר**, ⛔ ולא מה קודם לכך:
@@ -1085,7 +1085,7 @@ t(!capsFails((doc) => {
       if (!gm) t(true, 'נ37 · ⭕ המטפל אינו נפתח ב-`return` — ⛔ ואין לאן להוסיף');
       else {
         const okS = idx.replace(gm[0], gm[1] + 'if (!' + (gm[2].trim() || 'el') + ') return null;\n    return ');
-        t(okS !== idx && !runGateOn({ 'index.html': okS }, 'check-capabilities.mjs', () => ({})),
+        t(okS !== idx && !runGateOn({ 'index.html': okS }, 'test_caps_ui.mjs', () => ({})),
           'נ37 · ⭐ שומר שנוסף לפני ה-`return` ⛔ **אינו** מפיל');
       }
     }
@@ -1101,7 +1101,7 @@ t(!capsFails((doc) => {
       t(true, 'מ55 · ⭕ אין כאן `cachePrefix` — ⛔ ואין מה למוטט');
     else {
       const bad = idx.replace('indexOf(LS_CFG.cachePrefix)', 'indexOf(LS_CFG.hzPrefix)');
-      t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'check-capabilities.mjs', () => ({})),
+      t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'test_caps_guard.mjs', () => ({})),
         'מ55 · סינון המטמון בקידומת האחסון **מפיל** את «סימן דחיית הבאנר מתמיד»');
     }
   }
@@ -1117,7 +1117,7 @@ t(!capsFails((doc) => {
       const ok2 = { 'index.html': idx.split("cachePrefix: '" + m[1] + "'").join("cachePrefix: '" + to + "'"),
                     'sw.js': sw.split("prefix: '" + m[1] + "'").join("prefix: '" + to + "'") };
       ok2[CAPS] = swResign(ok2['index.html']);
-      t(!runGateOn(ok2, 'check-capabilities.mjs', () => ({})),
+      t(!runGateOn(ok2, 'test_caps_guard.mjs', () => ({})),
         'נ34 · ⭐ קידומת מטמון אחרת בשני הקבצים ⛔ **אינה** מפילה');
     }
   }
@@ -1165,7 +1165,7 @@ t(!capsFails((doc) => {
     if (idx.indexOf('--border') < 0) t(true, 'מ53 · ⭕ אין כאן `--border` — ⛔ ואין מה למוטט');
     else
       t(runGateOn({ 'index.html': idx.split('--border').join('--line') },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ53 · `--line` במקום `--border` **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
   /*  ⭐ מוטציית-נגד: שינוי שם עקבי — האסימון והמרשם יחד ⛔ אינו מפיל:
@@ -1177,7 +1177,7 @@ t(!capsFails((doc) => {
     else
       t(!runGateOn({ 'index.html': idx.split('--text2').join('--text-2'),
                      'tools/check-capabilities.mjs': caps.split("'--text2'").join("'--text-2'") },
-                   'check-capabilities.mjs', () => ({})),
+                   'test_caps_ui.mjs', () => ({})),
         'נ32 · ⭐ שינוי שם עקבי של אסימון הטקסט המשני ⛔ **אינו** מפיל');
   }
   /*  ⛔⛔ מ50 — צבע הזהות (סבב 133): ⚠️ **מה נכנס**: כלל `#updater .in`,
@@ -1190,7 +1190,7 @@ t(!capsFails((doc) => {
     else
       t(runGateOn({ 'index.html': idx.replace('#updater .in{\n  background:var(--brand)',
                                               '#updater .in{\n  background:var(--text)') },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_ui.mjs', () => ({})),
         'מ50 · משטח הבאנר מדיו הטקסט **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
   /*  ⭐ מוטציית-נגד: שינוי שם עקבי — האסימון, ההכרזה והכלל יחד ⛔ אינו
@@ -1206,7 +1206,7 @@ t(!capsFails((doc) => {
     if (idx.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
     else
       t(!runGateOn({ 'index.html': ren(idx), 'tools/check-capabilities.mjs': ren(caps) },
-                   'check-capabilities.mjs', () => ({})),
+                   'test_caps_ui.mjs', () => ({})),
         'נ30 · ⭐ שינוי שם עקבי של הצמד כולו ⛔ **אינו** מפיל');
   }
   /*  ⛔⛔ מ45 — סימן דחייה בזיכרון (סבב 132): ⚠️ הטענה שנופלת היא «סימן
@@ -1217,14 +1217,14 @@ t(!capsFails((doc) => {
     const bad = rd('index.html').replace(
       "if (v && v === lsGet(LS_CFG.dismissKey, '')) return;",
       'if (v && _swAccepted) return;');
-    t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'check-capabilities.mjs', () => ({})),
+    t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'test_caps_guard.mjs', () => ({})),
       'מ45 · סימן דחייה בזיכרון **מפיל** את «סימן דחיית הבאנר מתמיד»');
   }
   /*  ⭐ מוטציית-נגד: מפריד אחר במזהה הגרסה ⛔ אינו מפיל — ⚠️ המנגנון לא
    *  נגע, ⭐ והמזהה עדיין נגזר משמות המטמון החיים. */
   {
     const ok = rd('index.html').replace(".sort().join('|');", ".sort().join('#');");
-    t(!runGateOn({ 'index.html': ok, [CAPS]: swResign(ok) }, 'check-capabilities.mjs', () => ({})),
+    t(!runGateOn({ 'index.html': ok, [CAPS]: swResign(ok) }, 'test_caps_guard.mjs', () => ({})),
       'נ27 · ⭐ מפריד אחר במזהה הגרסה ⛔ **אינו** מפיל');
   }
   /*  ⛔ מוטציה: זוג-רשומה שמעתיק את שדות הבסיס בלבד (סבב 99) — ⚠️ בדיוק
@@ -1278,7 +1278,7 @@ t(!capsFails((doc) => {
     if (skip) {
       t(true, `מ25 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
-      t(runGateOn({ [SRC]: inject(''), [CAP]: declare }, 'check-capabilities.mjs', () => ({})),
+      t(runGateOn({ [SRC]: inject(''), [CAP]: declare }, 'test_caps_build.mjs', () => ({})),
         'מ25 · זוג-רשומה שמעתיק את שדות הבסיס בלבד **מפיל** את «מיזוג מכל»');
     }
     /*  ⛔ מוטציה: כתיבה לרשימה שאינה בודקת קיום (סבב 100) — ⚠️ הטענה
@@ -1300,7 +1300,7 @@ t(!capsFails((doc) => {
       t(true, `מ26 · ⭕ בשורה ${dupNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
       t(runGateOn({ [SRC]: inject(pairBody, addFn('')), [CAP]: declAdd(declare) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_build.mjs', () => ({})),
         'מ26 · כתיבה שאינה עוברת ב-`uniqHas` **מפילה** את «רשימה אינה נושאת פריט כפול»');
     }
     /*  ⛔ מוטציה: מיזוג שאינו מכווץ (סבב 100) — ⚠️ המכווץ המוצהר משרשר
@@ -1310,7 +1310,7 @@ t(!capsFails((doc) => {
       t(true, `מ27 · ⭕ בשורה ${dupNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
       t(runGateOn({ [SRC]: inject(pairBody).replace(COLLAPSING, CONCAT), [CAP]: declare },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_build.mjs', () => ({})),
         'מ27 · מכווץ מוצהר שאין בו מפת ערכים **מפיל** את «רשימה אינה נושאת פריט כפול»');
     }
     /*  ⛔ מוטציה: פריט שנכתב בלי חותמת (סבב 101) — ⚠️ הטענה שנופלת היא
@@ -1321,7 +1321,7 @@ t(!capsFails((doc) => {
       t(true, `מ28 · ⭕ בשורה ${rowNo} — ה-probe אינו רץ כאן, ⛔ ואין מה למוטט`);
     } else {
       t(runGateOn({ [SRC]: inject(pairBody, addFn(GUARD)), [CAP]: declStamp(declare) },
-                  'check-capabilities.mjs', () => ({})),
+                  'test_caps_build.mjs', () => ({})),
         'מ28 · פריט שנכתב בלי חותמת **מפיל** את «מיזוג מכל»');
     }
 
@@ -1330,8 +1330,78 @@ t(!capsFails((doc) => {
      *  ⛔ ובלי כתיבה לרשימה שאינה בודקת קיום: ⚠️ שינוי חי שאסור לו
      *  להפיל. */
     t(!runGateOn({ [SRC]: inject(pairBody, addFn(GUARD, '  var zzStamp = Date.now();\n')),
-                   [CAP]: declStamp(declare) }, 'check-capabilities.mjs', () => ({})),
+                   [CAP]: declStamp(declare) }, 'test_caps_build.mjs', () => ({})),
       'נ16 · ⭐ אותו עץ עם מיזוג פר-פריט, מכווץ, בדיקת קיום וחותמת ⛔ **אינו** מפיל');
+  }
+}
+
+/*  ⛔⛔ מ68 — שער שעבר את סף הגודל (סבב 137): ⚠️ **מה נכנס**: קובץ שער
+ *  שתפח מעבר לתקרת השורות, ⛔ **ומה מפיל**: שהוא אינו אחד מחלקי פיצול
+ *  מוצהר — ⭐ שער אחד ארוך חוסם את הבריכה, ⚠️ ורתמות המוטציה מריצות
+ *  אותו עשרות פעמים בכל סבב. */
+t(runGateOn({ 'tools/test_md.mjs': rd('tools/test_md.mjs') + '\n'.repeat(2200) },
+            'check-capabilities.mjs', () => ({})),
+  'מ68 · שער שתפח מעבר לתקרת השורות **מפיל** את «gateSizeGaps»');
+/*  ⭐ מוטציית-נגד: אותה תוספת **מתחת** לתקרה ⛔ אינה מפילה — ⚠️ הנמדד
+ *  הוא הסף, ⛔ ולא כל גדילה: ⭐ שער שגדל ונשאר מתחתיו אינו חוסם דבר. */
+t(!runGateOn({ 'tools/test_md.mjs': rd('tools/test_md.mjs') + '\n'.repeat(100) },
+             'check-capabilities.mjs', () => ({})),
+  'נ42 · ⭐ גדילה שנשארת מתחת לתקרה ⛔ **אינה** מפילה');
+
+/*  ⛔⛔ מ69 — דפוס שאחת מחלופותיו עוגן לבדו (סבב 137): ⚠️ **מה נכנס**:
+ *  `|^` בסוף דפוס, ⛔ **ומה מפיל**: שהוא מתאים למחרוזת ריקה בכל קלט —
+ *  ⭐ והבדיקה שנשענת עליו מאשרת כל גוף: ⚠️ בדיוק «probe שאינו יכול
+ *  להיכשל». ⛔ **והדפוס מורכב בזמן ריצה** — ⚠️ כתיבתו כליטרל הייתה
+ *  מפילה את השער על הקובץ הזה עצמו. */
+const DEADALT = '/' + 'zz|' + '^' + '/';
+t(runGateOn({ 'tools/test_md.mjs': rd('tools/test_md.mjs') + '\nconst _r137 = ' + DEADALT + ';\nvoid _r137;\n' },
+            'check-capabilities.mjs', () => ({})),
+  'מ69 · דפוס שאחת מחלופותיו עוגן לבדו **מפיל** את «anchorGaps»');
+/*  ⭐ מוטציית-נגד: אותה חלופה עם תו אחריה ⛔ אינה מפילה — ⚠️ `^y` הוא
+ *  עוגן שדורש תו, ⛔ והוא אינו מתאים למחרוזת ריקה. */
+t(!runGateOn({ 'tools/test_md.mjs': rd('tools/test_md.mjs') + '\nconst _r137 = /zz|' + '^y/;\nvoid _r137;\n' },
+             'check-capabilities.mjs', () => ({})),
+  'נ43 · ⭐ עוגן שדורש תו אחריו ⛔ **אינו** מפיל');
+
+/*  ⛔⛔ מ70 — מטפל שכותב ואינו מחזיר את ההבטחה (סבב 137): ⚠️ **מה נכנס**:
+ *  ה-`return` שבראש המטפל הראשון שב-`APP.writeActs`, ⛔ **ומה מפיל**:
+ *  הסרתו — ⭐ מטפל שאינו מחזיר אינו נכנס לשומר כלל, ⚠️ והכפתור נשאר חי
+ *  בזמן הכתיבה: ⛔ נמדד שחמישה מטפלי מחיקה היו כך, ⚠️ וה-probe אישר
+ *  אותם מפני שגבול ה-`return` שלו התאים תמיד. */
+{
+  const capsTxt = rd('tools/check-capabilities.mjs');
+  const idx = rd('index.html');
+  const wa = /writeActs: \[([\s\S]*?)\]/.exec(capsTxt);
+  const acts = wa ? (wa[1].match(/'([^']+)'/g) || []).map((x) => x.slice(1, -1)) : [];
+  /*  ⛔ המטפל נבחר מהמוצהר ⛔ ואינו מוקלד — ⚠️ שם שהוקלד נסחף בכל שינוי
+   *  במפת הפעולות, ⭐ והמוטציה מפסיקה לפגוע במה שהיא באה למדוד.
+   *  ⛔ **והגוף נחתך בהתאמת סוגריים** — ⚠️ מטפל נכתב בשורה אחת באחת
+   *  ובכמה שורות באחרת, ⭐ ותבנית שנשענת על שורה חדשה מוצאת חלק מהם. */
+  const bodyAt = (t, o) => {
+    let d = 0;
+    for (let i = o; i < t.length; i++) {
+      if (t[i] === '{') d++;
+      else if (t[i] === '}' && !--d) return t.slice(o, i + 1);
+    }
+    return '';
+  };
+  let head = '';
+  for (const act of acts) {
+    const m = new RegExp("'" + act + "':\\s*function\\s*\\([^)]*\\)\\s*\\{").exec(idx);
+    if (!m) continue;
+    const body = bodyAt(idx, idx.indexOf('{', m.index + m[0].length - 1));
+    if (/[{;]\s*return\s+[A-Za-z_$]/.test(body)) { head = m[0] + body.slice(1); break; }
+  }
+  if (!head) t(true, 'מ70 · ⭕ אין כאן מטפל שמחזיר הבטחה — ⛔ ואין מה למוטט');
+  else {
+    const cut = head.replace(/return\s+([A-Za-z_$])/, '$1');
+    t(runGateOn({ 'index.html': idx.replace(head, cut) }, 'test_caps_ui.mjs', () => ({})),
+      'מ70 · מטפל בלי `return` **מפיל** את «כפתור שכותב מושבת בזמן הכתיבה»');
+    /*  ⭐ מוטציית-נגד: קוד חי שנוסף לפני ההחזרה ⛔ אינו מפיל — ⚠️ שינוי
+     *  חי ⛔ ולא הערה, ⭐ והנמדד הוא ההחזרה ⛔ ולא מה שקודם לה. */
+    const add = head.replace(/return\s+([A-Za-z_$])/, 'var _r137 = 1; void _r137; return $1');
+    t(!runGateOn({ 'index.html': idx.replace(head, add) }, 'test_caps_ui.mjs', () => ({})),
+      'נ44 · ⭐ קוד חי שנוסף לפני ההחזרה ⛔ **אינו** מפיל');
   }
 }
 

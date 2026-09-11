@@ -36,7 +36,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 138, app: 0, appWhy: '' };
+const FLOOR = { shared: 140, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -138,12 +138,12 @@ const ok = (msg, cond) => { RAN++;
  *  ⛔ ורשימה שחיה בהערה אינה ניתנת להשוואה. ⭐ שתיהן מצהירות על **עובדת
  *  מסד** שאין דרך לראות מהריפו: שטבלת הגיבוי נוצרה, ושמשימת ה-`pg_cron`
  *  רשומה — ⛔ והצד שכן ניתן לבדיקה נאכף ב-test_cron. */
-const DB_FACT_EXEMPT = [55, 143];
+const DB_FACT_EXEMPT = [55, 145];
 const EXEMPT = [
   24, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 26, 28, 29, 30, 31,
   32, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 63, 64,
-  84, 83, 93, 94, 96, 97, 95, 98, 101, 102, 106, 107, 109, 110, 111, 113, 114, 116, 117, 118, 121, 123, 125, 128, 132,
-  135, 139, 141, 143, 147, 136, 137, 138, 154, 157, 78, 59, 163, 167, 169, 171, 173, 177, 178, 179, 180, 181, 185, 148
+  84, 83, 95, 96, 98, 99, 97, 100, 103, 104, 108, 109, 111, 112, 113, 115, 116, 118, 119, 120, 123, 125, 127, 130, 134,
+  137, 141, 143, 145, 149, 138, 139, 140, 156, 159, 78, 59, 165, 169, 171, 173, 175, 179, 180, 181, 182, 183, 187, 150
 ];
 
 function copyRepo() {
@@ -175,12 +175,18 @@ let spin = 0;
  *  ו-684 ייבואים, ⛔ וכל ייבוא קרא את העץ כולו מחדש.
  *  ⛔ **ומדידה שנקטעת אינה משאירה שארית** — ⚠️ אין מה לשחזר. */
 const CLEAN_CAP_TXT = fs.readFileSync(CAP_FILE, 'utf8');
-const capRun = (await import(CHECKER)).run;
-function callRun(runFn, over, changed) {
+const CAP_MOD = await import(CHECKER);
+const capRun = CAP_MOD.run;
+/*  ⛔ החלק נגזר מאות הקטגוריה שבטבלה (סבב 137) — ⚠️ הבודק מפוצל לשערים
+ *  לפי נושא, ⭐ והיפוך תא מפיל את השער שהשורה שייכת לו: ⛔ הרצת החלק
+ *  הלא-נכון הייתה מדווחת «לא נפל» על היפוך שכן נתפס. */
+const partOf = CAP_MOD.partOfRow;
+const CORE = CAP_MOD.CORE_PART;
+function callRun(runFn, over, changed, part) {
   const lg = console.log, er = console.error, out = [];
   console.log = (...a) => out.push(a.join(' '));
   console.error = (...a) => out.push(a.join(' '));
-  try { return { held: runFn(over, changed) === 0, out }; }
+  try { return { held: runFn(over, changed, part) === 0, out }; }
   catch (e) { out.push('❌ ' + (e && e.message)); return { held: false, out }; }
   finally { console.log = lg; console.error = er; }
 }
@@ -190,7 +196,7 @@ function callRun(runFn, over, changed) {
  *  שלמעלה — ⚠️ הבקרה החיובית היא זו שממלאת אותו, ⛔ ובלעדיה אין מה
  *  להחזיר והכל רץ. */
 const DOC_ONLY = ['doc'];
-const runChecker = (over, changed) => callRun(capRun, over, changed).held;
+const runChecker = (over, changed, part) => callRun(capRun, over, changed, part).held;
 const docOver = (text) => ({ 'CLAUDE.md': text });
 /*  ⛔ **הטבלה לבדה עוברת כארגומנט** — ⚠️ וזו אינה עצלות: ⭐ `over` גובר
  *  על `readOnce` בלבד, ⛔ ושתי השכבות שהבודק מייבא — שכבת האייקונים
@@ -198,22 +204,22 @@ const docOver = (text) => ({ 'CLAUDE.md': text });
  *  כארגומנט הייתה נמדדת על הקובץ הנקי, ⛔ וזה בדיוק «probe שאינו יכול
  *  להיכשל». ⭐ **והטבלה היא החריג היחיד** — ⛔ קוראה היחיד הוא
  *  `readOnce`, ⚠️ והיא זו שנהפכת שורה-שורה. */
-function why(files) {
+function why(files, part) {
   const over = {};
   const onDisk = [];
   for (const f of files) {
     if (path.relative(WORK, f[0]) === 'CLAUDE.md') over['CLAUDE.md'] = f[2];
     else onDisk.push(f);
   }
-  return onDisk.length ? withDisk(onDisk, over) : callRun(capRun, over);
+  return onDisk.length ? withDisk(onDisk, over, part) : callRun(capRun, over, undefined, part);
 }
 /*  ⛔ מוטציה שאינה בטבלה נכתבת לעותק ונטענת מחדש — ⚠️ **המודול עצמו** הוא
  *  מה שמוטט בחלקן, ⭐ והעץ משוחזר מיד אחריה: ⛔ גם כשהמדידה זרקה. */
-async function withDisk(files, over) {
+async function withDisk(files, over, part) {
   for (const [p, , text] of files) fs.writeFileSync(p, text);
   try {
     const mod = await import(`${CHECKER}?flip=${spin++}`);
-    return callRun(mod.run, over);
+    return callRun(mod.run, over, undefined, part);
   } catch (e) { return { held: false, out: ['❌ ' + (e && e.message)] }; }
   finally { for (const [p, clean] of files) fs.writeFileSync(p, clean); }
 }
@@ -231,7 +237,11 @@ function flipCell(line, col) {
 }
 
 const CLEAN_DOC = fs.readFileSync(DOC_IN_WORK);
-ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא', await runChecker());
+/*  ⛔ הבקרה החיובית על **כל** החלקים (סבב 137) — ⚠️ חלק שנשבר על העץ
+ *  הנקי היה מדווח «המוטציה נתפסה» על כל היפוך שנמסר לו: ⭐ «נפל» שאינו
+ *  בגלל המוטציה אינו אכיפה. */
+ok('בקרה חיובית: check-capabilities עובר על העץ כמות שהוא בכל חלקיו',
+   CAP_MOD.PART_NAMES.every((pt) => runChecker(undefined, undefined, pt)));
 
 /*  ⚠️ הטבלה מאותרת לפי **שורת הכותרת שלה** ולא לפי «כל שורה שמתחילה
  *  במספר» (סבב 37) — ב-schar-limud יושבת מעליה טבלת מצב המיגרציות, ששורותיה
@@ -262,8 +272,15 @@ for (const r of rows) {
     continue;
   }
   lines[r.at] = flipped;
-  const stillPasses = runChecker(docOver(lines.join('\n')), DOC_ONLY);
-  ok(`שורה ${r.row}: היפוך התא מפיל את check-capabilities`, !stillPasses);
+  /*  ⛔ ההיפוך נתפס בשער של השורה, ⛔ או בשער הליבה (סבב 137) — ⚠️ שורה
+   *  שנושאת נימוק חריגה אינה נמדדת ב-probe כלל, ⭐ ומה שתופס אותה הוא
+   *  טענת המבנה שבליבה: «❌ בלי הערה». ⛔ והליבה נבדקת רק כשהשער של
+   *  השורה החזיק — ⚠️ שתי ריצות לכל שורה היו מחזירות את הזמן שנחסך. */
+  const over = docOver(lines.join('\n'));
+  const mine = partOf(r.row);
+  let caught = !runChecker(over, DOC_ONLY, mine) ? mine : '';
+  if (!caught && mine !== CORE) caught = !runChecker(over, DOC_ONLY, CORE) ? CORE : '';
+  ok(`שורה ${r.row}: היפוך התא מפיל את ${caught || mine}`, !!caught);
   covered++;
 }
 
@@ -300,8 +317,8 @@ const FILTER_SAMPLE = 2;
     if (flipped === null || flipped === lines[r.at]) continue;
     lines[r.at] = flipped;
     const over = docOver(lines.join('\n'));
-    const filtered = runChecker(over, DOC_ONLY);
-    const full = runChecker(over, null);
+    const filtered = runChecker(over, DOC_ONLY, partOf(r.row));
+    const full = runChecker(over, null, partOf(r.row));
     seen++; hit.push(r.row);
     if (filtered === full) same++;
     else ok(`שורה ${r.row}: הסינון «doc» מסכים עם הריצה המלאה`, false);
@@ -320,7 +337,7 @@ const FILTER_SAMPLE = 2;
   const parts = lines[target.at].split('|');
   parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
   lines[target.at] = parts.join('|');
-  const held = runChecker(docOver(lines.join('\n')), DOC_ONLY);
+  const held = runChecker(docOver(lines.join('\n')), DOC_ONLY, partOf(target.row));
   ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
 }
 
@@ -379,11 +396,14 @@ const FILTER_SAMPLE = 2;
   const dropGap = (text, row) => text.replace(/(gapRows: \[)([^\]]*)\]/,
     (m, head, list) => head + list.split(',').map((x) => x.trim())
       .filter((x) => x && Number(x) !== row).join(', ') + ']');
-  const run = async (label, files, mustFall, row) => {
+  /*  ⛔ החלק נמסר במפורש (סבב 137) — ⚠️ מוטציית-נגד אינה נושאת שורה,
+   *  ⭐ והיא חייבת לרוץ בחלק של המוטציה שהיא מאזנת: ⛔ חלק אחר לא היה
+   *  מריץ את ה-probe כלל, ⚠️ ו«אינה מפילה» היה מתקיים מעצמו. */
+  const run = async (label, files, mustFall, row, part) => {
     let changed = false;
     for (const [, clean, text] of files) if (text !== clean) changed = true;
     ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', changed);
-    const { held, out } = await why(files);
+    const { held, out } = await why(files, part || (row ? partOf(row) : undefined));
     if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
     ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + row,
        !held && out.some((l) => l.indexOf('❌ שורה ' + row + ' ') === 0));
@@ -407,7 +427,8 @@ const FILTER_SAMPLE = 2;
    *  נעול על השם המדויק, ⛔ ואינו נגרר אחרי מי שדומה לו. */
   await run('קבוע שכן בשם דומה ובאותו ערך',
     [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>',
-      '<script>\nvar TOMBSTONE_TTL_DOC = 90 * 24 * 60 * 60 * 1000;')]], false);
+      '<script>\nvar TOMBSTONE_TTL_DOC = 90 * 24 * 60 * 60 * 1000;')]], false,
+    null, partOf(ROW_TOMB));
 
   /*  ⛔ סף הפינוי היזום — ⚠️ 60% מהקיבולת, ⛔ ותא ❌ נשבר מהצד השני:
    *  ⭐ הסרת הבדיקה על השכבה השנייה הופכת את ה-probe לאמת מול תא «אין». */
@@ -425,7 +446,8 @@ const FILTER_SAMPLE = 2;
   /*  ⭐ מוטציית-נגד חיה: ⛔ קבוע חדש בשם שכן — ⚠️ אותה טענה בדיוק, ⛔ ובכיוון
    *  שאסור לו להפיל. */
   await run('סף שכן בשם דומה ובערך אחר',
-    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>', '<script>\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false);
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('<script>', '<script>\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false,
+    null, partOf(ROW_SWEEP));
 
   /*  ⛔ מבנה ה-`tier` (סבב 96ד) — ⚠️ פריט בלי `syncedThrough` משלו מחזיר
    *  את העֵד לכניסה לרשימה, ⭐ וזה בדיוק המימוש השני שהתקן אישר בשקט. */
@@ -438,7 +460,8 @@ const FILTER_SAMPLE = 2;
    *  ⛔ ולא הערה, ⭐ והמבנה נשמר. */
   await run('פריט תקין שנוסף ל-tier1',
     [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [',
-      "tier1: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false);
+      "tier1: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false,
+    null, partOf(ROW_SWEEP));
 }
 
 
@@ -603,9 +626,14 @@ const FILTER_SAMPLE = 2;
   const clean = CLEAN_CAP_TXT;
   /*  ⛔ הפיכת תווית `mixed` ל-`src` — ⚠️ בדיקה שקוראת יותר ממשפחה אחת
    *  מוכרזת כאילו היא קוראת את המקור בלבד, ⛔ וזה בדיוק הסיווג שמשתיק. */
-  const bad = clean.replace(/('[^']*': ')mixed(',)/, '$1src$2');
+  /*  ⛔ החלק נגזר מהמפתח שהוחלף (סבב 137) — ⚠️ ההצהרה נמדדת בשער של
+   *  השורה, ⭐ ושער אחר אינו מריץ את הבדיקה כלל: ⛔ «לא נפל» היה מתקיים
+   *  מעצמו. */
+  const MIXED_RE = /'(\d+)\|[^']*': 'mixed',/;
+  const badRow = Number((MIXED_RE.exec(clean) || [])[1]);
+  const bad = clean.replace(MIXED_RE, (m) => m.replace("'mixed',", "'src',"));
   ok('המוטציה «תווית mixed שהוחלפה ב-src» שינתה את גוף check-capabilities', bad !== clean);
-  const r1 = await withDisk([[CAP_FILE, CLEAN_CAP_TXT, bad]]);
+  const r1 = await withDisk([[CAP_FILE, CLEAN_CAP_TXT, bad]], undefined, partOf(badRow));
   ok('⛔ מוטציה: תווית קלט שאינה תואמת לקריאה בפועל מפילה את «הצהרת קלט הבדיקות»',
      !r1.held && r1.out.some((l) => l.indexOf('❌') === 0 && l.indexOf('הצהרת קלט הבדיקות') >= 0));
   /*  ⭐ מוטציית-נגד חיה: ⛔ שם השדה מוחלף בעקביות בשני צדדיו — ⚠️ שינוי
