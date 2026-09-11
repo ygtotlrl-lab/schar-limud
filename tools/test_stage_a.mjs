@@ -55,7 +55,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 99, app: 0, appWhy: '' };
+const FLOOR = { shared: 92, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -221,18 +221,15 @@ function makeEnv(opts = {}) {
     },
   };
 
-  const details = { kids: [], querySelector: () => null, appendChild(n) { this.kids.push(n); } };
-  env.details = details;
   const sandbox = {
     console, setTimeout, clearTimeout, JSON, Date, Math, String, Number, Array, Object,
     parseInt, isFinite, Promise, RegExp, Error,
     window: {},
     document: {
-      getElementById: (id) => (id === 'status-extra-box' ? details : null),
+      getElementById: () => null,
       createElement: () => { const n = { _h: '', get firstChild() { return { html: n._h }; } }; Object.defineProperty(n, 'innerHTML', { set(h) { n._h = h; } }); return n; },
     },
     esc: (s) => String(s == null ? '' : s),
-    syncFmtTime: (t) => 'T' + t,
     lsGet: (k, d) => (k in env.store ? env.store[k] : (d === undefined ? null : d)),
     lsSet: (k, v) => { if (env.lsBlocked) return false; env.store[k] = String(v); return true; },
     /*  ⛔ פסק הזמן מוחלף בזהות (סבב 87ג) — ⚠️ הרתמה אינה מודדת רשת,
@@ -255,7 +252,6 @@ function cfgKv(env, extra = {}) {
   return Object.assign({
     client: () => env.client,
     flagKey: 'x_last_backup',
-    atKey: 'x_last_backup_at',
     logQueueKey: 'x_log_queue',
     prefix: '',
     device: () => 'dev1',
@@ -276,7 +272,6 @@ async function t1() {
   eq(env.inserted.kv_backup[0].key, 'k1', '1ג · מפתח הגיבוי הוא שם המקור');
   eq(env.inserted.kv_backup[0].value, 'AAA', '1ד · הערך שנכתב הוא הערך שבענן');
   eq(env.store['x_last_backup'], TODAY, '1ה · הדגל היומי נכתב אחרי ההצלחה');
-  ok(Number(env.store['x_last_backup_at']) > 0, '1ו · חותמת «גובה לאחרונה» נכתבה');
   ok(env.inserted.sync_log.some((x) => x.action === 'backup'), '1ז · הגיבוי נרשם ביומן');
   // ריצה שנייה באותו יום — יוצאת מיד ואינה נוגעת ברשת
   const before = env.calls.length;
@@ -504,22 +499,6 @@ async function t8() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   9 · «גובה לאחרונה» — התצוגה בשורות המצב הנוספות
-   ══════════════════════════════════════════════════════════════════════════ */
-async function t9() {
-  const env = makeEnv({ kv: { k1: 'A', k2: 'B' } });
-  env.sb.BK_CFG = cfgKv(env);
-  eq(env.sb.bkLastAt(), 0, '9א · לפני גיבוי — 0');
-  ok(/טרם גובה/.test(env.sb.bkStatusHTML()), '9ב · והתצוגה אומרת «טרם גובה»');
-  await env.sb.bkMaybeDaily();
-  ok(env.sb.bkLastAt() > 0, '9ג · אחרי גיבוי — חותמת אמיתית');
-  ok(/גובה לאחרונה/.test(env.sb.bkStatusHTML()), '9ד · והתצוגה מציגה אותה');
-  env.details.kids.length = 0;
-  env.sb.bkStatusMount();
-  eq(env.details.kids.length, 1, '9ה · ⛔ הרכיב נתלה בעוגן שמחוץ לבלוק הקפוא ואינו עורך אותו');
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
    10 · ⛔ כתיבה מקומית חסומה — הדגל לא נכתב, ואין הצהרת הצלחה שקרית
    ══════════════════════════════════════════════════════════════════════════ */
 async function t10() {
@@ -528,7 +507,6 @@ async function t10() {
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '10א · הגיבוי לענן עצמו הצליח');
   eq(env.store['x_last_backup'], undefined, '10ב · ⛔ באחסון חסום הדגל אינו נכתב — הגיבוי יינסה שוב');
-  eq(env.sb.bkLastAt(), 0, '10ג · ו«גובה לאחרונה» אינו מדווח מה שלא נשמר');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -751,7 +729,7 @@ async function t15() {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15];
+const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t10, t11, t12, t13, t14, t15];
 for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }

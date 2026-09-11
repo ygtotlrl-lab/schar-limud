@@ -83,7 +83,7 @@ const APP = {
           'test_bump.mjs',
          'test_pendflush.mjs', 'test_lock.mjs',
           'test_session.mjs',
-          'check-structure.mjs', 'check-status-area.mjs', 'check-docs.mjs',
+          'check-structure.mjs', 'check-docs.mjs',
           'check-comments.mjs', 'check-capabilities.mjs',
           'test_pull.mjs',
           'test_push.mjs',

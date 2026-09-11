@@ -132,6 +132,10 @@ function capsEnds(src) {
     const end = body.match(/end\s*:\s*'([^']*)'/);
     if (!end) continue;
     if (/\bfile\s*:/.test(body)) continue;
+    /*  ⛔ בלוק CSS מנוכה בגזירה (סבב 136) — ⚠️ `check-comments` סורק את
+     *  ה-JS המוטבע בלבד, ⭐ וכלל CSS אינו הערה שהוא רואה: ⛔ וההיסק מהשדה
+     *  עצמו ⛔ ולא מרשימת חריגים — ⚠️ בלוק CSS עתידי ינוכה מאליו. */
+    if (/\bcss\s*:\s*true/.test(body)) continue;
     out.push(norm(end[1]));
   }
   return out;

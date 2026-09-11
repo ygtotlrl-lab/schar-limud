@@ -53,7 +53,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 39, 174, 96];
+export const ROWS = [5, 8, 39, 173, 95];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -300,7 +300,7 @@ const ACTIVE = activeLines.join('\n');
   const heads = activeLines.filter((l) => l.startsWith('## '));
   const back = MODS.filter((m) => heads.some((h) => h.includes(m) && !h.includes('אינדקס')));
   t(back.length === 0, `22א · אין פרק פרוזה למודול משותף${back.length ? ' — ' + back.join(', ') : ''}`);
-  t(/\|\s*\d+\s*\|\s*`pend`/.test(DOC) && /\|\s*\d+\s*\|\s*`status`/.test(DOC),
+  t(/\|\s*\d+\s*\|\s*`pend`/.test(DOC) && /\|\s*\d+\s*\|\s*`hw`/.test(DOC),
     '22ב · המודולים המשותפים רשומים כשורות בטבלת התשתית');
   /*  ⛔ טבלת ידיות פר-אפליקציה (סבב 65) — 49 שורות שאף שער לא קרא,
    *  בזמן שהערכים כבר נאכפים בבלוק `APP` של כל שער. */
@@ -466,6 +466,12 @@ function work() {
   return WORK;
 }
 /*  ⛔ מחזירה `true` כשהשער **נפל** — ⚠️ זה מה שהמוטציה מודדת. */
+/*  ⛔ הזזת גוון בצעד אחד — ⚠️ משמשת מוטציית-נגד שצריכה
+ *  ערך אחר שעדיין תקין: ⭐ הנמדד הוא המבנה ⛔ ולא הצבע. */
+function shiftHex(h) {
+  const n = parseInt(h.slice(1), 16);
+  return '#' + (((n & 0xfefefe) + 0x010101) & 0xffffff).toString(16).padStart(6, '0');
+}
 function runGateOn(files, gate, env) {
   const dir = work();
   const saved = [];
@@ -809,11 +815,193 @@ t(!capsFails((doc) => {
     else {
       const from = hit[2] + '.' + hit[3] + '.' + hit[4];
       const to = hit[2] + '.' + hit[3] + '.' + (Number(hit[4]) + 1);
+      /*  ⛔ שלושה מקומות ולא שניים — ⚠️ הגרסה חיה בכתובת
+       *  שבהצהרה וגם ב-`ver` שלידה, ⭐ וקידום שמדלג על אחד מהם
+       *  אינו השינוי החי שהתקן בא להתיר. */
       const ok = { 'index.html': idx.split('@' + from + '/').join('@' + to + '/'),
                    'sw.js': sw.split('@' + from + '/').join('@' + to + '/'),
-                   'tools/check-capabilities.mjs': caps.split("': '" + from + "'").join("': '" + to + "'") };
+                   'tools/check-capabilities.mjs': caps.split('@' + from + '/').join('@' + to + '/')
+                                                       .split("ver: '" + from + "'").join("ver: '" + to + "'") };
       t(!runGateOn(ok, 'check-capabilities.mjs', () => ({})),
         'נ29 · ⭐ קידום גרסה עקבי בשני הקבצים ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ59 · מ60 · מ61 — שלושת כיווני ההצלבה של `APP.cdnLibs` (סבב 136):
+   *  ⚠️ **מה נכנס**: הרשימה ותגי ה-`script`, ⛔ **ומה מפיל**: כתובת
+   *  שאינה מוצהרת · סמל מוצהר שאין לו קורא · וסמל שנקרא בלי הצהרה.
+   *  ⭐ **ולמה שלוש** — ⚠️ כל אחת שוברת כיוון אחר, ⛔ ושער שתופס
+   *  שניים מהם ומפספס את השלישי עובר על שניים בלבד. */
+  {
+    const caps = rd('tools/check-capabilities.mjs');
+    const blk = /cdnLibs: \[([\s\S]*?)\n  \],/.exec(caps);
+    if (!blk) { t(true, 'מ59 · ⭕ אין כאן `cdnLibs` — ⛔ ואין מה למוטט');
+                t(true, 'מ60 · ⭕ אין כאן `cdnLibs` — ⛔ ואין מה למוטט');
+                t(true, 'מ61 · ⭕ אין כאן `cdnLibs` — ⛔ ואין מה למוטט'); }
+    else {
+      const one = /\{ url: '([^']+)',\n      ver: '([^']+)', sym: '([^']+)'/.exec(blk[1]);
+      /*  ⛔ מ59 · כתובת שירדה מההצהרה ונשארה בטעינה — ⚠️ הכיוון הראשון
+       *  נופל משני צדדיו: ⭐ תג בלי הצהרה, והצהרה בלי תג. */
+      t(runGateOn({ 'tools/check-capabilities.mjs':
+                      caps.replace("{ url: '" + one[1], "{ url: 'X" + one[1]) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ59 · כתובת שאינה מוצהרת **מפילה** את «ספרייה חיצונית — גרסה מוצהרת»');
+      /*  ⛔ מ60 · רשומה שנייה לאותה כתובת עם סמל שאיש אינו קורא —
+       *  ⚠️ הכיוון הראשון עובר (לכל רשומה יש תג), ⭐ והשני נופל. */
+      t(runGateOn({ 'tools/check-capabilities.mjs':
+                      caps.replace("cdnLibs: [\n",
+                        "cdnLibs: [\n    { url: '" + one[1] + "',\n      ver: '" + one[2] +
+                        "', sym: 'ZzTest' },\n") },
+                  'check-capabilities.mjs', () => ({})),
+        'מ60 · סמל מוצהר שאין לו קורא **מפיל** את «ספרייה חיצונית — גרסה מוצהרת»');
+      /*  ⛔ מ61 · קריאה לסמל שאינו מוצהר — ⚠️ הנבחר הוא הראשון
+       *  ב-`LIB_SYMS` שאינו מוצהר כאן, ⛔ ואינו מוקלד. */
+      const syms = /const LIB_SYMS = \[([^\]]*)\]/.exec(caps);
+      const pick = syms[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+                          .filter((x) => x && blk[1].indexOf("sym: '" + x + "'") < 0)[0];
+      const idx = rd('index.html');
+      if (!pick) t(true, 'מ61 · ⭕ כל סמלי הספריות מוצהרים כאן — ⛔ ואין מה למוטט');
+      else
+        t(runGateOn({ 'index.html': idx.replace('var MSG_SAVED_LOCAL',
+                        'var _mutLib = ' + pick + '.x;\nvar MSG_SAVED_LOCAL') },
+                    'check-capabilities.mjs', () => ({})),
+          'מ61 · סמל שנקרא בלי ספרייה מוצהרת **מפיל** את «ספרייה חיצונית — גרסה מוצהרת»');
+    }
+  }
+  /*  ⛔⛔ מ65 — מאזין רשת שאינו מוצהר (סבב 136): ⚠️ **מה נכנס**: כל
+   *  `addEventListener('online'…)` שבמקור, ⛔ **ומה מפיל**: מאזין שאינו
+   *  אחד מהשלושה המשותפים ואינו מוצהר. */
+  {
+    const idx = rd('index.html');
+    const at = idx.indexOf('var DOM_ACTIONS = {');
+    if (at < 0) t(true, 'מ65 · ⭕ אין כאן מפת פעולות — ⛔ ואין לאן להוסיף');
+    else
+      t(runGateOn({ 'index.html': idx.slice(0, at) +
+                      "window.addEventListener('online', function () { mutNetProbe(); });\n" +
+                      'function mutNetProbe() { return 1; }\n' + idx.slice(at) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ65 · מאזין רשת שאינו מוצהר **מפיל** את «`pull` — מנגנון המשיכה»');
+  }
+  /*  ⭐ מוטציית-נגד: מאזין נוסף שמוצהר יחד איתו ⛔ אינו מפיל —
+   *  ⚠️ זה בדיוק השינוי החי שהתקן בא להתיר: ⭐ מה שהפולינג אינו
+   *  מכסה נשאר במאזין משלו, ⛔ והוא נושא את נימוקו. */
+  {
+    const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    const at = idx.indexOf('var DOM_ACTIONS = {');
+    const dk = caps.indexOf('  netListeners: {');
+    if (at < 0 || dk < 0) t(true, 'נ41 · ⭕ אין כאן מפה או הצהרה — ⛔ ואין לאן להוסיף');
+    else {
+      const e = caps.indexOf('{', dk) + 1;
+      t(!runGateOn({ 'index.html': idx.slice(0, at) +
+                       "window.addEventListener('online', function () { mutNetProbe(); });\n" +
+                       'function mutNetProbe() { return 1; }\n' + idx.slice(at),
+                     'tools/check-capabilities.mjs': caps.slice(0, e) +
+                       "\n    mutNetProbe: 'מוטציית-נגד — ⛔ מאזין שמוצהר יחד עם הוספתו'," +
+                       caps.slice(e) },
+                   'check-capabilities.mjs', () => ({})),
+        'נ41 · ⭐ מאזין נוסף שמוצהר יחד איתו ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ64 — שמירה שיצאה מהצינור (סבב 136): ⚠️ **מה נכנס**: כל
+   *  `function save*` שבמקור, ⛔ **ומה מפיל**: שם שאינו ב-`runSave`
+   *  ואינו מוצהר ב-`APP.saveDirect`. ⭐ **והמוטציה שוברת את המנגנון**
+   *  ⛔ ולא את הצורה — ⚠️ הקריאה ל-`runSave` מוחלפת בקריאה ישירה. */
+  {
+    const idx = rd('index.html');
+    const hit = /return runSave\(([A-Za-z_$][\w$]*), /.exec(idx) ||
+                /return runSave\(function \(\) \{ return ([A-Za-z_$][\w$]*)\(/.exec(idx);
+    if (!hit) t(true, 'מ64 · ⭕ אין כאן קריאה ל-`runSave` במפה — ⛔ ואין מה למוטט');
+    else {
+      const at = idx.indexOf(hit[0]);
+      const tail = idx.slice(at, idx.indexOf('\n', at));
+      /*  ⛔ השמירה נקראת ישירות — ⚠️ והשורה נשארת תקינה תחבירית. */
+      const broke = '{ ' + hit[1] + '(); },';
+      t(runGateOn({ 'index.html': idx.replace(tail, broke) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ64 · שמירה שאינה עוברת בצינור **מפילה** את «פעולה מגיבה מיד»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: שם שמירה שהוחלף בעקביות ⛔ אינו מפיל —
+   *  ⚠️ הנמדד הוא **המעבר בצינור** ⛔ ולא השם, ⭐ ושינוי שם
+   *  הוא השינוי החי שהתקן בא להתיר. */
+  {
+    const idx = rd('index.html');
+    const hit = /return runSave\(([A-Za-z_$][\w$]*), / .exec(idx) ||
+                /return runSave\(function \(\) \{ return ([A-Za-z_$][\w$]*)\(/.exec(idx);
+    if (!hit) t(true, 'נ40 · ⭕ אין כאן שמירה שעוברת בצינור — ⛔ ואין מה להחליף');
+    else {
+      /*  ⛔ ההחלפה בשני הצדדים — ⚠️ השם מוצהר גם ברשימות החריגה שבשער,
+       *  ⭐ ושינוי עקבי הוא שינוי **בשניהם**: ⛔ החלפה במקור בלבד אינה
+       *  «שינוי חי» אלא הצהרה שנשברה. */
+      const re = new RegExp('\\b' + hit[1] + '\\b', 'g');
+      t(!runGateOn({ 'index.html': idx.replace(re, hit[1] + 'Zz'),
+                     'tools/check-capabilities.mjs': rd('tools/check-capabilities.mjs').replace(re, hit[1] + 'Zz') },
+                   'check-capabilities.mjs', () => ({})),
+        'נ40 · ⭐ שם שמירה שהוחלף בעקביות בשני הצדדים ⛔ **אינו** מפיל');
+    }
+  }
+  /*  ⛔⛔ מ66 — האופק שאין מי שינקה (סבב 136): ⚠️ **מה נכנס**: הקריאה
+   *  ל-`lsHorizonRelease` מגוף המשיכה המלאה, ⛔ **ומה מפיל**: הסרתה —
+   *  ⭐ הסימן שהפינוי משאיר אומר «את הישן זרקתי», ⚠️ וכל עוד הוא עומד
+   *  המשיכה אינה מחזירה אותו: ⛔ והכפתור שניקה אותו ידנית ירד. */
+  {
+    const idx = rd('index.html');
+    const hit = /\n(\s*)try \{ lsHorizonRelease\(\); \} catch \(e0\) \{ \}\n/.exec(idx);
+    if (!hit) t(true, 'מ66 · ⭕ אין כאן קריאה לשחרור האופק — ⛔ ואין מה למוטט');
+    else t(runGateOn({ 'index.html': idx.replace(hit[0], '\n') },
+                     'check-capabilities.mjs', () => ({})),
+           'מ66 · הסרת שחרור האופק מהמשיכה **מפילה** את «אסטרטגיית localStorage»');
+  }
+  /*  ⛔⛔ מ67 — שדה מצב שהוחזר (סבב 136): ⚠️ **מה נכנס**: אזור המצב
+   *  שירד במלואו, ⛔ **ומה מפיל**: פונקציית מצב שהוחזרה לקוד בלי
+   *  שורה בטבלה ובלי שער — ⭐ שבע פונקציות ושני מזהים ירדו יחד,
+   *  ⚠️ ומי שמחזיר אחת מהן מחזיר חצי רכיב. */
+  {
+    const idx = rd('index.html');
+    const at = idx.indexOf('window.lsHorizonRelease = lsHorizonRelease;');
+    if (at < 0) t(true, 'מ67 · ⭕ אין כאן נקודת הזרקה — ⛔ ואין מה למוטט');
+    else t(runGateOn({ 'index.html': idx.slice(0, at) +
+             'function bkLastAt() { return 0; }\nwindow.bkLastAt = bkLastAt;\n' + idx.slice(at) },
+                     'check-capabilities.mjs', () => ({})),
+           'מ67 · פונקציית מצב שהוחזרה **מפילה** את «פונקציה בלי קוראים»');
+  }
+  /*  ⛔⛔ מ62 · מ63 — משפחת הרקע (סבב 136): ⚠️ **מה נכנס**: שלוש
+   *  רמות הרקע וכללי הריחוף, ⛔ **ומה מפיל**: רמה חסרה ⛔ ורקע
+   *  ריחוף שנלקח מ-`--bg`. ⭐ **ולמה שתיים** — ⚠️ אחת שוברת את
+   *  ההגדרה, ⛔ והשנייה את השימוש: ⭐ שער שתופס את הראשונה
+   *  בלבד מאשר `--card-2` שמוגדר ואיש אינו נוגע בו. */
+  {
+    const idx = rd('index.html');
+    const hv = /([.#][\w.\- ]*:hover[^{}]*)\{([^}]*background:var\(--card-2\)[^}]*)\}/.exec(idx);
+    if (!hv) t(true, 'מ62 · ⭕ אין כאן כלל ריחוף עם `--card-2` — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html': idx.replace(hv[0],
+                      hv[0].replace('background:var(--card-2)', 'background:var(--bg)')) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ62 · רקע ריחוף מ-`--bg` **מפיל** את «ערכת נושא — בהיר וכהה»');
+    /*  ⛔ הרמה השלישית יורדת מהערכה הבהירה בלבד — ⚠️ וכללי
+     *  הריחוף נשארים במקומם: ⭐ זה בדיוק המצב שהטענה תופסת. */
+    const dm = idx.search(/@media\s*\(prefers-color-scheme/);
+    const j = idx.indexOf('--card-2:');
+    if (j < 0 || (dm >= 0 && j > dm)) t(true, 'מ63 · ⭕ אין `--card-2` בערכה הבהירה — ⛔ ואין מה למוטט');
+    else {
+      const e = idx.indexOf(';', j) + 1;
+      t(runGateOn({ 'index.html': idx.slice(0, j) + idx.slice(e) },
+                  'check-capabilities.mjs', () => ({})),
+        'מ63 · רמה חסרה במשפחת הרקע **מפילה** את «ערכת נושא — בהיר וכהה»');
+    }
+  }
+  /*  ⭐ מוטציית-נגד: גוון אחר לרמה השלישית בשתי הערכות ⛔ אינו
+   *  מפיל — ⚠️ הנמדד הוא **קיום הרמה והשימוש בה** ⛔ ולא הערך,
+   *  ⭐ ושינוי גוון הוא השינוי החי שהתקן בא להתיר. */
+  {
+    const idx = rd('index.html');
+    const all = [...idx.matchAll(/--card-2:\s*(#[0-9a-fA-F]{6})/g)];
+    if (all.length < 2) t(true, 'נ39 · ⭕ `--card-2` אינו מוגדר בשתי הערכות — ⛔ ואין מה להחליף');
+    else {
+      let out = idx;
+      for (const m of all) out = out.split(m[0]).join('--card-2:' + shiftHex(m[1]));
+      t(!runGateOn({ 'index.html': out }, 'check-capabilities.mjs', () => ({})),
+        'נ39 · ⭐ גוון אחר לרמה השלישית בשתי הערכות ⛔ **אינו** מפיל');
     }
   }
   /*  ⛔⛔ מ56 — דיו שאינו עומד ביחס במצב אחד (סבב 135): ⚠️ הטענה שנופלת היא
@@ -889,14 +1077,16 @@ t(!capsFails((doc) => {
       const bad = idx.replace(re, '$1');
       t(bad !== idx && runGateOn({ 'index.html': bad }, 'check-capabilities.mjs', () => ({})),
         'מ58 · פעולה מוצהרת שאינה מחזירה את ההבטחה **מפילה** את «כפתור שכותב מושבת בזמן הכתיבה»');
-      /*  ⭐ מוטציית-נגד: שם אחר לפונקציה שהמטפל מחזיר, בעקביות ⛔ אינו
-       *  מפיל — ⚠️ הנמדד הוא ה-`return`, ⛔ ולא מי נקרא. */
-      const fnm = new RegExp("'" + names[0] + "'\\s*:\\s*function\\s*\\([^)]*\\)\\s*\\{\\s*return\\s+([A-Za-z_$][\\w$]*)").exec(idx);
-      if (!fnm) t(true, 'נ37 · ⭕ המטפל אינו מחזיר קריאה בשם — ⛔ ואין מה להחליף');
+      /*  ⭐ מוטציית-נגד: שורת שמירה שנוספה לפני ה-`return` ⛔ אינה
+       *  מפילה — ⚠️ הנמדד הוא ש**המטפל מחזיר**, ⛔ ולא מה קודם לכך:
+       *  ⭐ ושם הפונקציה שהוא מחזיר יושב בבלוק חתום, ⛔ ואינו מקרה
+       *  לשינוי שם. */
+      const gm = new RegExp("('" + names[0] + "'\\s*:\\s*function\\s*\\(([^)]*)\\)\\s*\\{\\s*)return\\s").exec(idx);
+      if (!gm) t(true, 'נ37 · ⭕ המטפל אינו נפתח ב-`return` — ⛔ ואין לאן להוסיף');
       else {
-        const okS = idx.replace(new RegExp('\\b' + fnm[1] + '\\b', 'g'), fnm[1] + 'Alt');
-        t(!runGateOn({ 'index.html': okS }, 'check-capabilities.mjs', () => ({})),
-          'נ37 · ⭐ שינוי שם עקבי של הפונקציה שהמטפל מחזיר ⛔ **אינו** מפיל');
+        const okS = idx.replace(gm[0], gm[1] + 'if (!' + (gm[2].trim() || 'el') + ') return null;\n    return ');
+        t(okS !== idx && !runGateOn({ 'index.html': okS }, 'check-capabilities.mjs', () => ({})),
+          'נ37 · ⭐ שומר שנוסף לפני ה-`return` ⛔ **אינו** מפיל');
       }
     }
   }
@@ -1292,7 +1482,7 @@ t(!commentsFails({ 'CLAUDE.md': DOC.replace(noteRow,
   /*  ⛔ מ22 — הפניה למספר כלל שהוחזרה **לבאנר של שער** מפילה את ג2:
    *  ⚠️ זה ההיקף שנוסף בסבב 96ג, ⛔ ומוטציה על `sw.js` לבדו לא הייתה
    *  מודדת אותו. */
-  const GATE = 'tools/check-status-area.mjs';
+  const GATE = 'tools/check-structure.mjs';
   t(fails({ [GATE]: rd(GATE).replace(' *\n', ' *  ⚠️ הרכיב נאכף כאן (כלל ברזל 5).\n *\n') }),
     'מ22 · «כלל ברזל N» בבאנר של שער **מפילה** את «אין הפניה למספר כלל»');
   /*  ⭐ מוטציית-נגד: חותמת הסבב ⛔ אינה מפילה — ⚠️ היא אומרת **מתי**
