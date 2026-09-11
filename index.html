@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:14px}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 :root{
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  סרגל לשוניות תחתון קבוע. */
@@ -28,7 +28,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
    *  ⛔ ולא מדיו הטקסט — ⚠️ ארבעה באנרים בארבעה גוונים נראו זהים.
    *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
   --brand:var(--accent); --on-brand:#1a1a1a;
---navy:#1a1a1a;--accent:#9fe870;--accent2:#8dd95e;--green:#2e7d32;--yellow:#b45309;--red:#c62828;--redl:#ffebee;--redl2:#ffe0e4;--border:#e0e0e0;--bg:#f5f5f5;--card-2:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
+--navy:#1a1a1a;--accent:#9fe870;--accent2:#8dd95e;--green:#2e7d32;--yellow:#b45309;--red:#c62828;--redl:#ffebee;--redl2:#ffe0e4;--border:#e0e0e0;--bg:#f5f5f5;--card-2:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:var(--r-5);--credit:#1565c0;--creditl:#eef5fd}
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
  *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
  *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
@@ -48,49 +48,49 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
   }
 }
-#app{max-width:800px;margin:0 auto;padding-bottom:80px}
+#app{max-width:800px;margin:0 auto;padding-bottom:var(--sp-7)}
 #auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
 #auth-screen.hidden{display:none}
-.auth-box{background:var(--card);border-radius:24px;padding:40px 32px;width:90%;max-width:360px;box-shadow:0 2px 16px rgba(0,0,0,.08);text-align:center}
-.auth-title{font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:4px}
-.auth-sub{font-size:.85rem;color:var(--text3);margin-bottom:24px}
-.auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;text-align:right}
-.auth-field label{font-size:.8rem;font-weight:600;color:var(--text2)}
-.auth-field input{border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:Heebo;font-size:.95rem;outline:none;transition:border .15s;width:100%;background:var(--card)}
+.auth-box{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7) var(--sp-7);width:90%;max-width:360px;box-shadow:0 2px 16px rgba(0,0,0,.08);text-align:center}
+.auth-title{font-size:var(--fs-5);font-weight:700;color:var(--text);margin-bottom:var(--sp-2)}
+.auth-sub{font-size:var(--fs-3);color:var(--text3);margin-bottom:var(--sp-7)}
+.auth-field{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-6);text-align:right}
+.auth-field label{font-size:var(--fs-3);font-weight:600;color:var(--text2)}
+.auth-field input{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-4);outline:none;transition:border .15s;width:100%;background:var(--card)}
 .auth-field input:focus{border-color:var(--navy)}
-.auth-btn{width:100%;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:13px;font-family:Heebo;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s}
+.auth-btn{width:100%;background:var(--accent);color:#1a1a1a;border:none;border-radius:var(--r-7);padding:var(--sp-5);font-family:Heebo;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-2);transition:background .15s}
 .auth-btn:hover{background:var(--accent2)}
 .auth-btn:disabled{opacity:.5;cursor:default}
-.auth-spinner{display:none;margin:10px auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
-.auth-err{color:var(--red);font-size:.82rem;margin-top:8px;min-height:18px}
+.auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:var(--r-7);animation:spin .7s linear infinite}
+.auth-err{color:var(--red);font-size:var(--fs-3);margin-top:var(--sp-4);min-height:18px}
 @keyframes spin{to{transform:rotate(360deg)}}
-#topnav{position:sticky;top:0;z-index:100;background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;border-bottom:1px solid var(--border)}
-.nav-title{font-size:1rem;font-weight:700;color:var(--text)}
-.nav-user{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:8px}
-.nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text2);border-radius:999px;padding:4px 12px;font-family:Heebo;font-size:.75rem;cursor:pointer;transition:background .15s}
+#topnav{position:sticky;top:0;z-index:100;background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-6);height:54px;border-bottom:1px solid var(--border)}
+.nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
+.nav-user{font-size:var(--fs-2);color:var(--text3);display:flex;align-items:center;gap:var(--sp-4)}
+.nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-5);font-family:Heebo;font-size:var(--fs-2);cursor:pointer;transition:background .15s}
 .nav-logout:hover{background:var(--border)}
 /*  ⛔ מעל סרגל הלשוניות — ⚠️ טוסט שיושב מתחתיו אינו נראה. */
 :root{--toast-bottom:80px}
 #tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:100}
-.tab-btn{flex:1;background:none;border:none;padding:10px 4px 8px;font-family:Heebo;font-size:10px;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s}
-.tab-btn .ti{font-size:1.3rem;line-height:1}
+.tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color .15s}
+.tab-btn .ti{font-size:var(--fs-5);line-height:1}
 .tab-btn.active{color:var(--text);font-weight:700}
-.panel{display:none;padding:16px}
+.panel{display:none;padding:var(--sp-6)}
 .panel.active{display:block}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
-.card-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bg)}
-.card-hdr h3{font-size:.9rem;font-weight:700;color:var(--text)}
-.card-body{padding:16px}
-.btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:8px 18px;font-family:Heebo;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:var(--sp-6);overflow:hidden;border:1px solid var(--border)}
+.card-hdr{padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-4);background:var(--bg)}
+.card-hdr h3{font-size:var(--fs-4);font-weight:700;color:var(--text)}
+.card-body{padding:var(--sp-6)}
+.btn{display:inline-flex;align-items:center;gap:var(--sp-3);background:var(--accent);color:#1a1a1a;border:none;border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
 .btn:hover{background:var(--accent2)}
 .btn.out{background:var(--card);border:1.5px solid var(--navy);color:var(--text)}
 .btn.out:hover{background:var(--card-2)}
 .btn.danger{background:var(--redl);color:var(--red);border:1.5px solid var(--redl)}
 .btn.danger:hover{background:var(--redl2)}
-.btn.sm{padding:5px 12px;font-size:.78rem}
-.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
-.tbl th{background:var(--bg);color:var(--text2);padding:9px 10px;text-align:right;font-weight:600;font-size:.76rem;white-space:nowrap;border-bottom:2px solid var(--border)}
-.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+.btn.sm{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-2)}
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-3)}
+.tbl th{background:var(--bg);color:var(--text2);padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:600;font-size:var(--fs-2);white-space:nowrap;border-bottom:2px solid var(--border)}
+.tbl td{padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:var(--card-2)}
 .tbl td.num{text-align:center;font-weight:600}
@@ -115,7 +115,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tbl.pivot tfoot td{background:var(--bg);font-weight:700;border-bottom:none}
 .tbl.pivot tfoot td.stu{background:var(--bg)}
 .tbl.pivot tfoot tr.top td{border-top:2px solid var(--border)}
-.tbl.pivot tfoot tr.sub td{font-weight:600;font-size:.75rem;color:var(--text2)}
+.tbl.pivot tfoot tr.sub td{font-weight:600;font-size:var(--fs-2);color:var(--text2)}
 /* צביעת שורת האחוזים — נדרשת ספציפיות גבוהה מכלל שורת-הסיכום שמעליה */
 .tbl.pivot tfoot tr.sub td.amt-green{color:var(--green)}
 .tbl.pivot tfoot tr.sub td.amt-yellow{color:var(--yellow)}
@@ -124,17 +124,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* ⛔ מובייל-תחילה: השם עובר לשורה שנייה במקום להיחתך — ⚠️ «לא לחתוך שמות
    באף רזולוציה», ⭐ ולכן זו ברירת המחדל וההרחבה היא שמבטלת אותה. */
 .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
-.tbl.pivot td,.tbl.pivot th{padding:6px 5px}
+.tbl.pivot td,.tbl.pivot th{padding:var(--sp-3) var(--sp-3)}
 @media (min-width:640px){
   .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
-  .tbl.pivot td,.tbl.pivot th{padding:9px 10px}
+  .tbl.pivot td,.tbl.pivot th{padding:var(--sp-4) var(--sp-5)}
 }
-.frm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
-.frm-row label{font-size:.78rem;font-weight:600;color:var(--text2)}
-.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .15s;background:var(--card);color:var(--text)}
+.frm-row{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-6)}
+.frm-row label{font-size:var(--fs-2);font-weight:600;color:var(--text2)}
+.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-family:Heebo;font-size:var(--fs-4);width:100%;outline:none;transition:border .15s;background:var(--card);color:var(--text)}
 .frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:var(--navy)}
 .frm-row textarea{resize:vertical;min-height:70px}
-.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700}
+.badge{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);font-weight:700}
 .badge.green{background:#e8f5e9;color:#2e7d32}
 
 .badge.gray{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
@@ -142,46 +142,46 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 
 
 
-.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:var(--sp-4);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
 .st-row:last-child{border-bottom:none}
 .st-row:hover{background:var(--card-2)}
 
 
-.st-name{font-size:.9rem;color:var(--text)}
-.st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
-.st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
+.st-name{font-size:var(--fs-4);color:var(--text)}
+.st-paid{font-size:var(--fs-3);font-weight:700;min-width:65px;text-align:center}
+.st-total{font-size:var(--fs-2);color:var(--text3);min-width:80px;text-align:center}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
-.veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:var(--sp-6)}
 .veil.open{display:flex}
-.sheet{background:var(--card);border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
-.sheet-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.sheet-hd h3{font-size:.95rem;font-weight:700;color:var(--text);flex:1;margin:0}
-.sheet-hd .x{background:none;border:0;font-size:20px;line-height:1;color:var(--text3);cursor:pointer;padding:0 4px}
-.sheet-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.sheet{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7);width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
+.sheet-hd{display:flex;align-items:center;gap:var(--sp-5);margin-bottom:var(--sp-6)}
+.sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
+.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:1;color:var(--text3);cursor:pointer;padding:0 var(--sp-2)}
+.sheet-ft{display:flex;gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 .sheet-ft:empty{display:none}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
-.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
+.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-5) var(--sp-6);cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
 .acc-hdr:hover{background:var(--card-2)}
-.acc-hdr span{font-size:.85rem;font-weight:600;color:var(--text)}
-.acc-body{display:none;padding:14px}
+.acc-hdr span{font-size:var(--fs-3);font-weight:600;color:var(--text)}
+.acc-body{display:none;padding:var(--sp-6)}
 .acc-body.open{display:block}
-.year-tabs{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.ytab{background:var(--card);border:1.5px solid var(--border);border-radius:999px;padding:5px 14px;font-family:Heebo;font-size:.82rem;cursor:pointer;transition:all .15s;color:var(--text2)}
+.year-tabs{display:flex;gap:var(--sp-3);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ytab{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-7);padding:var(--sp-3) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);cursor:pointer;transition:all .15s;color:var(--text2)}
 .ytab.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700}
 .sd-wrap{position:relative}
-.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--navy);border-top:none;border-radius:0 0 12px 12px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.1)}
-.sd-opt{padding:9px 13px;cursor:pointer;font-size:.88rem;color:var(--text)}
+.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--navy);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.sd-opt{padding:var(--sp-4) var(--sp-5);cursor:pointer;font-size:var(--fs-3);color:var(--text)}
 .sd-opt:hover{background:var(--accent);color:#1a1a1a}
-.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.82rem}
+.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:var(--sp-4);align-items:center;padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);font-size:var(--fs-3)}
 .txn-row:last-child{border-bottom:none}
-.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:8px}
+.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);gap:var(--sp-4)}
 .set-list-item:last-child{border-bottom:none}
-.sc-hdr{background:var(--navy);color:var(--card);padding:22px 16px}
-.sc-name{font-size:1.25rem;font-weight:900}
-.sc-meta{font-size:.8rem;opacity:.65;margin-top:4px}
+.sc-hdr{background:var(--navy);color:var(--card);padding:var(--sp-7) var(--sp-6)}
+.sc-name{font-size:var(--fs-5);font-weight:900}
+.sc-meta{font-size:var(--fs-3);opacity:.65;margin-top:var(--sp-2)}
 
-.sc-tog{border:none;border-radius:999px;padding:6px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s}
+.sc-tog{border:none;border-radius:var(--r-7);padding:var(--sp-3) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background .15s}
 .tog-act-on{background:var(--accent);color:#1a1a1a}
 .tog-act-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
 
@@ -195,17 +195,17 @@ body.locked{overflow:hidden}
 .badge.blue{background:#e3f0fd;color:#1565c0}
 .pill.credit{background:#e3f0fd;color:#1565c0;border-color:#bcd9f7}
 .txn-row.credit{background:#f7fbff}
-.credit-note{background:var(--creditl);border:1px solid #cfe2f7;color:var(--credit);border-radius:12px;padding:10px 13px;font-size:.86rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
-.credit-sub{font-size:.72rem;color:var(--text3);margin-top:6px;padding:0 4px;line-height:1.5}
+.credit-note{background:var(--creditl);border:1px solid #cfe2f7;color:var(--credit);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-size:var(--fs-3);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-5)}
+.credit-sub{font-size:var(--fs-2);color:var(--text3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:1.5}
 .paid-cell{color:#2e7d32;font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text2)}
-.empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
-.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.empty{text-align:center;color:var(--text3);padding:var(--sp-7) 0;font-size:var(--fs-3)}
+.pill{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);background:var(--bg);color:var(--text2);border:1px solid var(--border)}
 .txn-row{grid-template-columns:65px 1fr auto auto}
-.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}
+.tbl td,.tbl th{padding:var(--sp-3) var(--sp-3);font-size:var(--fs-2)}
 .st-row{grid-template-columns:1fr auto}
 .st-total{display:none}
-@media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:9px 10px;font-size:inherit}.tbl th{padding:9px 10px;font-size:.76rem}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
+@media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:var(--sp-4) var(--sp-5);font-size:inherit}.tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
 /* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
    אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
@@ -214,8 +214,8 @@ body.locked{overflow:hidden}
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
-.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toast{background:#1a1a1a;color:#fff;border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
 .toast.bad{background:#b91c1c;color:#fff}
 .toast.good{background:#15803d;color:#fff}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -228,12 +228,12 @@ body.locked{overflow:hidden}
       במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
    ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
       לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
-.bchart{display:grid;gap:8px;padding:4px 0}
-.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:8px;font-size:.8rem}
+.bchart{display:grid;gap:var(--sp-4);padding:var(--sp-2) 0}
+.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:var(--sp-4);font-size:var(--fs-3)}
 .blab{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bbars{display:grid;gap:3px}
-.btrack{display:block;height:8px;border-radius:99px;background:var(--card-2);overflow:hidden}
-.btrack i{display:block;height:100%;border-radius:99px;background:var(--brand)}
+.bbars{display:grid;gap:var(--sp-2)}
+.btrack{display:block;height:8px;border-radius:var(--r-6);background:var(--card-2);overflow:hidden}
+.btrack i{display:block;height:100%;border-radius:var(--r-6);background:var(--brand)}
 .btrack.tgt{height:4px}
 .btrack.tgt i{opacity:.38}
 .bval{color:var(--text2);text-align:end;white-space:nowrap}
@@ -242,21 +242,96 @@ body.locked{overflow:hidden}
 #updater{
   position:fixed;inset-inline:0;z-index:10001;
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
-  display:none;justify-content:center;padding:10px 14px
-}
+  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
 #updater.show{display:flex}
 #updater .in{
-  background:var(--brand);color:var(--on-brand);border-radius:14px;padding:11px 12px 11px 16px;
-  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
-  font-size:14px;font-weight:700;max-width:520px;width:100%
+  background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:var(--shadow);
+  font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
 #updater button{
-  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:9px;
-  padding:7px 14px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13.5px;flex:none
+  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:var(--r-4);
+  padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
 }
 #updater button.x{
-  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 4px;font-size:15px
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 var(--sp-2);font-size:var(--fs-4)}
+/* ═══ סולמות הגודל, הריווח והרדיוס — מודול משותף (סבב 138) ═══════════════
+   ⛔ שלושה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך מספרי חזותי
+      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
+      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
+      ביניהם.
+   ⛔ **ומספר הדרגות נגזר מהערכים שהיו בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
+      משוקלל בסולם לוגריתמי על כל הערכים שבארבעת הריפו, ⭐ ותקרה של שבע.
+   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
+      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בארבעתן.
+   ⛔ **והמחלקות שכאן הן אלה שחיות בארבעתן** — ⚠️ מחלקה שחיה בחלקן יושבת
+      בבלוק הפרטי שמתחת: ⭐ מחלקה בבלוק משותף שאין לה קורא באחת מהן היא
+      סלקטור בלי קורא, ⛔ והשער מפיל עליה.
+   ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
+      ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
+      מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+--fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
+--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
+--r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px
 }
+.u-ai-c{align-items:center}
+.u-d-flex{display:flex}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
+.u-fw-700{font-weight:700}
+.u-fx-1{flex:1}
+.u-g-5{gap:var(--sp-5)}
+.u-mt-2{margin-top:var(--sp-2)}
+.u-mt-5{margin-top:var(--sp-5)}
+/* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
+/* ══ מחלקות הסולם הפרטיות — אינן חיות בארבעתן ═══════════════════════════
+   ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
+   המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-ai-fs{align-items:flex-start}
+.u-bd-2-solid-border{border:2px solid var(--border)}
+.u-bg-bg{background:var(--bg)}
+.u-bt-1-solid-border{border-top:1px solid var(--border)}
+.u-bt-2-solid-border{border-top:2px solid var(--border)}
+.u-c-credit{color:var(--credit)}
+.u-c-green{color:var(--green)}
+.u-c-text{color:var(--text)}
+.u-c-text2{color:var(--text2)}
+.u-c-text3{color:var(--text3)}
+.u-cur-def{cursor:default}
+.u-d-none{display:none}
+.u-ff-heebo{font-family:Heebo}
+.u-fs-4{font-size:var(--fs-4)}
+.u-fw-400{font-weight:400}
+.u-fw-600{font-weight:600}
+.u-fwr-wrap{flex-wrap:wrap}
+.u-g-4{gap:var(--sp-4)}
+.u-jc-sb{justify-content:space-between}
+.u-lh-15{line-height:1.5}
+.u-lh-17{line-height:1.7}
+.u-mb-2{margin-bottom:var(--sp-2)}
+.u-mb-3{margin-bottom:var(--sp-3)}
+.u-mb-6{margin-bottom:var(--sp-6)}
+.u-minw-120{min-width:120px}
+.u-ol-none{outline:none}
+.u-op-45{opacity:.45}
+.u-ovx-a{overflow-x:auto}
+.u-p-0-2{padding:0 var(--sp-2)}
+.u-p-2{padding:var(--sp-2)}
+.u-p-4-5{padding:var(--sp-4) var(--sp-5)}
+.u-p-5-6{padding:var(--sp-5) var(--sp-6)}
+.u-pb-5{padding-bottom:var(--sp-5)}
+.u-r-4{border-radius:var(--r-4)}
+.u-ta-c{text-align:center}
+.u-ta-r{text-align:right}
+.u-tr-border-2s{transition:border .2s}
+.u-w-100p{width:100%}
+.u-w-130{width:130px}
+.u-w-160{width:160px}
+.u-ws-nw{white-space:nowrap}
+/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
 </style>
 </head>
 <body><div id="auth-screen">
@@ -294,9 +369,9 @@ body.locked{overflow:hidden}
           <h3>לוח שנתי</h3>
           <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
                אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
-          <div style="display:flex;align-items:center;gap:8px">
+          <div class="u-d-flex u-ai-c u-g-4">
             <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת">&#9654;</button>
-            <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
+            <span id="dash-year-label" class="u-fw-700 u-c-text u-fs-4 u-minw-120 u-ta-c"></span>
             <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה">&#9664;</button>
           </div>
         </div>
@@ -312,7 +387,7 @@ body.locked{overflow:hidden}
         <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
         <div class="card-body"><div id="dash-chart"></div></div>
       </div>
-      <div class="card" id="dash-month-card" style="display:none">
+      <div class="u-d-none card" id="dash-month-card">
         <div class="card-hdr">
           <h3 id="dash-month-title">פירוט חודש</h3>
           <button class="btn sm out" data-act="dash-month-close">סגור</button>
@@ -329,8 +404,8 @@ body.locked{overflow:hidden}
           <div class="frm-row">
             <label>תלמיד</label>
             <div class="sd-wrap">
-              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
-              <div class="sd-list" id="sd-list-student" style="display:none"></div>
+              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
+              <div class="u-d-none sd-list" id="sd-list-student"></div>
               <input type="hidden" id="sd-val-student">
             </div>
           </div>
@@ -347,21 +422,21 @@ body.locked{overflow:hidden}
             <select id="txn-method" onchange="txnMethodHint()">
               <option value="">-- בחר --</option>
             </select>
-            <div id="txn-method-hint" class="credit-sub" style="display:none"></div>
+            <div id="txn-method-hint" class="u-d-none credit-sub"></div>
           </div>
           <div class="frm-row">
             <label for="txn-note">הערה</label>
             <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
-          <button class="btn" style="width:100%" data-act="txn-save" data-ksave>שמור תשלום</button>
+          <button class="u-w-100p btn" data-act="txn-save" data-ksave>שמור תשלום</button>
         </div>
       </div>
       <div class="card">
         <div class="card-hdr">
           <h3>יומן תשלומים</h3>
-          <div class="sd-wrap" style="width:160px">
-            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
-            <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
+          <div class="u-w-160 sd-wrap">
+            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-3 u-w-100p u-ol-none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
+            <div class="u-d-none sd-list" id="sd-list-txnfilter"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
         </div>
@@ -373,18 +448,18 @@ body.locked{overflow:hidden}
     <div id="panel-student" class="panel">
       <div class="card">
         <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
-        <div class="card-body" style="padding-bottom:12px">
+        <div class="u-pb-5 card-body">
           <div class="sd-wrap">
-            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
-            <div class="sd-list" id="sd-list-sc" style="display:none"></div>
+            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
+            <div class="u-d-none sd-list" id="sd-list-sc"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
         </div>
       </div>
-      <div id="sc-main" style="display:none">
+      <div id="sc-main" class="u-d-none">
         <div class="card">
           <div class="sc-hdr">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div class="u-d-flex u-ai-fs u-jc-sb u-g-5">
               <div>
                 <div class="sc-name" id="sc-name"></div>
                 <div class="sc-meta" id="sc-meta"></div>
@@ -410,11 +485,11 @@ body.locked{overflow:hidden}
             </div>
             <div class="frm-row">
               <label for="sc-edit-start">חודש הצטרפות</label>
-              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right">
+              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r">
             </div>
-            <div class="frm-row" style="margin-bottom:6px">
+            <div class="u-mb-3 frm-row">
               <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
-              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
+              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r">
             </div>
             <div class="frm-row">
               <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
@@ -424,15 +499,15 @@ body.locked{overflow:hidden}
               <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
               <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
-            <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
+            <div class="u-fs-2 u-c-text3 u-mb-6 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
             <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
           </div>
-          <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-annual" style="border-top:1px solid var(--border)">
+          <div class="u-bt-1-solid-border acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
             <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
           </div>
           <div class="acc-body" id="acc-sc-annual">
             <div class="year-tabs" id="sc-year-tabs"></div>
-            <div style="overflow-x:auto">
+            <div class="u-ovx-a">
               <table class="tbl">
                 <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
                 <tbody id="sc-annual-tbody"></tbody>
@@ -440,11 +515,11 @@ body.locked{overflow:hidden}
               </table>
             </div>
             <div id="sc-credit"></div>
-            <div style="margin-top:12px">
-              <div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:6px;padding:0 4px">תשלומים בשנה זו</div>
+            <div class="u-mt-5">
+              <div class="u-fs-3 u-fw-700 u-c-text2 u-mb-3 u-p-0-2">תשלומים בשנה זו</div>
               <div id="sc-txn-list"></div>
             </div>
-            <div style="margin-top:12px">
+            <div class="u-mt-5">
               <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
               <div id="sc-past"></div>
             </div>
@@ -458,17 +533,17 @@ body.locked{overflow:hidden}
       <!-- סבב 26: אין כאן יותר שער סיסמה. ההרשאה נגזרת מ-`sl_users.role`
            של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
            ההודעה שמוצגת למי שאינו admin — לא טופס. -->
-      <div id="settings-denied" class="card" style="display:none">
+      <div id="settings-denied" class="u-d-none card">
         <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
-          <div id="set-denied-msg" style="font-size:.9rem;color:var(--text2);line-height:1.7"></div>
+          <div id="set-denied-msg" class="u-fs-4 u-c-text2 u-lh-17"></div>
         </div>
       </div>
-      <div id="settings-main" style="display:none">
+      <div id="settings-main" class="u-d-none">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-          <div class="card-body ksave" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="לא הוגדר">
+          <div class="u-d-flex u-g-4 u-ai-c u-fwr-wrap card-body ksave">
+            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-130 u-ol-none" placeholder="לא הוגדר">
             <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
           </div>
         </div>
@@ -538,7 +613,7 @@ body.locked{overflow:hidden}
 <div class="veil" id="ask">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
     <div class="sheet-hd"><h3 id="ask-title">אישור</h3></div>
-    <div id="ask-body" style="font-size:.9rem;color:var(--text2)"></div>
+    <div id="ask-body" class="u-fs-4 u-c-text2"></div>
     <div class="sheet-ft">
       <button class="btn out" data-act="ask-no">ביטול</button>
       <button class="btn danger" data-act="ask-yes" id="ask-yes">אישור</button>
@@ -3823,7 +3898,7 @@ function slMyPassword() {
   var body = ''
     + '<div class="frm-row"><label for="mp-cur">סיסמה נוכחית</label><input id="mp-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>'
     + '<div class="frm-row"><label for="mp-new">סיסמה חדשה (שש ספרות)</label><input id="mp-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>'
-    + '<div class="frm-row" style="margin-bottom:6px"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+    + '<div class="u-mb-3 frm-row"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
   var foot = '<button class="btn out" data-act="modal-close">ביטול</button>'
            + '<button class="btn" data-act="my-pass-save" data-ksave>שמירה</button>';
   openModal('\u{1F511} שינוי הסיסמה שלי', body, foot);
@@ -4394,7 +4469,7 @@ function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){d
 // onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
 // קוד JS מורכב בתוך HTML.
-function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
+function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="u-c-text3 u-cur-def sd-opt">אין תוצאות</div>';}
 // ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
 // ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
@@ -4705,7 +4780,7 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
   h.style.display=on?'block':'none';
-  if(on)h.innerHTML='<span style="color:var(--credit);font-weight:700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="u-c-credit u-fw-700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 // זריעת הסעיף ב-sl_lists (פעם אחת, אחרי סנכרון תקין). מריצים מהאפליקציה
 // ולא רק ממיגרציה, כדי שהסעיף יופיע בהגדרות גם בלי הרצת SQL ידנית.
@@ -4850,8 +4925,8 @@ function showDashMonth(year,month){
     html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span></div>';
   });
   tot=Math.round(tot*100)/100;
-  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">נגבה: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
-    '<div style="font-weight:400;color:var(--text3);font-size:.78rem;margin-top:4px">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
+  html+='<div class="u-p-5-6 u-fw-700 u-bt-2-solid-border">נגבה: <span class="u-c-green">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
+    '<div class="u-fw-400 u-c-text3 u-fs-2 u-mt-2">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
 function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
@@ -4920,13 +4995,13 @@ function renderTxnLog(){
   var fid=document.getElementById('sd-val-txnfilter').value||'';
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span><span class="u-fw-600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
 function txnAmountHtml(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
-  return'<span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span>';
+  return'<span class="u-fw-700 u-c-green">&#8362;'+fmt(t.amount)+'</span>';
 }
 function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
@@ -5052,18 +5127,18 @@ function renderScAnnual(){
   // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
-    if(i.off){rows+='<tr style="opacity:.45"><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell" colspan="3" style="text-align:center;font-size:.76rem">לא היה בישיבה</td></tr>';return;}
+    if(i.off){rows+='<tr class="u-op-45"><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="u-ta-c u-fs-2 req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
     var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';
-    rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
+    rows+='<tr><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="u-ta-c '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   document.getElementById('sc-annual-tbody').innerHTML=rows;
-  var tb=tP-tR,tf='<tr style="background:var(--bg);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  var tb=tP-tR,tf='<tr class="u-bg-bg u-fw-700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="u-ta-c '+(tb>=0?'amt-green':'amt-red')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   /* ⭐ חוב משנים קודמות (סבב 35) — הזנה ידנית בלבד, בלי העברה אוטומטית
      בין שנים בכוונה: המנהל קובע מה נגרר. שורה נפרדת ומסומנת — ⛔ אינו
      מתווסף לשורת סה"כ של השנה (סבב 35) — ערבובו היה מסתיר האם החוב
      נולד השנה או נגרר, בדיוק ההבחנה שהשדה בא לתת. */
   var pd=parseInt(cs.prev_debt)||0;
-  if(pd>0)tf+='<tr style="background:var(--bg)"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="amt-red" style="text-align:center">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span style="font-size:.72rem;color:var(--text3)">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
+  if(pd>0)tf+='<tr class="u-bg-bg"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="u-ta-c amt-red">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="u-fs-2 u-c-text3">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
   document.getElementById('sc-annual-tfoot').innerHTML=tf;
   // יתרת זכות: שולם בשנה זו מעבר לסך החיוב בטווח החודשים של התלמיד. מוצגת
   // מתחת לטבלה כשורה נפרדת ובצבע נפרד — **אינה** נכנסת ל"סה"כ שולם" ואינה
@@ -5071,10 +5146,10 @@ function renderScAnnual(){
   var cr=distCredit(dist),applied=distCredApplied(dist),ce=document.getElementById('sc-credit'),ch='';
   if(cr>0)ch+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)ch+='<div class="credit-sub" style="color:var(--credit);font-weight:600">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
+  if(applied>0)ch+='<div class="u-c-credit u-fw-600 credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_client_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
@@ -5083,8 +5158,8 @@ async function scPastShow(){
   var r=await hwPastLoad(mirrorKey('sl_transactions'),function(t){return t.student_client_id===sid;});
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
-  box.innerHTML='<div style="font-size:.78rem;color:var(--text3);padding:4px">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date||'')+'</span><span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
+  box.innerHTML='<div class="u-fs-2 u-c-text3 u-p-2">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
+    r.rows.map(function(t){return'<div class="txn-row"><span class="u-c-text3 u-fs-2">'+esc(t.date||'')+'</span><span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
@@ -5203,7 +5278,7 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(todayStr());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="u-fw-600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
@@ -5255,9 +5330,9 @@ function openAddStudent(){
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
-    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right" value="'+esc(curMonthKey())+'"></div>'
-    +'<div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>'
-    +'<div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(curMonthKey())+'"></div>'
+    +'<div class="u-mb-3 frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r"></div>'
+    +'<div class="u-fs-2 u-c-text3 u-mb-2 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal('הוספת תלמיד', body, foot);
