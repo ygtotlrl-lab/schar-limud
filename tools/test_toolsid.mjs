@@ -36,7 +36,7 @@ const APP = {
     '_capability-notes.md', 'test_budget.mjs', 'test_caps_build.mjs',
     'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
     'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
-    'test_readonly.mjs', 'whiten.mjs',
+    'test_readonly.mjs', 'scope.mjs', 'whiten.mjs',
   ],
   /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
    *  שתוכנו זהה בארבעתן **מפיל**: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה
