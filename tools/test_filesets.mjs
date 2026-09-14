@@ -107,6 +107,7 @@ const SHARED = [
   'tools/test_caps_build.mjs',
   'tools/test_caps_guard.mjs',
   'tools/test_caps_ui.mjs',
+  'tools/test_codescan.mjs',
   'tools/test_cron.mjs',
   'tools/test_devid.mjs',
   'tools/test_crossgate.mjs',
@@ -140,6 +141,7 @@ const SHARED = [
   'tools/test_stage_a.mjs',
   'tools/test_swcore.mjs',
   'tools/test_toolsid.mjs',
+  'tools/test_visual.mjs',
   'tools/test_wiring.mjs',
 ];
 
