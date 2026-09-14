@@ -41,6 +41,15 @@ const APP = {
  *  רשימה שנייה בבודק. */
 export const ROWS = [189];
 
+/*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
+ *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
+ *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
+ *  עליו, ⛔ והוא כבר אינו נמדד. */
+export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media'];
+export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
+                     'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
+                     'color', 'color', 'future', 'media', 'future'];
+
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;

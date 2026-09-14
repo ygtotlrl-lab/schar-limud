@@ -56,6 +56,14 @@ const APP = {
  *  רשימה שנייה בבודק. */
 export const ROWS = [191];
 
+/*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
+ *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
+ *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
+ *  עליו, ⛔ והוא כבר אינו נמדד. */
+export const PATTERNS = ['literal', 'block', 'no-reader', 'orphan', 'dup-decl', 'shared-drift'];
+export const MUTS = ['literal', 'literal', 'literal', 'block', 'no-reader', 'orphan',
+                     'dup-decl', 'shared-drift'];
+
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ מדידה בזיכרון,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
 const RUN_MUT = process.env.GATE_MUT === '1';
@@ -340,10 +348,11 @@ t(SHARED.length > 0,
     '. מה עושים: מוחקים את הליטרל היתום ומשאירים את השם');
 }
 
-/* ── 5. הודעה שיותר מריפו אחד אומר — בבלוק החתום ───────────────────────── */
-{
-  /*  ⛔ הריפו האחיות נקראות מהדיסק — ⚠️ **וכשהן חסרות השער מדווח** ⛔ ואינו
-   *  מדלג בשתיקה: ⭐ «לא נמדד» אינו «נמדד ואין». */
+/*  ⛔ טקסטים שהאחיות אומרות — ⚠️ **מה נכנס**: ליטרל באתר הודעה אצל אחות,
+ *  והצהרה פרטית שלה; ⛔ **ומה מפיל**: כלום — הוא מחזיר מדידה. ⭐ **ולמה
+ *  המבנה קיים**: הטענה והמוטציה קוראות לו שתיהן, ⚠️ ושני מימושים לאותה
+ *  קריאה הם שתי הכרעות על אותה ראיה. */
+function peerTextSet() {
   const missing = [], peerTexts = new Set();
   for (const p of PEERS) {
     if (p === APP.app) continue;
@@ -356,6 +365,14 @@ t(SHARED.length > 0,
     for (const d of declared(ps, MARKS && MARKS.start, MARKS && MARKS.end, signedRanges(ps, pc)))
       if (!d.shared && !d.sealed) peerTexts.add(d.body);
   }
+  return { missing, peerTexts };
+}
+
+/* ── 5. הודעה שיותר מריפו אחד אומר — בבלוק החתום ───────────────────────── */
+{
+  /*  ⛔ הריפו האחיות נקראות מהדיסק — ⚠️ **וכשהן חסרות השער מדווח** ⛔ ואינו
+   *  מדלג בשתיקה: ⭐ «לא נמדד» אינו «נמדד ואין». */
+  const { missing, peerTexts } = peerTextSet();
   /*  ⛔ **אפס אחיות אינו «אחות חסרה»** — ⚠️ הוא עותק בודד של הריפו: ⭐ שער
    *  הקריאה-בלבד מריץ את הסט על עותק בתיקייה זמנית, ⛔ ואין שם ולא אמורות
    *  להיות אחיות. ⚠️ ודרישת הארבעה על הדיסק נאכפת בשער הבלוקים המשותפים,
@@ -401,30 +418,43 @@ const at = (() => {
   return -1;
 })();
 const MUT = [
-  { m: 'מ1', lbl: 'ליטרל עברי חוזר לאתר הודעה',
+  { m: 'מ1', key: 'literal', lbl: 'ליטרל עברי חוזר לאתר הודעה',
     edit: () => SRC.slice(0, at) + "toast('שלום למשתמש');\n" + SRC.slice(at),
     claim: (s) => routeLiterals(s, CAPS).msg.length > 0 },
-  { m: 'מ2', lbl: 'ליטרל עברי בקריאה שקודמים לה ארגומנטים',
+  { m: 'מ2', key: 'literal', lbl: 'ליטרל עברי בקריאה שקודמים לה ארגומנטים',
     edit: () => SRC.slice(0, at) + "toast(pick(a, b), 'נעלם מהמדידה');\n" + SRC.slice(at),
     claim: (s) => routeLiterals(s, CAPS).msg.length > 0 },
-  { m: 'מ3', lbl: 'ליטרל עברי בכותרת דיאלוג',
+  { m: 'מ3', key: 'literal', lbl: 'ליטרל עברי בכותרת דיאלוג',
     edit: () => SRC.slice(0, at) + "openModal('כותרת חדשה', body, '');\n" + SRC.slice(at),
     claim: (s) => routeLiterals(s, CAPS).msg.length > 0 },
-  { m: 'מ4', lbl: 'סמן הבלוק החתום נעלם',
+  { m: 'מ4', key: 'block', lbl: 'סמן הבלוק החתום נעלם',
     edit: () => B.start ? SRC.replace(B.start, '/* ═══ הודעות ═══') : null,
     claim: (s) => !blockOk(s, MARKS) },
-  { m: 'מ5', lbl: 'קבוע MSG_ בלי קורא',
+  { m: 'מ5', key: 'no-reader', lbl: 'קבוע MSG_ בלי קורא',
     edit: () => SRC.slice(0, at) + "var MSG_NO_READER_PROBE = 'הודעה שאיש אינו אומר';\n" + SRC.slice(at),
     claim: (s) => { const { noCom } = lex(s);
                     return declared(s, B.start, B.end, signedRanges(s, CAPS))
                       .filter((d) => !d.shared && !d.sealed)
                       .some((d) => (noCom.match(new RegExp('\\b' + d.name + '\\b', 'g')) || []).length < 2); } },
-  { m: 'מ6', lbl: 'ליטרל יתום נשאר לצד הקבוע',
+  { m: 'מ6', key: 'orphan', lbl: 'ליטרל יתום נשאר לצד הקבוע',
     edit: () => { const d = (declared(SRC, B.start, B.end, RANGES).filter((x) => x.shared)[0] || null);
                   return d ? SRC.slice(0, at) + 'var _probe = \'' + d.body + '\';\n' + SRC.slice(at) : null; },
     claim: (s) => { const { strs } = lex(s);
                     return declared(s, B.start, B.end, signedRanges(s, CAPS))
                       .some((d) => strs.filter((x) => x.body === d.body).length > 1); } },
+  { m: 'מ7', key: 'dup-decl', lbl: 'שם שהוצהר פעמיים',
+    edit: () => { const d = declared(SRC, B.start, B.end, RANGES)[0] || null;
+                  return d ? SRC.slice(0, at) + 'var ' + d.name + " = 'הצהרה שנייה לאותו שם';\n" + SRC.slice(at) : null; },
+    claim: (s) => { const names = declared(s, B.start, B.end, signedRanges(s, CAPS)).map((d) => d.name);
+                    return names.length !== new Set(names).size; } },
+  { m: 'מ8', key: 'shared-drift', lbl: 'טקסט שאחות אומרת, מחוץ לבלוק',
+    edit: () => { const body = [...peerTextSet().peerTexts][0];
+                  return body && body.indexOf("'") < 0
+                    ? SRC.slice(0, at) + "var MSG_DRIFT_PROBE = '" + body + "';\n" + SRC.slice(at) : null; },
+    claim: (s) => { const { peerTexts } = peerTextSet();
+                    return declared(s, B.start, B.end, signedRanges(s, CAPS))
+                      .filter((d) => !d.shared && !d.sealed)
+                      .some((d) => peerTexts.has(d.body) && !(APP.sharedExempt || {})[d.name]); } },
 ];
 for (const r of MUT) {
   const body = at < 0 ? null : r.edit();

@@ -41,6 +41,18 @@ import { whiten } from './whiten.mjs';
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [144, 139, 140, 141, 157, 180, 181, 182, 183, 151];
 
+/*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
+ *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
+ *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
+ *  עליו, ⛔ והוא כבר אינו נמדד. ⚠️ ו-`clean` היא מוטציית-הנגד, ⛔ ואינה
+ *  דפוס שנאכף. */
+export const PATTERNS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived',
+                         'live-order', 'live-from'];
+export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived',
+                     'live-order', 'live-from', 'live-from'];
+
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה.
