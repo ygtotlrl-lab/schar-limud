@@ -71,7 +71,7 @@ const GENERATORS = ['gen-icons.mjs'];
  *  ומוצהרת, ⛔ ולא הרחבה של `CHECKERS` שהטבלה מונה בה שישה. */
 /*  ⛔ המשותפים לארבעתן (סבב 139) — ⚠️ מודול שנקרא משערים בכל הריפו,
  *  ⭐ ומקומו מחוץ לאזור הפר-אפליקציה: ⛔ שם משותף שיושב בו נראה פרטי. */
-const SHARED_MODULES = ['scope.mjs', 'whiten.mjs'];
+const SHARED_MODULES = ['db_schema.mjs', 'scope.mjs', 'whiten.mjs'];
 /* ⚠️ פר-אפליקציה — רתמת מודל ההרשאות קיימת בשלוש שיש בהן כניסה, וביומן אין כניסה */
 const MODULES = SHARED_MODULES.concat(['roles-harness.mjs']);
 /* ⚠️ סוף פר-אפליקציה */

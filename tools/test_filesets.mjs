@@ -96,6 +96,7 @@ const SHARED = [
   'tools/check-js.mjs',
   'tools/check-structure.mjs',
   'tools/gen-icons.mjs',
+  'tools/db_schema.mjs',
   'tools/scope.mjs',
   'tools/whiten.mjs',
   'tools/test_anchors.mjs',
