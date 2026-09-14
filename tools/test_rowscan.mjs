@@ -81,7 +81,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בארבעתן. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -168,8 +168,45 @@ function registries(src) {
  *  ⛔ ושם כל דפוס שיש לו מוטציה; ⛔ **ומה מפיל**: דפוס בלי מוטציה,
  *  ומוטציה בלי דפוס. ⭐ **ולמה המבנה קיים**: הוא מה שמאפשר להצליב
  *  את השער מבחוץ — ⛔ דפוס בלי מוטציה נשחק בשקט. */
-export const PATTERNS = ['א', 'ב+ג', 'ד', 'ה'];
-export const MUTS = ['א', 'ב+ג', 'ד', 'ה'];
+
+/*  ⛔ אות הקטגוריה נגזרת ⛔ ואינה מוקלדת — ⚠️ **והמרשמים המותרים לה
+ *  שניים**: `CAT_ORDER` שמצהיר את סדר הפנים, ו-`PART_CATS` שמשייך
+ *  קטגוריה לשער; ⭐ **ומעליהם `HEB_ORD`**, ⛔ שהוא המנגנון שגוזר את
+ *  האות מהמספר ⛔ ואינו מקליד אותה.
+ *  ⛔ **ואות שמוקלדת בגוף שער נשברת בכל הסטה** — ⚠️ קטגוריה שיורדת
+ *  מסיטה את כל הבאות אחריה, ⭐ והאות שהוקלדה נשארת מצביעה על הקודמת.
+ *  ⛔ **והמדידה על המקור הגולמי** — ⚠️ **הלבנה מוחקת בדיוק את מה
+ *  שהוא סורק**: ⭐ אות הקטגוריה חיה כליטרל מחרוזת, ⛔ ומקור מולבן היה
+ *  מחזיר אפס תמיד — ⚠️ וזה probe שאינו יכול להיכשל. */
+function catLiteralGaps(src) {
+  const CAT = /^(?:[א-ט]|י[א-ט]?|[כלמנסעפצ])$/;
+  const w = src;
+  const spans = [];
+  for (const head of ['const CAT_ORDER = [', 'const PART_CATS = {', 'const HEB_ORD = (']) {
+    const i = w.indexOf(head);
+    if (i < 0) return ['מרשם מוצהר שאינו קיים: ' + head];
+    const o = Math.max(w.indexOf('[', i + head.length - 1), w.indexOf('{', i + head.length - 1));
+    const open = head.endsWith('[') ? w.indexOf('[', i) : (head.endsWith('{') ? w.indexOf('{', i) : w.indexOf('{', i));
+    const oc = w[open], cl = oc === '[' ? ']' : '}';
+    let d = 0, e = -1;
+    for (let j = open; j < w.length; j++) {
+      if (w[j] === oc) d++;
+      else if (w[j] === cl && --d === 0) { e = j; break; }
+    }
+    if (e < 0) return ['מרשם שאינו מאוזן: ' + head];
+    spans.push([open, e]);
+  }
+  const out = [];
+  for (const m of w.matchAll(/'([א-ת]{1,2})'/g)) {
+    if (!CAT.test(m[1])) continue;
+    if (spans.some(([a, b]) => m.index > a && m.index < b)) continue;
+    out.push('שורה ' + w.slice(0, m.index).split('\n').length + ': «' + m[1] + '»');
+  }
+  return out;
+}
+
+export const PATTERNS = ['א', 'ב+ג', 'ד', 'ה', 'ו'];
+export const MUTS = ['א', 'ב+ג', 'ד', 'ה', 'ו'];
 
 /*  ⛔ כל בדיקה היא **פונקציה טהורה של טקסט** — ⚠️ היא מקבלת את התוכן
  *  כארגומנט, ⭐ ולכן המוטציות רצות בזיכרון: ⛔ שער שמודד טקסט ומריץ
@@ -265,6 +302,16 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
          : ` (${s.silent.length} שערים מוכרזים)`));
 }
 
+/*  ⛔ טענה ו — אות הקטגוריה נגזרת: ⚠️ היא הצד השני של «שער אינו מקליד
+ *  מספר שורה», ⭐ והאות נשברת בהסטה בדיוק כמו המספר. */
+{
+  const g = catLiteralGaps(rd('tools/check-capabilities.mjs'));
+  t(g.length === 0, g.length
+    ? 'ו · אות קטגוריה שהוקלדה מחוץ למרשמים: ' + g.join(' · ') +
+      '. נמדדו ' + g.length + ' והצפוי אפס. גוזרים את האות מן המרשמים המוצהרים'
+    : 'ו · אות הקטגוריה נגזרת — אפס אותיות מוקלדות מחוץ לשני המרשמים ולמנוע הגזירה');
+}
+
 mutStage();
 if (RUN_MUT) {
   /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מוסרת טקסט שונה לאותה פונקציה,
@@ -332,6 +379,20 @@ if (RUN_MUT) {
     const got = r.run();
     if (got === null) { t(true, `${r.m} · ⭕ ${r.lbl} — ⛔ אין כאן מה למוטט`); continue; }
     t(got === true, `${r.m} · ${r.lbl} **מפיל** את «${r.claim}»`);
+  }
+  /*  ⛔ מוטציה ו · אות שהוקלדה בגוף שער — ⚠️ בזיכרון, ⭐ והיא בדיוק מה
+   *  שנשבר בכל הסטת קטגוריה. */
+  {
+    const src = rd('tools/check-capabilities.mjs')
+      .replace('const CAT_ORDER = [', "const ZZ_TYPED = 'ט';\nconst CAT_ORDER = [");
+    t(catLiteralGaps(src).length > 0, 'ו · אות שהוקלדה בגוף שער **מפילה** את «אות הקטגוריה נגזרת»');
+  }
+  /*  ⭐ מוטציית-נגד: קטגוריה חדשה **בסוף** המרשם ⛔ אינה מפילה — ⚠️ היא
+   *  נכנסת לתוך המרשם, ⭐ שהוא המקום המותר. */
+  {
+    const src = rd('tools/check-capabilities.mjs')
+      .replace("'test_caps_guard':    ['ט', 'י', 'יא'],", "'test_caps_guard':    ['ט', 'י', 'יא', 'יב'],");
+    t(catLiteralGaps(src).length === 0, 'נ2 · קטגוריה חדשה בסוף המרשם — ⛔ אינה מפילה');
   }
   /*  ⭐ מוטציית-נגד: שינוי ניסוח בשם שורה ⛔ אינו מפיל — ⚠️ הנמדד הוא
    *  **המבנה** ⛔ ולא הטקסט שהשורה נושאת. */

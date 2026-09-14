@@ -574,10 +574,12 @@ t(!capsFails((doc) => {
   /*  ⛔ הצורה העירומה נבנית בשרשור ⛔ ואינה נכתבת כמחרוזת אחת — ⚠️ הסורק
    *  קורא את הקובץ הזה אף הוא, ⭐ ומחרוזת שנושאת את הדפוס הייתה נספרת
    *  כאתר חי. */
-  const BARE_RX = 'new RegExp(' + 'APP.cfgReader';
-  t(runGateOn({ [CAPS]: caps,
-                'tools/test_dbfacts.mjs': rd('tools/test_dbfacts.mjs')
-                  .replace("new RegExp('(?<![\\\\w$.])' + APP.cfgReader", BARE_RX) },
+  /*  ⛔ האתר החי נבחר בבודק עצמו (סבב 143) — ⚠️ האתר הקודם ישב בשער
+   *  עובדות המסד ⛔ ונגרע כשהקורא המדומה הוחלף בדפוסי קריאה: ⭐ ומוטציה
+   *  שנושאה הוסר עוברת תמיד. */
+  const BOUND_RX = "new RegExp('(?<![\\\\w$.])' + APP.actMap + ";
+  const BARE_RX = 'new RegExp(' + 'APP.' + 'actMap + ';
+  t(runGateOn({ [CAPS]: caps.replace(BOUND_RX, BARE_RX) },
               'check-capabilities.mjs', () => ({})),
     'מ36 · דפוס שנפתח בשם מוצהר בלי גבול **מפיל** את «RegExp מהצהרה בלי גבול»');
   /*  ⛔⛔ מ37 — שם מפה שאינו קיים בקוד: ⚠️ הטענה שנופלת היא «הניתוב
@@ -590,11 +592,8 @@ t(!capsFails((doc) => {
    *  לא נגע, ⭐ ורק ניסוח הגבול השתנה: ⛔ ושם המפה עצמו אינו ניתן
    *  להחלפה כאן, ⚠️ שהוא יושב גם בבלוק חתום — ⭐ והחתימה הייתה נופלת
    *  במקום הטענה שנמדדת. */
-  t(!runGateOn({ [CAPS]: caps,
-                 'tools/test_dbfacts.mjs': rd('tools/test_dbfacts.mjs')
-                   .replace("new RegExp('(?<![\\\\w$.])' + APP.cfgReader",
-                            "new RegExp('(?<![\\\\w$.])(?:)' + APP.cfgReader") },
-               'test_caps_ui.mjs', () => ({})),
+  t(!runGateOn({ [CAPS]: caps.replace(BOUND_RX, 'new RegExp(' + "'(?<![\\\\w$.])(?:)' + APP.actMap + ") },
+               'check-capabilities.mjs', () => ({})),
     'נ23 · ⭐ גבול שנכתב בצורה שקולה ⛔ **אינו** מפיל');
   /*  ⛔⛔ מ38 — הכרזת הגירה בלי הסבב שבו רצה (סבב 130): ⚠️ הטענה
    *  שנופלת היא «הגירה מקומית שהושלמה», ⭐ והנימוק המדוד הוא שההכרזה

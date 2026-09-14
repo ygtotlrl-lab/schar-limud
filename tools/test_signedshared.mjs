@@ -64,7 +64,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -209,8 +209,10 @@ if (!away.length) {
  *  אינו — ⚠️ ולכן הקובץ אינו ב-`pureTools` והרשימה בכל זאת נמדדת.
  *  ⛔ **וההשוואה בית-לבית** — ⚠️ רשימה שהתפצלה בריפו אחד משנה את מה
  *  שהסורק חותך שם, ⭐ ואת סיווג הקלט של הבדיקות ⛔ בלי שאיש מודד. */
-const SHARED_LISTS = [{ file: 'check-comments.mjs', name: 'bodyCut' },
-                      { file: 'test_dbscan.mjs', name: 'dbSchema' }];
+/*  ⛔ סכימת המסד אינה כאן (סבב 143) — ⚠️ היא עברה למודול משותף שאין בו
+ *  `APP`, ⭐ והוא נחתם ומושווה בית-לבית כמו כל קובץ תשתית: ⛔ מדידה שנייה
+ *  שלו כאן הייתה שתי הכרעות על אותה ראיה. */
+const SHARED_LISTS = [{ file: 'check-comments.mjs', name: 'bodyCut' }];
 function listBody(text, name) {
   const i = text.indexOf('\n  ' + name + ': [');
   if (i < 0) return null;
