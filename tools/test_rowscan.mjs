@@ -271,10 +271,18 @@ if (RUN_MUT) {
    *  ⭐ ואינה כותבת לעץ ⛔ ואינה פותחת תהליך. */
   const firstRow = (tableRows(C0.md) || [])[0];
   const MUT = [
+    /*  ⛔ המוטציה משכפלת **שורת רשומה שלמה** ⛔ ואינה מרכיבה probe מטקסט —
+     *  ⚠️ probe שנחלץ ומולחם מחדש עלול להיחתך אחרת בפרסור, ⭐ והמוטציה
+     *  הייתה מדווחת «לא נפל» על מנגנון תקין. */
     { m: 'מ1', lbl: 'שתי שורות על אותו probe', claim: 'א',
-      run: () => dupProbe({ ...C0, cap: C0.cap.replace(/(const MATRIX = \[)/,
-        "$1\n  { row: 999, name: 'מוטציה', probe: () => " +
-        (registries(C0.cap).entries.find((e) => e.probe.length > 6) || {}).probe + " },") }).length > 0 },
+      run: () => {
+        const line = C0.cap.split('\n').find((l) =>
+          /^\s*\{ row: \d+, name: '[^']*', probe: \(\) => .*\},$/.test(l));
+        if (!line) return null;
+        const twin = line.replace(/row: \d+/, 'row: 999');
+        return dupProbe({ ...C0, cap: C0.cap.replace(line, line + '\n' + twin) }).length >
+               dupProbe(C0).length;
+      } },
     { m: 'מ2', lbl: 'הצהרה ששתי שורות נוקבות בה', claim: 'ב+ג',
       /*  ⛔ שם ההצהרה נבחר **מהטבלה** ⛔ ואינו מוקלד — ⚠️ שם מוקלד היה
        *  נספר בעצמו כקריאה חיה בסורק ההצהרות, ⭐ ומדווח על השער הזה. */
@@ -292,16 +300,23 @@ if (RUN_MUT) {
         const hurt = line.replace(host.std, host.std + ' · `APP' + '.' + solo + '`');
         return clashDecl({ ...C0, md: C0.md.replace(line, hurt) }).length > clashDecl(C0).length;
       } },
+    /*  ⛔ המועמדת נבחרת לפי **התוצאה** ⛔ ולא לפי התנאי לבדו — ⚠️ שורה
+     *  שמוצהרת ב-`ROWS` של שער אינה נספרת ב-`falseGreen`, ⭐ ובחירה בה
+     *  הייתה מדווחת «לא נפל» על מנגנון תקין. */
     { m: 'מ3', lbl: 'שורה שאכיפתה נימוק כתוב מסומנת תקין', claim: 'ד',
       run: () => {
-        const manualRow = (tableRows(C0.md) || []).find((r) => {
-          const { entries, gates } = registries(C0.cap);
-          return !entries.some((e) => e.row === r.n) && /manual:/.test(gates[r.n] || '') &&
-                 r.marks.length > 0 && r.marks.every((x) => x === '⭕');
-        });
-        if (!manualRow) return null;
-        const line = C0.md.split('\n').find((l) => new RegExp('^\\|\\s*' + manualRow.n + '\\s*\\|').test(l));
-        return falseGreen({ ...C0, md: C0.md.replace(line, line.replace('⭕', '✅')) }).length > 0;
+        const { entries, gates } = registries(C0.cap);
+        const base = falseGreen(C0).length;
+        for (const r of tableRows(C0.md) || []) {
+          if (entries.some((e) => e.row === r.n)) continue;
+          if (!/manual:/.test(gates[r.n] || '')) continue;
+          if (!r.marks.length || !r.marks.every((x) => x === '⭕')) continue;
+          const line = C0.md.split('\n').find((l) => new RegExp('^\\|\\s*' + r.n + '\\s*\\|').test(l));
+          if (!line) continue;
+          if (falseGreen({ ...C0, md: C0.md.replace(line, line.replace('⭕', '✅')) }).length > base)
+            return true;
+        }
+        return null;
       } },
     { m: 'מ4', lbl: 'שער בלי שורה ובלי הכרזה', claim: 'ה',
       run: () => {
