@@ -1815,7 +1815,7 @@ window.addEventListener('load', swRegister);
 
 /* ── BK_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⛔ `sl_users` אינה ברשימה (סבב 30) — היא מחזיקה `password` בטקסט גלוי
-   ואת `pass_salt`/`pass_fp`, ו-`kv_backup` קריאה ל-`anon`; גיבוי שלה היה
+   ואת `pass_salt`/`pass_fp`, ו-`sh_backup` קריאה ל-`anon`; גיבוי שלה היה
    מעתיק את הסוד למקום שני ומבטל את מה שסבב 24 בנה. שחזור משתמשים נעשה
    ידנית ע"י המנהל מלוח הבקרה, ר' «אחרי ההרצה» בקובץ ההתקנה. */
 var BK_CFG = {
@@ -1827,7 +1827,7 @@ var BK_CFG = {
   user: function () { try { var u = sessGet(); return (u && u.username) ? u.username : null; } catch (e) { return null; } },
   // ⭐ רשימת הסודות של הגיבוי היא רשימת המראה (השלמת סבב 35) —
   //    `SL_NEVER_MIRROR_SETTINGS`: שורת `sl_settings` שמפתחה שם אינה
-  //    נכתבת לא לדיסק ולא ל-`kv_backup`. הלקח: `admin_pass` שרד בגיבויים
+  //    נכתבת לא לדיסק ולא ל-`sh_backup`. הלקח: `admin_pass` שרד בגיבויים
   //    אחרי שנמחק מהמקור, ונוקה ידנית ע"י המנהל.
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   /*  ⛔ עמודת סדר לכל מקור (סבב 87ג) — ⚠️ שליפה בעמודים חייבת סדר יציב:
@@ -1850,8 +1850,8 @@ var BK_CFG = {
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
    ══════════════════════════════════════════════════════════════════════ */
-var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
-var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
+var BK_TABLE = 'sh_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
+var BK_LOG_TABLE = 'sh_sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
 var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
@@ -4829,7 +4829,7 @@ async function syncAll(){
    שהעלתה שורות נרשמת עם מספרן, ומשיכה מלאה נרשמת פעם אחת בסשן. הרישום
    דרך `logAction` שבמודול הגיבוי — fire-and-forget, לעולם אינו חוסם.
    ⛔ אין לרשום כל מחזור סנכרון (סבב 35) — `syncAll` רץ אחרי כל שמירה,
-   ו-`sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
+   ו-`sh_sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
 function slSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }

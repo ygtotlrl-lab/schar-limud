@@ -154,7 +154,7 @@ function makeEnv(opts = {}) {
     kv: Object.assign({}, opts.kv || {}),
     tables: Object.assign({}, opts.tables || {}),
     calls: [],
-    inserted: { kv_backup: [], sync_log: [] },
+    inserted: { sh_backup: [], sh_sync_log: [] },
     net: opts.net !== false,
     lsBlocked: !!opts.lsBlocked,
     backups: (opts.backups || []).slice(),
@@ -268,11 +268,11 @@ async function t1() {
   env.sb.BK_CFG = cfgKv(env);
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '1א · גיבוי מוצלח מחזיר true');
-  eq(env.inserted.kv_backup.length, 2, '1ב · שני המקורות נכתבו ל-kv_backup');
-  eq(env.inserted.kv_backup[0].key, 'k1', '1ג · מפתח הגיבוי הוא שם המקור');
-  eq(env.inserted.kv_backup[0].value, 'AAA', '1ד · הערך שנכתב הוא הערך שבענן');
+  eq(env.inserted.sh_backup.length, 2, '1ב · שני המקורות נכתבו ל-sh_backup');
+  eq(env.inserted.sh_backup[0].key, 'k1', '1ג · מפתח הגיבוי הוא שם המקור');
+  eq(env.inserted.sh_backup[0].value, 'AAA', '1ד · הערך שנכתב הוא הערך שבענן');
   eq(env.store['x_last_backup'], TODAY, '1ה · הדגל היומי נכתב אחרי ההצלחה');
-  ok(env.inserted.sync_log.some((x) => x.action === 'backup'), '1ז · הגיבוי נרשם ביומן');
+  ok(env.inserted.sh_sync_log.some((x) => x.action === 'backup'), '1ז · הגיבוי נרשם ביומן');
   // ריצה שנייה באותו יום — יוצאת מיד ואינה נוגעת ברשת
   const before = env.calls.length;
   const r2 = await env.sb.bkMaybeDaily();
@@ -292,12 +292,12 @@ async function t2() {
   ok(!threw, '2א · ⛔ כשל רשת אינו זורק — הגיבוי אינו חוסם ואינו מפיל');
   eq(r, false, '2ב · ומחזיר false');
   eq(env.store['x_last_backup'], undefined, '2ג · ⛔ הדגל היומי לא נכתב — אין דילוג על יממה');
-  eq(env.inserted.kv_backup.length, 0, '2ד · שום דבר לא נכתב ל-kv_backup');
+  eq(env.inserted.sh_backup.length, 0, '2ד · שום דבר לא נכתב ל-sh_backup');
   // הרשת חוזרת — אותו יום, והגיבוי כן רץ
   env.net = true;
   const r2 = await env.sb.bkMaybeDaily();
   eq(r2, true, '2ה · ⭐ הניסיון הבא באותו יום מצליח (זה מה שהדגל-אחרי-הצלחה נותן)');
-  eq(env.inserted.kv_backup.length, 2, '2ו · והפעם הכל נכתב');
+  eq(env.inserted.sh_backup.length, 2, '2ו · והפעם הכל נכתב');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -312,7 +312,7 @@ async function t3() {
   const orig = env.client.from;
   env.client.from = function (t) {
     const api = orig.call(env.client, t);
-    if (t === 'kv_backup') {
+    if (t === 'sh_backup') {
       const ins = api.insert;
       api.insert = (row) => (++nIns === 2 ? Promise.resolve({ data: null, error: { message: 'boom' } }) : ins(row));
     }
@@ -321,7 +321,7 @@ async function t3() {
   const r = await env.sb.bkMaybeDaily();
   eq(r, false, '3א · כישלון של מקור אחד מחזיר false');
   eq(env.store['x_last_backup'], undefined, '3ב · ⛔ ואינו כותב את הדגל היומי');
-  ok(env.inserted.sync_log.some((x) => x.action === 'backup_fail'), '3ג · הכישלון נרשם ביומן');
+  ok(env.inserted.sh_sync_log.some((x) => x.action === 'backup_fail'), '3ג · הכישלון נרשם ביומן');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -354,26 +354,26 @@ async function t3b() {
   eq(r, false, '3ב-א · כשל חלקי מחזיר false ואינו מתחזה להצלחה');
   eq(env.store['x_last_backup'], undefined, '3ב-ב · ⛔ והדגל הגלובלי אינו נכתב');
   // ⭐ החוליה הראשונה: המקור הבריא כן נכתב וכן סומן.
-  eq(env.inserted.kv_backup.length, 1, '3ב-ג · ⭐ המקור הבריא נכתב למרות הכשל של השני');
+  eq(env.inserted.sh_backup.length, 1, '3ב-ג · ⭐ המקור הבריא נכתב למרות הכשל של השני');
   eq(env.store['bk_day_k1'], TODAY, '3ב-ד · ⭐ וקיבל דגל-יום משלו');
   eq(env.store['bk_day_k2'], undefined, '3ב-ה · ⛔ והנכשל לא — הוא ינוסה שוב');
   // ⭐ החוליה השנייה: הכשל מדווח **עם השם**, ולא כמספר בלי מען.
-  const failLog = env.inserted.sync_log.filter((x) => x.action === 'backup_fail').pop();
+  const failLog = env.inserted.sh_sync_log.filter((x) => x.action === 'backup_fail').pop();
   ok(failLog && JSON.stringify(failLog).indexOf('k2') !== -1,
      '3ב-ו · ⭐ היומן נושא את שם המקור שנכשל');
   /* ⭐ החוליה השלישית — ⚠️ והערך **משתנה** בין הריצות בכוונה: החתימה
      הדיפרנציאלית לבדה כבר מדלגת על ערך זהה, ולכן טענה על ערך זהה אינה
      בודקת דבר. ⛔ הלולאה שנמדדה בשטח היא בדיוק המקרה ההפוך — מפתח
      הנוכחות משתנה בכל סימון, ולכן הוא נכתב מחדש בכל עלייה. */
-  const before = env.inserted.kv_backup.length;
+  const before = env.inserted.sh_backup.length;
   env.kv.k1 = 'AAA-שונה';
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, before,
+  eq(env.inserted.sh_backup.length, before,
      '3ב-ז · ⛔ ריצה נוספת באותו יום אינה מגבה שוב את הבריא — גם כשערכו השתנה');
   /* ⭐ וביום חדש הוא כן נכתב — ⛔ הדגל חוסם יממה, לא לנצח. */
   newDay(env);
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, before + 1,
+  eq(env.inserted.sh_backup.length, before + 1,
      '3ב-ח · ⭐ וביום חדש הוא כן נגבה — הדגל חוסם יממה ולא לנצח');
 }
 
@@ -384,23 +384,23 @@ async function t4() {
   const env = makeEnv({ kv: { k1: 'AAA', k2: 'BBB' } });
   env.sb.BK_CFG = cfgKv(env);
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, 2, '4א · היום הראשון כותב הכל');
+  eq(env.inserted.sh_backup.length, 2, '4א · היום הראשון כותב הכל');
   // יום חדש, אותם ערכים
   newDay(env);
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '4ב · היום השני מצליח');
-  eq(env.inserted.kv_backup.length, 2, '4ג · ⭐ ולא נכתבה אף שורה חדשה — הערכים זהים');
+  eq(env.inserted.sh_backup.length, 2, '4ג · ⭐ ולא נכתבה אף שורה חדשה — הערכים זהים');
   // ערך אחד השתנה
   newDay(env);
   env.kv.k2 = 'CCC';
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, 3, '4ד · רק המקור שהשתנה נכתב');
-  eq(env.inserted.kv_backup[2].key, 'k2', '4ה · והוא הנכון');
+  eq(env.inserted.sh_backup.length, 3, '4ד · רק המקור שהשתנה נכתב');
+  eq(env.inserted.sh_backup[2].key, 'k2', '4ה · והוא הנכון');
   // ⛔ בספק — כותבים: חתימה שנמחקה מחזירה כתיבה מלאה
   newDay(env);
   delete env.store['bk_sig_k1'];
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, 4, '4ו · ⛔ חתימה חסרה ⇒ כותבים שוב (בספק — מגבים)');
+  eq(env.inserted.sh_backup.length, 4, '4ו · ⛔ חתימה חסרה ⇒ כותבים שוב (בספק — מגבים)');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -416,7 +416,7 @@ async function t5() {
   });
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '5א · גיבוי טבלאות מצליח');
-  eq(env.inserted.kv_backup[0].value, JSON.stringify([{ id: 1 }]), '5ב · הערך הוא JSON של השורות');
+  eq(env.inserted.sh_backup[0].value, JSON.stringify([{ id: 1 }]), '5ב · הערך הוא JSON של השורות');
   const sel = env.calls.filter((c) => c.op === 'select');
   eq(sel.find((c) => c.table === 't_data').cols, '*', '5ג · טבלה בלי `cols` נשלפת ב-`*`');
   eq(sel.find((c) => c.table === 't_users').cols, 'id,username',
@@ -442,7 +442,7 @@ async function t6() {
   const env3 = makeEnv({ kv: { k1: 'A' } });   // k2 חסר
   env3.sb.BK_CFG = cfgKv(env3);
   eq(await env3.sb.bkMaybeDaily(), true, '6ה · מפתח שאין לו ערך בענן אינו כישלון');
-  eq(env3.inserted.kv_backup.length, 1, '6ו · ורק מה שקיים גובה');
+  eq(env3.inserted.sh_backup.length, 1, '6ו · ורק מה שקיים גובה');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -462,7 +462,7 @@ async function t7() {
   const sent = await env.sb.logFlush();
   eq(sent, 1, '7ה · ⭐ הריקון שולח את מה שהצטבר כשהרשת חוזרת');
   eq(JSON.parse(env.store['x_log_queue']).length, 0, '7ו · והתור מתרוקן');
-  eq(env.inserted.sync_log.length, 1, '7ז · והשורה הגיעה ל-sync_log');
+  eq(env.inserted.sh_sync_log.length, 1, '7ז · והשורה הגיעה ל-sh_sync_log');
 
   // ריקון שנכשל — הפריטים חוזרים לתור
   env.net = false;
@@ -540,7 +540,7 @@ async function t12() {
   const left = env.backups.map((r) => r.key + (r.created_at === OLD31 ? ':old' : ':new')).sort().join(',');
   eq(left, 'PRE_SYNC_UNIFY_k1:old,k1:new,zar_kv:old',
     '12ב · עותק יומי בן 31 יום נגרע; הטרי, ה-PRE_* ומפתח זר שורדים');
-  const ret = env.inserted.sync_log.find((x) => x.action === 'retention');
+  const ret = env.inserted.sh_sync_log.find((x) => x.action === 'retention');
   ok(ret && ret.record_count === 1, '12ג · הגריעה נרשמה ליומן עם המונה');
 
   // ⛔ נכשלת סגור — מסד שמסרב ל-DELETE אינו מפיל את הגיבוי ואינו רושם דבר
@@ -549,7 +549,7 @@ async function t12() {
   env2.sb.BK_CFG = cfgKv(env2);
   eq(await env2.sb.bkMaybeDaily(), true, '12ד · כשל מחיקה (אין הרשאה) אינו מפיל את הגיבוי');
   eq(env2.backups.length, 1, '12ה · ולא נגרע דבר — נכשל סגור');
-  ok(!env2.inserted.sync_log.some((x) => x.action === 'retention'),
+  ok(!env2.inserted.sh_sync_log.some((x) => x.action === 'retention'),
     '12ו · ואין רישום retention — נרשם רק כשנמחק משהו בפועל');
 
   // גיבוי שנכשל — הגריעה אינה רצה כלל
@@ -575,20 +575,20 @@ async function t13() {
     ],
   });
   eq(await env.sb.bkMaybeDaily(), true, '13א · הגיבוי מצליח');
-  ok(!env.inserted.kv_backup.some((x) => x.key === 'secret_k'),
+  ok(!env.inserted.sh_backup.some((x) => x.key === 'secret_k'),
     '13ב · ⛔ מפתח-סוד נחסם מכתיבה לגיבוי');
   /*  ⛔ מקור-טבלה נכתב מעכשיו תחת מפתח העוגן (סבב 87ג) — ⚠️ העותק הראשון
    *  הוא תמיד עוגן מלא, ⭐ והדיפים באים אחריו. */
-  const tset = env.inserted.kv_backup.find((x) => x.key === 'ANCHOR:t_set');
+  const tset = env.inserted.sh_backup.find((x) => x.key === 'ANCHOR:t_set');
   ok(tset && tset.value.indexOf('admin_pass') === -1 && tset.value.indexOf('SODI') === -1,
     '13ג · ⛔ שורת שדה-סוד סוננה לפני הסריאליזציה');
-  ok(env.inserted.kv_backup.some((x) => x.key === 'k1'), '13ד · והמקורות הרגילים גובו כרגיל');
+  ok(env.inserted.sh_backup.some((x) => x.key === 'k1'), '13ד · והמקורות הרגילים גובו כרגיל');
 
   // הרשימה ריקה — המנגנון דרוך ואינו משנה דבר
   const env2 = makeEnv({ kv: { k1: 'A', k2: 'B' } });
   env2.sb.BK_CFG = cfgKv(env2, { secrets: [] });
   eq(await env2.sb.bkMaybeDaily(), true, '13ה · רשימה ריקה — הגיבוי מצליח');
-  eq(env2.inserted.kv_backup.length, 2, '13ו · והכול מגובה, בלי שינוי התנהגות');
+  eq(env2.inserted.sh_backup.length, 2, '13ו · והכול מגובה, בלי שינוי התנהגות');
 }
 
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
@@ -625,7 +625,7 @@ async function t14() {
     env.sb.BK_CFG = cfgKv(env, { secrets: ['secret_k'],
       sources: () => [{ kind: 'kv', table: 'kv', name: 'secret_k' }] });
     await env.sb.bkMaybeDaily();
-    ok(env.inserted.kv_backup.some((x) => x.key === 'secret_k'),
+    ok(env.inserted.sh_backup.some((x) => x.key === 'secret_k'),
       '14ד · מוטציה שכותבת סוד נתפסת: במוטנט הוא נכתב — טענת 13ב הייתה נכשלת');
   }
   // מוטציה ג: ניפוח חלון השמירה — במוטנט עותק בן 31 יום שורד
@@ -677,7 +677,7 @@ async function t15() {
     sources: () => [{ kind: 'table', name: 't_big', order: 'id', ts: 'updated_at' }],
   });
   eq(await env.sb.bkMaybeDaily(), true, '15א · הגיבוי מצליח');
-  const anch = env.inserted.kv_backup.find((x) => x.key === 'ANCHOR:t_big');
+  const anch = env.inserted.sh_backup.find((x) => x.key === 'ANCHOR:t_big');
   ok(!!anch, '15ב · ⭐ העותק הראשון הוא עוגן מלא');
   eq(JSON.parse(anch.value).length, big.length,
     '15ג · ⛔ כל השורות בעוגן — נמדד ' + JSON.parse(anch.value).length + ' מתוך ' + big.length);
@@ -687,7 +687,7 @@ async function t15() {
   newDay(env);
   env.tables.t_big = big.concat([{ id: 9001, updated_at: 99999 }]);
   eq(await env.sb.bkMaybeDaily(), true, '15ה · היום השני מצליח');
-  const diff = env.inserted.kv_backup.find((x) => x.key === 'DIFF:t_big');
+  const diff = env.inserted.sh_backup.find((x) => x.key === 'DIFF:t_big');
   ok(!!diff, '15ו · ⭐ והעותק השני הוא דיפרנציאלי');
   /*  ⚠️ שתיים ולא אחת — ⛔ החלון הוא `gte` על חותמת המים, ⭐ ולכן שורת
    *  הגבול נקראת שוב: ⛔ קבוצת-על מכוונת, ⚠️ ו-`gt` היה מפספס שורה
@@ -696,9 +696,9 @@ async function t15() {
     '15ז · ⛔ ובו שורת הגבול והחדשה בלבד — נמדד ' + JSON.parse(diff.value).length);
   /*  ⛔ יום שלא השתנה בו דבר אינו כותב עותק — ⚠️ החתימה זהה. */
   newDay(env);
-  const before = env.inserted.kv_backup.length;
+  const before = env.inserted.sh_backup.length;
   await env.sb.bkMaybeDaily();
-  eq(env.inserted.kv_backup.length, before,
+  eq(env.inserted.sh_backup.length, before,
     '15ח · ⛔ דיפרנציאלי ריק אינו נכתב — אחרת כל לילה מציף את הפינוי');
   /*  ⛔⛔ ומוטציה: קריאה בלי עימוד מחזירה עמוד אחד — ⚠️ אימות מול מונה
    *  השרת מפיל אותה, ⭐ ואינו שומר חצי גיבוי. */
@@ -713,7 +713,7 @@ async function t15() {
     });
     let threw = false;
     try { await e2.sb.bkMaybeDaily(); } catch (e) { threw = true; }
-    ok(threw || !e2.inserted.kv_backup.some((x) => x.key === 'ANCHOR:t_big'),
+    ok(threw || !e2.inserted.sh_backup.some((x) => x.key === 'ANCHOR:t_big'),
       '15י · ⛔ מוטציה: קריאה בלי עימוד אינה נשמרת כגיבוי — טענה 15ג הייתה נכשלת');
   }
   /*  ⭐ ומוטציית-נגד: מקור נוסף לרשימה ⛔ אינו מפיל — נמדד המנגנון. */

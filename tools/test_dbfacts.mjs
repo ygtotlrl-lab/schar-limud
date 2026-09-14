@@ -92,7 +92,7 @@ const APP = {
    *  רצה שם ⛔ ולא בשלושה. */
   kvReadFn: 'slApplyMirror',
   kvTables: ['sl_settings'],
-  backupTable: 'kv_backup',
+  backupTable: 'sh_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
    *  בריפו של האפליקציה הראשונה בפרויקט, ⭐ ועותק שני היה מקור אמת שני. */
   allowlistFn: '',
@@ -127,7 +127,7 @@ const APP = {
    *  שאין לה טבלה במסד. ⚠️ **ולמה המבנה קיים**: גיבוי ולוג הם תוספת-בלבד,
    *  ⛔ ו-`UPDATE` שיתווסף להם הוא זכות שאין לה קורא — ⭐ והיא בדיוק
    *  הזכות שמאפשרת לשכתב עקבה. */
-  appendOnly: ['kv_backup', 'sync_log'],
+  appendOnly: ['sh_backup', 'sh_sync_log'],
   twinTables: {
     users:    { table: 'sl_users',
                 cols: ['client_id', 'username', 'full_name', 'role', 'active',
@@ -278,14 +278,26 @@ const sqlNoCmt = MIG.sql.replace(/^\s*--.*$/gm, '');
 
 const dropped = new Set(
   [...sqlNoCmt.matchAll(/drop\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)/gi)].map((m) => m[1]));
+/*  ⛔ שם שהוסב במיגרציה מאוחרת — ⚠️ **המאוחרת היא ההגדרה**: ⭐ מיגרציה
+ *  שכבר רצה אינה נערכת, ⛔ והיא ממשיכה להכריז את השם הישן — ⚠️ וגזירה
+ *  שאינה עוקבת אחרי ההסבה מחפשת במסד טבלה שכבר אינה שם.
+ *  ⛔ **וההסבה נגררת** — ⚠️ שם שהוסב פעמיים מגיע עד האחרון. */
+const renamedTo = (() => {
+  const m = new Map();
+  for (const x of sqlNoCmt.matchAll(
+    /alter\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)\s+rename\s+to\s+(?:public\.)?([a-z_][a-z0-9_]*)/gi))
+    m.set(x[1], x[2]);
+  return (t) => { const seen = new Set(); let cur = t; while (m.has(cur) && !seen.has(cur)) { seen.add(cur); cur = m.get(cur); } return cur; };
+})();
 const created = [...new Set(
   [...sqlNoCmt.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)/gi)].map((m) => m[1]))]
-  .filter((t) => !dropped.has(t));
+  .filter((t) => !dropped.has(t))
+  .map(renamedTo);
 /*  ⛔ עמודה שנוספה במיגרציה — ⚠️ זו בדיוק הסחיפה שהשורה מתארת: ⭐ מיגרציה
  *  שרצה חלקית משאירה את הטבלה ⛔ ואת העמודה לא. */
 const addedCols = [...sqlNoCmt.matchAll(
   /alter\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)\s+add\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_][a-z0-9_]*)/gi)]
-  .map((m) => ({ t: m[1], c: m[2] }))
+  .map((m) => ({ t: renamedTo(m[1]), c: m[2] }))
   .filter((x) => !dropped.has(x.t));
 
 /* ── הטענות ────────────────────────────────────────────────────────────── */

@@ -48,8 +48,8 @@ const APP = {
    *  משותפת; ⛔ **ומה מפיל**: שם שנשאל ואינו כאן, ⛔ ושם שכאן ואין לו
    *  אתר שאילתה. ⭐ **ולמה המבנה קיים**: הצלבה מול הסכימה דורשת רשימה
    *  סגורה, ⚠️ ורשימה שאינה נמדדת משני צדדיה מתיישנת בשקט. */
-  dbTables: ['kv_backup', 'sl_lists', 'sl_settings', 'sl_students',
-             'sl_transactions', 'sl_users', 'sync_log'],
+  dbTables: ['sh_backup', 'sl_lists', 'sl_settings', 'sl_students',
+             'sl_transactions', 'sl_users', 'sh_sync_log'],
   /*  ⛔ שכבת העימוד — ⚠️ הארגומנט השני שלה הוא **עמודת המיון**, ⭐ והיא
    *  אינה יושבת ב-`.order(…)`: ⛔ בלי ההצהרה הזו כל אתרי המיון האמיתיים
    *  אינם נסרקים כלל. */

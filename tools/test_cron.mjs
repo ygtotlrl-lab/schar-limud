@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /* ⚠️ פר-אפליקציה — הפרויקט שהאפליקציה חיה בו והבעלות על מיגרציית הגיבוי נבדלים בין הארבע */
 /* ⚠️ schar חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם yoman,
-   ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`.
+   ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `sh_backup`.
    ⛔ עותק שני שלה כאן היה מקור אמת שני שמתיישן (סבב 35ג). */
 /* ⚠️ סוף פר-אפליקציה */
 const APP = {
@@ -51,13 +51,13 @@ const APP = {
       ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
       וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
   allowlistMigration: null,
-  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `kv_rishon`/`kv_ramataviv`
+  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `tb_kv_rishon`/`tb_kv_ramataviv`
       הן הבית הענני של הגדרות היומן, ⭐ והבעלות שלו: ⛔ `migration` כאן הוא
       `null` בכל ריפו שאינו הבעלים, ⚠️ ו-`since` הוא המיגרציה שמצהירה מתי
       הבעלות עברה — ⭐ המיגרציות שקדמו לה רצו ⛔ ואינן נערכות ואינן נמחקות,
       ⚠️ ומה שנמדד הוא שאין הגדרה **חדשה** מנקודת ההצהרה ואילך. */
   kvShared: {
-    names: ['kv_rishon', 'kv_ramataviv'],
+    names: ['tb_kv_rishon', 'tb_kv_ramataviv'],
     migration: null,
     migrationDoc: 'yoman-avoda/migrations/000_initial_schema.sql',
     since: null,
@@ -195,7 +195,7 @@ function simulateSweep(sql, rows, days, nowMs) {
   if (gProt && keys.some(PROTECTED)) throw 'refuse:protected';
   if (gDays && (days === null || days < 7)) throw 'refuse:days';
 
-  const del = /delete\s+from\s+public\.kv_backup([\s\S]*?);/.exec(body);
+  const del = /delete\s+from\s+public\.sh_backup([\s\S]*?);/.exec(body);
   const where = del ? del[1] : '';
   let match;
   if (new RegExp('key\\s*=\\s*any\\s*\\(\\s*' + av + '\\s*\\)').test(where)) match = (r) => keys.indexOf(r.key) !== -1;
@@ -208,7 +208,7 @@ function simulateSweep(sql, rows, days, nowMs) {
 
   const gone = rows.filter((r) => match(r) && aged(r));
   const left = rows.filter((r) => gone.indexOf(r) === -1);
-  const logged = gone.length > 0 && /if\s+v_deleted\s*>\s*0[\s\S]{0,400}?insert into public\.sync_log/.test(body);
+  const logged = gone.length > 0 && /if\s+v_deleted\s*>\s*0[\s\S]{0,400}?insert into public\.sh_sync_log/.test(body);
   return { deleted: gone.length, left: left.map((r) => r.key).sort(), logged: logged };
 }
 
@@ -315,10 +315,10 @@ function t2(sql) {
      והשער נועל את הערך שבמסד. */
   assert(/'0 3 \* \* \*'/.test(sql), '2ז · תזמון יומי ב-03:00 UTC — רחוק מגל הגיבוי של חצות UTC');
   assert(/bk_retention_sweep\(30\)/.test(sql), '2ח · המשימה קוראת לגריעה עם חלון 30 יום');
-  assert(/insert into public\.sync_log[\s\S]{0,200}'retention'/.test(sql),
-    '2ט · כל ריצה שמחקה כותבת שורת `retention` ל-sync_log');
-  assert(!/grant[\s\S]{0,80}delete[\s\S]{0,80}kv_backup/i.test(sql),
-    '2י · ⛔ הקובץ אינו מעניק `delete` על `kv_backup` לאיש');
+  assert(/insert into public\.sh_sync_log[\s\S]{0,200}'retention'/.test(sql),
+    '2ט · כל ריצה שמחקה כותבת שורת `retention` ל-sh_sync_log');
+  assert(!/grant[\s\S]{0,80}delete[\s\S]{0,80}sh_backup/i.test(sql),
+    '2י · ⛔ הקובץ אינו מעניק `delete` על `sh_backup` לאיש');
   // רשימת-ההיתר מכסה את מפתחות הגיבוי של האפליקציה הזו.
   const keys = sqlKeys(sql) || [];
   assert(keys.length > 0, '2כ · רשימת-ההיתר אינה ריקה (' + keys.length + ' מפתחות)');
@@ -349,7 +349,7 @@ function t3(sql) {
   assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) !== -1, '3ג · ⛔ גיבוי `PRE_*` בן 400 יום שורד');
   assert(r.left.indexOf('ORPHAN_' + daily) !== -1, '3ד · ⛔ גיבוי `ORPHAN_*` בן 400 יום שורד');
   assert(r.left.indexOf('zar_lo_barshima') !== -1, '3ה · מפתח שאינו ברשימה שורד — גם בן 400 יום');
-  assert(r.logged, '3ו · הגריעה נרשמה ל-sync_log');
+  assert(r.logged, '3ו · הגריעה נרשמה ל-sh_sync_log');
 
   let refused = '';
   try { simulateSweep(sql, fixture(daily), 3, Date.now()); } catch (e) { refused = String(e); }
