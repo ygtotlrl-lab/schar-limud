@@ -79,6 +79,10 @@ const APP = {
   /*  ⛔ שכבת העימוד — ⚠️ הארגומנט השני שלה הוא **עמודת המיון**, ⭐ והיא
    *  אינה יושבת ב-`.order(…)`: ⛔ בלי ההצהרה הזו כל אתרי המיון האמיתיים
    *  אינם נסרקים כלל. */
+  /*  ⛔ שכבת העימוד המשותפת — ⚠️ **מה נכנס**: שם הפונקציה שבה תשובת
+   *  השרת הופכת לשורות; ⛔ **ומה מפיל**: שם שאין לו גוף במקור. ⭐ **ולמה
+   *  היא כאן**: היא נקודת הקריאה האחת, ⛔ וענף הכשל שבה חל על כל הקוראים. */
+  pagerFn: '_ysRowsPaged',
   dbPager: '_ysRowsPaged',
   /*  ⛔ טבלה שנגרעה מהמסד ושמה נשאר בקוד — ⚠️ **מה נכנס**: השם, הדגל
    *  שמכבה את המסלול, והנימוק; ⛔ **ומה מפיל**: דגל שאינו כבוי, והכרזה
@@ -113,16 +117,16 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [144];
+export const ROWS = [144, 133];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
 export const PATTERNS = ['from-open', 'table-undeclared', 'decl-no-site',
-                         'schema-table', 'schema-col', 'schema-dup'];
+                         'schema-table', 'schema-col', 'schema-dup', 'readguard'];
 export const MUTS = ['from-open', 'table-undeclared', 'decl-no-site',
-                     'schema-table', 'schema-col', 'schema-dup'];
+                     'schema-table', 'schema-col', 'schema-dup', 'readguard'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -139,7 +143,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 4, app: 0, appWhy: '' };
+const FLOOR = { shared: 5, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -577,6 +581,43 @@ const SCAN = dbScan(SRC);
        ', ו-' + SCHEMA.m.size + ' טבלאות נמדדות מולו');
 }
 
+/*  ⛔ כשל קריאה מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ מיזוג מול אוסף ריק
+ *  מוחק את מה שלא הספיק לעלות, ⭐ ו-`null` הוא מה שעוצר אותו לפני המיזוג.
+ *  ⛔ **והנמדד הוא גוף נקודת הקריאה האחת** — ⚠️ שכבת העימוד המשותפת:
+ *  ⭐ היא המקום היחיד שבו תשובת השרת הופכת לשורות, ⛔ וענף כשל שמחזיר
+ *  מערך ריק שם הופך «לא ידעתי» ל«אין שם כלום» בכל הקוראים בבת אחת.
+ *  ⛔ **והמדידה על מקור מולבן** — ⚠️ הערה שנוקבת ב-`return []` אינה קוד. */
+function readGuardGaps(src) {
+  const out = [];
+  const w = whiten(src, { markup: 'blank' });
+  const i = w.indexOf('function ' + APP.pagerFn + '(');
+  if (i < 0) return ['נקודת הקריאה אינה קיימת במקור: ' + APP.pagerFn];
+  const open = w.indexOf('{', i);
+  let d = 0, end = -1;
+  for (let j = open; j < w.length; j++) {
+    if (w[j] === '{') d++;
+    else if (w[j] === '}' && --d === 0) { end = j; break; }
+  }
+  if (end < 0) return ['גוף שאינו מאוזן: ' + APP.pagerFn];
+  const body = w.slice(open, end + 1);
+  if (!/res\.error/.test(body)) out.push('אין בגוף בדיקת שגיאה על תשובת השרת');
+  if (!/return null/.test(body)) out.push('אין בגוף ענף שמחזיר «אין ראיה»');
+  if (/return\s*\[\s*\]/.test(body)) out.push('יש בגוף ענף שמחזיר אוסף ריק');
+  return out;
+}
+
+/*  ⛔ טענה ה — כשל הקריאה: ⚠️ הוא הצד שבמקור של «מקור הקריאה — טבלאות
+ *  בלבד», ⭐ והצד שבמסד נמדד בשער עובדות המסד. */
+{
+  const gaps = readGuardGaps(SRC);
+  if (gaps.length)
+    bad('ה. מקור הקריאה — ' + gaps.join(' · ') + '. נמדדו ' + gaps.length +
+        ' מול הצפוי 0. כשל משיכה מחזיר `null` — ⛔ ומיזוג מול מערך ריק מוחק את מה שלא הספיק לעלות');
+  else
+    ok('ה. מקור הקריאה — נקודת הקריאה `' + APP.pagerFn +
+       '` בודקת שגיאה, ⛔ ומחזירה «אין ראיה» ⛔ ולא אוסף ריק');
+}
+
 if (RUN_MUT) {
   mutStage();
   /*  ⛔ המוטציות בזיכרון — ⚠️ הסורק מקבל את התוכן כארגומנט, ⭐ ואין עותק
@@ -676,6 +717,38 @@ if (RUN_MUT) {
     const s2 = schemaMap(APP.dbSchema.concat([{ p: first.p, t: first.t, c: first.c }]), APP.project);
     for (const t of s2.dup) g.push('`' + t + '` מופיעה פעמיים באותו פרויקט');
     mut('⛔ מוטציה: רשומה כפולה בסכימה', g, new RegExp(first.t), 'ג. הסכימה המוצהרת נמדדת משני צדדיה');
+  }
+
+
+  /*  ⛔ ה · ענף הכשל שמחזיר אוסף ריק — ⚠️ המוטציה בזיכרון, ⭐ והיא הופכת
+   *  את «אין ראיה» ל«אין שם כלום»: ⛔ בדיוק המחיקה שהטענה מונעת. */
+  {
+    /*  ⛔ ההחלפה בתוך גוף שכבת העימוד בלבד — ⚠️ `return null` חי גם
+     *  במסלולים אחרים, ⭐ והחלפה גורפת מוטטת קוד שאינו נמדד כאן. */
+    const i0 = SRC.indexOf('function ' + APP.pagerFn + '(');
+    const o0 = SRC.indexOf('{', i0);
+    let d0 = 0, e0 = -1;
+    for (let j = o0; j < SRC.length; j++) {
+      if (SRC[j] === '{') d0++;
+      else if (SRC[j] === '}' && --d0 === 0) { e0 = j; break; }
+    }
+    const src = SRC.slice(0, o0) +
+      SRC.slice(o0, e0 + 1).replace('return null;', 'return [];') + SRC.slice(e0 + 1);
+    mut('⛔ מוטציה: ענף כשל שמחזיר אוסף ריק', readGuardGaps(src),
+        /אוסף ריק/, 'ה. מקור הקריאה');
+  }
+
+  /*  ⭐ נ4 · מוטציית-נגד: ⛔ שם שהוחלף בעקביות בשכבת העימוד ⛔ אינו מפיל —
+   *  ⚠️ הנמדד הוא ענף הכשל, ⭐ ולא שם הפונקציה. */
+  {
+    const src = SRC.split(APP.pagerFn).join('_ysRowsPagedRenamed');
+    const saved = APP.pagerFn;
+    APP.pagerFn = '_ysRowsPagedRenamed';
+    const g = readGuardGaps(src);
+    APP.pagerFn = saved;
+    if (!g.length) ok('נ4 · ⭐ מוטציית-נגד: שם שכבת העימוד שהוחלף בעקביות ⛔ אינו מפיל');
+    else bad('נ4 · ⭐ מוטציית-נגד: שם שהוחלף בעקביות — נמדדו ' + g.length +
+             ' פערים והצפוי 0. מיישרים את הגזירה לשם המוצהר');
   }
 
   /*  ⭐ נ1 · מוטציית-נגד: `from` שיושב **בתוך הערה** ⛔ אינו נסרק — ⚠️ זו

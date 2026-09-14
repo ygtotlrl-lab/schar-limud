@@ -1,14 +1,15 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** שתים-עשרה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** שלוש-עשרה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
    ⛔ כל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/` ·
    ⛔ כל טבלה מקבילה בצורת המשפחה שלה · ⛔ כל עמודה חיה נקראת בקוד או
    מוצהרת עם נימוקה · ⛔ כל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה ·
-   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי.
+   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי ·
+   ⛔ ואין `DELETE` בהישג ידו של מפתח ה-`anon` על טבלה שבבעלות הריפו.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -25,7 +26,9 @@
    הסט הופך את השער לרעש שמכבים. ⚠️ **ורשימת-ההיתר נגזרת מהמיגרציה
    ולא מהמסד** — ⛔ ל-`anon` אין `EXECUTE` על `bk_retention_keys()`,
    ⭐ והרחבתו היא החלטת מנהל: ⚠️ מה שנמדד מול המסד הוא **המפתחות החיים**,
-   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם. ⚠️ **ותוכן העמודה
+   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם. ⚠️ **ו-`REFERENCES` ו-`TRIGGER` אינם
+   נמדדים כאן** — ⛔ אין להם ביטוי ב-REST, ⭐ ואינם זכות על נתון: ⚠️ הם נמדדים
+   ב-`information_schema` בידי המנהל. ⚠️ **ותוכן העמודה
    אינו נמדד כאן** — ⛔ רק שמה: ⭐ ערך שאינו מתפרש יושב בטענה משלו.
    ⚠️ **ושאילתות המקור אינן נסרקות כאן** — ⛔ הן נמדדות מול הסכימה המוצהרת
    בשער נפרד: ⭐ שתי סריקות על אותו קלט הן שתי הכרעות על אותה ראיה.
@@ -37,7 +40,7 @@ import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [147, 141, 142, 143, 160, 184, 185, 186, 187, 154];
+export const ROWS = [147, 141, 142, 143, 160, 184, 185, 186, 187, 154, 145, 133];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -45,9 +48,9 @@ export const ROWS = [147, 141, 142, 143, 160, 184, 185, 186, 187, 154];
  *  עליו, ⛔ והוא כבר אינו נמדד. ⚠️ ו-`clean` היא מוטציית-הנגד, ⛔ ואינה
  *  דפוס שנאכף. */
 export const PATTERNS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
-                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived'];
+                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd'];
 export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
-                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived'];
+                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -70,7 +73,17 @@ const APP = {
    *  קיימת**: טבלה שמוצהרת ואינה קיימת היא סחיפה — ⛔ **וכאן כל טבלה
    *  מוצהרת קיימת במסד**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   schemaSkip: [],
-  cfgReader: 'slCfgGet',
+  /*  ⛔ דפוסי קריאת מפתח ההגדרה — ⚠️ **מה נכנס**: `re` ביטוי עם קבוצת
+   *  לכידה אחת לשם המפתח, ⛔ ו-`why` המסלול שהוא מכסה; ⛔ **ומה מפיל**:
+   *  דפוס שאין לו אף אתר במקור. ⭐ **ולמה אינדקס ולא עוטף**: ההגדרות
+   *  נטענות למפה אחת בסנכרון, ⚠️ ואתרי הקריאה מאנדקסים אותה בשם. */
+  cfgReads: [
+    { re: "SETTINGS\\[\\s*'([a-z_0-9]+)'\\s*\\]", why: 'אינדקס במפת ההגדרות שנטענה בסנכרון' },
+  ],
+  /*  ⛔ מפתח חי שאין לו קורא — ⚠️ **מה נכנס**: השם ⟵ הנימוק; ⛔ **ומה
+   *  מפיל**: מפתח חי שאינו כאן ואין לו קורא, ⛔ והכרזה שאין לה מפתח חי.
+   *  ⭐ **ולמה ריק**: נמדד ואין. */
+  cfgOrphans: {},
   cfgTable: 'sl_settings',
   /*  ⛔ טבלאות המפתח-ערך שבבעלות הריפו — ⚠️ **מה נכנס**: שם טבלה שעמודת
    *  `value` שלה נושאת JSON; ⛔ **ומה מפיל**: ערך שאינו מתפרש, ⭐ ורשימה
@@ -104,6 +117,12 @@ const APP = {
   colNoReader: {
     full_name:  'משפחת טבלאות המשתמשים — עמודה שאינה בשימוש כאן נשארת בסכימה',
   },
+  /*  ⛔ טבלאות משותפות שאינן מתעדכנות — ⚠️ **מה נכנס**: שם טבלה שנכתבת
+   *  פעם אחת ואינה נערכת; ⛔ **ומה מפיל**: `UPDATE` שמוענק לה, ⭐ והצהרה
+   *  שאין לה טבלה במסד. ⚠️ **ולמה המבנה קיים**: גיבוי ולוג הם תוספת-בלבד,
+   *  ⛔ ו-`UPDATE` שיתווסף להם הוא זכות שאין לה קורא — ⭐ והיא בדיוק
+   *  הזכות שמאפשרת לשכתב עקבה. */
+  appendOnly: ['kv_backup', 'sync_log'],
   twinTables: {
     users:    { table: 'sl_users',
                 cols: ['client_id', 'username', 'full_name', 'role', 'active',
@@ -128,7 +147,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 16, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -397,18 +416,53 @@ async function claimSchema() {
   if (!miss) ok(`ב. חתימת סכימה — ${checked} טבלאות מוצהרות, וכל עמודה שמוצהרת להן קיימת במסד`);
 }
 
+/*  ⛔ מפתחות ההגדרה נמדדים **משני הצדדים** — ⚠️ כל מפתח שהקוד קורא קיים
+ *  במסד, ⛔ וכל מפתח חי במסד יש לו קורא או הצהרה. ⭐ **והקריאה נגזרת
+ *  מדפוסים מוצהרים** — ⚠️ ארבע האפליקציות קוראות בארבע צורות: קריאת
+ *  משיכה, עוטף הגדרה, אינדקס במפה, ורשומה במרשם; ⛔ **ודפוס שאין לו אף
+ *  אתר מפיל** — ⭐ הנימוק המדוד: שלוש מארבע האפליקציות הצהירו שם פונקציה
+ *  שאינו קיים בהן כלל, ⛔ והטענה דיווחה «אין קריאת הגדרה» ועברה.
+ *  ⛔ **ומפתח מחוק אינו נספר** — ⚠️ הוא tombstone, ⭐ ולא מפתח חי. */
 async function claimCfgKeys() {
-  const want = [...new Set([...SRC.matchAll(
-    new RegExp('(?<![\\w$.])' + APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))].sort();
-  if (!want.length) { ok('ג. כל מפתח שהקוד מבקש — אין קריאת הגדרה בריפו הזה'); return; }
-  const r = await q(`/${APP.cfgTable}?select=key`);
+  const reads = APP.cfgReads || [];
+  if (!reads.length) {
+    bad('ג. כל מפתח שהקוד מבקש — `APP.cfgReads` ריק. נמדד 0 דפוסים מול הצפוי לפחות אחד. מצהירים את דפוס הקריאה של האפליקציה');
+    return;
+  }
+  const want = new Set();
+  const dead = [];
+  for (const p of reads) {
+    const hits = [...SRC.matchAll(new RegExp(p.re, 'g'))].map((m) => m[1]);
+    if (!hits.length) dead.push(p.re);
+    hits.forEach((k) => want.add(k));
+  }
+  if (dead.length)
+    bad('ג. כל מפתח שהקוד מבקש — דפוס קריאה מוצהר שאין לו אף אתר: ' +
+        dead.join(' · ') + '. נמדד 0 התאמות מול הצפוי לפחות אחת. ' +
+        'מיישרים את הדפוס למקור, או מסירים אותו מ-`APP.cfgReads`');
+  const r = await q(`/${APP.cfgTable}?select=key,deleted`);
   if (r.status !== 200) throw new Error(`${APP.cfgTable} → ${r.status} ${r.text.slice(0, 120)}`);
-  const live = new Set(JSON.parse(r.text).map((x) => x.key));
-  const missing = want.filter((k) => !live.has(k));
-  if (missing.length) bad(`ג. כל מפתח שהקוד מבקש — מפתחות שהקוד קורא ואינם ב-\`${APP.cfgTable}\`: ${missing.join(', ')}. נמדד ${want.length - missing.length}/${want.length} מול הצפוי ${want.length}. מוסיפים אותם במיגרציה, או מסירים את הקורא`);
-  else ok(`ג. כל מפתח שהקוד מבקש — ${want.length} מפתחות נקראים בקוד, וכולם קיימים ב-\`${APP.cfgTable}\``);
+  const rows = JSON.parse(r.text);
+  const live = new Set(rows.filter((x) => !x.deleted).map((x) => x.key));
+  const missing = [...want].filter((k) => !live.has(k)).sort();
+  if (missing.length)
+    bad('ג. כל מפתח שהקוד מבקש — מפתחות שהקוד קורא ואינם ב-`' + APP.cfgTable + '`: ' +
+        missing.join(', ') + '. נמדד ' + (want.size - missing.length) + '/' + want.size +
+        ' מול הצפוי ' + want.size + '. מוסיפים אותם במיגרציה, או מסירים את הקורא');
+  const known = APP.cfgOrphans || {};
+  const orphan = [...live].filter((k) => !want.has(k) && !known[k]).sort();
+  const ghost = Object.keys(known).filter((k) => !live.has(k)).sort();
+  if (orphan.length)
+    bad('ג. כל מפתח שהקוד מבקש — מפתחות חיים ב-`' + APP.cfgTable + '` שאין להם קורא: ' +
+        orphan.join(', ') + '. נמדד ' + orphan.length + ' מול הצפוי 0. ' +
+        'מצהירים אותם ב-`APP.cfgOrphans` עם נימוקם, ⛔ ומחיקתם מהמסד היא הכרעת מנהל');
+  if (ghost.length)
+    bad('ג. כל מפתח שהקוד מבקש — הכרזות ב-`APP.cfgOrphans` שאין להן מפתח חי: ' +
+        ghost.join(', ') + '. נמדד ' + ghost.length + ' מול הצפוי 0. מסירים את ההכרזה');
+  if (!missing.length && !orphan.length && !ghost.length && !dead.length)
+    ok('ג. כל מפתח שהקוד מבקש — ' + want.size + ' מפתחות נקראים בקוד וכולם קיימים ב-`' +
+       APP.cfgTable + '`, ⛔ ומעליהם ' + Object.keys(known).length + ' מוצהרים בלי קורא');
 }
-
 async function claimAllowlist() {
   if (!APP.allowlistFn) { ok('ד. רשימת-היתר — הפינוי אינו בבעלות הריפו הזה'); return; }
   /*  ⛔⛔ הרשימה נקראת **מהמסד** ⛔ ולא מקובץ המיגרציה (סבב 94) — ⚠️ קריאה
@@ -658,7 +712,51 @@ async function claimDerivedStale() {
 }
 
 
+
+/*  ⛔ ההרשאה נמדדת **בהתנהגות** ⛔ ולא ב-`information_schema` — ⚠️ אין לו
+ *  חשיפה ב-REST, ⭐ והנמדד כאן הוא הזכות **בפועל**: ⛔ בקשת `DELETE`
+ *  מסוננת שחוזרת «permission denied» היא הראיה שאין מחיקה בהישג יד.
+ *  ⛔ **והסינון הוא חותמת שלילית** — ⚠️ הוא אינו תואם אף שורה, ⭐ וגם אילו
+ *  הייתה ההרשאה קיימת לא הייתה נמחקת שורה: ⛔ השער קורא בלבד.
+ *  ⛔ **ו-404 אינו מחיקה** — ⚠️ טבלה שאינה קיימת היא עניינה של טענה ב. */
+async function claimGrants() {
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  if (!tabs.length) { ok('יב. הרשאות במסד — אין טבלה בבעלות הריפו הזה, ⛔ ואין מה למדוד'); return; }
+  const held = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?updated_at=eq.-1`, { method: 'DELETE' });
+    if (r.status === 401 || r.status === 403 || /42501/.test(r.text)) continue;
+    if (r.status === 404 || /42P01/.test(r.text)) continue;
+    held.push(`${t}→${r.status}`);
+  }
+  if (held.length)
+    bad('יב. הרשאות במסד — `DELETE` בהישג ידו של מפתח ה-`anon` על ' + held.join(', ') +
+        '. נמדד ' + held.length + ' מול הצפוי 0. מריצים ' +
+        '`revoke delete on <טבלה> from anon, authenticated` — ' +
+        '⛔ מחיקה ברמת המסד עוקפת את המחיקה הרכה');
+  else ok('יב. הרשאות במסד — ' + tabs.length +
+          ' טבלאות נמדדו, ⛔ ואין `DELETE` בהישג ידו של מפתח ה-`anon`');
+
+  const upd = [];
+  for (const t of (APP.appendOnly || [])) {
+    const r = await q(`/${t}?id=eq.-1`, { method: 'PATCH', body: '{"key":"__probe__"}' });
+    if (r.status === 401 || r.status === 403 || /42501/.test(r.text)) continue;
+    if (r.status === 404 || /42P01/.test(r.text)) continue;
+    upd.push(`${t}→${r.status}`);
+  }
+  if (upd.length)
+    bad('יג. תוספת-בלבד — `UPDATE` בהישג יד על טבלה מוצהרת: ' + upd.join(', ') +
+        '. נמדד ' + upd.length + ' מול הצפוי 0. מריצים ' +
+        '`revoke update on <טבלה> from anon, authenticated` — ' +
+        '⛔ גיבוי ולוג נכתבים פעם אחת ואינם נערכים');
+  else if (!(APP.appendOnly || []).length)
+    ok('יג. תוספת-בלבד — אין טבלה מוצהרת בריפו הזה');
+  else ok('יג. תוספת-בלבד — ' + APP.appendOnly.length +
+          ' טבלאות מוצהרות, ⛔ ואין `UPDATE` בהישג ידו של מפתח ה-`anon`');
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
+
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
 mutStage();
@@ -684,6 +782,7 @@ if (!CONN && !SELFTEST) {
     await claimReplacedDefs();
     await claimDerivedStale();
     await claimKvJson();
+    await claimGrants();
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -704,14 +803,30 @@ if (RUN_MUT && !SELFTEST) {
   const { createServer } = await import('node:http');
   const { spawn } = await import('node:child_process');
 
-  const cfgWant = [...new Set([...SRC.matchAll(
-    new RegExp('(?<![\\w$.])' + APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
+  /*  ⛔ הרשימה נגזרת מאותם דפוסים שהטענה סורקת בהם — ⚠️ רתמה שגוזרת
+   *  אחרת מודדת מסלול שאינו המסלול החי. */
+  const cfgWant = (() => {
+    const s = new Set();
+    for (const p of (APP.cfgReads || []))
+      for (const m of SRC.matchAll(new RegExp(p.re, 'g'))) s.add(m[1]);
+    return [...s];
+  })();
+  const cfgOrph = Object.keys(APP.cfgOrphans || {});
   const allowFirst = 'bk_key_in_the_stub_allowlist';
   const DF = (APP.derivedFields || [])[0];
 
   /*  ⛔ התשובות נגזרות **מצורת הבקשה** ⛔ ולא משמות טבלה מוקלדים — ⚠️ ארבעת
    *  הריפו שולחים שמות אחרים, ⭐ ושרת ששומע שם אחד אינו רתמה לשלושה. */
-  const reply = (scen, url) => {
+  const reply = (scen, url, method) => {
+    /*  ⛔ בדיקת ההרשאה היא **בקשת DELETE** — ⚠️ 401 היא ההרשאה החסרה,
+     *  ⭐ ו-204 היא הרשאה קיימת: ⛔ והנקי מחזיר 401, ⚠️ שזה המצב שנמדד
+     *  מול המסד. */
+    if (method === 'DELETE')
+      return scen === 'grantdel'
+        ? [204, ''] : [401, '{"code":"42501","message":"permission denied for table x"}'];
+    if (method === 'PATCH')
+      return scen === 'grantupd'
+        ? [204, ''] : [401, '{"code":"42501","message":"permission denied for table x"}'];
     /*  ⛔ ענף נפרד לשאילתת המיון, ובחתימתה המלאה — ⚠️ `order=` לבדו מופיע
      *  גם בשאילתת הערך הנגזר, ⭐ וענף רחב היה בולע אותה: ⛔ הנמדד הוא
      *  `select=X&order=X&limit=1` — אותה עמודה בשני הצדדים, ושורה אחת. */
@@ -773,13 +888,13 @@ if (RUN_MUT && !SELFTEST) {
       return [200, JSON.stringify(
         (scen === 'orphan' ? [{ key: 'ys_orphan_key_that_is_not_listed' }] : [])
           .concat([{ key: allowFirst }]))];
-    const keys = scen === 'cfg' ? cfgWant.slice(1) : cfgWant;
-    return [200, JSON.stringify(keys.map((k) => ({ key: k })))];
+    const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph);
+    return [200, JSON.stringify(keys.map((k) => ({ key: k, deleted: false })))];
   };
 
   let scenario = 'clean';
   const srv = createServer((req, res) => {
-    const [code, body] = reply(scenario, req.url);
+    const [code, body] = reply(scenario, req.url, req.method);
     res.writeHead(code, { 'Content-Type': 'application/json' });
     res.end(body);
   });
@@ -826,6 +941,8 @@ if (RUN_MUT && !SELFTEST) {
     else bad(`${label} — נמדד ${got ? 'עבר' : 'נפל'} מול הצפוי ${want ? 'עבר' : 'נפל'}. מיישרים את הטענה, או את השרת שברתמה`);
   };
 
+  await mut('⛔ מוטציה: `DELETE` בהישג יד מפיל את «הרשאות במסד»', 'grantdel', false);
+  await mut('⛔ מוטציה: `UPDATE` על טבלת תוספת-בלבד מפיל את «הרשאות במסד»', 'grantupd', false);
   await mut('⭐ מוטציית-נגד: תשובה נקייה ⛔ אינה מפילה', 'clean', true);
   await mut('⛔ מוטציה: רשומה עם `updated_at` אפס מפילה את «חותמת בכל רשומה»', 'stamp', false);
   await mut('⛔ מוטציה: חותמת שחוזרת כמחרוזת מפילה את «דפוס עמודות אחיד»', 'stamptype', false);
@@ -869,5 +986,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שתים-עשרה הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שלוש-עשרה הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);
