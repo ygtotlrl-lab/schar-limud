@@ -35,15 +35,13 @@ const APP = {
    *  ⭐ **ולמה המבנה קיים**: הכיוונים שמעליו סורקים את **כל** ההצהרות,
    *  ⚠️ והרשימה הזו היא מה שמוודא שמה שנוסף עכשיו אכן נסרק. */
   newDecls: [
-    ['test_visual.mjs', 'visualAllow'],
-    ['test_codescan.mjs', 'appFns'],
-    ['test_dbfacts.mjs', 'dbTables'],
-    ['test_dbfacts.mjs', 'dbPager'],
-    ['test_dbfacts.mjs', 'dbTableGone'],
-    ['test_dbfacts.mjs', 'dbDyn'],
-    ['test_dbfacts.mjs', 'dbOrderDyn'],
-    ['test_textscan.mjs', 'textAllow'],
-    ['test_textscan.mjs', 'sharedExempt'],
+    ['test_dbscan.mjs', 'project'],
+    ['test_dbscan.mjs', 'dbSchema'],
+    ['test_dbscan.mjs', 'dbTables'],
+    ['test_dbscan.mjs', 'dbPager'],
+    ['test_dbscan.mjs', 'dbTableGone'],
+    ['test_dbscan.mjs', 'dbDyn'],
+    ['test_dbscan.mjs', 'dbOrderDyn'],
   ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */

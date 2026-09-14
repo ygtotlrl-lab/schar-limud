@@ -39,7 +39,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 114, 174];
+export const ROWS = [17, 20, 114, 175];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -136,6 +136,7 @@ const SHARED = [
   'tools/test_rowscan.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_dbfacts.mjs',
+  'tools/test_dbscan.mjs',
   'tools/test_scanscan.mjs',
   'tools/test_session.mjs',
   'tools/test_sharedsync.mjs',
