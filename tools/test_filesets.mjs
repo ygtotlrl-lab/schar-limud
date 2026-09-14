@@ -39,7 +39,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 112, 172];
+export const ROWS = [17, 20, 114, 174];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -101,13 +101,16 @@ const SHARED = [
   'tools/test_anchors.mjs',
   'tools/test_android.mjs',
   'tools/test_backup_policy.mjs',
+  'tools/test_behavior.mjs',
   'tools/test_budget.mjs',
   'tools/test_build.mjs',
   'tools/test_bump.mjs',
   'tools/test_caps_build.mjs',
   'tools/test_caps_guard.mjs',
   'tools/test_caps_ui.mjs',
+  'tools/test_codescan.mjs',
   'tools/test_cron.mjs',
+  'tools/test_declscan.mjs',
   'tools/test_devid.mjs',
   'tools/test_crossgate.mjs',
   'tools/test_filesets.mjs',
@@ -130,8 +133,10 @@ const SHARED = [
   'tools/test_orphans.mjs',
   'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
+  'tools/test_rowscan.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_dbfacts.mjs',
+  'tools/test_scanscan.mjs',
   'tools/test_session.mjs',
   'tools/test_sharedsync.mjs',
   'tools/test_signedshared.mjs',
@@ -139,7 +144,9 @@ const SHARED = [
   'tools/test_sources.mjs',
   'tools/test_stage_a.mjs',
   'tools/test_swcore.mjs',
+  'tools/test_textscan.mjs',
   'tools/test_toolsid.mjs',
+  'tools/test_visual.mjs',
   'tools/test_wiring.mjs',
 ];
 

@@ -1,14 +1,17 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** תשע טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** ארבע-עשרה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
    ⛔ כל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/` ·
    ⛔ כל טבלה מקבילה בצורת המשפחה שלה · ⛔ כל עמודה חיה נקראת בקוד או
    מוצהרת עם נימוקה · ⛔ כל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה ·
-   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי.
+   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי · ⛔ **וכל שאילתה
+   נסרקת**: שם הטבלה ושם העמודה שב-`from` · `select` · `order` · `eq` ·
+   `insert` · `update` — ⚠️ **גם כשהם אינם ליטרל**, ⭐ ואז הם נפתרים
+   מהקבוע שהם נבנו ממנו ⛔ או מוצהרים עם נימוקם.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -25,16 +28,30 @@
    הסט הופך את השער לרעש שמכבים. ⚠️ **ורשימת-ההיתר נגזרת מהמיגרציה
    ולא מהמסד** — ⛔ ל-`anon` אין `EXECUTE` על `bk_retention_keys()`,
    ⭐ והרחבתו היא החלטת מנהל: ⚠️ מה שנמדד מול המסד הוא **המפתחות החיים**,
-   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם.
+   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם. ⚠️ **ותוכן העמודה
+   אינו נמדד בסריקה** — ⛔ רק שמה: ⭐ ערך שאינו מתפרש יושב בטענה משלו.
    ══════════════════════════════════════════════════════════════════════════ */
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { whiten } from './whiten.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [144, 139, 140, 141, 157, 180, 181, 182, 183, 151];
+export const ROWS = [146, 141, 142, 143, 159, 183, 184, 185, 186, 153];
+
+/*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
+ *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
+ *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
+ *  עליו, ⛔ והוא כבר אינו נמדד. ⚠️ ו-`clean` היא מוטציית-הנגד, ⛔ ואינה
+ *  דפוס שנאכף. */
+export const PATTERNS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived',
+                         'live-order', 'live-from'];
+export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived',
+                     'live-order', 'live-from', 'live-from'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -99,6 +116,44 @@ const APP = {
                 cols: ['key', 'value', 'updated_at', 'client_id',
                     'deleted', 'deleted_at', 'deleted_by'] },
   },
+  /*  ⛔ שכבת העימוד — ⚠️ הארגומנט השני שלה הוא **עמודת המיון**, ⭐ והיא
+   *  אינה יושבת ב-`.order(…)`: ⛔ בלי ההצהרה הזו כל אתרי המיון האמיתיים
+   *  אינם נסרקים כלל. */
+  dbPager: '_ysRowsPaged',
+  /*  ⛔ הטבלאות שהקוד שואל — ⚠️ **מה נכנס**: כל שם שמגיע ל-`from`, גם
+   *  משותפת; ⛔ **ומה מפיל**: שם שנשאל ואינו כאן, ⛔ ושם שכאן ואין לו
+   *  אתר שאילתה. ⭐ **ולמה המבנה קיים**: הצלבה מול המסד דורשת רשימה
+   *  סגורה, ⚠️ ורשימה שאינה נמדדת משני צדדיה מתיישנת בשקט. */
+  dbTables: ['kv_backup', 'sl_lists', 'sl_settings', 'sl_students',
+             'sl_transactions', 'sl_users', 'sync_log'],
+  /*  ⛔ טבלה שנגרעה מהמסד ושמה נשאר בקוד — ⚠️ **מה נכנס**: השם, הדגל
+   *  שמכבה את המסלול, והנימוק; ⛔ **ומה מפיל**: דגל שאינו כבוי, והכרזה
+   *  בלי אתר. ⭐ **ולמה ריק**: נמדד ואין. */
+  dbTableGone: {},
+  /*  ⛔ שם טבלה שאינו ליטרל ואינו נפתר מקבוע — ⚠️ **מה נכנס**: נוסח
+   *  הביטוי, הטבלאות שהוא יכול לקבל, והנימוק; ⛔ **ומה מפיל**: ביטוי
+   *  בלי הצהרה, הצהרה בלי אתר, והצהרה שנוקבת בטבלה שאינה מוצהרת.
+   *  ⭐ **ולמה המבנה קיים**: שם שמדולג בשתיקה הוא בדיוק מה ששרד. */
+  dbDyn: {
+    's.name':  { tables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
+                 why: 'שם המקור בגיבוי היומי — הרשימה נבנית בזמן ריצה' },
+    's.table': { tables: [],
+                 why: 'טבלת מפתח-ערך של מקור גיבוי, ⛔ ואין כאן מקור כזה: נמדד ואין' },
+    tbl:       { tables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
+                 why: 'יעד הדחיפה — נבחר מרשימת הדחיפה בלולאה' },
+    'e[0]':    { tables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
+                 why: 'שם הטבלה בזוג שבמפת הסנכרון, והלולאה עוברת על כולם' },
+  },
+  /*  ⛔ עמודת מיון שאינה ליטרל — ⚠️ **מה נכנס**: נוסח הביטוי והעמודות;
+   *  ⛔ **ומה מפיל**: ביטוי בלי הצהרה, והצהרה בלי אתר. ⭐ **ו-`null`
+   *  פירושו שהעמודה נמדדת בטענת עמודת המיון** — ⚠️ שם היא מוצלבת מול
+   *  הטבלה **שלצידה** ⛔ ולא מול כל טבלה בקבוצה. */
+  dbOrderDyn: {
+    's.order || null': { cols: null,
+                 why: 'עמודת המיון מוצהרת בזוג עם שם הטבלה, ונמדדת מול אותו זוג' },
+    'e[1]':    { cols: null,
+                 why: 'עמודת המיון היא הצד השני של אותו זוג, ונמדדת מולו' },
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -115,7 +170,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 19, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -200,7 +255,17 @@ const TIMEOUT_MS = 8000;
  *  שחוזר בלי המשך הוא חיתוך, ⭐ והלולאה עוצרת רק על עמוד חלקי. */
 const DERIVED_PAGE = 1000;
 
+/*  ⛔ קריאת `GET` זהה נשאלת פעם אחת — ⚠️ שלוש טענות שואלות את אותה
+ *  שורה ראשונה מכל טבלה, ⭐ ושלוש בקשות לאותה כתובת הן אותה עבודה
+ *  שלוש פעמים: ⛔ המטמון הוא לכל תהליך, ⚠️ והשער קורא בלבד. */
+const _qCache = new Map();
 async function q(path, init) {
+  if (!init && _qCache.has(path)) return _qCache.get(path);
+  const r0 = await _q(path, init);
+  if (!init) _qCache.set(path, r0);
+  return r0;
+}
+async function _q(path, init) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), TIMEOUT_MS);
   try {
@@ -634,6 +699,371 @@ async function claimDerivedStale() {
        (kept ? `, ${kept} שומרות מפתח שאינו במקור ומוצהרות` : ''));
 }
 
+
+/* ── dbScan — כל שאילתה מול הסכימה ─────────────────────────────────────── */
+/*  ⛔ **מה נכנס**: כל `.from(…)` שאינו `Array.from`, והשרשרת שאחריו;
+ *  ⛔ **מה מפיל**: שם טבלה או עמודת מיון שאינם ליטרל, אינם נפתרים ואינם
+ *  מוצהרים. ⭐ **ולמה המבנה קיים**: `order` על עמודה שאינה קיימת שרד סבב
+ *  שלם ⛔ מפני שהוא לא היה ליטרל פשוט — ⚠️ וסורק שמדלג על מה שאינו ליטרל
+ *  מדווח «נקי» על מה שנסרק בלבד. */
+const DB_COL1 = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'is', 'in', 'contains'];
+const DB_OBJV = ['insert', 'update', 'upsert'];
+const DB_NAME = /^[a-z_][a-z0-9_]*$/;
+
+function dbParen(W, open) {
+  let d = 0;
+  for (let i = open; i < W.length; i++) {
+    const c = W[i];
+    if (c === '(') d++; else if (c === ')') { d--; if (!d) return i; }
+  }
+  return -1;
+}
+/*  ⛔ הפיצול נעשה על המולבן ⛔ ולא על המקור — ⚠️ פסיק בתוך מחרוזת אינו
+ *  מפריד ארגומנטים, ⭐ וההיסטים זהים בשני הצדדים. */
+function dbArgs(w, raw) {
+  const out = []; let d = 0, last = 0;
+  for (let i = 0; i <= w.length; i++) {
+    const c = w[i];
+    if (i === w.length || (c === ',' && d === 0)) {
+      out.push({ w: w.slice(last, i), raw: raw.slice(last, i) }); last = i + 1; continue;
+    }
+    if (c === '(' || c === '[' || c === '{') d++;
+    else if (c === ')' || c === ']' || c === '}') d--;
+  }
+  return out;
+}
+/*  ⛔ «ליטרל» נמדד על המולבן — ⚠️ ארגומנט שכולו רווחים אחרי ההלבנה היה
+ *  מחרוזת במקור, ⭐ וכל דבר אחר הוא ביטוי: ⛔ זו ההבחנה שהשער נשען עליה. */
+const dbIsLit = (w) => w.trim() === '';
+const dbLit = (raw) => { const m = /^\s*(['"])([\s\S]*)\1\s*$/.exec(raw); return m ? m[2] : null; };
+const dbFlat = (s) => s.replace(/\s+/g, ' ').trim();
+
+function dbChain(W, SRC, from) {
+  const out = [];
+  let i = from;
+  for (;;) {
+    while (i < W.length && /\s/.test(W[i])) i++;
+    const head = W.slice(i, i + 40);
+    let verb = null, open = -1;
+    const m = /^\.([A-Za-z_$][\w$]*)\s*\(/.exec(head);
+    if (m) { verb = m[1]; open = i + m[0].length - 1; }
+    else {
+      /*  ⚠️ `['delete']()` הוא קריאת פועל אף הוא — ⛔ `delete` היא מילה
+       *  שמורה, ⭐ והמקור כותב אותה בסוגריים מרובעים. */
+      const b = /^\[\s*\]\s*\(/.exec(head);
+      if (b) {
+        const q = /\[\s*(['"])([a-z]+)\1\s*\]/.exec(SRC.slice(i, i + b[0].length));
+        if (q) { verb = q[2]; open = i + b[0].length - 1; }
+      }
+    }
+    if (!verb) break;
+    const close = dbParen(W, open);
+    if (close < 0) break;
+    out.push({ verb, raw: SRC.slice(open + 1, close), w: W.slice(open + 1, close), at: open });
+    i = close + 1;
+  }
+  return out;
+}
+
+function dbScan(SRC) {
+  const W = whiten(SRC, { markup: 'blank' });
+  const line = (i) => SRC.slice(0, i).split('\n').length;
+  const dynFrom = APP.dbDyn || {}, dynOrder = APP.dbOrderDyn || {}, gone = APP.dbTableGone || {};
+  const declared = new Set(APP.dbTables || []);
+  const usedDyn = new Set(), usedOrd = new Set(), usedGone = new Set();
+  const gaps = [], tables = new Set(), colsBy = new Map(), ordLits = [];
+  const addCol = (t, c) => { if (!colsBy.has(t)) colsBy.set(t, new Set()); colsBy.get(t).add(c); };
+
+  const cache = new Map();
+  /*  ⛔ הליטרלים שהושמו לשם — ⚠️ ליטרל שצדו השני של אופרטור השוואה אינו
+   *  ערך שהושם: ⭐ `y === 'ramataviv'` אינו שם טבלה, ⛔ ומי שסופר אותו
+   *  מדווח טבלה שאינה קיימת. ⚠️ **וחוליה אחת אחורה** — ⛔ `var a = B;`
+   *  הוא השם שממנו הוא נבנה, ⭐ וזו «מעקב אחרי הקבוע» עצמה. */
+  function dbAssigned(name, seen) {
+    if (cache.has(name)) return cache.get(name);
+    const re = new RegExp('(?:^|[^\\w$.])' + name + '\\s*=(?!=)', 'g');
+    const vals = [];
+    let m;
+    while ((m = re.exec(W))) {
+      const st = m.index + m[0].length;
+      let e = st;
+      while (e < W.length && W[e] !== ';' && W[e] !== '\n') e++;
+      const wSeg = W.slice(st, e), rSeg = SRC.slice(st, e);
+      let any = false;
+      for (const s of rSeg.matchAll(/(['"])([^'"]*)\1/g)) {
+        if (wSeg.slice(s.index, s.index + s[0].length).trim() !== '') continue;
+        if (/[=<>!]\s*$/.test(rSeg.slice(0, s.index))) continue;
+        vals.push(s[2]); any = true;
+      }
+      if (any) continue;
+      const id = /^\s*([A-Za-z_$][\w$]*)\s*(?:[,;]|$)/.exec(wSeg);
+      const mark = seen || new Set([name]);
+      if (id && !mark.has(id[1]) && mark.size < 4) {
+        mark.add(id[1]);
+        for (const v of dbAssigned(id[1], mark)) vals.push(v);
+      }
+    }
+    cache.set(name, vals);
+    return vals;
+  }
+  function dbArrayLits(name) {
+    const m = new RegExp('(?:^|[^\\w$.])' + name + '\\s*=\\s*\\[', 'g').exec(W);
+    if (!m) return [];
+    const open = m.index + m[0].length - 1;
+    let d = 0, e = open;
+    for (; e < W.length; e++) { const c = W[e]; if (c === '[') d++; else if (c === ']') { d--; if (!d) break; } }
+    const wSeg = W.slice(open, e), rSeg = SRC.slice(open, e), out = [];
+    for (const s of rSeg.matchAll(/(['"])([^'"]*)\1/g))
+      if (wSeg.slice(s.index, s.index + s[0].length).trim() === '') out.push(s[2]);
+    return out;
+  }
+  /*  ⛔ `OBJ.from()` ריק — ⚠️ עוקבים אל ההגדרה שממנה הוא נבנה, ⭐ ששם
+   *  יושב שם הטבלה: ⛔ בלעדיה האתר נקרא «אינו ליטרל» ומדולג. */
+  function dbObjFrom(obj) {
+    const at = W.indexOf(obj + ' = {');
+    if (at < 0) return [];
+    const m = /from:\s*function\s*\([^)]*\)\s*\{[^}]*?\.from\s*\(/.exec(W.slice(at, at + 4000));
+    if (!m) return [];
+    const open = at + m.index + m[0].length - 1, close = dbParen(W, open);
+    if (close < 0) return [];
+    const l = dbLit(SRC.slice(open + 1, close));
+    return l ? [l] : [];
+  }
+
+  function resolveTable(raw, w, at) {
+    const expr = dbFlat(raw);
+    if (expr !== '' && dbIsLit(w)) { const l = dbLit(raw); if (l) return { how: 'ליטרל', v: [l] }; }
+    if (expr === '') {
+      const pre = /([A-Za-z_$][\w$]*)\s*$/.exec(W.slice(Math.max(0, at - 60), at));
+      if (pre) { const t = dbObjFrom(pre[1]); if (t.length) return { how: 'הפניה', v: t }; }
+    }
+    if (/^[A-Za-z_$][\w$]*$/.test(expr)) {
+      const v = [...new Set(dbAssigned(expr).filter((x) => DB_NAME.test(x)))];
+      if (v.length) return { how: 'קבוע', v };
+    }
+    if (dynFrom[expr]) { usedDyn.add(expr); return { how: 'מוצהר', v: dynFrom[expr].tables || [] }; }
+    return { how: null, v: [] };
+  }
+  function resolveOrder(raw, w) {
+    const expr = dbFlat(raw);
+    if (expr === '' || expr === 'null') return { how: 'ריק', v: [] };
+    if (dbIsLit(w)) { const l = dbLit(raw); if (l) return { how: 'ליטרל', v: [l] }; }
+    if (/^[A-Za-z_$][\w$]*$/.test(expr)) {
+      const v = [...new Set(dbAssigned(expr).filter((x) => DB_NAME.test(x)))];
+      if (v.length) return { how: 'קבוע', v };
+    }
+    if (dynOrder[expr]) { usedOrd.add(expr); return { how: 'מוצהר', v: dynOrder[expr].cols || [] }; }
+    return { how: null, v: [] };
+  }
+  function resolveSelect(raw, w) {
+    const a0 = dbArgs(w, raw)[0] || { w: '', raw: '' };
+    const expr = dbFlat(a0.raw);
+    if (dbIsLit(a0.w)) { const l = dbLit(a0.raw); return l == null ? null : l; }
+    const j = /^([A-Za-z_$][\w$]*)\s*\.\s*join\s*\(/.exec(expr);
+    if (j) { const a = dbArrayLits(j[1]); return a.length ? a.join(',') : null; }
+    /*  ⛔ שם שהושמו לו שני ליטרלים שונים אינו נפתר — ⚠️ רשימת עמודות
+     *  שנבנית בשרשור תנאי היא שתי רשימות, ⭐ ובחירה באחת מהן מדווחת
+     *  עמודה שאינה נשאלת בהקשר הזה. */
+    if (/^[A-Za-z_$][\w$]*$/.test(expr)) {
+      const v = [...new Set(dbAssigned(expr))];
+      if (v.length === 1) return v[0];
+    }
+    return null;
+  }
+
+  /*  ⛔ שכבת העימוד — ⚠️ הארגומנט השני שלה הוא עמודת המיון, ⭐ והיא אינה
+   *  יושבת ב-`.order(…)` שבשרשרת: ⛔ סורק שמודד את השרשרת בלבד אינו רואה
+   *  אותה כלל. */
+  const pagers = [];
+  if (APP.dbPager) {
+    const re = new RegExp('(?:^|[^\\w$.])' + APP.dbPager + '\\s*\\(', 'g');
+    let m;
+    while ((m = re.exec(W))) {
+      const open = m.index + m[0].length - 1, close = dbParen(W, open);
+      if (close < 0) continue;
+      const parts = dbArgs(W.slice(open + 1, close), SRC.slice(open + 1, close));
+      if (parts.length < 2) continue;
+      pagers.push({ from: open + 1, to: open + 1 + parts[0].w.length, at: m.index,
+                    off: open + 2 + parts[0].w.length, raw: parts[1].raw, w: parts[1].w });
+    }
+  }
+
+  const sites = [];
+  for (const m of W.matchAll(/\.from\s*\(/g)) {
+    /*  ⚠️ `Array.from` אינו שאילתה — ⛔ והוא ההחרגה היחידה: ⭐ כל מקבל
+     *  אחר הוא לקוח המסד, במישרין או בהפניה. */
+    const recv = /([A-Za-z_$][\w$]*)\s*\.\s*$/.exec(W.slice(Math.max(0, m.index - 40), m.index + 1));
+    if (recv && recv[1] === 'Array') continue;
+    const open = m.index + m[0].length - 1, close = dbParen(W, open);
+    if (close < 0) continue;
+    const raw = SRC.slice(open + 1, close), w = W.slice(open + 1, close);
+    const r = resolveTable(raw, w, m.index);
+    const qi = raw.search(/['"]/);
+    sites.push({ ln: line(m.index), at: m.index, raw, how: r.how, tables: r.v,
+                 litAt: (r.how === 'ליטרל' && qi >= 0) ? open + 1 + qi : -1,
+                 chain: dbChain(W, SRC, close + 1) });
+  }
+
+  let nOrder = 0, nCols = 0, nDyn = 0, nOpen = 0;
+  for (const s of sites) {
+    if (!s.how) {
+      gaps.push('שורה ' + s.ln + ': `from(' + (dbFlat(s.raw) || '·ריק·') +
+                ')` אינו ליטרל, אינו נפתר ואינו מוצהר');
+      continue;
+    }
+    if (s.how === 'מוצהר') nDyn++;
+    for (const t of s.tables) tables.add(t);
+    for (const c of s.chain) {
+      if (c.verb === 'order') {
+        nOrder++;
+        const a0 = dbArgs(c.w, c.raw)[0] || { w: '', raw: '' };
+        const o = resolveOrder(a0.raw, a0.w);
+        if (!o.how) {
+          gaps.push('שורה ' + line(c.at) + ': `order(' + dbFlat(c.raw) +
+                    ')` אינו ליטרל, אינו נפתר ואינו מוצהר');
+          continue;
+        }
+        if (o.how === 'מוצהר') nDyn++;
+        if (o.how === 'ליטרל') { const qi = a0.raw.search(/['"]/); if (qi >= 0) ordLits.push({ at: c.at + 1 + qi, lit: o.v[0] }); }
+        for (const t of s.tables) for (const col of o.v) addCol(t, col);
+      } else if (c.verb === 'select') {
+        const l = resolveSelect(c.raw, c.w);
+        if (l == null) { nOpen++; continue; }
+        for (const part of l.split(',')) {
+          const p = part.trim();
+          if (!p || p === '*' || p.indexOf('(') >= 0) continue;
+          const col = p.indexOf(':') >= 0 ? p.slice(p.indexOf(':') + 1).trim() : p;
+          if (!DB_NAME.test(col)) continue;
+          for (const t of s.tables) addCol(t, col);
+          nCols++;
+        }
+      } else if (DB_COL1.indexOf(c.verb) >= 0) {
+        const a0 = dbArgs(c.w, c.raw)[0] || { w: 'x', raw: '' };
+        if (!dbIsLit(a0.w)) { nOpen++; continue; }
+        const col = dbLit(a0.raw);
+        if (col && DB_NAME.test(col)) { for (const t of s.tables) addCol(t, col); nCols++; }
+      } else if (DB_OBJV.indexOf(c.verb) >= 0) {
+        const a0 = dbArgs(c.w, c.raw)[0] || { w: '', raw: '' };
+        const aw = a0.w.trim(), ar = a0.raw.trim();
+        if (!/^\{[\s\S]*\}$/.test(aw)) { nOpen++; continue; }
+        for (const part of dbArgs(aw.slice(1, -1), ar.slice(1, -1))) {
+          const k = /^\s*['"]?([a-z_][a-z0-9_]*)['"]?\s*:/.exec(part.raw);
+          if (!k) continue;
+          for (const t of s.tables) addCol(t, k[1]);
+          nCols++;
+        }
+      }
+    }
+    for (const p of pagers) {
+      if (s.at < p.from || s.at > p.to) continue;
+      nOrder++;
+      const o = resolveOrder(p.raw, p.w);
+      if (!o.how) {
+        gaps.push('שורה ' + line(p.at) + ': עמודת המיון `' + dbFlat(p.raw) +
+                  '` שבשכבת העימוד אינה ליטרל, אינה נפתרת ואינה מוצהרת');
+        continue;
+      }
+      if (o.how === 'מוצהר') nDyn++;
+      if (o.how === 'ליטרל') { const qi = p.raw.search(/['"]/); if (qi >= 0) ordLits.push({ at: p.off + qi, lit: o.v[0] }); }
+      for (const t of s.tables) for (const col of o.v) addCol(t, col);
+    }
+  }
+
+  for (const t of tables) {
+    if (declared.has(t)) continue;
+    if (gone[t]) { usedGone.add(t); continue; }
+    gaps.push('הטבלה `' + t + '` נשאלת בקוד ואינה מוצהרת');
+  }
+  for (const t of declared) if (!tables.has(t)) gaps.push('הטבלה `' + t + '` מוצהרת ואין לה אתר שאילתה');
+  for (const e of Object.keys(dynFrom)) {
+    if (!usedDyn.has(e)) { gaps.push('`' + e + '` מוצהר ואין לו אתר `from`'); continue; }
+    if (!(dynFrom[e].why || '').trim()) gaps.push('`' + e + '` מוצהר בלי נימוק');
+    for (const t of dynFrom[e].tables || [])
+      if (!declared.has(t) && !gone[t]) gaps.push('`' + e + '` מצהיר את `' + t + '` שאינה מוצהרת');
+  }
+  for (const e of Object.keys(dynOrder)) {
+    if (!usedOrd.has(e)) { gaps.push('`' + e + '` מוצהר ואין לו אתר מיון'); continue; }
+    if (!(dynOrder[e].why || '').trim()) gaps.push('`' + e + '` מוצהר בלי נימוק');
+  }
+  /*  ⛔ טבלה שנגרעה מהמסד ⛔ ושם שלה עדיין בקוד — ⚠️ ההכרזה נושאת את
+   *  **הדגל שמכבה את המסלול**, ⭐ והשער מודד שהוא כבוי: ⛔ מי שמדליק
+   *  אותו מפיל את השער ⛔ ולא את המשתמש. */
+  for (const t of Object.keys(gone)) {
+    if (!usedGone.has(t)) { gaps.push('`' + t + '` מוכרזת כטבלה שנגרעה ואין לה אתר שאילתה'); continue; }
+    if (!(gone[t].why || '').trim()) gaps.push('`' + t + '` מוכרזת בלי נימוק');
+    const g = gone[t].guard;
+    if (!g || !new RegExp('\\b' + g + '\\s*=\\s*false\\s*;').test(W))
+      gaps.push('`' + t + '` מוכרזת כטבלה שנגרעה והדגל `' + g + '` אינו כבוי');
+  }
+
+  return { sites, gaps, tables, colsBy, ordLits, nOrder, nCols, nDyn, nOpen };
+}
+
+/*  ⛔ ההצלבה מול הסכימה החיה — ⚠️ **מה נכנס**: תוצאת הסריקה ומפת
+ *  «טבלה ⟵ עמודות שנמדדו חסרות»; ⛔ **מה מפיל**: טבלה שאינה במסד, או
+ *  עמודה שהקוד נוקב בה ואינה בטבלה. ⭐ **ולמה היא פונקציה נפרדת**: היא
+ *  מודדת טקסט מול מפה, ⛔ והמפה היא מה שיוצא לרשת. */
+function dbLiveGaps(scan, miss) {
+  const out = [];
+  for (const t of [...scan.tables].sort()) {
+    const m = miss.get(t);
+    if (m === 'אין טבלה') { out.push('הטבלה `' + t + '` נשאלת בקוד ואינה במסד'); continue; }
+    for (const c of (m || [])) out.push('`' + t + '.' + c + '` נשאלת בקוד ואינה בטבלה שבמסד');
+  }
+  return out;
+}
+
+async function claimDbScan() {
+  const r = dbScan(SRC);
+  if (r.gaps.length)
+    bad('יג. כל שאילתה נפתרת — ' + r.gaps.join(' · ') + '. נמדדו ' + r.gaps.length +
+        ' מול הצפוי 0. פותרים את השם מהקבוע שהוא נבנה ממנו, או מצהירים אותו ' +
+        'ב-`APP.dbDyn`/`APP.dbOrderDyn` עם נימוקו');
+  else
+    ok('יג. כל שאילתה נפתרת — ' + r.sites.length + ' אתרי `from` · ' + r.tables.size +
+       ' טבלאות · ' + r.nOrder + ' אתרי מיון · ' + r.nCols + ' עמודות נקובות · ' +
+       r.nDyn + ' שמות שאינם ליטרל נפתרו או הוצהרו, ואפס דילוגים · ' +
+       r.nOpen + ' ביטויי עמודה שאינם ליטרל אינם נמדדים כאן');
+  return r;
+}
+
+/*  ⛔ בקשה אחת לטבלה — ⚠️ **וכל העמודות בה יחד**: ⭐ תשובת `42703` נוקבת
+ *  בשם העמודה החסרה, ⛔ והלולאה מסירה אותה ושואלת שוב: ⚠️ תקרה של חמש —
+ *  טבלה שכל עמודותיה חסרות היא טבלה שהוחלפה, ⛔ ולא רשימת עמודות. */
+async function claimDbLive(scan) {
+  const gone = APP.dbTableGone || {};
+  const miss = new Map();
+  let nReq = 0;
+  for (const t of [...scan.tables].sort()) {
+    if (gone[t]) continue;
+    let want = [...(scan.colsBy.get(t) || [])].sort();
+    const lost = [];
+    for (let i = 0; i <= 5; i++) {
+      const r = await q('/' + t + '?select=' + (want.length ? want.join(',') : '*') + '&limit=0');
+      nReq++;
+      if (r.status === 200) break;
+      if (r.status === 404 || /42P01/.test(r.text)) { miss.set(t, 'אין טבלה'); break; }
+      const c = /column\s+(?:"?[a-z_0-9]+"?\.)?"?([a-z_0-9]+)"?\s+does not exist/i.exec(r.text) ||
+                /'([a-z_0-9]+)' column of '[a-z_0-9]+'/i.exec(r.text);
+      if (!/42703/.test(r.text) || !c) throw new Error(t + ' → ' + r.status + ' ' + r.text.slice(0, 120));
+      lost.push(c[1]);
+      /*  ⛔ שם שאינו ברשימה שנשאלה עוצר את הלולאה — ⚠️ הסרתו לא תקצר
+       *  את השאילתה, ⭐ והבקשה הבאה תחזיר את אותה תשובה בדיוק. */
+      if (want.indexOf(c[1]) < 0) break;
+      want = want.filter((x) => x !== c[1]);
+      if (!want.length) break;
+    }
+    if (lost.length) miss.set(t, [...new Set(lost)]);
+  }
+  const g = dbLiveGaps(scan, miss);
+  if (g.length)
+    bad('יד. שאילתה מול הסכימה החיה — ' + g.join(' · ') + '. נמדדו ' + g.length +
+        ' מול הצפוי 0. מיישרים את השאילתה לעמודה שקיימת, או מריצים את המיגרציה שמוסיפה אותה');
+  else
+    ok('יד. שאילתה מול הסכימה החיה — ' + scan.tables.size + ' טבלאות ו-' +
+       scan.nCols + ' עמודות נקובות נמדדו ב-' + nReq + ' בקשות, וכולן קיימות');
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
@@ -647,6 +1077,10 @@ if (!CONN && !SELFTEST) {
 } else {
   /*  ⛔ טענת הקורא היא מדידת מקור ⛔ ואינה יוצאת לרשת — ⚠️ ולכן היא
    *  מחוץ ל-`try` שבולע ניתוק: ⭐ בפנים, ניתוק היה מדלג עליה בשקט. */
+  /*  ⛔ ריצת-משנה מדלגת על שתי טענות הסריקה — ⚠️ היא רצה על **אותו עץ**
+   *  שהאב כבר מדד, ⭐ והרתמה מודדת בה את מסלול הרשת בלבד: ⛔ סריקה
+   *  חוזרת בכל אחת משלוש-עשרה הריצות היא אותה עבודה שלוש-עשרה פעמים. */
+  const _scan = SUBRUN ? null : await claimDbScan();
   await claimKvReader();
   try {
     await claimStamp();
@@ -660,6 +1094,7 @@ if (!CONN && !SELFTEST) {
     await claimReplacedDefs();
     await claimDerivedStale();
     await claimKvJson();
+    if (_scan) await claimDbLive(_scan);
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -832,6 +1267,92 @@ if (RUN_MUT && !SELFTEST) {
     await mut('⛔ מוטציה: ערך שמור שאינו מסכים עם המקור מפיל את «ערך נגזר שהתיישן»', 'derived', false);
   else ok('⛔ אין מוטציית «ערך נגזר שהתיישן» — ⚠️ אין כאן שדה נגזר מוצהר, ⛔ ואין מה למוטט');
 
+
+  /* ── מוטציות הסריקה — בזיכרון, בלי תהליך ובלי רשת ────────────────────── */
+  /*  ⛔ הסורק מקבל את התוכן כארגומנט — ⚠️ **ולכן המוטציה היא מחרוזת**:
+   *  ⭐ אין עותק בעץ, אין תהליך, ⛔ ואין רשת שתשנה את התוצאה בין הרצה
+   *  להרצה. ⛔ **וכל מוטציה נוקבת בשם הטענה שתיפול** ⛔ ומאמתת שהיא זו
+   *  שנפלה. */
+  const _base = dbScan(SRC);
+  /*  ⛔ הסכימה שהמוטציה נמדדת מולה היא **מה שנמדד לפני המוטציה** —
+   *  ⚠️ ולכן ההצלבה החיה נבדקת כאן בלי רשת: ⭐ כל שם שהמוטציה הוסיפה
+   *  הוא שם שאינו בסכימה, ⛔ וזו בדיוק התשובה שהמסד היה מחזיר. */
+  const asIf = (mut) => {
+    const miss = new Map();
+    for (const t of mut.tables) {
+      if (!_base.tables.has(t)) { miss.set(t, 'אין טבלה'); continue; }
+      const have = _base.colsBy.get(t) || new Set();
+      const lost = [...(mut.colsBy.get(t) || [])].filter((c) => !have.has(c));
+      if (lost.length) miss.set(t, lost);
+    }
+    return dbLiveGaps(mut, miss);
+  };
+  const scanMut = (label, src, want, live, claim) => {
+    const mut = dbScan(src);
+    const g = live ? asIf(mut) : mut.gaps;
+    if (g.some((x) => want.test(x)))
+      ok(label + ' — נמדד נפל כמצופה, והטענה שנפלה היא «' + claim + '»');
+    else
+      bad(label + ' — נמדד עבר מול הצפוי נפל. מיישרים את הסורק, או את המוטציה');
+  };
+
+  if (_base.ordLits.length) {
+    /*  ⛔ שם עמודה שאינו קיים ב-`order` — ⚠️ זו הצורה ששרדה סבב שלם,
+     *  ⭐ והיא מפילה את ההצלבה מול הסכימה ⛔ ולא את הפרסור. */
+    const o = _base.ordLits[0];
+    scanMut('⛔ מוטציה: שם עמודה ב-`order` שאינו קיים מפיל את «שאילתה מול הסכימה החיה»',
+            SRC.slice(0, o.at + 1) + 'zz_no_such_col' + SRC.slice(o.at + 1 + o.lit.length),
+            /zz_no_such_col/, true, 'יד. שאילתה מול הסכימה החיה');
+  } else {
+    /*  ⛔ עמודת מיון שאינה ליטרל אלא **מוצהרת** — ⚠️ המוטציה מחליפה את
+     *  ההצהרה, ⭐ שהיא המסלול שבו העמודה מגיעה למדידה כאן: ⛔ ריפו שכל
+     *  עמודות המיון שלו מוצהרות אינו פטור מהמוטציה. */
+    const od = APP.dbOrderDyn || {};
+    const k = Object.keys(od).find((x) => (od[x].cols || []).length);
+    if (k) {
+      const saved = od[k].cols;
+      od[k].cols = ['zz_no_such_col'];
+      const mut = dbScan(SRC);
+      od[k].cols = saved;
+      if (asIf(mut).some((x) => /zz_no_such_col/.test(x)))
+        ok('⛔ מוטציה: עמודת מיון מוצהרת שאינה קיימת מפילה את «יד. שאילתה מול הסכימה החיה» — נמדד נפל כמצופה');
+      else
+        bad('⛔ מוטציה: עמודת מיון מוצהרת — נמדד עבר מול הצפוי נפל. מיישרים את איסוף עמודות המיון');
+    } else ok('⛔ אין מוטציית עמודת מיון — ⚠️ אין כאן עמודת מיון בליטרל ואין מוצהרת, ⛔ ואין מה למוטט');
+  }
+
+  const litSite = _base.sites.find((s) => s.litAt >= 0 && s.tables.length === 1);
+  if (litSite) {
+    const a = litSite.litAt, n = litSite.tables[0].length;
+    /*  ⛔ שם טבלה אחר — ⚠️ המוטציה מחליפה ליטרל בליטרל, ⭐ ולכן היא
+     *  שוברת את ההצלבה מול ההצהרה ⛔ ולא את הפרסור. */
+    scanMut('⛔ מוטציה: שם טבלה ב-`from` שאינו מוצהר מפיל את «כל שאילתה נפתרת»',
+            SRC.slice(0, a + 1) + 'zz_no_such_table' + SRC.slice(a + 1 + n),
+            /zz_no_such_table/, false, 'יג. כל שאילתה נפתרת');
+    /*  ⛔ ליטרל שהפך לשם שאי אפשר לפתור ואינו מוצהר — ⚠️ בדיוק המקרה
+     *  שסורק הליטרלים בלבד מדלג עליו בשתיקה. */
+    scanMut('⛔ מוטציה: ליטרל שהפך לשם שאינו נפתר ואינו מוצהר מפיל את «כל שאילתה נפתרת»',
+            SRC.slice(0, a) + ' zzUnresolvable ' + SRC.slice(a + n + 2),
+            /אינו ליטרל, אינו נפתר ואינו מוצהר/, false, 'יג. כל שאילתה נפתרת');
+  } else {
+    ok('⛔ אין מוטציית שם טבלה — ⚠️ אין כאן `from` בליטרל, ⛔ ואין מה למוטט');
+    ok('⛔ אין מוטציית ליטרל שהפך לביטוי — ⚠️ אין כאן `from` בליטרל, ⛔ ואין מה למוטט');
+  }
+
+  /*  ⭐ מוטציית-נגד: שם שהוחלף **בעקביות** ⛔ אינו מפיל — ⚠️ שכבת העימוד
+   *  מוצהרת בשמה, ⭐ והחלפה עקבית שלה היא שינוי חי: ⛔ סורק שנשבר עליה
+   *  מודד שם ⛔ ולא מנגנון. */
+  const pg = APP.dbPager;
+  const hits = (SRC.match(new RegExp('\\b' + pg + '\\b', 'g')) || []).length;
+  APP.dbPager = pg + 'Rows';
+  const gRen = dbScan(SRC.split(pg).join(pg + 'Rows'));
+  APP.dbPager = pg;
+  if (!gRen.gaps.length && !asIf(gRen).length && hits > 1)
+    ok('⭐ מוטציית-נגד: שם שהוחלף בעקביות ב-' + hits + ' אתרים ⛔ אינו מפיל');
+  else
+    bad('⭐ מוטציית-נגד: שם שהוחלף בעקביות — נמדדו ' + (gRen.gaps.length + asIf(gRen).length) +
+        ' פערים מול הצפוי 0. מיישרים את הסורק כך שימדוד מנגנון ולא שם');
+
   /*  ⭐ מוטציית-נגד אחרונה: ⛔ יעד שאינו נענה **אינו מפיל** — ⚠️ זו ההתנהגות
    *  שהבאנר מכריז, ⭐ ובלי מדידה שלה היא הצהרה בלבד. */
   srv.close();
@@ -844,5 +1365,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — תשע הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — ארבע-עשרה הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);

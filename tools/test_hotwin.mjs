@@ -35,6 +35,10 @@ const APP = {
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
     [/hwPastLoad\(mirrorKey\('sl_transactions'\)/, 'מסך «שנים קודמות» קורא דרך hwPastLoad'],
   ],
+  /*  ⛔ בדיקות על קובץ שאינו `index.html` — ⚠️ **מה נכנס**: `[קובץ, תבנית,
+   *  הודעה]`; ⛔ **ומה מפיל**: תבנית שאינה נמצאת בקובץ. ⭐ **ולמה המבנה
+   *  קיים**: החלון החם נשען על מטמון ה-CDN שב-`sw.js`, ⛔ והוא אינו נראה
+   *  מ-`index.html` — ⚠️ ובלי המפתח הזה אין דרך למדוד אותו. */
   fileChecks: [
     ['sw.js', /supabase-js@2\.111\.0/, 'רשימת ה-CDN ב-sw.js נעוצה ל-supabase-js 2.111.0'],
     ['sw.js', /ensureCdnCached/, 'ריפוי עצמי של ה-CDN קיים (ensureCdnCached)'],

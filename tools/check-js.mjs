@@ -69,8 +69,15 @@ const APP = {
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
-  gates: ['test_rulesdocs.mjs',
+  gates: ['test_behavior.mjs',
+          'test_rowscan.mjs',
+          'test_scanscan.mjs',
+          'test_declscan.mjs',
+          'test_textscan.mjs',
+          'test_codescan.mjs',
+          'test_rulesdocs.mjs',
           'test_anchors.mjs',
+          'test_visual.mjs',
            'test_dbfacts.mjs',
           'test_sharedsync.mjs',
           'test_signedshared.mjs',
@@ -105,7 +112,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
  *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
  *  אותה היה מריץ את כולם פעם שנייה. */
-export const ROWS = [34, 35, 26];
+export const ROWS = [37, 38, 26];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
