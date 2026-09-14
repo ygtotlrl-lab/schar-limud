@@ -20,12 +20,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PEERS, COL_FIRST, COL_NOTE, ROW_CELLS } from './peers.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
   sameProbeOk: [],
   sharedDecl: [],
+  /*  ⛔ מפקד שאינו מפקד — ⚠️ **מה נכנס**: קטע טקסט שהמספר בו הוא
+   *  שם של מבנה או תיאורו, והנימוק למה; ⛔ **ומה מפיל**: הכרזה שאין לה
+   *  אתר בהיקף של מרשם. ⭐ **ולמה המבנה קיים**: הסריקה הפוכה
+   *  תופסת גם מספר שהוא **שם**, ⚠️ והוא אינו מתיישן עם המרשם. */
+  censusAllow: {},
   /*  ⛔ שער שרץ ואינו מצהיר שורה — ⚠️ **מה נכנס**: שם השער ⟵ הנושא
    *  שהוא מודד ולמה אינו מצהיר אותו; ⛔ **ומה מפיל**: שער בלי שורה
    *  ובלי הכרזה, והכרזה שאין לה שער. ⭐ **ולמה המבנה קיים**: אכיפה
@@ -65,7 +71,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [52];
+export const ROWS = [53, 49];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -76,13 +82,13 @@ let pass = 0, fail = 0;
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
  *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
- *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בארבעתן. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+ *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
+const FLOOR = { shared: 8, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -119,7 +125,8 @@ const t = (c, m) => { RAN++; if (c) { pass++; console.log('  ok   ' + m); }
 const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 /*  ⛔ הטבלה נקראת פעם אחת — ⚠️ **מה נכנס**: שורות הבלוק החתום;
- *  ⛔ **ומה מפיל**: שורה שאינה מתפרקת לשבע עמודות. ⭐ **ולמה המבנה
+ *  ⛔ **ומה מפיל**: שורה שאינה מתפרקת למספר העמודות שהמרשם
+ *  גוזר. ⭐ **ולמה המבנה
  *  קיים**: חמש הבדיקות שכאן מודדות את **אותה** טבלה, ⛔ וקריאה נפרדת
  *  לכל אחת הייתה חמישה מצבים שיכולים להיבדל. */
 function tableRows(md) {
@@ -133,8 +140,8 @@ function tableRows(md) {
     if (!m) continue;
     const c = l.split('|');
     out.push({ n: Number(m[1]), name: (c[2] || '').trim(), std: c[3] || '',
-               marks: [c[4], c[5], c[6], c[7]].map((x) => (x || '').trim()),
-               note: (c[8] || '').trim() });
+               marks: c.slice(COL_FIRST, COL_NOTE).map((x) => (x || '').trim()),
+               note: (c[COL_NOTE] || '').trim() });
   }
   return out;
 }
@@ -206,8 +213,86 @@ function catLiteralGaps(src) {
   return out;
 }
 
-export const PATTERNS = ['א', 'ב+ג', 'ד', 'ה', 'ו'];
-export const MUTS = ['א', 'ב+ג', 'ד', 'ה', 'ו'];
+
+/*  ⛔ מרשם המרשמים — ⚠️ **מה נכנס**: שם ההכרזה, הקובץ שבו היא חיה, והשמות
+ *  העבריים של מה שהיא מונה; ⛔ **ומה מפיל**: הכרזה שאין לה אתר חי בקובץ
+ *  שהוצהר. ⭐ **ולמה המבנה קיים**: המפקד נסרק **הפוך** — ⚠️ הרשימה נבנית
+ *  מהמרשמים עצמם, ⛔ ולא מרשימת ניסוחים ידועים שמישהו הקליד. */
+const REGISTRIES = [
+  { id: 'PEERS', src: 'peers', nouns: ['אפליקציות', 'אפליקציה', 'ריפו', 'אחיות'] },
+  { id: 'CAT_ORDER', src: 'cap', nouns: ['קטגוריות', 'קטגוריה'] },
+  { id: 'MATRIX', src: 'cap', nouns: ['שורות', 'שורה'] },
+  { id: 'GATES', src: 'cap', nouns: ['שערים', 'שער'] },
+  { id: 'SHARED', src: 'sets', nouns: ['קבצים', 'קובץ'] },
+];
+/*  ⛔ מילות המספר בעברית ובספרות — ⚠️ צורת הנפרד וצורת הנסמך כאחת, ⭐ והגבול
+ *  הוא «התו הבא אינו אות עברית» ⛔ ולא `\b`: ⚠️ `\b` צמוד לאות עברית אינו
+ *  גבול-מילה, ⭐ והוא probe שאינו יכול להיכשל. */
+const HEB_NUM = ['אחת', 'אחד', 'שתי', 'שתיים', 'שני', 'שלוש', 'שלושה', 'שלושת',
+                 'ארבע', 'ארבעה', 'ארבעת', 'חמש', 'חמישה', 'חמשת', 'שש', 'שישה',
+                 'ששת', 'שבע', 'שבעה', 'שבעת', 'שמונה', 'שמונת', 'תשע', 'תשעה',
+                 'תשעת', 'עשר', 'עשרה', 'עשרת'];
+const HEB_TAIL = '(?![\\u0590-\\u05FF])';
+const NUM_RE = () => new RegExp('(?:\\d+|(?:' + HEB_NUM.join('|') + '))' + HEB_TAIL, 'g');
+/*  ⛔ צורת נסמך עם כינוי חבור — «כולן» · «שלושתם» — ⚠️ היא מונה את
+ *  האפליקציות **בלי שם עצם כלל**, ⭐ ולכן היא מפקד בפני עצמה: ⛔ והיא בדיוק
+ *  מה שנשבר ביום שנוספת אפליקציה. */
+const BOUND_RE = () => new RegExp('(?:שלושת|ארבעת|חמשת|ששת|שבעת|שמונת|תשעת|עשרת)[ןם]' + HEB_TAIL, 'g');
+
+/*  ⛔ ההיקף הוא **ההכרזה ובלוק ההערה שצמוד לה** — ⚠️ שם נכתב «כמה יש»,
+ *  ⭐ ושם הוא מתיישן: ⛔ והחזרה היא מחרוזת ריקה כשההכרזה אינה קיימת,
+ *  ⚠️ וזה הצד השני שהטענה מודדת. */
+function declSpan(src, id) {
+  const m = new RegExp('(?:^|\\n)(?:export )?(?:const|let|var) ' + id + '\\s*=').exec(src);
+  if (!m) return '';
+  let at = m.index + (src[m.index] === '\n' ? 1 : 0);
+  const head = src.slice(0, at);
+  const cm = head.lastIndexOf('/*');
+  if (cm >= 0 && /^\/\*[\s\S]*\*\/[ \t]*\n?[ \t]*$/.test(head.slice(cm))) at = cm;
+  const nl = src.indexOf('\n', m.index + 1);
+  return src.slice(at, nl < 0 ? src.length : nl);
+}
+
+/* ז · הכרזה שאין לה מרשם חי */
+function registryGaps(c) {
+  return REGISTRIES.filter((r) => !declSpan(c[r.src] || '', r.id))
+                   .map((r) => `${r.id} (${r.src})`);
+}
+
+/* ח · מפקד מוקלד בהיקף של מרשם */
+function censusGaps(c) {
+  const out = [];
+  const allow = Object.keys(APP.censusAllow || {});
+  for (const r of REGISTRIES) {
+    const txt = declSpan(c[r.src] || '', r.id);
+    if (!txt) continue;
+    const num = NUM_RE();
+    let m;
+    while ((m = num.exec(txt)) !== null) {
+      const rest = txt.slice(m.index + m[0].length).replace(/^[\s־-]+/, '');
+      if (!r.nouns.some((n) => new RegExp('^(?:ה|ב|ל|מ|ו)?' + n + HEB_TAIL).test(rest))) continue;
+      const hit = txt.slice(m.index, m.index + 40).split('\n')[0];
+      if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
+      out.push(`${r.id}: «${hit.trim()}»`);
+    }
+    const bnd = BOUND_RE();
+    while ((m = bnd.exec(txt)) !== null) {
+      const hit = txt.slice(Math.max(0, m.index - 14), m.index + m[0].length);
+      if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
+      out.push(`${r.id}: «${hit.trim().split('\n').pop()}»`);
+    }
+  }
+  return out;
+}
+
+/* ח · והצד השני — הכרזה בהיתר שאין לה אתר חי */
+function censusAllowGaps(c) {
+  const body = REGISTRIES.map((r) => declSpan(c[r.src] || '', r.id)).join('\n');
+  return Object.keys(APP.censusAllow || {}).filter((a) => body.indexOf(a) < 0);
+}
+
+export const PATTERNS = ['א', 'ב+ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
+export const MUTS = ['א', 'ב+ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
 
 /*  ⛔ כל בדיקה היא **פונקציה טהורה של טקסט** — ⚠️ היא מקבלת את התוכן
  *  כארגומנט, ⭐ ולכן המוטציות רצות בזיכרון: ⛔ שער שמודד טקסט ומריץ
@@ -215,6 +300,8 @@ export const MUTS = ['א', 'ב+ג', 'ד', 'ה', 'ו'];
 const CTX = () => ({
   md: rd('CLAUDE.md'),
   cap: rd('tools/check-capabilities.mjs'),
+  peers: rd('tools/peers.mjs'),
+  sets: rd('tools/test_filesets.mjs'),
   js: rd('tools/check-js.mjs'),
   rows: Object.fromEntries(fs.readdirSync(path.join(ROOT, 'tools'))
     .filter((x) => x.endsWith('.mjs'))
@@ -313,6 +400,23 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
     : 'ו · אות הקטגוריה נגזרת — אפס אותיות מוקלדות מחוץ לשני המרשמים ולמנוע הגזירה');
 }
 
+/*  ⛔ ז — הכרזת מרשם שאין לה אתר חי: ⚠️ זה הצד השני של הסריקה ההפוכה,
+ *  ⭐ ובלעדיו מרשם ששמו הוסב היה מוציא את עצמו מהמדידה בשקט. */
+{
+  const g = registryGaps(C0);
+  t(g.length === 0, `ז · כל מרשם מוכרז חי בקובץ שהוצהר — נמדדו ${g.length} בלי הכרזה חיה והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מיישרים את שם ההכרזה, או מסירים אותה מהמרשם` : ''));
+}
+/*  ⛔ ח — מפקד מוקלד בהיקף של מרשם: ⚠️ המספר שנכתב ליד מה שהוא מונה
+ *  מתיישן ביום שהמרשם משתנה, ⭐ ואיש אינו חוזר לעדכן אותו: ⛔ והסריקה
+ *  הפוכה — היא נבנית מהמרשמים ⛔ ולא מרשימת ניסוחים ידועים. */
+{
+  const g = censusGaps(C0), a = censusAllowGaps(C0);
+  t(g.length + a.length === 0,
+    `ח · מפקד נגזר ואינו מוקלד — נמדדו ${g.length} מפקדים מוקלדים ו-${a.length} היתרים בלי אתר, והצפוי אפס` +
+    (g.length + a.length ? `: ${[...g, ...a].slice(0, 8).join(' · ')}. גוזרים את המספר מהמרשם, או מכריזים ב-\`APP.censusAllow\` עם נימוקו` : ''));
+}
+
 mutStage();
 if (RUN_MUT) {
   /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מוסרת טקסט שונה לאותה פונקציה,
@@ -409,6 +513,43 @@ if (RUN_MUT) {
     clashDecl(c2).length === clashDecl(C0).length &&
     falseGreen(c2).length === falseGreen(C0).length,
     'נ1 · ניסוח שם שורה שהשתנה — ⛔ אינו מוסיף ממצא');
+
+  /*  ⛔ מפקד מוקלד — ⚠️ כל מוטציה מזריקה בלוק הערה **צמוד** להכרזת מרשם,
+   *  ⭐ שהוא ההיקף שהטענה מודדת: ⛔ והן בזיכרון ⛔ ואינן נוגעות בעץ. */
+  const CMUT = [
+    { m: 'מ5', lbl: 'מספר האפליקציות מוקלד', src: 'peers',
+      at: 'export const PEERS = [', txt: '/*  ⛔ ארבע אפליקציות — וזה מה שאסור. */\n' },
+    { m: 'מ6', lbl: 'צורת נסמך שמונה את האפליקציות', src: 'peers',
+      at: 'export const PEERS = [', txt: '/*  ⛔ הרשימה זהה בארבע' + 'תן — וזה מה שאסור. */\n' },
+    { m: 'מ7', lbl: 'מספר הקטגוריות מוקלד', src: 'cap',
+      at: 'const CAT_ORDER = [', txt: '/*  ⛔ שבע קטגוריות — וזה מה שאסור. */\n' },
+    { m: 'מ8', lbl: 'ספירה של אירוע שחלף', src: 'cap',
+      at: 'const MATRIX = [', txt: '/*  ⛔ נמדדו 57 שורות פגומות — וזה מה שאסור. */\n' },
+  ];
+  for (const r of CMUT) {
+    const c2 = { ...C0, [r.src]: C0[r.src].replace(r.at, () => r.txt + r.at) };
+    t(censusGaps(c2).length > censusGaps(C0).length,
+      `${r.m} · ${r.lbl} **מפיל** את «ח»`);
+  }
+  /*  ⭐ מוטציית-נגד: מספר שהוא **שם של מבנה** ⛔ אינו מפקד — ⚠️ הוא אינו
+   *  מונה מרשם, ⭐ ואינו משתנה איתו: ⛔ ושער שמפיל עליו מלמד לכתוב פחות. */
+  const ANTI = [
+    { m: 'נ3', lbl: 'ארבעה ממדים', src: 'peers',
+      at: 'export const PEERS = [', txt: '/*  ⛔ ארבעה ממדים — וזה מותר. */\n' },
+    { m: 'נ4', lbl: 'שלוש פתיחות', src: 'cap',
+      at: 'const CAT_ORDER = [', txt: '/*  ⛔ שלוש פתיחות — וזה מותר. */\n' },
+  ];
+  for (const r of ANTI) {
+    const c2 = { ...C0, [r.src]: C0[r.src].replace(r.at, () => r.txt + r.at) };
+    t(censusGaps(c2).length === censusGaps(C0).length,
+      `${r.m} · «${r.lbl}» ⛔ אינו מפיל את «ח»`);
+  }
+  /*  ⛔ מוטציה: שם מרשם שהוסב — ⚠️ ההכרזה נשארת במרשם, ⭐ והאתר החי נעלם. */
+  {
+    const c2 = { ...C0, sets: C0.sets.replace('const SHARED = [', () => 'const SHARED_SET = [') };
+    t(registryGaps(c2).length > registryGaps(C0).length,
+      'מ9 · שם מרשם שהוסב **מפיל** את «ז»');
+  }
 }
 
 if (fail) {

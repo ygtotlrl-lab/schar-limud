@@ -16,7 +16,7 @@
  * (⚠️ אחרת היא נמדדת 192 בסף `ALPHA_MIN` ו-190 בסף שמעליו).
  *
  * הרצה:  node tools/gen-icons.mjs
- * ⛔ הקובץ זהה בית-לבית בארבעת הריפו פרט לבלוק `APP` שבראשו.
+ * ⛔ הקובץ זהה בית-לבית בכל הריפו פרט לבלוק `APP` שבראשו.
  */
 import { deflateSync, inflateSync } from 'node:zlib';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';

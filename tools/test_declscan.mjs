@@ -2,11 +2,11 @@
 /* ───────────────────────────────────────────────────────────────────────────
    test_declscan.mjs — כל הצהרה ב-`APP` נאכפת (סבב 141)
 
-   **מה נאכף:** ⛔ חמישה כיוונים על כל בלוק `APP` שבארבעת הריפו — ⚠️ כל מפתח
+   **מה נאכף:** ⛔ חמישה כיוונים על כל בלוק `APP` שבכל הריפו — ⚠️ כל מפתח
    נקרא · כל קורא מוצהר · מפתח פרטי נושא נימוק **תפקידי** · ערך ריק
    נושא נימוק · ⭐ והנימוק אומר מה התפקיד ⛔ ולא איפה הוא אינו.
 
-   **הנימוק המדוד:** ⚠️ 269 מפתחות חיים בארבעת הריפו, ⛔ וההצהרות עצמן מעולם לא
+   **הנימוק המדוד:** ⚠️ 269 מפתחות חיים בכל הריפו, ⛔ וההצהרות עצמן מעולם לא
    נאכפו: ⭐ מי שהוסיף מפתח לא נדרש לקורא, ⛔ ומי שהסיר קורא לא
    נדרש להסיר את המפתח — ⚠️ והרשימה גדלה בשקט.
 
@@ -19,12 +19,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PEERS } from './peers.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
-  /* ⚠️ ארבעת הריפו זה לצד זה — ⛔ ההשוואה היא ביניהם */
-  repos: ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius'],
   idKeys: ['app', 'name'],
   readerExempt: {
     'check-capabilities.mjs': 'הבודק המרוכז פורס את בלוקי ה-APP של שאר השערים ומודד אותם — ⚠️ והאזכורים בגופו מפנים לבלוק שנפרס',
@@ -42,6 +41,7 @@ const APP = {
     ['test_dbscan.mjs', 'dbTableGone'],
     ['test_dbscan.mjs', 'dbDyn'],
     ['test_dbscan.mjs', 'dbOrderDyn'],
+    ['check-capabilities.mjs', 'kvMeta'],
   ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -59,12 +59,12 @@ let pass = 0, fail = 0;
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
  *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
- *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בארבעתן. */
+ *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
 const FLOOR = { shared: 8, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -105,10 +105,10 @@ const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
  *  היעדרן אינו דילוג: ⛔ שער שמדלג בשתיקה כשאין מול מה להשוות אינו
  *  יכול להיכשל. */
 const SIBS = path.resolve(ROOT, '..');
-const REPOS = APP.repos;
+const REPOS = PEERS;
 
 /*  ⛔ חילוץ בלוק ה-`APP` — ⚠️ **מה נכנס**: גוף קובץ שער; ⛔ **ומה מפיל**:
- *  בלוק שנפתח ואינו נסגר. ⭐ **ולמה המבנה קיים**: ארבעה שערים בשם אחד
+ *  בלוק שנפתח ואינו נסגר. ⭐ **ולמה המבנה קיים**: שערים בשם אחד
  *  מצהירים ארבע רשימות, ⛔ והשוואה ביניהן דורשת חילוץ זהה בדיוק. */
 function appBlock(src) {
   const i = src.indexOf('/* ── APP —');
@@ -117,7 +117,7 @@ function appBlock(src) {
   return j < 0 ? null : src.slice(i, j);
 }
 
-/*  ⛔ מונה שמדלג על מחרוזת · תבנית · הערה **ותבנית `regex`** — ⚠️ ארבעתן
+/*  ⛔ מונה שמדלג על מחרוזת · תבנית · הערה **ותבנית `regex`** — ⚠️ כולן
  *  נושאות סוגריים שאינם מבנה: ⭐ הנימוק המדוד — `\(` בתוך תבנית נספר
  *  כפותח שאין לו סוגר, ⛔ והעומק לא חזר לאפס עד סוף הבלוק, ⚠️ ו-20
  *  מפתחות אחרי אותה שורה לא נספרו כלל. */
@@ -238,9 +238,9 @@ function reasonOf(block, key) {
     before = cut.slice(0, nl + 1);
   }
 }
-/*  ⛔ נימוק תפקידי ⛔ ולא נוכחות — ⚠️ «אינו בארבעתן» הוא המדידה ⛔ ולא
+/*  ⛔ נימוק תפקידי ⛔ ולא נוכחות — ⚠️ «אינו בכולן» הוא המדידה ⛔ ולא
  *  הנימוק: ⭐ הנימוק אומר **מה תפקיד המפתח**, ⛔ ולמה התפקיד אינו קיים שם. */
-const PRESENCE = /אינו בארבעתן|אינה בארבעתן|לא קיים בשאר|אין כאן\s*$|קיים רק ב|אינו קיים בשאר/;
+const PRESENCE = /אינו בכולן|אינה בכולן|לא קיים בשאר|אין כאן\s*$|קיים רק ב|אינו קיים בשאר/;
 const isFunctional = (why) => {
   const t = String(why).replace(/[⛔⚠️⭐*]/g, ' ').trim();
   if (t.length < 12) return false;
@@ -255,14 +255,14 @@ const isFunctional = (why) => {
 export const PATTERNS = ['א', 'ב', 'ג', 'ד', 'ה'];
 export const MUTS = ['א', 'ב', 'ג', 'ד', 'ה'];
 
-/*  ⛔ קובצי `tools/` שקיימים בארבעת הריפו — ⚠️ ההשוואה היא ביניהם,
+/*  ⛔ קובצי `tools/` שקיימים בכל הריפו — ⚠️ ההשוואה היא ביניהם,
  *  ⭐ ושער פרטי לאפליקציה אחת אין לו מול מה להישוות. */
-const present = APP.repos.map((r) => fs.existsSync(path.join(SIBS, r, 'tools')));
-const missing = APP.repos.filter((r, i) => !present[i]);
+const present = REPOS.map((r) => fs.existsSync(path.join(SIBS, r, 'tools')));
+const missing = REPOS.filter((r, i) => !present[i]);
 const FILES = present[0]
-  ? fs.readdirSync(path.join(SIBS, APP.repos[0], 'tools'))
+  ? fs.readdirSync(path.join(SIBS, REPOS[0], 'tools'))
       .filter((x) => x.endsWith('.mjs'))
-      .filter((f) => APP.repos.every((r, i) => present[i] &&
+      .filter((f) => REPOS.every((r, i) => present[i] &&
         fs.existsSync(path.join(SIBS, r, 'tools', f)))).sort()
   : [];
 
@@ -271,7 +271,7 @@ const FILES = present[0]
  *  את אותו טקסט, ⚠️ והמוטציות מחליפות אותו בזיכרון ⛔ בלי לכתוב לעץ. */
 function snapshot() {
   const st = {};
-  for (const r of APP.repos) {
+  for (const r of REPOS) {
     if (missing.includes(r)) continue;
     st[r] = {};
     for (const f of FILES) st[r][f] = fs.readFileSync(path.join(SIBS, r, 'tools', f), 'utf8');
@@ -314,7 +314,7 @@ function readerNoKey(st) {
   return [...out];
 }
 
-/* ג · מפתח שאינו בארבעתן נושא נימוק תפקידי */
+/* ג · מפתח שאינו בכולן נושא נימוק תפקידי */
 function privateNoWhy(st) {
   const out = [];
   const repos = Object.keys(st);
@@ -335,7 +335,7 @@ function privateNoWhy(st) {
 }
 
 /*  ד · ערך ריק הוא «נמדד ואין» — ⛔ **והנימוק נדרש כשהשדה נבדל בין
- *  הארבע**: ⚠️ שדה שריק בארבעתן אינו הבדל, ⭐ והוא נקרא כ«אין כאן
+ *  כולן**: ⚠️ שדה שריק בכולן אינו הבדל, ⭐ והוא נקרא כ«אין כאן
  *  מקרה» בלי שאיש צריך להסביר; ⛔ אבל שדה שריק כאן ומלא באחות הוא
  *  **הבדל פר-אפליקציה**, ⚠️ והוא נושא נימוק במקומו. */
 function emptyNoWhy(st) {
@@ -379,11 +379,11 @@ const ST = snapshot();
  *  רצה על תת-קבוצה ומדווחת «נקי». */
 /*  ⚠️ **והעותק אינו נושא את שם הריפו** — ⛔ שער הקריאה-בלבד מעתיק לתיקייה
  *  זמנית בשם אחר, ⭐ ואז חסר גם הריפו עצמו: ⛔ ולכן «לכל היותר אחת». */
-const LONE = missing.length >= APP.repos.length - 1;
+const LONE = missing.length >= REPOS.length - 1;
 if (LONE) console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${missing.join(' · ')} ` +
-                      `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם ארבעת הריפו זה לצד זה`);
+                      `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם כל הריפו זה לצד זה`);
 t(LONE || (missing.length === 0 && FILES.length > 0),
-  `הריפו האחיות — נמדדו ${APP.repos.length - missing.length} מתוך ${APP.repos.length} ` +
+  `הריפו האחיות — נמדדו ${REPOS.length - missing.length} מתוך ${REPOS.length} ` +
   `ו-${FILES.length} קובצי \`tools/\` משותפים` +
   (missing.length ? `; חסרות: ${missing.join(', ')}. מעמידים אותן זו לצד זו` : ''));
 
@@ -408,7 +408,7 @@ t(LONE || (missing.length === 0 && FILES.length > 0),
   const ghostRd = Object.keys(APP.readerExempt).filter((f) => !FILES.includes(f));
   const bareRd = Object.entries(APP.readerExempt).filter(([, w]) => !isFunctional(w)).map(([f]) => f);
   const ghostId = APP.idKeys.filter((k) => !FILES.some((f) => {
-    const b = appBlock(ST[APP.repos[0]][f]); return b && topKeys(b).includes(k); }));
+    const b = appBlock(ST[REPOS[0]][f]); return b && topKeys(b).includes(k); }));
   t(LONE || (ghostRd.length === 0 && bareRd.length === 0 && ghostId.length === 0),
     `ההחרגות נמדדות משני צדדיהן — נמדדו ${ghostRd.length + ghostId.length} בלי מקרה ` +
     `ו-${bareRd.length} בלי נימוק תפקידי; והצפוי אפס` +
@@ -432,7 +432,7 @@ mutStage();
 if (RUN_MUT) {
   /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מחליפה מקור אחד במפה, ⭐ ואינה
    *  כותבת לעץ ⛔ ואינה פותחת תהליך: ⚠️ הזמן נגזר ממספרן. */
-  const R0 = APP.repos.find((r) => ST[r]);
+  const R0 = REPOS.find((r) => ST[r]);
   const clone = (edit) => {
     const c = {};
     for (const r of Object.keys(ST)) { c[r] = {}; for (const f of FILES) c[r][f] = ST[r][f]; }
@@ -472,7 +472,7 @@ if (RUN_MUT) {
         c[R0][HOST] = c[R0][HOST].replace(new RegExp('\\/\\*[^*]*\\*\\/\\s*(\\n\\s*' + k + '\\s*:)'), '$1');
       })).length > privateNoWhy(ST).length },
     { m: 'מ4', claim: 'ד', lbl: 'ערך ריק בלי נימוק',
-      /*  ⛔ ריק **שנבדל** — ⚠️ ריק בארבעתן אינו הבדל ואינו דורש נימוק,
+      /*  ⛔ ריק **שנבדל** — ⚠️ ריק בכולן אינו הבדל ואינו דורש נימוק,
        *  ⭐ ולכן המוטציה מציבה ריק כאן ומלא באחות. */
       run: () => emptyNoWhy(clone((c) => {
         put(c, HOST, inject(ST[R0][HOST], "  zzEmpty: [],"));
@@ -481,7 +481,7 @@ if (RUN_MUT) {
       })).length > emptyNoWhy(ST).length },
     { m: 'מ5', claim: 'ה', lbl: 'נימוק שנוקב בנוכחות בלבד',
       run: () => whyIsPresence(clone((c) => put(c, HOST,
-        inject(ST[R0][HOST], "  /* אינו בארבעתן */\n  zzWhy: 'x',")))).length >
+        inject(ST[R0][HOST], "  /* אינו בכולן */\n  zzWhy: 'x',")))).length >
         whyIsPresence(ST).length },
   ];
   for (const r of MUT) {
