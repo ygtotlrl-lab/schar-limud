@@ -171,7 +171,7 @@ const NAMES_VAR = [
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
-  'slUsersLoad', 'slUsersSave', 'slUsersSaveOne', 'slUserByName', 'slPullUsers',
+  'slUsersLoad', 'slUsersSave', 'slUsersSaveAll', 'slUsersSaveOne', 'slUserByName', 'slPullUsers',
   'slEnsurePassFp', 'slVerifyOffline', 'slIsSecretSetting', 'slStripSecrets',
   'slStripMeta',
   'slSanitizeRows', 'mirrorSave', 'slLocalWrite', 'slWhoName',

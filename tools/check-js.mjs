@@ -71,6 +71,8 @@ const APP = {
   ],
   gates: ['test_behavior.mjs',
           'test_rowscan.mjs',
+          'test_users_patch.mjs',
+          'test_schema_source.mjs',
           'test_scanscan.mjs',
           'test_declscan.mjs',
           'test_textscan.mjs',
@@ -113,7 +115,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
  *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
  *  אותה היה מריץ את כולם פעם שנייה. */
-export const ROWS = [37, 38, 26];
+export const ROWS = [38, 39, 27];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');

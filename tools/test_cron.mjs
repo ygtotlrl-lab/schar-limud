@@ -13,9 +13,10 @@
  *  **מה יישבר בלעדיו:** ⛔ פינוי שנשען על קידומת תופס גם גיבוי שאין
  *  למחקו לעולם, ⚠️ והמחיקה בלתי-הפיכה.
  *
- *  **מה אינו נאכף כאן:** ⛔ הבדיקה קוראת את הקובץ שבריפו ⛔ ואינה מתחברת
- *  לשום מסד — ⚠️ מיגרציה שנכתבה ולא הורצה עוברת אותה במלואה, ⭐ ואימות
- *  המסד החי הוא פעולת מנהל.
+ *  **מה אינו נאכף כאן:** ⛔ **צורת** המיגרציה נמדדת מהקובץ ⛔ ולא מהמסד —
+ *  ⚠️ מיגרציה שנכתבה ולא הורצה עוברת את טענות הצורה במלואן; ⭐ **וגוף
+ *  הפינוי נקרא מהמסד** ב-`pg_get_functiondef`, ⛔ ובמסד שאינו בהישג יד
+ *  הוא מדווח «לא נמדד» ⛔ ואינו מפיל — ⚠️ חסימת רשת אינה כשל קוד.
  *
  *  ⚠️ שם הקובץ נגזר מהנושא ⛔ ולא ממספר הסבב; ⛔ מיגרציות שכבר רצו מפנות
  *  לשם הישן, ⛔ ואין לערוך אותן.
@@ -24,11 +25,12 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DB_SCHEMA } from './db_schema.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /* ⚠️ פר-אפליקציה — הפרויקט שהאפליקציה חיה בו והבעלות על מיגרציית הגיבוי נבדלים בין הארבע */
 /* ⚠️ schar חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם yoman,
-   ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`.
+   ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `sh_backup`.
    ⛔ עותק שני שלה כאן היה מקור אמת שני שמתיישן (סבב 35ג). */
 /* ⚠️ סוף פר-אפליקציה */
 const APP = {
@@ -45,19 +47,32 @@ const APP = {
    *  ברשימה במסד. ⭐ **ולמה היא קיימת**: הרשימה אחת לכל הפרויקט —
    *  ⛔ **וכאן אין מפתח של אחות**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   sisterKeys: [],
+  /*  ⛔ הפרויקט שהאפליקציה חיה בו — ⚠️ שתי סכימות חיות ב-`DB_SCHEMA`,
+      ⭐ וההצלבה היא מול זו של הפרויקט הזה בלבד. */
+  project: 'shared',
+  /*  ⛔ טבלת הגיבוי בשמה החי — ⚠️ מוטציית-הנגד נוקבת בה, ⭐ ושם מוקלד
+      בגוף השער היה נשבר בהסבה הבאה. */
+  backupTableName: 'sh_backup',
+  /*  ⛔ המיגרציה האחרונה שכותבת מחדש את גוף הפינוי — ⚠️ מיגרציה שכבר רצה
+      אינה נערכת, ⭐ והמאוחרת היא ההגדרה: ⛔ `null` בריפו שאינו הבעלים. */
+  sweepMigration: null,
+  /*  ⛔ ה-RPC שמחזיר `pg_get_functiondef` לשלוש פונקציות הפינוי — ⚠️ רשימה
+      סגורה בצד המסד, ⭐ והוא מחזיר טקסט הגדרה ⛔ ולא נתון. */
+  fnDefRpc: 'bk_fn_def',
+  fnNames: ['bk_retention_keys', 'bk_retention_sweep', 'bk_prune_layer'],
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql',
   /*  ⛔ המסלול שדורש את השדות האלה אינו רץ באפליקציה הזו (סבב 72) —
       ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
       וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
   allowlistMigration: null,
-  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `kv_rishon`/`kv_ramataviv`
+  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `tb_kv_rishon`/`tb_kv_ramataviv`
       הן הבית הענני של הגדרות היומן, ⭐ והבעלות שלו: ⛔ `migration` כאן הוא
       `null` בכל ריפו שאינו הבעלים, ⚠️ ו-`since` הוא המיגרציה שמצהירה מתי
       הבעלות עברה — ⭐ המיגרציות שקדמו לה רצו ⛔ ואינן נערכות ואינן נמחקות,
       ⚠️ ומה שנמדד הוא שאין הגדרה **חדשה** מנקודת ההצהרה ואילך. */
   kvShared: {
-    names: ['kv_rishon', 'kv_ramataviv'],
+    names: ['tb_kv_rishon', 'tb_kv_ramataviv'],
     migration: null,
     migrationDoc: 'yoman-avoda/migrations/000_initial_schema.sql',
     since: null,
@@ -72,7 +87,7 @@ const APP = {
 
 /*  ⛔ השורה שהקובץ הזה אוכף (סבב 92) — ⚠️ בעלות הסכימה המשותפת: ⭐ עותק
  *  אחד, בריפו אחד, ⛔ והנמדד הוא היעדר העותק השני. */
-export const ROWS = [140, 153];
+export const ROWS = [141, 146, 155];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -93,7 +108,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 20, app: 0, appWhy: '' };
+const FLOOR = { shared: 25, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -195,7 +210,7 @@ function simulateSweep(sql, rows, days, nowMs) {
   if (gProt && keys.some(PROTECTED)) throw 'refuse:protected';
   if (gDays && (days === null || days < 7)) throw 'refuse:days';
 
-  const del = /delete\s+from\s+public\.kv_backup([\s\S]*?);/.exec(body);
+  const del = /delete\s+from\s+public\.sh_backup([\s\S]*?);/.exec(body);
   const where = del ? del[1] : '';
   let match;
   if (new RegExp('key\\s*=\\s*any\\s*\\(\\s*' + av + '\\s*\\)').test(where)) match = (r) => keys.indexOf(r.key) !== -1;
@@ -208,7 +223,10 @@ function simulateSweep(sql, rows, days, nowMs) {
 
   const gone = rows.filter((r) => match(r) && aged(r));
   const left = rows.filter((r) => gone.indexOf(r) === -1);
-  const logged = gone.length > 0 && /if\s+v_deleted\s*>\s*0[\s\S]{0,400}?insert into public\.sync_log/.test(body);
+  /*  ⛔ השומר נמדד במנגנון ⛔ ולא בשם המשתנה — ⚠️ מונה שהוחלף בעקביות
+   *  אינו שבירה, ⭐ והנמדד הוא «נמחק משהו ⟵ נרשם ביומן». */
+  const logged = gone.length > 0 &&
+    />\s*0\s+then[\s\S]{0,400}?insert\s+into\s+public\.sh_sync_log/i.test(body);
   return { deleted: gone.length, left: left.map((r) => r.key).sort(), logged: logged };
 }
 
@@ -301,7 +319,7 @@ function t2(sql) {
   assert(/create or replace function public\.bk_retention_keys\(\)/.test(sql) &&
          /create or replace function public\.bk_retention_sweep\(p_days/.test(sql),
     '2ב · שתי הפונקציות ב-`create or replace` — אידמפוטנטי');
-  assert(/security definer/.test(sql) && /set search_path = public/.test(sql),
+  assert(/security definer/.test(sql) && /set\s+search_path\s*(?:=|to)\s*'?public'?/.test(sql),
     '2ג · `security definer` עם `search_path` נעוץ');
   assert(/revoke all on function public\.bk_retention_sweep\(integer\)\s+from public, anon, authenticated;/.test(sql),
     '2ד · ⛔ הרשאת ההרצה נשללת מ-anon/authenticated — אחרת זהו נתיב מחיקה ב-RPC');
@@ -315,10 +333,10 @@ function t2(sql) {
      והשער נועל את הערך שבמסד. */
   assert(/'0 3 \* \* \*'/.test(sql), '2ז · תזמון יומי ב-03:00 UTC — רחוק מגל הגיבוי של חצות UTC');
   assert(/bk_retention_sweep\(30\)/.test(sql), '2ח · המשימה קוראת לגריעה עם חלון 30 יום');
-  assert(/insert into public\.sync_log[\s\S]{0,200}'retention'/.test(sql),
-    '2ט · כל ריצה שמחקה כותבת שורת `retention` ל-sync_log');
-  assert(!/grant[\s\S]{0,80}delete[\s\S]{0,80}kv_backup/i.test(sql),
-    '2י · ⛔ הקובץ אינו מעניק `delete` על `kv_backup` לאיש');
+  assert(/insert into public\.sh_sync_log[\s\S]{0,200}'retention'/.test(sql),
+    '2ט · כל ריצה שמחקה כותבת שורת `retention` ל-sh_sync_log');
+  assert(!/grant[\s\S]{0,80}delete[\s\S]{0,80}sh_backup/i.test(sql),
+    '2י · ⛔ הקובץ אינו מעניק `delete` על `sh_backup` לאיש');
   // רשימת-ההיתר מכסה את מפתחות הגיבוי של האפליקציה הזו.
   const keys = sqlKeys(sql) || [];
   assert(keys.length > 0, '2כ · רשימת-ההיתר אינה ריקה (' + keys.length + ' מפתחות)');
@@ -349,7 +367,7 @@ function t3(sql) {
   assert(r.left.indexOf('PRE_SYNC_UNIFY_' + daily) !== -1, '3ג · ⛔ גיבוי `PRE_*` בן 400 יום שורד');
   assert(r.left.indexOf('ORPHAN_' + daily) !== -1, '3ד · ⛔ גיבוי `ORPHAN_*` בן 400 יום שורד');
   assert(r.left.indexOf('zar_lo_barshima') !== -1, '3ה · מפתח שאינו ברשימה שורד — גם בן 400 יום');
-  assert(r.logged, '3ו · הגריעה נרשמה ל-sync_log');
+  assert(r.logged, '3ו · הגריעה נרשמה ל-sh_sync_log');
 
   let refused = '';
   try { simulateSweep(sql, fixture(daily), 3, Date.now()); } catch (e) { refused = String(e); }
@@ -429,9 +447,91 @@ function t5() {
     '5ג · מחיקת 57 שורות ה-`PRE_*`/`ORPHAN_*` רשומה כעובדה');
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ל · ⛔ ההגדרה החיה נקראת מהמסד ⛔ ולא מקובץ המיגרציה
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ גוף `plpgsql` הוא **טקסט** — ⚠️ ו-`alter table ... rename to` אינו נוגע
+   בו: ⭐ שם טבלה שהוסב ונשאר בגוף מפיל את הפונקציה בזמן ריצה, ⛔ והפינוי
+   הלילי מפסיק לרוץ ב-03:00 בשקט. ⚠️ **ומיגרציה שכבר רצה אינה נערכת** —
+   ⛔ ולכן הקובץ הוא היסטוריה, ⭐ וההגדרה החיה היא המקור.
+   ⛔ **ובמסד שאינו בהישג יד מדווח «לא נמדד» ואינו מפיל** — ⚠️ חסימת רשת
+   אינה כשל קוד. */
+const _sbUrl = /https:\/\/[a-z0-9]+\.supabase\.co/.exec(SRC);
+const _sbKey = /\bey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/.exec(SRC);
+/*  ⛔ הגוף מנורמל ל-`$$` — ⚠️ `pg_get_functiondef` מחזיר `$function$`,
+ *  ⭐ ואותם חולצים בדיוק כמו גוף שנקרא מקובץ מיגרציה. */
+const normDef = (s) => String(s || '').replace(/\$function\$/g, '$$$$');
+async function liveDefs() {
+  if (!_sbUrl || !_sbKey) return null;
+  const out = {};
+  for (const fn of APP.fnNames) {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await fetch(`${_sbUrl[0]}/rest/v1/rpc/${APP.fnDefRpc}`, {
+        method: 'POST', signal: ctl.signal,
+        headers: { apikey: _sbKey[0], Authorization: 'Bearer ' + _sbKey[0],
+                   'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_name: fn }),
+      });
+      const txt = await r.text();
+      if (!r.ok) throw new Error(`${fn} → ${r.status} ${txt.slice(0, 120)}`);
+      out[fn] = normDef(JSON.parse(txt));
+    } finally { clearTimeout(to); }
+  }
+  return out;
+}
+/*  ⛔ שמות הטבלאות שבגוף — ⚠️ **מה נכנס**: כל שם שאחרי `from`/`into`/
+ *  `update`/`join` עם תחילית הסכימה; ⛔ ומה שאינו כזה אינו טבלה: ⭐ שם
+ *  פונקציה שנקראת בגוף אינו נמדד כאן. */
+function bodyTables(txt) {
+  return [...new Set([...String(txt || '').matchAll(
+    /(?:from|into|update|join)\s+public\.([a-z_][a-z0-9_]*)/gi)].map((m) => m[1].toLowerCase()))];
+}
+const DECLARED_TABLES = new Set(DB_SCHEMA.filter((x) => x.p === APP.project).map((x) => x.t));
+function liveNameGaps(defs) {
+  const bad = [];
+  for (const fn of Object.keys(defs || {}))
+    for (const t of bodyTables(defs[fn]))
+      if (!DECLARED_TABLES.has(t)) bad.push(fn + ' ⟵ ' + t);
+  return bad;
+}
+async function tLive() {
+  let defs = null, why = '';
+  try { defs = await liveDefs(); }
+  catch (e) { why = String((e && e.message) || e).slice(0, 140); }
+  if (!defs) {
+    ok('ל1 · ⚠️ לא נמדד — ההגדרה החיה אינה בהישג יד מהסביבה הזו' + (why ? ' (' + why + ')' : ''));
+    ok('ל2 · ⚠️ לא נמדד — אין גוף חי שאפשר להצליב מולו את `DB_SCHEMA`');
+    ok('ל3 · ⚠️ לא נמדד — הסימולציה רצה על ההגדרה האפקטיבית שבקבצים');
+    return null;
+  }
+  const names = Object.keys(defs);
+  assert(names.length === APP.fnNames.length,
+    'ל1 · ההגדרה החיה נקראה מהמסד ב-`pg_get_functiondef` — נמדדו ' + names.length +
+    ' מתוך ' + APP.fnNames.length + ' פונקציות מוצהרות');
+  const gaps = liveNameGaps(defs);
+  assert(gaps.length === 0,
+    'ל2 · כל שם טבלה שבגוף החי מוצהר ב-`DB_SCHEMA` — נמדדו ' + gaps.length +
+    ' חורגים (' + (gaps.join(' · ') || 'אין') + ') והצפוי אפס. מיישרים את גוף הפונקציה ' +
+    'למסד — ⛔ `rename` אינו נוגע בגוף `plpgsql`');
+  const liveSql = APP.fnNames.map((f) => defs[f]).join('\n');
+  let refused = '';
+  try { simulateSweep(liveSql.replace(/array\s*\[[\s\S]*?\]\s*::\s*text\[\]/, 'array[]::text[]'),
+                      [], 30, Date.now()); } catch (e) { refused = String(e); }
+  assert(refused === 'refuse:empty',
+    'ל3 · הסימולציה על הגוף החי מסרבת לרוץ על רשימת-היתר ריקה — נמדד «' +
+    (refused || 'רצה') + '» והצפוי «refuse:empty»');
+  return liveSql;
+}
+
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
 console.log('· ' + APP.name + ' — סבב 35ג: פינוי גיבויים אוטומטי במסד');
 t1();
+/*  ⛔ ההגדרה החיה נקראת בכל ריפו ⛔ ולא בבעלים בלבד — ⚠️ כל אחד מהם פונה
+ *  למסד שלו, ⭐ ושם טבלה שהוסב מפיל את הפונקציה אצל כולם. */
+const LIVE_SQL = await tLive();
 if (APP.migration) {
   /* ⭐ סבב 65 — «המצב האפקטיבי» ולא «הקובץ הראשון»: מיגרציה שכבר רצה אינה
    *  נערכת, ולכן שינוי ברשימת-ההיתר הוא קובץ חדש שמגדיר אותה מחדש. השער
@@ -447,7 +547,21 @@ if (APP.migration) {
      *  `String.replace` כ-`$` בודד, וגוף ה-SQL היה נשבר בשקט. */
     sql = sql.replace(RE, () => later[0]);
   }
-  t2(sql); t3(sql); t4(sql);
+  /*  ⛔ והגוף האפקטיבי — ⚠️ מיגרציה מאוחרת שכותבת מחדש את הפינוי היא
+   *  ההגדרה, ⭐ והקובץ הראשון הוא היסטוריה. */
+  if (APP.sweepMigration) {
+    const later = readFileSync(join(ROOT, APP.sweepMigration), 'utf8');
+    for (const fn of ['bk_retention_sweep', 'bk_prune_layer']) {
+      const RE = new RegExp('create or replace function public\\.' + fn +
+                            '\\([\\s\\S]*?\\$function\\$[\\s\\S]*?\\$function\\$;');
+      const m = RE.exec(later);
+      assert(!!m, '0ב · ' + APP.sweepMigration + ' כותבת מחדש את `' + fn + '`');
+      const CUR = new RegExp('create or replace function public\\.' + fn +
+                             '\\([\\s\\S]*?\\$\\$[\\s\\S]*?\\$\\$;');
+      sql = CUR.test(sql) ? sql.replace(CUR, () => normDef(m[0])) : sql + '\n' + normDef(m[0]);
+    }
+  }
+  t2(sql); t3(LIVE_SQL || sql); t4(sql);
 } else {
   /* ⚠️ אין כאן קובץ מיגרציה (הפרויקט משותף), ולכן נבדקת התרומה עצמה —
      והשקילות מולה נאכפת בריפו שמחזיק את הקובץ. ⛔ העתקת המיגרציה לכאן
@@ -509,8 +623,19 @@ t5();
   const K = APP.kvShared;
   const dir = join(ROOT, 'migrations');
   const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.sql')).sort() : [];
+  /*  ⛔ השם שהמיגרציה נוקבת בו הוא **השם שהיה** — ⚠️ הסבה מאוחרת אינה
+   *  נוגעת בקובץ שכבר רץ, ⭐ ומי שמחפש את השם החדש בקובץ שקדם להסבה אינו
+   *  מוצא: ⛔ ולכן ההסבה נגררת אחורה, והחיפוש הוא על השם החי ועל קודמיו. */
+  const back = new Map();
+  for (const f of files)
+    for (const m of readFileSync(join(dir, f), 'utf8').replace(/^\s*--.*$/gm, '').matchAll(
+      /alter\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)\s+rename\s+to\s+(?:public\.)?([a-z_][a-z0-9_]*)/gi))
+      back.set(m[2].toLowerCase(), m[1].toLowerCase());
+  const chain = (n) => { const out = [n]; const seen = new Set([n]); let c = n;
+    while (back.has(c) && !seen.has(back.get(c))) { c = back.get(c); seen.add(c); out.push(c); } return out; };
+  const allNames = K.names.reduce((a, n) => a.concat(chain(n)), []);
   const defRe = new RegExp('(?:create|alter)\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?(?:public\\.)?(?:' +
-                           K.names.join('|') + ')\\b', 'i');
+                           allNames.join('|') + ')\\b', 'i');
   const cut = K.since ? K.since.split('/').pop() : '';
   const after = files.filter((f) => (K.since ? f > cut : true));
   const defines = after.filter((f) => defRe.test(readFileSync(join(dir, f), 'utf8')));
@@ -567,6 +692,18 @@ if (RUN_MUT) {
   assert(!new RegExp('function\\s+(?:public\\.)?' + SHARED_FN + '\\b', 'i').test(note),
     '6ד · ⭐ מוטציית-נגד: אזכור בהערה ⛔ אינו נספר כעותק שני');
 }
+}
+
+
+/*  ⛔ מוטציה: שם טבלה שהוסב ונשאר בגוף החי (סבב 144) — ⚠️ הפונקציה
+ *  מפילה בזמן ריצה, ⭐ והפינוי הלילי נעצר בשקט. */
+{
+  const stale = { x: 'delete from public.kv_backup where key = any (v_keys);' };
+  assert(liveNameGaps(stale).length === 1,
+    'ל4 · ⛔ מוטציה: שם טבלה שאינו ב-`DB_SCHEMA` בגוף החי מפיל את טענה ל2');
+  const fresh = { x: 'delete from public.' + APP.backupTableName + ' where key = any (v_keys);' };
+  assert(liveNameGaps(fresh).length === 0,
+    'ל5 · ⭐ מוטציית-נגד: גוף שנוקב בשם מוצהר ⛔ אינו מפיל');
 }
 
 if (failed) { console.error('\n✗ ' + failed + ' טענות נכשלו'); process.exit(1); }

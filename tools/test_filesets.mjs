@@ -25,9 +25,10 @@ const APP = {
   /*  ⛔ שער שקיים כאן ואינו בסט המשותף (סבב 68) —
    *  ⚠️ כל שורה נושאת את הסיבה, ⛔ ו-⏳ מסמן **שער מעבר** שנושא
    *  טריגר להסרה. ⛔ שער תשתית שקיים באחת בלבד בלי שורה כאן מפיל. */
-  testsOnly: {
-      'offline_login': 'כניסה אופליין — ⛔ ביומן אין כניסה כלל (מטריצה — שורת הכניסה האופליין)',
-      'roles': 'הרשאות לפי `role` **וניקוי שער הסיסמה שהוסר** — ⛔ טענה שלילית קבועה נגד רגרסיה, ולא שריד מעבר',
+  appGates: {
+      'roles': 'מודד את מודל ההרשאות ואת היעדר ההשוואה מול שם התפקיד כסיסמה — ⛔ וביומן אין כניסה ואין תפקיד שיוכרע',
+      'offline_login': 'מודד את הכניסה האופליין מול הטביעה ואת ארבע התשובות שלה — ⛔ וביומן אין כניסה ואין משתמש שיאומת',
+      'users_patch': 'מודד שעדכון חלקי למראת המשתמשים אינו מכניס את הסוד — ⛔ וביומן אין טבלת משתמשים ואין כניסה',
   },
   only: {
     'tools/roles-harness.mjs': 'רתמת מודל ההרשאות — ⛔ קיימת בשלוש שיש בהן כניסה, ⚠️ וביומן אין כניסה ואין תפקיד שיוכרע; ⭐ והזהות בין השלוש נמדדת ב-`APP.subsetTools`',
@@ -39,7 +40,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 114, 175];
+export const ROWS = [17, 20, 21, 115, 178];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -50,6 +51,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { reasonGaps } from './scope.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בארבעת העותקים (סבב 67). ⚠️ קובץ שיורד
  *  מכאן יורד בארבעתם באותו סבב, בדיוק כמו חתימת בלוק SHARED. */
@@ -135,6 +137,7 @@ const SHARED = [
   'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
   'tools/test_rowscan.mjs',
+  'tools/test_schema_source.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_dbfacts.mjs',
   'tools/test_dbscan.mjs',
@@ -172,7 +175,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 2, app: 0, appWhy: '' };
+const FLOOR = { shared: 3, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -255,7 +258,7 @@ export function audit(root) {
     /*  ⛔ שער שאינו בסט המשותף חייב שורה מוצהרת (סבב 68) — ⚠️ הפטור
      *  הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט. */
     if (/^tools\/test_(.+)\.mjs$/.test(f) &&
-        (f.match(/^tools\/test_(.+)\.mjs$/)[1] in APP.testsOnly)) continue;
+        (f.match(/^tools\/test_(.+)\.mjs$/)[1] in APP.appGates)) continue;
     v.push('[extra] ' + f + ' — קיים כאן ואינו בסט המשותף, בקטגוריה פטורה או ברשימת-ההיתר');
   }
   const have = new Set(files);
@@ -263,6 +266,11 @@ export function audit(root) {
   /*  ⛔ ורשימת-היתר שהתיישנה מפילה גם היא — אחרת הרשימה הופכת בעצמה
    *  לשריד, בדיוק סוג הדבר שהשער הזה בא לסלק. */
   for (const f of Object.keys(APP.only)) if (!have.has(f)) v.push('[stale] ' + f + ' — ברשימת-ההיתר ואינו קיים');
+  /*  ⛔ הצהרת שער שאין לה קובץ — ⚠️ שער שירד וההצהרה שלו נשארה היא
+   *  בעצמה השארית שהשער בא לסלק: ⭐ ושני הצדדים מפילים. */
+  for (const k of Object.keys(APP.appGates))
+    if (!have.has('tools/test_' + k + '.mjs'))
+      v.push('[stale-gate] tools/test_' + k + '.mjs — מוכרז ב-`appGates` ואינו קיים');
   return v;
 }
 
@@ -278,6 +286,18 @@ base.length === 0
   : base.forEach((x) => bad('1 · ' + x));
 ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשימת-ההיתר כאן ' +
    Object.keys(APP.only).length);
+/*  ⛔ הנימוק תפקידי ⛔ ואינו נוכחות — ⚠️ «קיים כאן בלבד» הוא **המדידה**
+ *  שכבר נעשתה, ⭐ ואינו אומר איזו יכולת מצדיקה את השער: ⛔ והצהרה כזו
+ *  עוברת בשקט ומשאירה שער פרטי בלי סיבה. */
+{
+  const g = reasonGaps(APP.appGates);
+  g.length === 0
+    ? ok('3 · [gate-reason] ' + Object.keys(APP.appGates).length +
+         ' שערים מוצהרים ב-`appGates`, וכל נימוק נושא את היכולת שמצדיקה אותו')
+    : bad('3 · [gate-reason] נימוק שאינו תפקידי — נמדדו ' + g.length + ' מתוך ' +
+          Object.keys(APP.appGates).length + ' והצפוי אפס (' + g.join(' · ') + '). ' +
+          'כותבים «מה השער מודד — ולמה היכולת אינה קיימת בשאר»');
+}
 
 console.log('\n— מוטציות —');
 /*  ⛔ כותב על עותק — ⚠️ המוטציה משנה את סט הקבצים של הריפו, ⛔ ואין סט שאפשר למסור בזיכרון. */
@@ -323,29 +343,51 @@ if (!RUN_MUT) {
     : bad('נ1 · שינוי תוכן נספר בטעות כשינוי בסט');
 }
 
-/*  ⛔ מ3 — שער שקיים כאן בלבד ואינו מוצהר ב-`testsOnly` (סבב 68).
+/*  ⛔ מ3 — שער שקיים כאן בלבד ואינו מוצהר ב-`appGates` (סבב 68).
  *  ⚠️ הפטור הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט,
  *  ⛔ וזה בדיוק מה שאסור. */
 {
   /*  ⚠️ המוטציה היא **לוגית** ולא על העץ (סבב 68) — `git ls-files` בעותק
    *  קורא את ה-`.git` שהועתק איתו, ⛔ ולכן קובץ חדש אינו נספר שם כלל.
    *  ⭐ הסרת ההכרזה שקולה בדיוק להוספת שער לא-מוצהר. */
-  const key = Object.keys(APP.testsOnly)[0];
-  const keep = APP.testsOnly[key];
-  delete APP.testsOnly[key];
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  delete APP.appGates[key];
   const hit = audit(ROOT).some((x) => x.startsWith('[extra]') && x.includes('test_' + key));
-  APP.testsOnly[key] = keep;
-  hit ? ok('מ3 · שער שאינו מוצהר ב-testsOnly מפיל את טענה 1')
+  APP.appGates[key] = keep;
+  hit ? ok('מ3 · שער שאינו מוצהר ב-appGates מפיל את טענה 1')
       : bad('מ3 · שער לא-מוצהר לא נתפס');
+}
+
+/*  ⛔ מ4 — נימוק שהוא נוכחות בלבד (סבב 144). ⚠️ «אינו בארבעתן» הוא
+ *  המדידה ⛔ ואינו הנימוק, ⭐ והצהרה כזו עוברת בשקט. */
+{
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  APP.appGates[key] = 'השער אינו בארבעתן';
+  const hit = reasonGaps(APP.appGates).some((x) => x.startsWith(key + ':'));
+  APP.appGates[key] = keep;
+  hit ? ok('מ4 · [gate-reason] נימוק שנוקב בנוכחות בלבד מפיל את טענה 3')
+      : bad('מ4 · נימוק שהוא נוכחות בלבד לא נתפס');
+}
+
+/*  ⛔ מ5 — הצהרה שאין לה שער (סבב 144). ⚠️ הצהרה שהתיישנה היא בעצמה
+ *  השארית שהשער בא לסלק, ⭐ ושני הצדדים מפילים. */
+{
+  APP.appGates.__ghost__ = 'מודד יכולת שאינה קיימת — ולכן אין לה מקבילה בשאר';
+  const hit = audit(ROOT).some((x) => x.startsWith('[stale-gate]'));
+  delete APP.appGates.__ghost__;
+  hit ? ok('מ5 · הצהרת שער שאין לה קובץ מפילה את טענה 1')
+      : bad('מ5 · הצהרה שהתיישנה לא נתפסה');
 }
 
 /*  ⭐ מוטציית-נגד — ⛔ שער ש**כן** מוצהר ⛔ אינו מפיל, ⚠️ אחרת הטענה
  *  אינה מבחינה בין «מודדת הכרזה» ל«אוסרת כל שער פרטי». */
 {
-  const name = Object.keys(APP.testsOnly)[0];
+  const name = Object.keys(APP.appGates)[0];
   audit(ROOT).some((x) => x.includes('test_' + name))
     ? bad('נ2 · שער מוצהר נתפס בטעות')
-    : ok('נ2 · ⭐ מוטציית-נגד: שער שמוצהר ב-testsOnly ⛔ אינו מפיל');
+    : ok('נ2 · ⭐ מוטציית-נגד: שער שמוצהר ב-appGates ⛔ אינו מפיל');
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 

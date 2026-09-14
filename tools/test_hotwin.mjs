@@ -30,7 +30,7 @@ const APP = {
     [/cs\.prev_debt_note/, 'הערת החוב נשמרת ב-card_settings'],
     [/חוב משנים קודמות/, 'שורת החוב המסומנת קיימת בטבלה השנתית'],
     [/if\(debtRaw&&debtVal>0\)cs\.prev_debt=debtVal;else delete cs\.prev_debt;/, 'אימות שדה החוב: רק ערך חיובי נשמר, ערך ריק נמחק'],
-    [/function slSyncLog\(/, 'עוטף sync_log קיים (slSyncLog)'],
+    [/function slSyncLog\(/, 'עוטף sh_sync_log קיים (slSyncLog)'],
     [/var SL_NEVER_MIRROR_SETTINGS = \[\];/, 'רשימת הסודות ריקה (admin_pass נמחק מהמסד, סבב 35)'],
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
     [/hwPastLoad\(mirrorKey\('sl_transactions'\)/, 'מסך «שנים קודמות» קורא דרך hwPastLoad'],

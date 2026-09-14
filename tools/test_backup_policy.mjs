@@ -237,8 +237,8 @@ function t4(sql) {
     '4ה · ⛔ ואין `execute` ל-`anon` בשום מקום בקובץ');
   assert(/'aged'/.test(sql) && /'capped'/.test(sql) && /'manual'/.test(sql),
     '4ו · ⭐ היומן מפריד בין שלושת המסלולים');
-  assert(!/grant[^;]*delete[^;]*kv_backup/i.test(sql),
-    '4ז · ⛔ והקובץ אינו מעניק `delete` על `kv_backup`');
+  assert(!/grant[^;]*delete[^;]*sh_backup/i.test(sql),
+    '4ז · ⛔ והקובץ אינו מעניק `delete` על `sh_backup`');
 }
 
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה

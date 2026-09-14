@@ -29,6 +29,7 @@
    **מדווחת ואינה מדלגת בשתיקה**.
    ──────────────────────────────────────────────────────────────────────── */
 import { readFileSync, existsSync } from 'node:fs';
+import { reasonGaps } from './scope.mjs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { whiten } from './whiten.mjs';
@@ -124,7 +125,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [53];
+export const ROWS = [54];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -155,7 +156,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הטענות אינן נגזרות ממספר השמות אלא
  *  ממבנה המדידה, ⭐ והוא זהה בארבעתן. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -203,7 +204,12 @@ const DEF_FORMS = [
   /^window\s*\.\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\b/gm,
   /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\b/gm,
   /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^()]*\)\s*=>/gm,
+  /^window\s*\.\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^()]*\)\s*=>/gm,
 ];
+/*  ⛔ מאפיין באובייקט אינו צורת הגדרה כאן — ⚠️ `X: function` הוא שדה של
+ *  אובייקט ⛔ ואינו שם שאפשר לקרוא לו מכל מקום: ⭐ ונמדד — הוספתו הייתה
+ *  מוסיפה 33 · 39 · 41 · 38 שמות, ⛔ ומתוכם 12 שמות «חלקיים» מדומים
+ *  שהיו דורשים הצהרה תפקידית על שדה שאינו פונקציה ברמת המודול. */
 /*  ⛔ הליבה מקבלת מקור כארגומנט ⛔ ואינה קוראת מהדיסק — ⚠️ המוטציה מזינה
  *  לה עץ סינתטי, ⭐ בלי לגעת בעץ האמיתי ובלי תהליך נוסף.
  *  ⛔ **וההלבנה קודמת לסריקה** — ⚠️ `'function ghost('` בתוך מחרוזת אינו
@@ -233,29 +239,6 @@ export function partialNames(sets) {
   return out;
 }
 
-/*  ⛔ נימוק שהוא נוכחות בלבד — ⚠️ הוא חוזר על **המדידה** שכבר נעשתה,
- *  ⭐ ואינו אומר דבר על התפקיד: ⛔ והוא בדיוק ההצהרה שעוברת בשקט. */
-const PRESENCE_ONLY =
-  /אינה בארבעתן|אינו בארבעתן|אינם בארבעתן|לא בארבעתן|קיימת רק ב|קיים רק ב|קיימות רק ב|יש רק ב|קיימת בשתיים|קיים בשתיים|קיימת בשלוש|קיים בשלוש/;
-/*  ⛔ שני חלקים ומפריד ביניהם — ⚠️ הראשון מה הפונקציה עושה, ⭐ והשני למה
- *  לתפקיד אין מקבילה: ⛔ נימוק שכולו חלק אחד אינו נמדד בשני הצדדים. */
-const PART_MIN = 15;
-
-export function reasonGaps(decl) {
-  const out = [];
-  for (const [name, why] of Object.entries(decl || {})) {
-    const s = typeof why === 'string' ? why.trim() : '';
-    if (!s) { out.push(name + ': הצהרה בלי נימוק'); continue; }
-    if (PRESENCE_ONLY.test(s)) { out.push(name + ': נימוק שהוא נוכחות בלבד'); continue; }
-    const i = s.indexOf(' — ');
-    if (i < 0) { out.push(name + ': נימוק בלי מפריד בין התפקיד להיעדרו'); continue; }
-    const does = s.slice(0, i).trim(), why2 = s.slice(i + 3).trim();
-    if (does.length < PART_MIN) out.push(name + ': הנימוק אינו אומר מה הפונקציה עושה');
-    else if (why2.length < PART_MIN) out.push(name + ': הנימוק אינו אומר למה התפקיד אינו קיים בשאר');
-  }
-  return out;
-}
-
 /*  ⛔ שני הצדדים — ⚠️ שם חלקי שקיים כאן ואינו מוצהר, ⛔ והצהרה שאין לה
  *  פונקציה חלקית כאן: ⭐ צד אחד לבדו מאשר את השני. */
 export function declGaps(mine, partial, decl) {
@@ -272,12 +255,21 @@ let n = 1;
    *  למצוא הגדרה חיה, ⛔ ולא למצוא שם שיושב בתוך מחרוזת ולא עוזר מקומי. */
   const SYN = '<script>\n' +
     'function realFn(a) { return `\nfunction ghostFn(b) {}\n`; }\n' +
+    'window.arrowFn = (a) => a;\n' +
     '  var localFn = function () {};\n' +
+    '  propHolder = { propFn: function () {} };\n' +
     '</script>';
   const got = fnNames(SYN);
   t(n++, got.has('realFn') && !got.has('ghostFn') && !got.has('localFn'),
     `[fn-scan] הסורק על קוד מולבן ברמת המודול — נמדדו ${got.size} שמות והצפוי ` +
-    'בדיוק `realFn`. מלבינים את המקור לפני הסריקה, ועוגנים את הצורות לתחילת שורה');
+    'בדיוק `realFn` ו-`arrowFn`. מלבינים את המקור לפני הסריקה, ועוגנים את הצורות לתחילת שורה');
+  /*  ⛔ חץ שמוצב על `window` הוא שם ברמת המודול (סבב 144) — ⚠️ הצורה
+   *  נוספה בלי שיש לה היום אף אתר: ⭐ היום שבו תיכנס לא יעבור בשתיקה,
+   *  ⛔ בדיוק כמו תכונה חזותית שנסרקת לפני שנולדה. */
+  t(n++, got.has('arrowFn') && !got.has('propFn'),
+    `[fn-scan] חץ על \`window\` נספר, ומאפיין באובייקט אינו — נמדדו ` +
+    `arrowFn=${got.has('arrowFn')} propFn=${got.has('propFn')} והצפוי true/false. ` +
+    'מוסיפים את צורת החץ ל-`DEF_FORMS`, ⛔ ומשאירים את המאפיין בחוץ');
 }
 
 /* ── 2. הנימוק תפקידי ──────────────────────────────────────────────────── */

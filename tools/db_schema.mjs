@@ -12,8 +12,8 @@
    ──────────────────────────────────────────────────────────────────────── */
 
 export const DB_SCHEMA = [
-    { p: 'shared', t: 'kv_rishon',        c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
-    { p: 'shared', t: 'kv_ramataviv',     c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
+    { p: 'shared', t: 'tb_kv_rishon',        c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
+    { p: 'shared', t: 'tb_kv_ramataviv',     c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'shared', t: 'sl_settings',      c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'shared', t: 'ys_settings',      c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'shared', t: 'sl_lists',         c: 'category,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
@@ -27,8 +27,8 @@ export const DB_SCHEMA = [
     { p: 'shared', t: 'ys_marks',         c: 'client_id,session_client_id,student_id,date_iso,status,minutes,deleted,updated_at,synced_at,deleted_at,deleted_by' },
     { p: 'shared', t: 'ys_sleep_marks',   c: 'client_id,session_client_id,student_id,date_iso,status,minutes,note,deleted,updated_at,synced_at,deleted_at,deleted_by' },
     { p: 'shared', t: 'ys_students_rows', c: 'client_id,student_id,updated_at,deleted,data,synced_at,deleted_at,deleted_by' },
-    { p: 'shared', t: 'kv_backup',        c: 'id,created_at,key,value' },
-    { p: 'shared', t: 'sync_log',         c: 'id,created_at,device_id,user_name,action,key,record_count,details' },
+    { p: 'shared', t: 'sh_backup',        c: 'id,created_at,key,value' },
+    { p: 'shared', t: 'sh_sync_log',         c: 'id,created_at,device_id,user_name,action,key,record_count,details' },
     { p: 'gius',   t: 'g_config',         c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'gius',   t: 'g_donors',         c: 'client_id,name,phone,agent,is_vip,notes,tags,deleted,deleted_at,created_at,updated_at,deleted_by' },
     { p: 'gius',   t: 'g_pledges',        c: 'client_id,donor_client_id,amount,cause,agent,note,due_date,deleted,deleted_at,created_at,updated_at,deleted_by' },
@@ -36,19 +36,5 @@ export const DB_SCHEMA = [
     { p: 'gius',   t: 'g_tasks',          c: 'client_id,title,stage,assignee,domain,due_date,log,deleted,deleted_at,created_at,updated_at,deleted_by' },
     { p: 'gius',   t: 'g_targets',        c: 'client_id,month,amount,created_at,updated_at,deleted,deleted_at,deleted_by' },
     { p: 'gius',   t: 'g_users',          c: 'client_id,username,full_name,role,active,created_at,updated_at,pass_salt,pass_fp' },
-    { p: 'gius',   t: 'kv_backup',        c: 'id,created_at,key,value' },
-    { p: 'gius',   t: 'sync_log',         c: 'id,created_at,device_id,user_name,action,key,record_count,details' },];
-
-/*  ⛔ שאריות שנשארו במסד — ⚠️ **מה נכנס**: `p` הפרויקט · `t` שם הטבלה ·
- *  `why` מי יצר אותה ולמה היא מיותרת; ⛔ **ומה מפיל**: הכרזה שאין לה
- *  טבלה חיה במסד. ⭐ **ולמה המבנה קיים**: גיבוי שנוצר בסבב ולא נמחק הוא
- *  שארית — ⚠️ אין לה קורא בקוד, ⛔ והיא אינה נראית באף סריקה שרצה על העץ:
- *  ⭐ **והמחיקה היא הכרעת מנהל** ⛔ שנתונים אינם קוד, ⚠️ ולכן ההכרזה
- *  מדווחת ⛔ ואינה מוחקת. ⛔ **וביום שהמנהל ימחק — ההכרזה מפילה**,
- *  ⚠️ והיא יורדת באותו סבב. */
-export const DB_LEFTOVER = [
-  { p: 'shared', t: 'bk_entries_124',
-    why: 'גיבוי שנוצר לפני תיקון `catName` בסבב 124 — התיקון אומת, ואין לה קורא' },
-  { p: 'shared', t: 'bk_entries_125',
-    why: 'גיבוי שנוצר לפני תיקון `catName` בסבב 125 — התיקון אומת, ואין לה קורא' },
-];
+    { p: 'gius',   t: 'sh_backup',        c: 'id,created_at,key,value' },
+    { p: 'gius',   t: 'sh_sync_log',         c: 'id,created_at,device_id,user_name,action,key,record_count,details' },];

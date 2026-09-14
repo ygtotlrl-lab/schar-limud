@@ -120,7 +120,7 @@ const NAMES_VAR = [
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
-  'slUsersLoad', 'slUsersSave', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
+  'slUsersLoad', 'slUsersSave', 'slUsersSaveAll', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
   /*  ⛔ שכבת המראה (סבב 118) — ⚠️ מראת המשתמשים היא טבלה בתוכה, ⭐ ורתמה
    *  שאינה מחלצת את השכבה מקבלת `ReferenceError` שנבלע ב-`catch`. */
   'mirrorKey', 'mirrorTables', 'mirrorLoadOne', 'mirrorSave',
