@@ -49,19 +49,31 @@ const SQL010 = fs.readFileSync(path.join(ROOT, 'migrations', '010_users_pass_fp.
 
 let pass = 0, fail = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
- *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
- *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = 158;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+const FLOOR = { shared: 0, app: 158, appWhy: 'הכניסה האופליין — קיימת בשלוש, ומספר המסלולים נגזר ממסך ניהול המשתמשים שיש או שאין' };
+const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
@@ -73,14 +85,22 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-  if (RAN < EXPECTED) {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+   *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
+   *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
     process.exitCode = 1;
-  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-      'עדכן את `EXPECTED`.');
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `FLOOR`.');
     process.exitCode = 1;
   }
 });
@@ -131,6 +151,10 @@ const UKEY  = (h) => h.ctx.mirrorKey(h.ctx.SL_USERS_TABLE);
 const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
 const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
 
+/*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
+ *  הצהרותיהן, ⭐ שאם לא כן מטפל שמציג הודעה זורק `ReferenceError`,
+ *  ⛔ והכשל נקרא ככשל התנהגות ולא כחוסר בסביבה. */
+const MSG_DECLS = (SRC.match(/^var MSG_[A-Z_0-9]* = '(?:[^'\\]|\\.)*';$/gm) || []).join('\n');
 const NAMES_VAR = [
   'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_NEVER_MIRROR_SETTINGS', 'MIRROR_CFG', 'SL_TABLES', 'MIRROR', 'PUSH_TABLES',
@@ -141,6 +165,9 @@ const NAMES_VAR = [
    *  הפר-אפליקציה של הבלוק החתום, ⭐ ו-`MSG_OFFLINE` הוא ההודעה שהוא
    *  קורא: ⛔ רתמה שאינה מחלצת אותם מקבלת `false` שקט מכל השלמת טביעה. */
   'MSG_OFFLINE', 'USER_CFG',
+  /*  ⛔ המודול המשותף לערך מפתח-ערך (סבב 126) — ⚠️ הקריאה להגדרות עוברת
+   *  בו, ⭐ ורתמה שאינה מחלצת אותו נופלת על `kvParse is not defined`. */
+  'KV_BAD',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',
@@ -159,6 +186,7 @@ const NAMES_FN = [
    *  את הפונקציות **האמיתיות** שלו ולא בדל. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive',
   'slNow', 'slKey', 'slTs', 'doLogin', 'doLoginOffline',
+  'kvParse', 'kvBadLabel',
 ];
 
 /* ── הרתמה ─────────────────────────────────────────────────────────────── */
@@ -234,7 +262,7 @@ function makeCtx(opts = {}) {
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
+  vm.runInContext(MSG_DECLS + '\n' + NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
   return { ctx, store, calls, fields };
 }
 
@@ -422,7 +450,9 @@ async function main() {
     h.ctx.slApplyMirror();
     eq('⚠️ הנתונים נקראים — תלמידים', h.ctx.STUDENTS.length, 1);
     eq('⚠️ ותנועות', h.ctx.TRANSACTIONS.length, 1);
-    eq('⚠️ והגדרות', h.ctx.SETTINGS.default_tuition, '2000');
+    /*  ⛔ הערך מפורש כ-JSON ⛔ ולא נקרא כטקסט — ⚠️ אילוץ במסד מבטיח JSON,
+     *  ⭐ וקורא שמתייחס לטקסט היה מחזיר `"2000"` עם הגרשיים. */
+    eq('⚠️ והגדרות — הערך מפורש כ-JSON ולא כטקסט', h.ctx.SETTINGS.default_tuition, 2000);
     eq('⚠️ ורשימות', (h.ctx.LISTS.payment_method || []).length, 1);
 
   }
@@ -508,8 +538,10 @@ async function main() {
     const h = makeCtx();
     const m = [h.ctx.MSG_OFF_UNKNOWN, h.ctx.MSG_OFF_NO_FP, h.ctx.MSG_OFF_NO_CRYPTO, h.ctx.MSG_BAD_LOGIN];
     eq('ארבע ההודעות נבדלות זו מזו', new Set(m).size, 4);
-    ok('⛔ שלוש החדשות מחוץ לבלוק ההודעות המשותף',
-      !/^var MSG_OFFLINE[\s\S]{0,400}MSG_OFF_UNKNOWN/m.test(SRC));
+    /*  ⭐ שלוש ההודעות עברו לבלוק החתום — ⚠️ הן זהות בשלוש שיש בהן
+     *  כניסה, ⛔ והחתימה היא מה שמודד את זהות הנוסח. */
+    ok('⭐ שלוש החדשות בתוך הבלוק החתום',
+      /מחרוזות ההודעה המשותפות[\s\S]*?MSG_OFF_UNKNOWN[\s\S]*?סוף מודול מחרוזות ההודעה/.test(SRC));
   }
   {
     // ⛔ מטמון מפורמט ישן — סיסמה גלויה אינה מתקבלת כטביעה.
@@ -751,16 +783,16 @@ async function main() {
   sect('ט. אינווריאנטות במקור עצמו');
   {
     ok('⛔ אין select(\'*\') על sl_users', !/from\('sl_users'\)\s*\.\s*select\('\*'\)/.test(SRC));
-    // ⚠️ **עודכן בסבב 26.** `changeAdminPass` היה אתר האכיפה **היחיד** של
-    // `PASS_SIX_RE`, והוא הוסר יחד עם שער סיסמת ההגדרות שהוא שירת; הקבוע
-    // ירד איתו. הטענה המקורית («כן מופיע ב-changeAdminPass») אינה ניתנת
-    // לבדיקה יותר, אבל **הכוונה שלה נשמרת במלואה**: מסלולי הכניסה נשארים
+    // ⚠️ **עודכן בסבב 132.** `PASS_SIX_RE` חזר לקובץ עם מסך שינוי הסיסמה,
+    // ⛔ ואתר האכיפה היחיד שלו הוא מסלול השינוי: מסלולי הכניסה נשארים
     // נקיים מאכיפת פורמט, מאותו נימוק בדיוק (סבב 19 — אכיפה שם נועלת
     // בחוץ סיסמה קיימת ותקפה). ⛔ אין להוסיף שם בדיקת פורמט.
     ok('⛔ אין אכיפת פורמט בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-slVerifyOffline', body('slVerifyOffline').indexOf('PASS_SIX_RE') === -1);
-    ok('⛔ PASS_SIX_RE ירד מהקובץ (סבב 26)', !/^var PASS_SIX_RE\s*=/m.test(SRC));
+    ok('⭐ ואתר האכיפה היחיד הוא מסלול שינוי הסיסמה',
+      /^var PASS_SIX_RE\s*=/m.test(SRC) &&
+      body('slSaveMyPassword').indexOf('PASS_SIX_RE') !== -1);
     ok('⛔ אין קבוע `SESSION_KEY` בקובץ (סבב 53)', !/SESSION_KEY/.test(SRC));
     ok('⛔ אין password ברשימת ההיתר שבמקור', !/SL_USER_COLS\s*=\s*\[[^\]]*password/.test(SRC));
     // ⚠️ תבנית ולא מספר קבוע (סבב 26) — טענה שמקבעת מספר נכשלת על כל
@@ -780,6 +812,7 @@ await main().catch((e) => { console.error(e); process.exit(1); });
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_offline_login: המוטציות רצות ברמה המלאה (--full)');
   process.exit(fail ? 1 : 0);

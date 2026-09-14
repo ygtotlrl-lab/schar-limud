@@ -1,13 +1,15 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** שמונה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** שלוש-עשרה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
    ⛔ כל `updated_at` חוזר כמספר, בלי טריגר `touch` חי ב-`migrations/` ·
    ⛔ כל טבלה מקבילה בצורת המשפחה שלה · ⛔ כל עמודה חיה נקראת בקוד או
-   מוצהרת עם נימוקה · ⛔ וכל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה.
+   מוצהרת עם נימוקה · ⛔ כל עמודה שהקוד נוקב בה בשליפה קיימת בטבלה ·
+   ⛔ וכל שדה נגזר ששמור ברשומה מסכים עם מקורו החי ·
+   ⛔ ואין `DELETE` בהישג ידו של מפתח ה-`anon` על טבלה שבבעלות הריפו.
 
    **הנימוק המדוד:** ארבע השורות האלה היו ⭕ עם הנימוק «שער רץ על קבצים
    ואינו רואה את המסד», ⚠️ ובינתיים נמדד מולו ידנית: ⛔ **940 מתוך 988**
@@ -24,16 +26,32 @@
    הסט הופך את השער לרעש שמכבים. ⚠️ **ורשימת-ההיתר נגזרת מהמיגרציה
    ולא מהמסד** — ⛔ ל-`anon` אין `EXECUTE` על `bk_retention_keys()`,
    ⭐ והרחבתו היא החלטת מנהל: ⚠️ מה שנמדד מול המסד הוא **המפתחות החיים**,
-   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם.
+   ⛔ והם הצד שבו מפתח שאינו ברשימה אינו מתפנה לעולם. ⚠️ **ו-`REFERENCES` ו-`TRIGGER` אינם
+   נמדדים כאן** — ⛔ אין להם ביטוי ב-REST, ⭐ ואינם זכות על נתון: ⚠️ הם נמדדים
+   ב-`information_schema` בידי המנהל. ⚠️ **ותוכן העמודה
+   אינו נמדד כאן** — ⛔ רק שמה: ⭐ ערך שאינו מתפרש יושב בטענה משלו.
+   ⚠️ **ושאילתות המקור אינן נסרקות כאן** — ⛔ הן נמדדות מול הסכימה המוצהרת
+   בשער נפרד: ⭐ שתי סריקות על אותו קלט הן שתי הכרעות על אותה ראיה.
    ══════════════════════════════════════════════════════════════════════════ */
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { DB_SCHEMA, DB_LEFTOVER } from './db_schema.mjs';
 import { dirname, join } from 'node:path';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [138, 133, 134, 135, 149, 172, 173, 174];
+export const ROWS = [147, 141, 142, 143, 160, 184, 185, 186, 187, 154, 145, 133, 144];
+
+/*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
+ *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
+ *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
+ *  עליו, ⛔ והוא כבר אינו נמדד. ⚠️ ו-`clean` היא מוטציית-הנגד, ⛔ ואינה
+ *  דפוס שנאכף. */
+export const PATTERNS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror', 'leftover'];
+export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
+                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror', 'leftover'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -43,8 +61,6 @@ export const ROWS = [138, 133, 134, 135, 149, 172, 173, 174];
 const RUN_MUT = process.env.GATE_MUT === '1';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 0,
   name: 'schar-limud',
   /*  ⛔ ארבע טבלאות הכספים נושאות חותמת שרת מטריגר `touch` — ⚠️ ובה הכשל
    *  היחיד האפשרי הוא ריק, ⭐ שאפס אינו ניתן לייצוג ב-`timestamptz`. */
@@ -53,9 +69,29 @@ const APP = {
    *  ⛔ אין כאן טיפוס שני — ⚠️ שני טיפוסים לאותו מושג הם שני מנועי הכרעה. */
   stamped: ['sl_students', 'sl_transactions', 'sl_settings',
              'sl_lists', 'sl_users'],
+  /*  ⛔ טבלה מוצהרת שאינה במסד בכוונה — ⚠️ **מה נכנס**: שם טבלה ⟵ נימוק.
+   *  ⛔ **ומה מפיל**: שם שאין לו הצהרה ב-`migrations/`. ⭐ **ולמה היא
+   *  קיימת**: טבלה שמוצהרת ואינה קיימת היא סחיפה — ⛔ **וכאן כל טבלה
+   *  מוצהרת קיימת במסד**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   schemaSkip: [],
-  cfgReader: 'slCfgGet',
+  /*  ⛔ דפוסי קריאת מפתח ההגדרה — ⚠️ **מה נכנס**: `re` ביטוי עם קבוצת
+   *  לכידה אחת לשם המפתח, ⛔ ו-`why` המסלול שהוא מכסה; ⛔ **ומה מפיל**:
+   *  דפוס שאין לו אף אתר במקור. ⭐ **ולמה אינדקס ולא עוטף**: ההגדרות
+   *  נטענות למפה אחת בסנכרון, ⚠️ ואתרי הקריאה מאנדקסים אותה בשם. */
+  cfgReads: [
+    { re: "SETTINGS\\[\\s*'([a-z_0-9]+)'\\s*\\]", why: 'אינדקס במפת ההגדרות שנטענה בסנכרון' },
+  ],
+  /*  ⛔ מפתח חי שאין לו קורא — ⚠️ **מה נכנס**: השם ⟵ הנימוק; ⛔ **ומה
+   *  מפיל**: מפתח חי שאינו כאן ואין לו קורא, ⛔ והכרזה שאין לה מפתח חי.
+   *  ⭐ **ולמה ריק**: נמדד ואין. */
+  cfgOrphans: {},
   cfgTable: 'sl_settings',
+  /*  ⛔ טבלאות המפתח-ערך שבבעלות הריפו — ⚠️ **מה נכנס**: שם טבלה שעמודת
+   *  `value` שלה נושאת JSON; ⛔ **ומה מפיל**: ערך שאינו מתפרש, ⭐ ורשימה
+   *  ריקה. ⚠️ **ולמה היא קיימת**: הבעלות היא של ריפו אחד, ⛔ והמדידה
+   *  רצה שם ⛔ ולא בשלושה. */
+  kvReadFn: 'slApplyMirror',
+  kvTables: ['sl_settings'],
   backupTable: 'kv_backup',
   /*  ⛔ הפינוי אינו בבעלות הריפו הזה — ⚠️ רשימת-ההיתר מוגדרת במיגרציה אחת
    *  בריפו של האפליקציה הראשונה בפרויקט, ⭐ ועותק שני היה מקור אמת שני. */
@@ -66,15 +102,32 @@ const APP = {
   /*  ⛔ הטבלאות שהריפו הזה מחזיק — ⚠️ הן והן בלבד נסרקות לשתי טענות
    *  השאריות: ⭐ טבלה של אחות אינה שלנו למדוד, ⛔ ועמודה שאין לה קורא
    *  **כאן** אינה שארית אם היא נקראת שם. */
+  /*  ⛔ הפרויקט שהריפו שואל — ⚠️ המפתח שמסנן את `DB_SCHEMA`; ⛔ **ומה
+   *  מפיל**: שם שאין לו אף טבלה בסכימה. ⭐ **ולמה הוא כאן**: שני פרויקטים
+   *  חיים בקובץ אחד, ⛔ וריפו שמודד את שניהם מדווח פער על טבלה שאינה שלו. */
+  project: 'shared',
   ownTables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists', 'sl_users'],
   /*  ⛔ שמות עמודה שאין להם קורא **בכוונה** (סבב 104) — ⚠️ וכל אחד נושא
    *  את נימוקו: ⭐ שלישיית המחיקה הרכה ומשפחת הטבלאות המקבילות מחייבות
    *  את העמודה בסכימה, ⛔ גם באפליקציה שאינה כותבת אותה.
    *  ⛔ **וההצהרה עצמה נמדדת** — ⚠️ שם שאין לו מקרה חי **מפיל**, ⭐ בדיוק
    *  כמו כל רשימת חריגה. */
+  /*  ⛔ שדות שנשמרו ברשומה ונגזרים ממקור חי — ⚠️ **מה נכנס**: הטבלה,
+   *  השדה, המפתח שלצידו, והמקור פר-הקשר; ⛔ **ומה מפיל**: ערך שמור
+   *  שאינו מסכים עם המקור הנוכחי. ⭐ **ולמה המבנה קיים**: המקור משתנה
+   *  ⛔ והרשומה אינה.
+   *  ⛔ **והרשימה אינה נשמטת** — ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק
+   *  נקרא «נמדד ואין». */
+  derivedFields: [],
   colNoReader: {
     full_name:  'משפחת טבלאות המשתמשים — עמודה שאינה בשימוש כאן נשארת בסכימה',
   },
+  /*  ⛔ טבלאות משותפות שאינן מתעדכנות — ⚠️ **מה נכנס**: שם טבלה שנכתבת
+   *  פעם אחת ואינה נערכת; ⛔ **ומה מפיל**: `UPDATE` שמוענק לה, ⭐ והצהרה
+   *  שאין לה טבלה במסד. ⚠️ **ולמה המבנה קיים**: גיבוי ולוג הם תוספת-בלבד,
+   *  ⛔ ו-`UPDATE` שיתווסף להם הוא זכות שאין לה קורא — ⭐ והיא בדיוק
+   *  הזכות שמאפשרת לשכתב עקבה. */
+  appendOnly: ['kv_backup', 'sync_log'],
   twinTables: {
     users:    { table: 'sl_users',
                 cols: ['client_id', 'username', 'full_name', 'role', 'active',
@@ -92,19 +145,31 @@ const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
 let fail = 0, notMeasured = '';
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
- *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
- *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.expected;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+const FLOOR = { shared: 18, app: 0, appWhy: '' };
+const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
@@ -116,14 +181,22 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-  if (RAN < EXPECTED) {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+   *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
+   *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
     process.exitCode = 1;
-  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-      'עדכן את `EXPECTED`.');
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `FLOOR`.');
     process.exitCode = 1;
   }
 });
@@ -160,8 +233,21 @@ const KEY  = CONN ? CONN[2] : '';
 /*  ⛔ תקרת זמן לכל קריאה — ⚠️ שער שממתין לרשת בלי תקרה תולה את הסט:
  *  ⭐ הכשל הוא «לא נמדד» ⛔ ולא המתנה. */
 const TIMEOUT_MS = 8000;
+/*  ⛔ הקריאה בעימוד ⛔ ואינה נחתכת בתקרת השרת — ⚠️ מספר עגול של שורות
+ *  שחוזר בלי המשך הוא חיתוך, ⭐ והלולאה עוצרת רק על עמוד חלקי. */
+const DERIVED_PAGE = 1000;
 
+/*  ⛔ קריאת `GET` זהה נשאלת פעם אחת — ⚠️ שלוש טענות שואלות את אותה
+ *  שורה ראשונה מכל טבלה, ⭐ ושלוש בקשות לאותה כתובת הן אותה עבודה
+ *  שלוש פעמים: ⛔ המטמון הוא לכל תהליך, ⚠️ והשער קורא בלבד. */
+const _qCache = new Map();
 async function q(path, init) {
+  if (!init && _qCache.has(path)) return _qCache.get(path);
+  const r0 = await _q(path, init);
+  if (!init) _qCache.set(path, r0);
+  return r0;
+}
+async function _q(path, init) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), TIMEOUT_MS);
   try {
@@ -203,6 +289,62 @@ const addedCols = [...sqlNoCmt.matchAll(
   .filter((x) => !dropped.has(x.t));
 
 /* ── הטענות ────────────────────────────────────────────────────────────── */
+/*  ⛔ ערך במפתח-ערך הוא JSON (סבב 125) — ⚠️ הקורא עושה `JSON.parse`,
+ *  ⭐ וערך חשוף זורק: ⛔ המפתח נספר ככשל בלי לומר למה, ⚠️ והטוסט צף.
+ *  ⛔ **והמדידה מול המסד החי** ⛔ ולא מול קובץ המיגרציה — ⭐ אילוץ שנכתב
+ *  ולא רץ אינו מונע את הכתיבה הבאה. */
+async function claimKvJson() {
+  const tables = APP.kvTables || [];
+  if (!tables.length) { bad('י. ערך במפתח-ערך — אין טבלת מפתח-ערך מוצהרת. מצהירים אותה ב-`APP.kvTables`'); return; }
+  let n = 0; const bads = [];
+  for (const t of tables) {
+    const r = await q(`/${t}?select=key,value`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    for (const row of JSON.parse(r.text)) {
+      n++;
+      if (row.value == null) continue;
+      try { JSON.parse(row.value); } catch (e) { bads.push(t + '.' + row.key); }
+    }
+  }
+  if (bads.length) bad(`י. ערך במפתח-ערך — ערכים שאינם JSON: ${bads.join(', ')}. נמדדו ${bads.length} מתוך ${n} והצפוי אפס. מתקנים את הערך במסד, ואת אילוץ ה-check שמונע את הכתיבה הבאה`);
+  else ok(`י. ערך במפתח-ערך — ${n} ערכים ב-${tables.length} טבלאות מפתח-ערך, וכולם JSON תקין`);
+}
+
+/*  ⛔ הקורא מבחין בין «אין ערך» ל«ערך פגום» (סבב 125) — ⚠️ שניהם חזרו
+ *  אותה תשובה, ⭐ והמפתח נספר ככשל בלי לומר מה קרה בו: ⛔ ומי שראה את
+ *  ההודעה חיפש רשת שלא נפלה. */
+/*  ⛔ נקודת הקריאה אחת ומשותפת — ⚠️ **מה נכנס**: גוף `kvParse` והשימוש בו,
+ *  ⭐ **ומה מפיל**: פירוש שאינו עובר בו · כשל שאינו נתפס · כשל שאינו מגיע
+ *  למשתמש · או מנתח שני. ⛔ **ולמה המבנה קיים**: כשל שאינו אומר מה קרה
+ *  שקול לכשל שקט, ⚠️ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד.
+ *  ⛔ **ומה אינו נמדד כאן**: תוכן הערכים שבמסד — הוא בטענה שמעל. */
+function kvReaderGaps() {
+  const out = [];
+  const i = SRC.indexOf('function kvParse(');
+  if (i < 0) { out.push('המודול המשותף אינו קיים: kvParse'); return out; }
+  const body = SRC.slice(i, i + 900);
+  if (!/JSON\.parse/.test(body)) out.push('kvParse אינו מפרש JSON');
+  if (!/catch/.test(body)) out.push('kvParse אינו תופס ערך פגום');
+  if (body.indexOf('KV_BAD') < 0) out.push('kvParse אינו נושא את סימון הערך הפגום');
+  if (!/catch\s*\([\s\S]{0,500}?toast\(/.test(body)) out.push('הכשל אינו מגיע לטוסט');
+  if (SRC.indexOf('function kvBadLabel(') < 0) out.push('אין ניסוח אחיד לערך פגום: kvBadLabel');
+  const fn = APP.kvReadFn;
+  if (!fn) { out.push('אין נקודת קריאה מוצהרת'); return out; }
+  const j = SRC.indexOf('function ' + fn + '(');
+  if (j < 0) { out.push('נקודת הקריאה המוצהרת אינה קיימת: ' + fn); return out; }
+  if (SRC.slice(j, j + 1600).indexOf('kvParse(') < 0)
+    out.push('נקודת הקריאה אינה עוברת במודול המשותף: ' + fn);
+  for (const m of SRC.matchAll(/JSON\.parse\([^)]{0,40}\.value/g))
+    if (m.index < i || m.index > i + 900)
+      out.push('מנתח שני לערך שבמסד, בשורה ' + SRC.slice(0, m.index).split('\n').length);
+  return out;
+}
+async function claimKvReader() {
+  const g = kvReaderGaps();
+  if (g.length) bad('יא. ערך פגום נבדל מ«אין ערך» — ' + g.join(' · ') + '. נמדדו ' + g.length + ' פערים והצפוי אפס. מיישרים את נקודת הקריאה, או את ההצהרה');
+  else ok('יא. ערך פגום נבדל מ«אין ערך» — `kvParse` תופס, מסמן ומגיע לטוסט, ונקודת הקריאה `' + APP.kvReadFn + '` עוברת בו');
+}
+
 async function claimStamp() {
   const tabs = created.filter((t) => APP.stamped.includes(t));
   if (!tabs.length) { ok(`א. חותמת בכל רשומה — אין טבלה חתומה בריפו הזה`); return; }
@@ -215,6 +357,51 @@ async function claimStamp() {
     if (rows.length) { badRows++; bad(`א. חותמת בכל רשומה — \`${t}\` נושאת רשומה עם \`updated_at\` אפס או ריק. נמדד ${rows.length}+ מול הצפוי 0. מתקנים במיגרציה שגוזרת את החותמת מהתאריך שברשומה`); }
   }
   if (!badRows) ok(`א. חותמת בכל רשומה — ${seen} טבלאות חתומות, ואפס רשומות עם אפס או ריק`);
+}
+
+/*  ⛔ עמודת מיון מוצהרת קיימת בסכימה החיה (סבב 135) — ⚠️ **מה נכנס**: כל
+ *  מקור `kind:'table'` שנושא `order`, ⭐ וכל זוג ב-`SYNC_TABLES`;
+ *  ⛔ **ומה מפיל**: עמודה שאינה בטבלה. ⚠️ **ולמה היא קיימת**: `order` על
+ *  עמודה שאינה קיימת מחזיר `42703` — ⛔ והוא נקרא «סכימה מיושנת», ⭐ מפיל
+ *  את המשיכה ומציג באנר עדכון שאינו קשור לגרסה, ⚠️ בכל טעינה.
+ *  ⛔ **וההצהרה נקראת מהמקור** ⛔ ואינה רשימה שנייה כאן — ⚠️ רשימה שנייה
+ *  מתיישנת, ⭐ והמקור הוא מה שרץ בדפדפן. */
+function declaredSortCols(src) {
+  const out = new Map();
+  for (const m of src.matchAll(/\{[^{}]*kind:\s*'table'[^{}]*\}/g)) {
+    const t = /name:\s*'([a-z_0-9]+)'/.exec(m[0]);
+    const c = /order:\s*'([a-z_0-9]*)'/.exec(m[0]);
+    if (t && c && c[1]) out.set(t[1] + '|' + c[1], [t[1], c[1]]);
+  }
+  const st = /SYNC_TABLES\s*=\s*\[([\s\S]*?)\];/.exec(src);
+  if (st)
+    for (const m of st[1].matchAll(/\['([a-z_0-9]+)'\s*,\s*'([a-z_0-9]+)'\]/g))
+      out.set(m[1] + '|' + m[2], [m[1], m[2]]);
+  return [...out.values()];
+}
+async function claimSortCols() {
+  const pairs = declaredSortCols(SRC);
+  if (!pairs.length) {
+    bad('יב. עמודת מיון — אפס עמודות מיון מוצהרות והצפוי לפחות אחת. ' +
+        'שליפה בעמודים בלי `ORDER BY` אינה מבטיחה סדר; מצהירים `order` לכל מקור');
+    return;
+  }
+  let miss = 0;
+  for (const [t, c] of pairs) {
+    /*  ⛔ השאילתה נושאת `order` בפועל ⛔ ואינה בדיקת קיום עמודה — ⚠️ זה
+     *  בדיוק המסלול שהאפליקציה מריצה, ⭐ וזה מה שמחזיר `42703`. */
+    const r = await q(`/${t}?select=${c}&order=${c}&limit=1`);
+    if (r.status === 200) continue;
+    miss++;
+    if (/42703/.test(r.text))
+      bad(`יב. עמודת מיון — \`${t}.${c}\` מוצהרת כעמודת מיון ואינה קיימת במסד. ` +
+          'נמדד 400/42703 מול הצפוי 200. מיישרים את `order` לעמודה שקיימת — ' +
+          '`order` על עמודה שאינה קיימת נקרא «סכימה מיושנת» ומציג באנר עדכון');
+    else
+      bad(`יב. עמודת מיון — \`${t}.${c}\` החזירה ${r.status}: ${r.text.slice(0, 120)}. ` +
+          'נמדד מול הצפוי 200. מיישרים את `order` לעמודה שקיימת');
+  }
+  if (!miss) ok(`יב. עמודת מיון — ${pairs.length} עמודות מיון מוצהרות, וכולן קיימות בסכימה החיה`);
 }
 
 async function claimSchema() {
@@ -234,18 +421,53 @@ async function claimSchema() {
   if (!miss) ok(`ב. חתימת סכימה — ${checked} טבלאות מוצהרות, וכל עמודה שמוצהרת להן קיימת במסד`);
 }
 
+/*  ⛔ מפתחות ההגדרה נמדדים **משני הצדדים** — ⚠️ כל מפתח שהקוד קורא קיים
+ *  במסד, ⛔ וכל מפתח חי במסד יש לו קורא או הצהרה. ⭐ **והקריאה נגזרת
+ *  מדפוסים מוצהרים** — ⚠️ ארבע האפליקציות קוראות בארבע צורות: קריאת
+ *  משיכה, עוטף הגדרה, אינדקס במפה, ורשומה במרשם; ⛔ **ודפוס שאין לו אף
+ *  אתר מפיל** — ⭐ הנימוק המדוד: שלוש מארבע האפליקציות הצהירו שם פונקציה
+ *  שאינו קיים בהן כלל, ⛔ והטענה דיווחה «אין קריאת הגדרה» ועברה.
+ *  ⛔ **ומפתח מחוק אינו נספר** — ⚠️ הוא tombstone, ⭐ ולא מפתח חי. */
 async function claimCfgKeys() {
-  const want = [...new Set([...SRC.matchAll(
-    new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))].sort();
-  if (!want.length) { ok('ג. כל מפתח שהקוד מבקש — אין קריאת הגדרה בריפו הזה'); return; }
-  const r = await q(`/${APP.cfgTable}?select=key`);
+  const reads = APP.cfgReads || [];
+  if (!reads.length) {
+    bad('ג. כל מפתח שהקוד מבקש — `APP.cfgReads` ריק. נמדד 0 דפוסים מול הצפוי לפחות אחד. מצהירים את דפוס הקריאה של האפליקציה');
+    return;
+  }
+  const want = new Set();
+  const dead = [];
+  for (const p of reads) {
+    const hits = [...SRC.matchAll(new RegExp(p.re, 'g'))].map((m) => m[1]);
+    if (!hits.length) dead.push(p.re);
+    hits.forEach((k) => want.add(k));
+  }
+  if (dead.length)
+    bad('ג. כל מפתח שהקוד מבקש — דפוס קריאה מוצהר שאין לו אף אתר: ' +
+        dead.join(' · ') + '. נמדד 0 התאמות מול הצפוי לפחות אחת. ' +
+        'מיישרים את הדפוס למקור, או מסירים אותו מ-`APP.cfgReads`');
+  const r = await q(`/${APP.cfgTable}?select=key,deleted`);
   if (r.status !== 200) throw new Error(`${APP.cfgTable} → ${r.status} ${r.text.slice(0, 120)}`);
-  const live = new Set(JSON.parse(r.text).map((x) => x.key));
-  const missing = want.filter((k) => !live.has(k));
-  if (missing.length) bad(`ג. כל מפתח שהקוד מבקש — מפתחות שהקוד קורא ואינם ב-\`${APP.cfgTable}\`: ${missing.join(', ')}. נמדד ${want.length - missing.length}/${want.length} מול הצפוי ${want.length}. מוסיפים אותם במיגרציה, או מסירים את הקורא`);
-  else ok(`ג. כל מפתח שהקוד מבקש — ${want.length} מפתחות נקראים בקוד, וכולם קיימים ב-\`${APP.cfgTable}\``);
+  const rows = JSON.parse(r.text);
+  const live = new Set(rows.filter((x) => !x.deleted).map((x) => x.key));
+  const missing = [...want].filter((k) => !live.has(k)).sort();
+  if (missing.length)
+    bad('ג. כל מפתח שהקוד מבקש — מפתחות שהקוד קורא ואינם ב-`' + APP.cfgTable + '`: ' +
+        missing.join(', ') + '. נמדד ' + (want.size - missing.length) + '/' + want.size +
+        ' מול הצפוי ' + want.size + '. מוסיפים אותם במיגרציה, או מסירים את הקורא');
+  const known = APP.cfgOrphans || {};
+  const orphan = [...live].filter((k) => !want.has(k) && !known[k]).sort();
+  const ghost = Object.keys(known).filter((k) => !live.has(k)).sort();
+  if (orphan.length)
+    bad('ג. כל מפתח שהקוד מבקש — מפתחות חיים ב-`' + APP.cfgTable + '` שאין להם קורא: ' +
+        orphan.join(', ') + '. נמדד ' + orphan.length + ' מול הצפוי 0. ' +
+        'מצהירים אותם ב-`APP.cfgOrphans` עם נימוקם, ⛔ ומחיקתם מהמסד היא הכרעת מנהל');
+  if (ghost.length)
+    bad('ג. כל מפתח שהקוד מבקש — הכרזות ב-`APP.cfgOrphans` שאין להן מפתח חי: ' +
+        ghost.join(', ') + '. נמדד ' + ghost.length + ' מול הצפוי 0. מסירים את ההכרזה');
+  if (!missing.length && !orphan.length && !ghost.length && !dead.length)
+    ok('ג. כל מפתח שהקוד מבקש — ' + want.size + ' מפתחות נקראים בקוד וכולם קיימים ב-`' +
+       APP.cfgTable + '`, ⛔ ומעליהם ' + Object.keys(known).length + ' מוצהרים בלי קורא');
 }
-
 async function claimAllowlist() {
   if (!APP.allowlistFn) { ok('ד. רשימת-היתר — הפינוי אינו בבעלות הריפו הזה'); return; }
   /*  ⛔⛔ הרשימה נקראת **מהמסד** ⛔ ולא מקובץ המיגרציה (סבב 94) — ⚠️ קריאה
@@ -426,9 +648,185 @@ async function claimReplacedDefs() {
        (empty.length ? `, ${empty.length} טבלאות ריקות ולא נמדדו` : ''));
 }
 
+
+/*  ⛔ טענה ט — «ערך נגזר שהתיישן ברשומה»: ⚠️ שדה שנשמר ברשומה ונגזר
+ *  ממקור שהשתנה מתיישן בשקט, ⭐ **והמדידה היא מול המקור החי** — ⛔ ולא
+ *  מול הקוד. ⭐ **ומה שנשמר בכוונה מוצהר**: רשומה שמפתחה כבר אינו
+ *  במקור היא הנפילה-חזרה, ⛔ והיא נספרת ואינה מפילה.
+ *  ⛔ **והצד ההפוך נמדד בכל ריפו** — ⚠️ עמודה חיה ולצידה עמודה בשם
+ *  `<שם>_name` היא שם נגזר ששמור בטבלה: ⭐ ריפו בלי שדות נגזרים מוצהרים
+ *  עדיין נמדד כאן, ⛔ ואינו טענה שאינה יכולה להיכשל. */
+async function claimDerivedStale() {
+  const defs = APP.derivedFields || [];
+  const decl = new Set(defs.map((d) => d.field));
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  const pairs = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?select=*&limit=1`);
+    if (r.status !== 200) throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
+    const rows = JSON.parse(r.text);
+    if (!rows.length) continue;
+    const cols = Object.keys(rows[0]);
+    for (const c of cols)
+      if (/_name$/.test(c) && cols.includes(c.replace(/_name$/, '')) && !decl.has(c))
+        pairs.push(`${t}.${c}`);
+  }
+  if (pairs.length)
+    bad(`ט. ערך נגזר שהתיישן — עמודות שם לצד המפתח שלהן ואינן מוצהרות: ${pairs.join(', ')}. ` +
+        'נמדדו ' + pairs.length + ' מול הצפוי 0. גורעים את העמודה במיגרציה, או מצהירים אותה ' +
+        'ב-`APP.derivedFields` עם מקורה');
+  if (!defs.length) {
+    if (!pairs.length)
+      ok(`ט. ערך נגזר שהתיישן — אפס שדות נגזרים מוצהרים, ו-${tabs.length} טבלאות נסרקו`);
+    return;
+  }
+  let seen = 0, kept = 0;
+  const stale = [];
+  for (const d of defs) {
+    for (const s of d.sources) {
+      const sr = await q(`/${s.table}?key=eq.${s.row}&select=value`);
+      if (sr.status !== 200) throw new Error(`${s.table} → ${sr.status} ${sr.text.slice(0, 120)}`);
+      const srow = JSON.parse(sr.text);
+      if (!srow.length) { stale.push(`${s.table}:${s.row} אינו במסד`); continue; }
+      const map = new Map();
+      for (const x of JSON.parse(srow[0].value)) map.set(x[d.by], x[d.as]);
+      for (let off = 0; ; off += DERIVED_PAGE) {
+        const r = await q(`/${d.entries}?${s.where}&${d.json}->>${d.field}=not.is.null` +
+                          `&select=${d.json}&order=${d.order}&limit=${DERIVED_PAGE}&offset=${off}`);
+        if (r.status !== 200) throw new Error(`${d.entries} → ${r.status} ${r.text.slice(0, 120)}`);
+        const rows = JSON.parse(r.text);
+        for (const row of rows) {
+          const rec = row[d.json] || {};
+          if (rec[d.field] == null) continue;
+          seen++;
+          if (!map.has(rec[d.key])) { kept++; continue; }
+          if (map.get(rec[d.key]) !== rec[d.field])
+            stale.push(`${rec[d.key]}: «${rec[d.field]}» מול «${map.get(rec[d.key])}»`);
+        }
+        if (rows.length < DERIVED_PAGE) break;
+      }
+    }
+  }
+  if (stale.length)
+    bad(`ט. ערך נגזר שהתיישן — ${[...new Set(stale)].slice(0, 6).join(' · ')}. ` +
+        `נמדדו ${stale.length} מול הצפוי 0. מתקנים במיגרציה מול המקור הנוכחי, ` +
+        '⛔ ובלי לקדם את `updated_at` — ⚠️ זה תיקון ולא עריכה');
+  else if (!pairs.length)
+    ok(`ט. ערך נגזר שהתיישן — ${seen} רשומות נמדדו מול המקור החי, אפס שגויות` +
+       (kept ? `, ${kept} שומרות מפתח שאינו במקור ומוצהרות` : ''));
+}
+
+
+
+/*  ⛔ ההרשאה נמדדת **בהתנהגות** ⛔ ולא ב-`information_schema` — ⚠️ אין לו
+ *  חשיפה ב-REST, ⭐ והנמדד כאן הוא הזכות **בפועל**: ⛔ בקשת `DELETE`
+ *  מסוננת שחוזרת «permission denied» היא הראיה שאין מחיקה בהישג יד.
+ *  ⛔ **והסינון הוא חותמת שלילית** — ⚠️ הוא אינו תואם אף שורה, ⭐ וגם אילו
+ *  הייתה ההרשאה קיימת לא הייתה נמחקת שורה: ⛔ השער קורא בלבד.
+ *  ⛔ **ו-404 אינו מחיקה** — ⚠️ טבלה שאינה קיימת היא עניינה של טענה ב. */
+async function claimGrants() {
+  const tabs = (APP.ownTables || []).filter((t) => created.includes(t));
+  if (!tabs.length) { ok('יב. הרשאות במסד — אין טבלה בבעלות הריפו הזה, ⛔ ואין מה למדוד'); return; }
+  const held = [];
+  for (const t of tabs) {
+    const r = await q(`/${t}?updated_at=eq.-1`, { method: 'DELETE' });
+    if (r.status === 401 || r.status === 403 || /42501/.test(r.text)) continue;
+    if (r.status === 404 || /42P01/.test(r.text)) continue;
+    held.push(`${t}→${r.status}`);
+  }
+  if (held.length)
+    bad('יב. הרשאות במסד — `DELETE` בהישג ידו של מפתח ה-`anon` על ' + held.join(', ') +
+        '. נמדד ' + held.length + ' מול הצפוי 0. מריצים ' +
+        '`revoke delete on <טבלה> from anon, authenticated` — ' +
+        '⛔ מחיקה ברמת המסד עוקפת את המחיקה הרכה');
+  else ok('יב. הרשאות במסד — ' + tabs.length +
+          ' טבלאות נמדדו, ⛔ ואין `DELETE` בהישג ידו של מפתח ה-`anon`');
+
+  const upd = [];
+  for (const t of (APP.appendOnly || [])) {
+    const r = await q(`/${t}?id=eq.-1`, { method: 'PATCH', body: '{"key":"__probe__"}' });
+    if (r.status === 401 || r.status === 403 || /42501/.test(r.text)) continue;
+    if (r.status === 404 || /42P01/.test(r.text)) continue;
+    upd.push(`${t}→${r.status}`);
+  }
+  if (upd.length)
+    bad('יג. תוספת-בלבד — `UPDATE` בהישג יד על טבלה מוצהרת: ' + upd.join(', ') +
+        '. נמדד ' + upd.length + ' מול הצפוי 0. מריצים ' +
+        '`revoke update on <טבלה> from anon, authenticated` — ' +
+        '⛔ גיבוי ולוג נכתבים פעם אחת ואינם נערכים');
+  else if (!(APP.appendOnly || []).length)
+    ok('יג. תוספת-בלבד — אין טבלה מוצהרת בריפו הזה');
+  else ok('יג. תוספת-בלבד — ' + APP.appendOnly.length +
+          ' טבלאות מוצהרות, ⛔ ואין `UPDATE` בהישג ידו של מפתח ה-`anon`');
+}
+
+/*  ⛔ הסכימה המוצהרת היא **מראה** של החיה — ⚠️ והמראה נמדדת מולה בכל ריצה
+ *  שמגיעה למסד: ⭐ **קבוע ידני מתיישן**, ⛔ ומיגרציה שמוסיפה עמודה ואינה
+ *  מעדכנת אותו מסתירה פער שאיש אינו רואה.
+ *  ⛔ **ושני הכיוונים נמדדים** — ⚠️ עמודה מוצהרת שאינה במסד נתפסת בשליפה
+ *  שנוקבת בה בשמה, ⭐ ועמודה שבמסד ואינה מוצהרת נתפסת במפתחות השורה:
+ *  ⛔ **ואיתם הסדר** — ⚠️ `select *` שסדר עמודותיו נבדל הוא שלושה דברים
+ *  שונים לשלושה קוראים.
+ *  ⛔ **וטבלה ריקה אינה ניתנת למניית עמודות** — ⚠️ אין שורה שממנה לקרוא
+ *  מפתחות, ⭐ והיא נספרת «נמדדה חלקית» ⛔ ואינה מדווחת תקינה. */
+async function claimSchemaMirror() {
+  const mine = DB_SCHEMA.filter((x) => x.p === APP.project);
+  if (!mine.length) {
+    bad('טו. מראת הסכימה — `DB_SCHEMA` אינה נושאת אף טבלה לפרויקט «' + APP.project +
+        '». נמדד 0 מול הצפוי לפחות אחת. מיישרים את `APP.project` לסכימה');
+    return;
+  }
+  const gaps = [], partial = [];
+  let full = 0;
+  for (const row of mine) {
+    const r0 = await q(`/${row.t}?select=${row.c}&limit=0`);
+    if (r0.status === 404 || /42P01/.test(r0.text)) { gaps.push(row.t + ' — מוצהרת ואינה במסד'); continue; }
+    if (/42703/.test(r0.text)) { gaps.push(row.t + ' — עמודה מוצהרת שאינה במסד: ' + r0.text.slice(0, 80)); continue; }
+    if (r0.status !== 200) throw new Error(`${row.t} → ${r0.status} ${r0.text.slice(0, 120)}`);
+    const r1 = await q(`/${row.t}?select=*&limit=1`);
+    if (r1.status !== 200) throw new Error(`${row.t} → ${r1.status} ${r1.text.slice(0, 120)}`);
+    const live = JSON.parse(r1.text);
+    if (!live.length) { partial.push(row.t); continue; }
+    const got = Object.keys(live[0]).join(',');
+    if (got !== row.c) gaps.push(row.t + ' — נמדד «' + got + '» מול המוצהר «' + row.c + '»');
+    else full++;
+  }
+  if (gaps.length)
+    bad('טו. מראת הסכימה — ' + gaps.join(' · ') + '. נמדדו ' + gaps.length +
+        ' מול הצפוי 0. מיישרים את `db_schema.mjs` לסכימה החיה באותו קומיט של המיגרציה');
+  else
+    ok('טו. מראת הסכימה — ' + full + ' טבלאות נמדדו במלואן מול המסד' +
+       (partial.length ? ', ו-' + partial.length + ' ריקות נמדדו בעמודות המוצהרות בלבד' : '') +
+       ', ⛔ והמראה תואמת');
+}
+
+/*  ⛔ ההכרזה על שארית נמדדת מול המסד — ⚠️ **טבלה מוכרזת שאינה קיימת עוד
+ *  מפילה**: ⭐ ביום שהמנהל מוחק אותה ההכרזה מתיישנת, ⛔ והיא יורדת באותו
+ *  סבב. ⚠️ **והכיוון השני אינו נמדד כאן** — ⛔ ל-REST אין מניית טבלאות:
+ *  ⭐ שארית חדשה נתפסת בסריקת המסד שבסבב שנוגע בו. */
+async function claimLeftover() {
+  const mine = DB_LEFTOVER.filter((x) => x.p === APP.project);
+  if (!mine.length) { ok('טז. שאריות במסד — אין הכרזה לפרויקט הזה, ⛔ ואין מה למדוד'); return; }
+  const gone = [];
+  for (const x of mine) {
+    const r = await q(`/${x.t}?select=*&limit=0`);
+    if (r.status === 404 || /42P01/.test(r.text)) { gone.push(x.t); continue; }
+    if (r.status !== 200) throw new Error(`${x.t} → ${r.status} ${r.text.slice(0, 120)}`);
+  }
+  if (gone.length)
+    bad('טז. שאריות במסד — הכרזות שאין להן טבלה חיה: ' + gone.join(', ') +
+        '. נמדדו ' + gone.length + ' מול הצפוי 0. מסירים אותן מ-`DB_LEFTOVER` — ' +
+        '⛔ הכרזה שאין לה מקרה חי היא היתר שלא נסגר');
+  else
+    ok('טז. שאריות במסד — ' + mine.length + ' טבלאות מוכרזות וקיימות, ⛔ ואין להן קורא בקוד: ' +
+       'המחיקה היא הכרעת מנהל');
+}
+
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
+
 console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
 
+mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_dbfacts: השער רץ ברמה המלאה (--full)');
   process.exit(0);
@@ -436,15 +834,24 @@ if (!RUN_MUT) {
 if (!CONN && !SELFTEST) {
   bad(`לא נמצא מפתח \`anon\` תקין ב-\`index.html\`. נמדד כתובת=${!!_url} מפתח=${!!_key} תפקיד=«${KEY_ROLE || 'אין'}» מול הצפוי «anon». מיישרים את הקריאה שבקוד, ⛔ ולא משתמשים ב-\`service_role\` — הוא עוקף RLS`);
 } else {
+  /*  ⛔ טענת הקורא היא מדידת מקור ⛔ ואינה יוצאת לרשת — ⚠️ ולכן היא
+   *  מחוץ ל-`try` שבולע ניתוק: ⭐ בפנים, ניתוק היה מדלג עליה בשקט. */
+  await claimKvReader();
   try {
     await claimStamp();
     await claimStampType();
     await claimTwins();
     await claimSchema();
+    await claimSortCols();
     await claimCfgKeys();
     await claimAllowlist();
     await claimColReaders();
     await claimReplacedDefs();
+    await claimDerivedStale();
+    await claimKvJson();
+    await claimGrants();
+    await claimSchemaMirror();
+    await claimLeftover();
   } catch (e) {
     /*  ⛔⛔ כשל רשת אינו מפיל (סבב 93) — ⚠️ הוא מדווח «לא נמדד»: ⭐ הסביבה
      *  שבה רץ הסט אינה תמיד מחוברת, ⛔ וניתוק ששובר את הסט הופך את השער
@@ -465,19 +872,50 @@ if (RUN_MUT && !SELFTEST) {
   const { createServer } = await import('node:http');
   const { spawn } = await import('node:child_process');
 
-  const cfgWant = [...new Set([...SRC.matchAll(
-    new RegExp(APP.cfgReader + "\\(\\s*'([a-z_][a-z0-9_]*)'", 'g'))].map((m) => m[1]))];
+  /*  ⛔ הרשימה נגזרת מאותם דפוסים שהטענה סורקת בהם — ⚠️ רתמה שגוזרת
+   *  אחרת מודדת מסלול שאינו המסלול החי. */
+  const cfgWant = (() => {
+    const s = new Set();
+    for (const p of (APP.cfgReads || []))
+      for (const m of SRC.matchAll(new RegExp(p.re, 'g'))) s.add(m[1]);
+    return [...s];
+  })();
+  const cfgOrph = Object.keys(APP.cfgOrphans || {});
   const allowFirst = 'bk_key_in_the_stub_allowlist';
+  const DF = (APP.derivedFields || [])[0];
 
   /*  ⛔ התשובות נגזרות **מצורת הבקשה** ⛔ ולא משמות טבלה מוקלדים — ⚠️ ארבעת
    *  הריפו שולחים שמות אחרים, ⭐ ושרת ששומע שם אחד אינו רתמה לשלושה. */
-  const reply = (scen, url) => {
+  const reply = (scen, url, method) => {
+    /*  ⛔ בדיקת ההרשאה היא **בקשת DELETE** — ⚠️ 401 היא ההרשאה החסרה,
+     *  ⭐ ו-204 היא הרשאה קיימת: ⛔ והנקי מחזיר 401, ⚠️ שזה המצב שנמדד
+     *  מול המסד. */
+    if (method === 'DELETE')
+      return scen === 'grantdel'
+        ? [204, ''] : [401, '{"code":"42501","message":"permission denied for table x"}'];
+    if (method === 'PATCH')
+      return scen === 'grantupd'
+        ? [204, ''] : [401, '{"code":"42501","message":"permission denied for table x"}'];
+    /*  ⛔ ענף נפרד לשאילתת המיון, ובחתימתה המלאה — ⚠️ `order=` לבדו מופיע
+     *  גם בשאילתת הערך הנגזר, ⭐ וענף רחב היה בולע אותה: ⛔ הנמדד הוא
+     *  `select=X&order=X&limit=1` — אותה עמודה בשני הצדדים, ושורה אחת. */
+    if (/\?select=([a-z_0-9]+)&order=\1&limit=1$/.test(url))
+      return scen === 'sortcol'
+        ? [400, '{"code":"42703","message":"column x does not exist"}'] : [200, '[]'];
+    /*  ⛔ שארית מוכרזת שאינה קיימת עוד — ⚠️ התרחיש מחזיר 404 לטבלה
+     *  המוכרזת: ⭐ בדיוק המצב שאחרי שהמנהל מחק אותה. */
+    if (scen === 'leftover' && DB_LEFTOVER.some((x) => url.indexOf('/' + x.t + '?') === 0))
+      return [404, '{"code":"42P01","message":"relation does not exist"}'];
     if (/limit=0/.test(url))
       return scen === 'schema'
         ? [400, '{"code":"42703","message":"column x does not exist"}'] : [200, '[]'];
     /*  ⛔ שני מסלולי `updated_at` נפרדים — ⚠️ טענה א שואלת **בסינון**
      *  על אפס או ריק, ⭐ וטענה ה שואלת שורה אחת בלי סינון: ⛔ ענף אחד
      *  לשתיהן היה מפיל את אחת מהן על תשובה שנועדה לשנייה. */
+    /*  ⛔ ערך המפתח-ערך חוזר כזוג `key,value` — ⚠️ והמוטציה מחזירה ערך
+     *  חשוף: ⭐ בדיוק מה שנכתב במסד, ⛔ ובדיוק מה ש-`JSON.parse` זורק עליו. */
+    if (/select=key,value/.test(url))
+      return [200, JSON.stringify([{ key: 'k', value: scen === 'kvjson' ? 'לא JSON' : '"ok"' }])];
     if (/updated_at\.eq\.0|updated_at\.is\.null/.test(url))
       return scen === 'stamp' ? [200, '[{"updated_at":0}]'] : [200, '[]'];
     if (/select=updated_at/.test(url))
@@ -490,6 +928,17 @@ if (RUN_MUT && !SELFTEST) {
     /*  ⛔ שני תרחישי השאריות (סבב 104) — ⚠️ שניהם עונים על `select=*`:
      *  ⭐ `colreader` מוסיף עמודה שאין לה קורא ואינה מוצהרת, ⛔ ו-`staledef`
      *  מחזיר שורה שאין בה אף עמודה שהקוד נוקב בה בשליפה. */
+    /*  ⛔ מראת הסכימה — ⚠️ התרחיש מחזיר את העמודות המוצהרות **בסדר הפוך**:
+     *  ⭐ אותו סט בדיוק, ⛔ וסדר אחר — וזו בדיוק הסחיפה שהטענה מודדת. */
+    if (scen === 'mirror' && /select=\*&limit=1/.test(url)) {
+      const t = url.slice(1, url.indexOf('?'));
+      const row = DB_SCHEMA.find((x) => x.p === APP.project && x.t === t);
+      if (row) {
+        const o = {};
+        row.c.split(',').reverse().forEach((c) => { o[c] = 'x'; });
+        return [200, JSON.stringify([o])];
+      }
+    }
     if (scen === 'colreader' && /select=\*/.test(url))
       return [200, '[{"zz_orphan_col":"x"}]'];
     if (scen === 'staledef' && /select=\*/.test(url))
@@ -504,19 +953,32 @@ if (RUN_MUT && !SELFTEST) {
       cols.forEach((c) => { row[c] = 'x'; });
       return [200, JSON.stringify([row])];
     }
+    /*  ⛔ שני מסלולי טענה ט — ⚠️ המקור החי חוזר כערך מפתח-ערך, ⭐ והרשומות
+     *  חוזרות כעמודת ה-jsonb: ⛔ והמוטציה משנה את **הערך השמור** ⛔ ולא
+     *  את המקור, ⚠️ שזו בדיוק ההתיישנות שהטענה מודדת. */
+    if (DF && /\?key=eq\.[^&]+&select=value$/.test(url)) {
+      const one = {}; one[DF.by] = 'K'; one[DF.as] = 'שם נוכחי';
+      return [200, JSON.stringify([{ value: JSON.stringify([one]) }])];
+    }
+    if (DF && url.indexOf(DF.field + '=not.is.null') >= 0) {
+      const rec = {}; rec[DF.key] = 'K';
+      rec[DF.field] = scen === 'derived' ? 'שם שהתיישן' : 'שם נוכחי';
+      const wrap = {}; wrap[DF.json] = rec;
+      return [200, JSON.stringify([wrap])];
+    }
     if (APP.allowlistFn && url.includes('/rpc/' + APP.allowlistFn))
       return [200, JSON.stringify([allowFirst])];
     if (APP.backupTable && url.includes('/' + APP.backupTable + '?'))
       return [200, JSON.stringify(
         (scen === 'orphan' ? [{ key: 'ys_orphan_key_that_is_not_listed' }] : [])
           .concat([{ key: allowFirst }]))];
-    const keys = scen === 'cfg' ? cfgWant.slice(1) : cfgWant;
-    return [200, JSON.stringify(keys.map((k) => ({ key: k })))];
+    const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph);
+    return [200, JSON.stringify(keys.map((k) => ({ key: k, deleted: false })))];
   };
 
   let scenario = 'clean';
   const srv = createServer((req, res) => {
-    const [code, body] = reply(scenario, req.url);
+    const [code, body] = reply(scenario, req.url, req.method);
     res.writeHead(code, { 'Content-Type': 'application/json' });
     res.end(body);
   });
@@ -529,7 +991,11 @@ if (RUN_MUT && !SELFTEST) {
    *  ⚠️ וכל ארבע המוטציות «עברו» מבלי שנמדד דבר. */
   const runSelf = (url) => new Promise((res) => {
     const c = spawn(process.execPath, [fileURLToPath(import.meta.url)], {
-      env: { ...process.env, GATE_MUT: '1', DBFACTS_SELFTEST: '1', DBFACTS_URL: url },
+      /*  ⛔ ריצת-משנה מוצהרת (סבב 119) — ⚠️ הרתמה מריצה את השער על שרת
+       *  דמה, ⭐ והוא מגיע לחלק מטענותיו בכוונה: ⛔ בלי ההכרזה הריצפה
+       *  נמדדת על ריצה שאינה על העץ האמיתי. */
+      env: { ...process.env, GATE_MUT: '1', GATE_SUBRUN: '1',
+             DBFACTS_SELFTEST: '1', DBFACTS_URL: url },
     });
     let out = '';
     c.stdout.on('data', (d) => { out += d; });
@@ -559,6 +1025,12 @@ if (RUN_MUT && !SELFTEST) {
     else bad(`${label} — נמדד ${got ? 'עבר' : 'נפל'} מול הצפוי ${want ? 'עבר' : 'נפל'}. מיישרים את הטענה, או את השרת שברתמה`);
   };
 
+  await mut('⛔ מוטציה: `DELETE` בהישג יד מפיל את «הרשאות במסד»', 'grantdel', false);
+  await mut('⛔ מוטציה: `UPDATE` על טבלת תוספת-בלבד מפיל את «הרשאות במסד»', 'grantupd', false);
+  await mut('⛔ מוטציה: סדר עמודות שנבדל מהמוצהר מפיל את «מראת הסכימה»', 'mirror', false);
+  if (DB_LEFTOVER.some((x) => x.p === APP.project))
+    await mut('⛔ מוטציה: שארית מוכרזת שאינה קיימת מפילה את «שאריות במסד»', 'leftover', false);
+  else ok('⛔ אין מוטציית שארית — ⚠️ אין הכרזה לפרויקט הזה, ⛔ ואין מה למוטט');
   await mut('⭐ מוטציית-נגד: תשובה נקייה ⛔ אינה מפילה', 'clean', true);
   await mut('⛔ מוטציה: רשומה עם `updated_at` אפס מפילה את «חותמת בכל רשומה»', 'stamp', false);
   await mut('⛔ מוטציה: חותמת שחוזרת כמחרוזת מפילה את «דפוס עמודות אחיד»', 'stamptype', false);
@@ -566,6 +1038,9 @@ if (RUN_MUT && !SELFTEST) {
     await mut('⛔ מוטציה: סדר עמודות הפוך מפיל את «טבלה מקבילה»', 'twin', false);
   else ok('⛔ אין מוטציית טבלה מקבילה — ⚠️ אין כאן משפחה מוצהרת, ⛔ ואין מה למוטט');
   await mut('⛔ מוטציה: עמודה שאינה קיימת (42703) מפילה את «חתימת סכימה»', 'schema', false);
+  /*  ⛔ עמודת מיון שאינה קיימת — ⚠️ אותו `42703`, ⭐ ומסלול אחר לגמרי:
+   *  ⛔ הוא מפיל את המשיכה ומציג באנר עדכון שאינו קשור לגרסה. */
+  await mut('⛔ מוטציה: עמודת מיון שאינה קיימת (42703) מפילה את «עמודת מיון»', 'sortcol', false);
   if (cfgWant.length)
     await mut('⛔ מוטציה: מפתח הגדרה שנעדר מהטבלה מפיל את «כל מפתח שהקוד מבקש»', 'cfg', false);
   else ok('⛔ אין מוטציית מפתח הגדרה — הריפו הזה אינו קורא הגדרה, ⚠️ ואין מה למוטט');
@@ -574,12 +1049,18 @@ if (RUN_MUT && !SELFTEST) {
   else ok('⛔ אין מוטציית רשימת-היתר — הפינוי אינו בבעלות הריפו הזה, ⚠️ ואין רשימה למוטט');
 
   await mut('⛔ מוטציה: עמודה שאין לה קורא ואינה מוצהרת מפילה את «עמודה בלי קורא»', 'colreader', false);
+  await mut('⛔ מוטציה: ערך שאינו JSON מפיל את «ערך במפתח-ערך הוא JSON»', 'kvjson', false);
   /*  ⛔ תרחיש ההגדרה שהוחלפה דורש **אתר בפועל** — ⚠️ שליפה שנוקבת בעמודה
    *  בשמה: ⭐ ריפו שכל שליפותיו `select('*')` אין בו מה למוטט, ⛔ והוא
    *  מוכרז כאן ⛔ ואינו מדולג בשתיקה. */
   if (NAMED_SELECTS)
     await mut('⛔ מוטציה: עמודה שהקוד נוקב בה ואינה בשורה מפילה את «הגדרה שהוחלפה»', 'staledef', false);
   else ok('⛔ אין מוטציית «הגדרה שהוחלפה» — ⚠️ אין כאן שליפה שנוקבת בעמודה בשמה, ⛔ ואין מה למוטט');
+
+  if (DF)
+    await mut('⛔ מוטציה: ערך שמור שאינו מסכים עם המקור מפיל את «ערך נגזר שהתיישן»', 'derived', false);
+  else ok('⛔ אין מוטציית «ערך נגזר שהתיישן» — ⚠️ אין כאן שדה נגזר מוצהר, ⛔ ואין מה למוטט');
+
 
   /*  ⭐ מוטציית-נגד אחרונה: ⛔ יעד שאינו נענה **אינו מפיל** — ⚠️ זו ההתנהגות
    *  שהבאנר מכריז, ⭐ ובלי מדידה שלה היא הצהרה בלבד. */
@@ -593,5 +1074,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שמונה הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שלוש-עשרה הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);

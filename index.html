@@ -14,81 +14,84 @@
      לאפליקציה בלי שינוי קוד ובלי בדיקה — ושבירה כזו אינה ניתנת לשחזור
      (הקוד בריפו לא השתנה). @2.39.3 הוא בדיוק מה שרץ בייצור ב-hanhala. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Heebo',sans-serif;background:var(--bgsec);color:var(--text);direction:rtl;min-height:100vh;font-size:14px}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 :root{
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  סרגל לשוניות תחתון קבוע. */
   --toast-bottom:26px;
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בארבעתן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
-  --stale-ink:#a3341f;
---navy:#1a1a1a;--navy2:#2d2d2d;--navy3:#111111;--accent:#9fe870;--accent2:#8dd95e;--green:#2e7d32;--greenl:#e8f5e9;--yellow:#b45309;--yellowl:#fef3c7;--red:#c62828;--redl:#ffebee;--border:#e0e0e0;--bgsec:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:16px;--credit:#1565c0;--creditl:#eef5fd}
+  /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בארבעתן,
+   *  ⭐ והגוון בלבד נבדל: ⛔ רכיב שמייצג את האפליקציה נגזר ממנו
+   *  ⛔ ולא מדיו הטקסט — ⚠️ ארבעה באנרים בארבעה גוונים נראו זהים.
+   *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
+  --brand:var(--accent); --on-brand:#1a1a1a;
+--accent:#9fe870;--accent2:#8dd95e;--ok:#2e7d32;--ok-soft:#e8f5e9;--warn:#b45309;--warn-soft:#fdf1e3;--bad:#c62828;--bad-soft:#ffebee;--bad-soft-2:#ffe0e4;--border:#e0e0e0;--bg:#f5f5f5;--card-2:#f5f5f5;--text:#1a1a1a;--text2:#555555;--text3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:var(--r-5);--credit:#1565c0;--creditl:#eef5fd}
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
  *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
  *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
 @media (prefers-color-scheme:dark){
   :root{
-    --stale-ink:#ffb4a2;
-    --bgsec:#18242f; --card:#131e29;
+    --on-brand:#1a1a1a;
+
+    --bg:#18242f; --card:#131e29; --card-2:#18242f;
     --text:#e8eef5; --text2:#c2cfdc; --text3:#93a5b8;
     --border:#24333f;
-    --navy:#e8eef5; --navy2:#c2cfdc; --navy3:#ffffff;
     --accent:#9fe870; --accent2:#8dd95e;
-    --green:#4ade80; --greenl:#122a1c;
-    --yellow:#fbbf24; --yellowl:#2c2213;
-    --red:#f87171; --redl:#2d1717;
+    --ok:#4ade80; --ok-soft:#12251c;
+    --warn:#fbbf24; --warn-soft:#2c2213;
+    --bad:#f87171; --bad-soft:#2d1717; --bad-soft-2:#3d1f1f;
     --credit:#7bb7f5; --creditl:#122334;
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
   }
 }
-#app{max-width:800px;margin:0 auto;padding-bottom:80px}
-#auth-screen{position:fixed;inset:0;background:var(--bgsec);display:flex;align-items:center;justify-content:center;z-index:9999}
+#app{max-width:800px;margin:0 auto;padding-bottom:var(--sp-7)}
+#auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:var(--z-7)}
 #auth-screen.hidden{display:none}
-.auth-box{background:var(--card);border-radius:24px;padding:40px 32px;width:90%;max-width:360px;box-shadow:0 2px 16px rgba(0,0,0,.08);text-align:center}
-.auth-title{font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:4px}
-.auth-sub{font-size:.85rem;color:var(--text3);margin-bottom:24px}
-.auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;text-align:right}
-.auth-field label{font-size:.8rem;font-weight:600;color:var(--text2)}
-.auth-field input{border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:Heebo;font-size:.95rem;outline:none;transition:border .15s;width:100%;background:var(--card)}
-.auth-field input:focus{border-color:var(--navy)}
-.auth-btn{width:100%;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:13px;font-family:Heebo;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s}
+.auth-box{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7) var(--sp-7);width:90%;max-width:360px;box-shadow:0 2px 16px var(--sh-1);text-align:center}
+.auth-title{font-size:var(--fs-5);font-weight:700;color:var(--text);margin-bottom:var(--sp-2)}
+.auth-sub{font-size:var(--fs-3);color:var(--text3);margin-bottom:var(--sp-7)}
+.auth-field{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-6);text-align:right}
+.auth-field label{font-size:var(--fs-3);font-weight:600;color:var(--text2)}
+.auth-field input{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-4);outline:none;transition:border var(--dur-2);width:100%;background:var(--card)}
+.auth-field input:focus{border-color:var(--text)}
+.auth-btn{width:100%;background:var(--accent);color:var(--on-brand);border:none;border-radius:var(--r-7);padding:var(--sp-5);font-family:Heebo;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-2);transition:background var(--dur-2)}
 .auth-btn:hover{background:var(--accent2)}
-.auth-btn:disabled{opacity:.5;cursor:default}
-.auth-spinner{display:none;margin:10px auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
-.auth-err{color:var(--red);font-size:.82rem;margin-top:8px;min-height:18px}
+.auth-btn:disabled{opacity:var(--op-3);cursor:default}
+.auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:var(--r-7);animation:spin var(--dur-6) linear infinite}
+.auth-err{color:var(--bad);font-size:var(--fs-3);margin-top:var(--sp-4);min-height:18px}
 @keyframes spin{to{transform:rotate(360deg)}}
-#topnav{position:sticky;top:0;z-index:100;background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;border-bottom:1px solid var(--border)}
-.nav-title{font-size:1rem;font-weight:700;color:var(--text)}
-.nav-user{font-size:.78rem;color:var(--text3);display:flex;align-items:center;gap:8px}
-.nav-logout{background:var(--bgsec);border:1.5px solid var(--border);color:var(--text2);border-radius:999px;padding:4px 12px;font-family:Heebo;font-size:.75rem;cursor:pointer;transition:background .15s}
+#topnav{position:sticky;top:0;z-index:var(--z-2);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-6);height:54px;border-bottom:1px solid var(--border)}
+.nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
+.nav-user{font-size:var(--fs-2);color:var(--text3);display:flex;align-items:center;gap:var(--sp-4)}
+.nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-5);font-family:Heebo;font-size:var(--fs-2);cursor:pointer;transition:background var(--dur-2)}
 .nav-logout:hover{background:var(--border)}
 /*  ⛔ מעל סרגל הלשוניות — ⚠️ טוסט שיושב מתחתיו אינו נראה. */
 :root{--toast-bottom:80px}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:100}
-.tab-btn{flex:1;background:none;border:none;padding:10px 4px 8px;font-family:Heebo;font-size:10px;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s}
-.tab-btn .ti{font-size:1.3rem;line-height:1}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
+.tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color var(--dur-2)}
+.tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--text);font-weight:700}
-.panel{display:none;padding:16px}
+.panel{display:none;padding:var(--sp-6)}
 .panel.active{display:block}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
-.card-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bgsec)}
-.card-hdr h3{font-size:.9rem;font-weight:700;color:var(--text)}
-.card-body{padding:16px}
-.btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#1a1a1a;border:none;border-radius:999px;padding:8px 18px;font-family:Heebo;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:var(--sp-6);overflow:hidden;border:1px solid var(--border)}
+.card-hdr{padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-4);background:var(--bg)}
+.card-hdr h3{font-size:var(--fs-4);font-weight:700;color:var(--text)}
+.card-body{padding:var(--sp-6)}
+.btn{display:inline-flex;align-items:center;gap:var(--sp-3);background:var(--accent);color:var(--on-brand);border:none;border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2);white-space:nowrap}
 .btn:hover{background:var(--accent2)}
-.btn.out{background:var(--card);border:1.5px solid var(--navy);color:var(--text)}
-.btn.out:hover{background:var(--bgsec)}
-.btn.danger{background:var(--redl);color:var(--red);border:1.5px solid var(--redl)}
-.btn.danger:hover{background:#ffcdd2}
-.btn.sm{padding:5px 12px;font-size:.78rem}
-.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
-.tbl th{background:var(--bgsec);color:var(--text2);padding:9px 10px;text-align:right;font-weight:600;font-size:.76rem;white-space:nowrap;border-bottom:2px solid var(--border)}
-.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+.btn.out{background:var(--card);border:1.5px solid var(--text);color:var(--text)}
+.btn.out:hover{background:var(--card-2)}
+.btn.danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid var(--bad-soft)}
+.btn.danger:hover{background:var(--bad-soft-2)}
+.btn.sm{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-2)}
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-3)}
+.tbl th{background:var(--bg);color:var(--text2);padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:600;font-size:var(--fs-2);white-space:nowrap;border-bottom:2px solid var(--border)}
+.tbl td{padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
 .tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:var(--bgsec)}
+.tbl tr:hover td{background:var(--card-2)}
 .tbl td.num{text-align:center;font-weight:600}
 .tbl th.num{text-align:center}
 /* ===== הלוח השנתי: תלמיד בשורה, חודש בעמודה =====
@@ -100,151 +103,253 @@ body{font-family:'Heebo',sans-serif;background:var(--bgsec);color:var(--text);di
    הגבולות שייכים לטבלה ולא לתא, ולכן border לא נגלל יחד עם התא הדביק. */
 .dash-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tbl.pivot td{white-space:nowrap}
-.tbl.pivot th.stu,.tbl.pivot td.stu{position:sticky;right:0;z-index:2;text-align:right;font-weight:600;min-width:6rem;background:var(--card);box-shadow:-1px 0 0 var(--border)}
-.tbl.pivot thead th.stu{z-index:3;background:var(--bgsec)}
+.tbl.pivot th.stu,.tbl.pivot td.stu{position:sticky;right:0;z-index:var(--z-1);text-align:right;font-weight:600;min-width:6rem;background:var(--card);box-shadow:-1px 0 0 var(--border)}
+.tbl.pivot thead th.stu{z-index:var(--z-2);background:var(--bg)}
 .tbl.pivot th.mo{cursor:pointer}
 .tbl.pivot td.mo{cursor:pointer}
-.tbl.pivot td.off{color:var(--text3);opacity:.45}
-.tbl.pivot td.paid{color:var(--green)}
+.tbl.pivot td.off{color:var(--text3);opacity:var(--op-3)}
+.tbl.pivot td.paid{color:var(--ok)}
 .tbl.pivot td.zero{color:var(--text3);font-weight:400}
-.tbl.pivot td.tot,.tbl.pivot th.tot{font-weight:700;background:var(--bgsec)}
-.tbl.pivot tfoot td{background:var(--bgsec);font-weight:700;border-bottom:none}
-.tbl.pivot tfoot td.stu{background:var(--bgsec)}
+.tbl.pivot td.tot,.tbl.pivot th.tot{font-weight:700;background:var(--bg)}
+.tbl.pivot tfoot td{background:var(--bg);font-weight:700;border-bottom:none}
+.tbl.pivot tfoot td.stu{background:var(--bg)}
 .tbl.pivot tfoot tr.top td{border-top:2px solid var(--border)}
-.tbl.pivot tfoot tr.sub td{font-weight:600;font-size:.75rem;color:var(--text2)}
+.tbl.pivot tfoot tr.sub td{font-weight:600;font-size:var(--fs-2);color:var(--text2)}
 /* צביעת שורת האחוזים — נדרשת ספציפיות גבוהה מכלל שורת-הסיכום שמעליה */
-.tbl.pivot tfoot tr.sub td.amt-green{color:var(--green)}
-.tbl.pivot tfoot tr.sub td.amt-yellow{color:var(--yellow)}
-.tbl.pivot tfoot tr.sub td.amt-red{color:var(--red)}
-.tbl.pivot tfoot tr:hover td{background:var(--bgsec)}
+.tbl.pivot tfoot tr.sub td.amt-ok{color:var(--ok)}
+.tbl.pivot tfoot tr.sub td.amt-warn{color:var(--warn)}
+.tbl.pivot tfoot tr.sub td.amt-bad{color:var(--bad)}
+.tbl.pivot tfoot tr:hover td{background:var(--card-2)}
 /* ⛔ מובייל-תחילה: השם עובר לשורה שנייה במקום להיחתך — ⚠️ «לא לחתוך שמות
    באף רזולוציה», ⭐ ולכן זו ברירת המחדל וההרחבה היא שמבטלת אותה. */
-.tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
-.tbl.pivot td,.tbl.pivot th{padding:6px 5px}
+.tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:var(--lh-2)}
+.tbl.pivot td,.tbl.pivot th{padding:var(--sp-3) var(--sp-3)}
 @media (min-width:640px){
   .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
-  .tbl.pivot td,.tbl.pivot th{padding:9px 10px}
+  .tbl.pivot td,.tbl.pivot th{padding:var(--sp-4) var(--sp-5)}
 }
-.frm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
-.frm-row label{font-size:.78rem;font-weight:600;color:var(--text2)}
-.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .15s;background:var(--card);color:var(--text)}
-.frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:var(--navy)}
+.frm-row{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-6)}
+.frm-row label{font-size:var(--fs-2);font-weight:600;color:var(--text2)}
+.frm-row input,.frm-row select,.frm-row textarea{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-family:Heebo;font-size:var(--fs-4);width:100%;outline:none;transition:border var(--dur-2);background:var(--card);color:var(--text)}
+.frm-row input:focus,.frm-row select:focus,.frm-row textarea:focus{border-color:var(--text)}
 .frm-row textarea{resize:vertical;min-height:70px}
-.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700}
-.badge.green{background:#e8f5e9;color:#2e7d32}
+.badge{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);font-weight:700}
+.badge.green{background:var(--ok-soft);color:var(--ok)}
 
-.badge.gray{background:var(--bgsec);color:var(--text3);border:1px solid var(--border)}
-
-
+.badge.gray{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
 
 
-.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+
+
+.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:var(--sp-4);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--dur-1)}
 .st-row:last-child{border-bottom:none}
-.st-row:hover{background:var(--bgsec)}
+.st-row:hover{background:var(--card-2)}
 
 
-.st-name{font-size:.9rem;color:var(--text)}
-.st-paid{font-size:.88rem;font-weight:700;min-width:65px;text-align:center}
-.st-total{font-size:.74rem;color:var(--text3);min-width:80px;text-align:center}
+.st-name{font-size:var(--fs-4);color:var(--text)}
+.st-paid{font-size:var(--fs-3);font-weight:700;min-width:65px;text-align:center}
+.st-total{font-size:var(--fs-2);color:var(--text3);min-width:80px;text-align:center}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
-.veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.veil{position:fixed;inset:0;background:var(--veil);z-index:var(--z-4);display:none;align-items:center;justify-content:center;padding:var(--sp-6)}
 .veil.open{display:flex}
-.sheet{background:var(--card);border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
-.sheet-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.sheet-hd h3{font-size:.95rem;font-weight:700;color:var(--text);flex:1;margin:0}
-.sheet-hd .x{background:none;border:0;font-size:20px;line-height:1;color:var(--text3);cursor:pointer;padding:0 4px}
-.sheet-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.sheet{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7);width:100%;max-width:420px;box-shadow:0 8px 40px var(--sh-1);max-height:90vh;overflow-y:auto}
+.sheet-hd{display:flex;align-items:center;gap:var(--sp-5);margin-bottom:var(--sp-6)}
+.sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
+.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:var(--lh-1);color:var(--text3);cursor:pointer;padding:0 var(--sp-2)}
+.sheet-ft{display:flex;gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 .sheet-ft:empty{display:none}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
-.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bgsec)}
-.acc-hdr:hover{background:var(--bgsec)}
-.acc-hdr span{font-size:.85rem;font-weight:600;color:var(--text)}
-.acc-body{display:none;padding:14px}
+.acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-5) var(--sp-6);cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
+.acc-hdr:hover{background:var(--card-2)}
+.acc-hdr span{font-size:var(--fs-3);font-weight:600;color:var(--text)}
+.acc-body{display:none;padding:var(--sp-6)}
 .acc-body.open{display:block}
-.year-tabs{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.ytab{background:var(--card);border:1.5px solid var(--border);border-radius:999px;padding:5px 14px;font-family:Heebo;font-size:.82rem;cursor:pointer;transition:all .15s;color:var(--text2)}
-.ytab.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700}
+.year-tabs{display:flex;gap:var(--sp-3);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ytab{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-7);padding:var(--sp-3) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);cursor:pointer;transition:all var(--dur-2);color:var(--text2)}
+.ytab.active{background:var(--accent);color:var(--on-brand);border-color:var(--accent);font-weight:700}
 .sd-wrap{position:relative}
-.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--navy);border-top:none;border-radius:0 0 12px 12px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 20px rgba(0,0,0,.1)}
-.sd-opt{padding:9px 13px;cursor:pointer;font-size:.88rem;color:var(--text)}
-.sd-opt:hover{background:var(--accent);color:#1a1a1a}
-.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.82rem}
+.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);max-height:200px;overflow-y:auto;z-index:var(--z-3);box-shadow:0 8px 20px var(--sh-1)}
+.sd-opt{padding:var(--sp-4) var(--sp-5);cursor:pointer;font-size:var(--fs-3);color:var(--text)}
+.sd-opt:hover{background:var(--accent);color:var(--on-brand)}
+.txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:var(--sp-4);align-items:center;padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);font-size:var(--fs-3)}
 .txn-row:last-child{border-bottom:none}
-.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:8px}
+.set-list-item{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);gap:var(--sp-4)}
 .set-list-item:last-child{border-bottom:none}
-.sc-hdr{background:var(--navy);color:var(--card);padding:22px 16px}
-.sc-name{font-size:1.25rem;font-weight:900}
-.sc-meta{font-size:.8rem;opacity:.65;margin-top:4px}
+.sc-hdr{background:var(--text);color:var(--card);padding:var(--sp-7) var(--sp-6)}
+.sc-name{font-size:var(--fs-5);font-weight:900}
+.sc-meta{font-size:var(--fs-3);opacity:var(--op-5);margin-top:var(--sp-2)}
 
-.sc-tog{border:none;border-radius:999px;padding:6px 16px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s}
-.tog-act-on{background:var(--accent);color:#1a1a1a}
-.tog-act-off{background:rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
+.sc-tog{border:none;border-radius:var(--r-7);padding:var(--sp-3) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
+.tog-act-on{background:var(--accent);color:var(--on-brand)}
+.tog-act-off{background:var(--fill-dark);color:var(--on-dark-3)}
 
 
-.amt-green{color:#2e7d32;font-weight:700}
-.amt-yellow{color:#b45309;font-weight:700}
-.amt-red{color:#c62828;font-weight:700}
+.amt-ok{color:var(--ok);font-weight:700}
+.amt-warn{color:var(--warn);font-weight:700}
+.amt-bad{color:var(--bad);font-weight:700}
 /* יתרת זכות וזיכוי מיתרה — כחול, נבדל מירוק (שולם) ומאדום (חוב) בכוונה:
    אלה אינם חוב שלילי ואינם תקבול, ולכן גם לא נצבעים כמותם. */
-.amt-credit{color:#1565c0;font-weight:700}
-.badge.blue{background:#e3f0fd;color:#1565c0}
-.pill.credit{background:#e3f0fd;color:#1565c0;border-color:#bcd9f7}
-.txn-row.credit{background:#f7fbff}
-.credit-note{background:var(--creditl);border:1px solid #cfe2f7;color:var(--credit);border-radius:12px;padding:10px 13px;font-size:.86rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
-.credit-sub{font-size:.72rem;color:var(--text3);margin-top:6px;padding:0 4px;line-height:1.5}
-.paid-cell{color:#2e7d32;font-weight:700;text-align:center}
+.amt-credit{color:var(--credit);font-weight:700}
+.badge.blue{background:var(--creditl);color:var(--credit)}
+.pill.credit{background:var(--creditl);color:var(--credit);border-color:var(--credit)}
+.txn-row.credit{background:var(--creditl)}
+.credit-note{background:var(--creditl);border:1px solid var(--credit);color:var(--credit);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-size:var(--fs-3);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-5)}
+.credit-sub{font-size:var(--fs-2);color:var(--text3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:var(--lh-3)}
+.paid-cell{color:var(--ok);font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text2)}
-.empty{text-align:center;color:var(--text3);padding:32px 0;font-size:.88rem}
-.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.71rem;background:var(--bgsec);color:var(--text2);border:1px solid var(--border)}
+.empty{text-align:center;color:var(--text3);padding:var(--sp-7) 0;font-size:var(--fs-3)}
+.pill{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);background:var(--bg);color:var(--text2);border:1px solid var(--border)}
 .txn-row{grid-template-columns:65px 1fr auto auto}
-.tbl td,.tbl th{padding:6px 6px;font-size:.75rem}
+.tbl td,.tbl th{padding:var(--sp-3) var(--sp-3);font-size:var(--fs-2)}
 .st-row{grid-template-columns:1fr auto}
 .st-total{display:none}
-@media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:9px 10px;font-size:inherit}.tbl th{padding:9px 10px;font-size:.76rem}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
-/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
-   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
-   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+@media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:var(--sp-4) var(--sp-5);font-size:inherit}.tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
+/* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
+   זהה בית-לבית בארבע האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
+   המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
       אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
-.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
-.toast.bad{background:#b91c1c;color:#fff}
-.toast.good{background:#15803d;color:#fff}
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toast{background:var(--chip);color:var(--on-chip);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
+.toast.bad{background:var(--bad);color:var(--bad-soft)}
+.toast.good{background:var(--ok);color:var(--ok-soft)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
-/* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
-   זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
-   הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים יורשים צבע
-   וגופן, ⛔ ואינם נשענים על אסימוני הגוון של אף אפליקציה — הם נבדלים
-   ביניהן. ⚠️ **החריג היחיד הוא `--stale-ink`** (סבב 113): ⭐ הוא מוגדר
-   בשם אחד בארבעתן, בערכה הבהירה ובכהה, ⛔ ולכן כלל שנשען עליו נשאר
-   זהה בית-לבית. */
-.tech-info{margin-top:22px;font-size:12px;opacity:.7}
-.tech-info>summary{cursor:pointer;list-style:none;display:inline-block;padding:4px 2px}
-.tech-info>summary::-webkit-details-marker{display:none}
-.tech-info[open]{opacity:1}
-.tech-info .ls-status button{display:none!important}
-.sync-box{margin-top:22px;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.02)}
-.sync-box-ttl{font-weight:800;font-size:14px;margin-bottom:6px}
-.sync-line{font-size:13px;line-height:1.8;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08)}
-.sync-line .sync-act{margin-top:8px}
-.sync-line button{font:inherit;font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid rgba(0,0,0,.18);background:rgba(0,0,0,.05);color:inherit;cursor:pointer}
-.sync-line button[disabled]{opacity:.5;cursor:default}
-/*  ⛔ הבאנר «הגיבוי לא רץ N ימים» נושא גוון משלו — ⚠️ שאר הבלוק יורש
-    צבע, ⭐ והוא הודעת אזהרה שחייבת להיקרא כאזהרה. ⛔ והגוון יושב
-    ב-`--stale-ink` ⛔ ולא כערך מוטבע: ⚠️ הוא מוגדר בערכה הבהירה ובכהה
-    בשם אחד, ⭐ ולכן הכלל עצמו זהה בארבע האפליקציות. */
-.bkStale{margin-top:4px;font-weight:700;color:var(--stale-ink)}
-/* ═══ סוף CSS אזור המצב ═════════════════════════════════════════════════ */
-.ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
+/* ═══ CSS גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════
+   ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
+      כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.
+   ⛔ הצבעים מהאסימונים ⛔ ואין כאן ליטרל — ⚠️ `--brand` למה שנגבה,
+      ⭐ ו-`--card-2` למסלול שמאחוריו: ⛔ ליטרל מוטבע כאן היה נשאר בהיר
+      במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
+   ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
+      לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
+.bchart{display:grid;gap:var(--sp-4);padding:var(--sp-2) 0}
+.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:var(--sp-4);font-size:var(--fs-3)}
+.blab{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbars{display:grid;gap:var(--sp-2)}
+.btrack{display:block;height:8px;border-radius:var(--r-6);background:var(--card-2);overflow:hidden}
+.btrack i{display:block;height:100%;border-radius:var(--r-6);background:var(--brand)}
+.btrack.tgt{height:4px}
+.btrack.tgt i{opacity:var(--op-2)}
+.bval{color:var(--text2);text-align:end;white-space:nowrap}
+/* ═══ סוף CSS גרף העמודות ════════════════════════════════════════════════ */
+/* ================================================================= מעדכן */
+#updater{
+  position:fixed;inset-inline:0;z-index:var(--z-6);
+  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
+  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
+#updater.show{display:flex}
+#updater .in{
+  background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:var(--shadow);
+  font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
+}
+#updater button{
+  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:var(--r-4);
+  padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
+}
+#updater button.x{
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
+/* ═══ סולמות הערך החזותי — מודול משותף (סבב 141) ═════════════════════════
+   ⛔ שמונה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך חזותי
+      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
+      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
+      ביניהם.
+   ⛔ **ומספר הדרגות נגזר מהערכים שהיו בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
+      משוקלל בסולם לוגריתמי על כל הערכים שבארבעת הריפו, ⭐ ותקרה של שבע.
+   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
+      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בארבעתן.
+   ⛔ **והמחלקות שכאן הן אלה שחיות בארבעתן** — ⚠️ מחלקה שחיה בחלקן יושבת
+      בבלוק הפרטי שמתחת: ⭐ מחלקה בבלוק משותף שאין לה קורא באחת מהן היא
+      סלקטור בלי קורא, ⛔ והשער מפיל עליה.
+   ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
+      ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
+      מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
+   ⛔ **ו-`--z-*` הוא סדר ולא גודל** — ⚠️ הדרגה נבחרת לפי **תפקיד**
+      השכבה — תוכן · סרגל · תפריט · מודאל · טוסט · באנר · נעילה — ⭐ ולא
+      לפי המספר שהיה שם: ⛔ מספר שנבחר לכל אתר הוא מרוץ שאיש אינו מכריע בו.
+   ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
+      אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
+      הם שני חיפושים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+--fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
+--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
+--r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px;
+--z-1:1;--z-2:10;--z-3:20;--z-4:30;--z-5:40;--z-6:50;--z-7:60;
+--dur-1:.12s;--dur-2:.15s;--dur-3:.2s;--dur-4:.3s;--dur-5:.6s;--dur-6:.7s;--ease:cubic-bezier(.2,.8,.3,1);
+--op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
+--lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
+--ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
+--chip:#1A1A1A;--on-chip:#FFFFFF;--veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
+--alert:#B3261E;--on-alert:#FFFFFF;
+--sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
+--on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
+}
+.u-ai-c{align-items:center}
+.u-d-flex{display:flex}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
+.u-fw-700{font-weight:700}
+.u-fx-1{flex:1}
+.u-g-5{gap:var(--sp-5)}
+.u-mt-2{margin-top:var(--sp-2)}
+.u-mt-5{margin-top:var(--sp-5)}
+/* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
+/* ══ מחלקות הסולם הפרטיות — אינן חיות בארבעתן ═══════════════════════════
+   ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
+   המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-ai-fs{align-items:flex-start}
+.u-bd-2-solid-border{border:2px solid var(--border)}
+.u-bg-bg{background:var(--bg)}
+.u-bt-1-solid-border{border-top:1px solid var(--border)}
+.u-bt-2-solid-border{border-top:2px solid var(--border)}
+.u-c-credit{color:var(--credit)}
+.u-c-green{color:var(--ok)}
+.u-c-text{color:var(--text)}
+.u-c-text2{color:var(--text2)}
+.u-c-text3{color:var(--text3)}
+.u-cur-def{cursor:default}
+.u-d-none{display:none}
+.u-ff-heebo{font-family:Heebo}
+.u-fs-4{font-size:var(--fs-4)}
+.u-fw-400{font-weight:400}
+.u-fw-600{font-weight:600}
+.u-fwr-wrap{flex-wrap:wrap}
+.u-g-4{gap:var(--sp-4)}
+.u-jc-sb{justify-content:space-between}
+.u-lh-15{line-height:var(--lh-3)}
+.u-lh-17{line-height:var(--lh-5)}
+.u-mb-2{margin-bottom:var(--sp-2)}
+.u-mb-3{margin-bottom:var(--sp-3)}
+.u-mb-6{margin-bottom:var(--sp-6)}
+.u-minw-120{min-width:120px}
+.u-ol-none{outline:none}
+.u-op-45{opacity:var(--op-3)}
+.u-ovx-a{overflow-x:auto}
+.u-p-0-2{padding:0 var(--sp-2)}
+.u-p-2{padding:var(--sp-2)}
+.u-p-4-5{padding:var(--sp-4) var(--sp-5)}
+.u-p-5-6{padding:var(--sp-5) var(--sp-6)}
+.u-pb-5{padding-bottom:var(--sp-5)}
+.u-r-4{border-radius:var(--r-4)}
+.u-ta-c{text-align:center}
+.u-ta-r{text-align:right}
+.u-tr-border-2s{transition:border var(--dur-3)}
+.u-w-100p{width:100%}
+.u-w-130{width:130px}
+.u-w-160{width:160px}
+.u-ws-nw{white-space:nowrap}
+/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
 </style>
 </head>
 <body><div id="auth-screen">
-  <div class="auth-box">
+  <div class="auth-box ksave">
     <div class="auth-title">שכר לימוד</div>
     <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
     <div class="auth-field">
@@ -253,9 +358,9 @@ body.locked{overflow:hidden}
     </div>
     <div class="auth-field">
       <label for="au-pass">סיסמה</label>
-      <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password">
     </div>
-    <button class="auth-btn" id="auth-btn" data-act="login">כניסה</button>
+    <button class="auth-btn" id="auth-btn" data-act="login" data-ksave>כניסה</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-spinner" id="auth-spinner"></div>
   </div>
@@ -278,9 +383,9 @@ body.locked{overflow:hidden}
           <h3>לוח שנתי</h3>
           <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
                אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
-          <div style="display:flex;align-items:center;gap:8px">
+          <div class="u-d-flex u-ai-c u-g-4">
             <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת">&#9654;</button>
-            <span id="dash-year-label" style="font-weight:700;color:var(--navy);font-size:.9rem;min-width:120px;text-align:center"></span>
+            <span id="dash-year-label" class="u-fw-700 u-c-text u-fs-4 u-minw-120 u-ta-c"></span>
             <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה">&#9664;</button>
           </div>
         </div>
@@ -294,9 +399,9 @@ body.locked{overflow:hidden}
       </div>
       <div class="card">
         <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
-        <div class="card-body"><canvas id="dash-chart" height="160"></canvas></div>
+        <div class="card-body"><div id="dash-chart"></div></div>
       </div>
-      <div class="card" id="dash-month-card" style="display:none">
+      <div class="u-d-none card" id="dash-month-card">
         <div class="card-hdr">
           <h3 id="dash-month-title">פירוט חודש</h3>
           <button class="btn sm out" data-act="dash-month-close">סגור</button>
@@ -309,12 +414,12 @@ body.locked{overflow:hidden}
     <div id="panel-txn" class="panel">
       <div class="card">
         <div class="card-hdr"><h3>הוספת תשלום</h3></div>
-        <div class="card-body">
+        <div class="card-body ksave">
           <div class="frm-row">
             <label>תלמיד</label>
             <div class="sd-wrap">
-              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
-              <div class="sd-list" id="sd-list-student" style="display:none"></div>
+              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="הקלד לחיפוש..." autocomplete="off" onfocus="sdOpen('student')" oninput="sdFilter('student')" onblur="sdBlur('student')">
+              <div class="u-d-none sd-list" id="sd-list-student"></div>
               <input type="hidden" id="sd-val-student">
             </div>
           </div>
@@ -331,21 +436,21 @@ body.locked{overflow:hidden}
             <select id="txn-method" onchange="txnMethodHint()">
               <option value="">-- בחר --</option>
             </select>
-            <div id="txn-method-hint" class="credit-sub" style="display:none"></div>
+            <div id="txn-method-hint" class="u-d-none credit-sub"></div>
           </div>
           <div class="frm-row">
             <label for="txn-note">הערה</label>
             <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
-          <button class="btn" style="width:100%" data-act="txn-save">שמור תשלום</button>
+          <button class="u-w-100p btn" data-act="txn-save" data-ksave>שמור תשלום</button>
         </div>
       </div>
       <div class="card">
         <div class="card-hdr">
           <h3>יומן תשלומים</h3>
-          <div class="sd-wrap" style="width:160px">
-            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" style="border:2px solid var(--border);border-radius:9px;padding:7px 10px;font-family:Heebo;font-size:.82rem;width:100%;outline:none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
-            <div class="sd-list" id="sd-list-txnfilter" style="display:none"></div>
+          <div class="u-w-160 sd-wrap">
+            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-3 u-w-100p u-ol-none" placeholder="סנן לפי תלמיד..." autocomplete="off" onfocus="sdOpen('txnfilter')" oninput="sdFilter('txnfilter')" onblur="sdBlur('txnfilter')">
+            <div class="u-d-none sd-list" id="sd-list-txnfilter"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
         </div>
@@ -357,18 +462,18 @@ body.locked{overflow:hidden}
     <div id="panel-student" class="panel">
       <div class="card">
         <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
-        <div class="card-body" style="padding-bottom:12px">
+        <div class="u-pb-5 card-body">
           <div class="sd-wrap">
-            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:100%;outline:none;transition:border .2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
-            <div class="sd-list" id="sd-list-sc" style="display:none"></div>
+            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="בחר תלמיד..." autocomplete="off" onfocus="sdOpen('sc')" oninput="sdFilter('sc')" onblur="sdBlur('sc')">
+            <div class="u-d-none sd-list" id="sd-list-sc"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
         </div>
       </div>
-      <div id="sc-main" style="display:none">
+      <div id="sc-main" class="u-d-none">
         <div class="card">
           <div class="sc-hdr">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div class="u-d-flex u-ai-fs u-jc-sb u-g-5">
               <div>
                 <div class="sc-name" id="sc-name"></div>
                 <div class="sc-meta" id="sc-meta"></div>
@@ -379,7 +484,7 @@ body.locked{overflow:hidden}
           <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
             <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
           </div>
-          <div class="acc-body" id="acc-sc-settings">
+          <div class="acc-body ksave" id="acc-sc-settings">
             <div class="frm-row">
               <label for="sc-edit-name">שם</label>
               <input id="sc-edit-name" type="text">
@@ -394,11 +499,11 @@ body.locked{overflow:hidden}
             </div>
             <div class="frm-row">
               <label for="sc-edit-start">חודש הצטרפות</label>
-              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right">
+              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r">
             </div>
-            <div class="frm-row" style="margin-bottom:6px">
+            <div class="u-mb-3 frm-row">
               <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
-              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right">
+              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r">
             </div>
             <div class="frm-row">
               <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
@@ -408,15 +513,15 @@ body.locked{overflow:hidden}
               <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
               <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
-            <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
-            <button class="btn" data-act="student-settings-save">שמור</button>
+            <div class="u-fs-2 u-c-text3 u-mb-6 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
+            <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
           </div>
-          <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-annual" style="border-top:1px solid var(--border)">
+          <div class="u-bt-1-solid-border acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
             <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
           </div>
           <div class="acc-body" id="acc-sc-annual">
             <div class="year-tabs" id="sc-year-tabs"></div>
-            <div style="overflow-x:auto">
+            <div class="u-ovx-a">
               <table class="tbl">
                 <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
                 <tbody id="sc-annual-tbody"></tbody>
@@ -424,11 +529,11 @@ body.locked{overflow:hidden}
               </table>
             </div>
             <div id="sc-credit"></div>
-            <div style="margin-top:12px">
-              <div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:6px;padding:0 4px">תשלומים בשנה זו</div>
+            <div class="u-mt-5">
+              <div class="u-fs-3 u-fw-700 u-c-text2 u-mb-3 u-p-0-2">תשלומים בשנה זו</div>
               <div id="sc-txn-list"></div>
             </div>
-            <div style="margin-top:12px">
+            <div class="u-mt-5">
               <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
               <div id="sc-past"></div>
             </div>
@@ -442,23 +547,29 @@ body.locked{overflow:hidden}
       <!-- סבב 26: אין כאן יותר שער סיסמה. ההרשאה נגזרת מ-`sl_users.role`
            של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
            ההודעה שמוצגת למי שאינו admin — לא טופס. -->
-      <div id="settings-denied" class="card" style="display:none">
+      <div id="settings-denied" class="u-d-none card">
         <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
-          <div id="set-denied-msg" style="font-size:.9rem;color:var(--text2);line-height:1.7"></div>
+          <div id="set-denied-msg" class="u-fs-4 u-c-text2 u-lh-17"></div>
         </div>
       </div>
-      <div id="settings-main" style="display:none">
+      <div id="settings-main" class="u-d-none">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-          <div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input aria-label="2000" id="set-def-tuition" type="text" inputmode="decimal" style="border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-family:Heebo;font-size:.9rem;width:130px;outline:none" placeholder="2000">
-            <button class="btn" data-act="tuition-save">שמור</button>
+          <div class="u-d-flex u-g-4 u-ai-c u-fwr-wrap card-body ksave">
+            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-130 u-ol-none" placeholder="לא הוגדר">
+            <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
           </div>
         </div>
-        <!-- סבב 26: כרטיס «שינוי סיסמת מנהל» הוסר יחד עם השער שהוא שירת.
-             סיסמאות המשתמשים מנוהלות בלוח הבקרה של Supabase — אין כאן מסך
-             ניהול משתמשים, וזו החלטה מתועדת. -->
+        <!-- סבב 132: שינוי הסיסמה של המשתמש המחובר. יצירת משתמש נשארה
+             בלוח הבקרה של Supabase — אין כאן מסך ניהול משתמשים, וזו
+             החלטה מתועדת; שינוי סיסמה אינו יצירה. -->
+        <div class="card">
+          <div class="card-hdr">
+            <h3>&#128273; הסיסמה שלי</h3>
+            <button class="btn sm" data-act="my-pass">שינוי סיסמה</button>
+          </div>
+        </div>
         <div class="card">
           <div class="card-hdr">
             <h3>&#128100; תלמידים</h3>
@@ -481,8 +592,6 @@ body.locked{overflow:hidden}
           <div id="set-sections-list"></div>
         </div>
         <!-- אזור מצב (סבב 17) — שני האלמנטים האחרונים במסך, בסדר הזה -->
-        <div id="sync-status-box"></div>
-        <div id="tech-info-box"></div>
       </div>
     </div>
   </div>
@@ -506,7 +615,7 @@ body.locked{overflow:hidden}
 <!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68) — ⚠️ פתיחה, סגירה
      ו-Escape חיים במקום אחד; ⛔ שני דפוסים במקביל הם שני מסלולי סגירה. -->
 <div class="veil" id="modal">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
@@ -518,7 +627,7 @@ body.locked{overflow:hidden}
 <div class="veil" id="ask">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
     <div class="sheet-hd"><h3 id="ask-title">אישור</h3></div>
-    <div id="ask-body" style="font-size:.9rem;color:var(--text2)"></div>
+    <div id="ask-body" class="u-fs-4 u-c-text2"></div>
     <div class="sheet-ft">
       <button class="btn out" data-act="ask-no">ביטול</button>
       <button class="btn danger" data-act="ask-yes" id="ask-yes">אישור</button>
@@ -526,7 +635,15 @@ body.locked{overflow:hidden}
   </div>
 </div>
 
-<div id="toasts"></div><script>
+<div id="toasts"></div>
+<div id="updater">
+  <div class="in">
+    <span>🔄 גרסה חדשה זמינה</span>
+    <button data-act="sw-apply">עדכן עכשיו</button>
+    <button class="x" data-act="sw-dismiss" aria-label="סגור">✕</button>
+  </div>
+</div>
+<script>
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var SB_PROJECT='kxbtskqobynewvnckaaz';
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
@@ -539,7 +656,6 @@ var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 //    ⛔ אין להזין מהן את עֵד הפינוי (סבב 51) — ר' `_slPushedAt`.
 var _slSeenTs=0,_slLastSeenOk=0;
 var SL_STAMP_KEY='sl_last_changed';
-var _dashChart=null;
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
@@ -551,24 +667,100 @@ var TOAST_DEFAULT_MS = 2400;
 /* ══════════════════════════════════════════════════════════════════════════
    הודעות ועוזרי רשת — נוסח משותף לארבע האפליקציות
    ══════════════════════════════════════════════════════════════════════════
-   ⚠️ `MSG_OFFLINE`/`MSG_SAVED`/`MSG_BAD_LOGIN`/`MSG_SYNC_BACK` זהים
-   מילה במילה בארבעתן (סבב 8/17). ⛔ אין להוסיף כאן קבוע הודעה
-   חדש «לאחידות» (סבב 19) — קבוע שנוסף בשתיים מהארבע הוא בדיוק
-   הסחיפה שהבלוק המשותף בא למנוע; הודעה פרטית יושבת מחוץ לבלוק.
+   ⚠️ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN` נבדלים בגיוס בהחלטת מנהל,
+   ⛔ ולכן הם פר-אפליקציה. ⛔ אין להוסיף כאן קבוע הודעה חדש
+   «לאחידות» (סבב 19) — קבוע שנוסף בשתיים מהארבע הוא בדיוק הסחיפה
+   שהבלוק החתום בא למנוע; הודעה שרק כאן נאמרת יושבת מחוץ לבלוק.
    ══════════════════════════════════════════════════════════════════════════ */
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
-// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ ושתי ההודעות שלמטה נבדלות
+// בגיוס בהחלטת מנהל — ⚠️ ולכן הן פר-אפליקציה ואינן בבלוק החתום.
 var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_SAVED     = '✅ נשמר בהצלחה';
-// נוסח משותף לארבע האפליקציות (סבב 12 שלב 4). שמירה מקומית שטרם אושרה
-// בענן **חייבת** להיאמר אחרת משמירה שאושרה — אחרת "נשמר" נראה בדיוק אותו
-// דבר בשני המצבים, וזו ההטעיה שהסבב הזה בא למנוע.
-var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
-// סבב 17: נוסח אחיד לארבע האפליקציות.
+/* ═══ מחרוזות ההודעה המשותפות — מודול משותף (סבב 141) ════════════════════
+   ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
+   ⚠️ עד כאן הצהירה **הערה** «מילה במילה זהות», ⛔ ואיש לא מדד — ⭐ ונמדד
+   ששני שמות נשאו טקסט אחר, ⚠️ ושאחת-עשרה הודעות נכתבו כליטרל בשניים
+   ובשלושה ריפו בלי שם כלל.
+   ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
+   אותה בכל זאת: ⭐ המושג חי בארבעתן, ⛔ ורשימה שנגזרת ממי שמציג אותה
+   היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
+   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN`
+   נבדלים בגיוס בהחלטת מנהל, ⭐ והם נשארים פר-אפליקציה עם נימוקם במקומם.
+   ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
+   «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
+   נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
+   ═══════════════════════════════════════════════════════════════════════ */
+var MSG_SAVED = '✅ נשמר בהצלחה';
+var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
+var MSG_DELETE = 'מחק';
+var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
+var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
+var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
+var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
+var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
+var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
+var MSG_SERVER_ERR = 'שגיאת שרת';
+var MSG_SWITCHED_TO = 'הוחלף ל';
+var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+/* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
+/* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
+   ⛔ ההודעה היא קבוע ⛔ ואינה ליטרל באתר התצוגה — ⚠️ טקסט שנכתב במקום
+   שבו הוא נאמר נכתב שוב במסך הבא, ⭐ ושני ניסוחים לאותו מצב הם שני
+   מסלולים בעיני הקורא.
+   ⚠️ **ומה שיותר מאפליקציה אחת אומרת אינו כאן** — ⛔ הוא בבלוק החתום,
+   ⭐ ששם החתימה היא מה שמודד את זהות הנוסח. */
+var MSG_NO_USER_RELOGIN = '⚠️ אין משתמש מחובר — נא להיכנס מחדש';
+var MSG_PASS_UPDATED = '✅ הסיסמה עודכנה';
+var MSG_PASS_UPDATED_NO_FP2 = '⚠️ הסיסמה עודכנה — אך ללא הכנה לכניסה ללא רשת';
+var MSG_LOAD_FAIL_POST = ') — המוצג הוא העותק שבמכשיר';
+var MSG_PICK_STUDENT_PLAIN = 'נא לבחור תלמיד';
+var MSG_PICK_DATE = 'נא לבחור תאריך';
+var MSG_NEED_AMOUNT = 'נא להזין סכום תקין';
+var MSG_PAY_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — התשלום לא נשמר';
+var MSG_PAY_MISSING = '⚠️ התשלום לא נמצא';
+var MSG_DEL_NOT_SAVED = '❌ המחיקה לא נשמרה במכשיר';
+var MSG_PAY_DELETED = '✅ תשלום נמחק';
+var MSG_CHANGE_NOT_SAVED = '❌ השינוי לא נשמר במכשיר';
+var MSG_STUDENT_ON = '✅ תלמיד הופעל';
+var MSG_STUDENT_OFF = '✅ תלמיד הושהה';
+var MSG_START_MONTH_BAD = '❌ חודש הצטרפות לא תקין — פורמט YYYY-MM';
+var MSG_END_MONTH_BAD = '❌ חודש עזיבה לא תקין — פורמט YYYY-MM';
+var MSG_END_BEFORE_START = '❌ חודש העזיבה מוקדם מחודש ההצטרפות';
+var MSG_NAME_REQUIRED = 'שם חובה';
+var MSG_STUDENT_MISSING2 = '⚠️ התלמיד לא נמצא';
+var MSG_TUITION_POSITIVE = '❌ שכר לימוד חייב להיות מספר חיובי';
+var MSG_DEBT_POSITIVE = '❌ חוב קודם חייב להיות מספר חיובי';
+var MSG_SETTINGS_NOT_SAVED = '❌ ההגדרות לא נשמרו במכשיר';
+var MSG_VALUE_BAD = 'ערך לא תקין';
+var MSG_VALUE_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — הערך לא נשמר';
+var MSG_VALUE_EXISTS = '⚠️ הערך כבר קיים ברשימה';
+var MSG_ITEM_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — הפריט לא נוסף';
+var MSG_CREDIT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות';
+var MSG_ITEM_MISSING = '⚠️ הפריט לא נמצא';
+var MSG_DELETED_OK = '✅ נמחק';
+var MSG_ADD_STUDENT = 'הוספת תלמיד';
+var MSG_STUDENT_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — התלמיד לא נשמר';
+var MSG_STUDENT_DELETED = '✅ תלמיד נמחק';
+var MSG_CONFIRM = 'אישור';
+var MSG_DEL_TXN_TITLE = 'מחיקת תשלום';
+var MSG_DEL_TXN_BODY = 'למחוק תשלום זה?';
+var MSG_DEL_ITEM_TITLE = 'מחיקת פריט';
+var MSG_DEL_ITEM_BODY = 'למחוק פריט זה?';
+var MSG_DEL_STUDENT_TITLE = 'מחיקת תלמיד';
+var MSG_DEL_STUDENT_PRE = 'למחוק את ';
+var MSG_DEL_STUDENT_ANON = 'תלמיד';
+var MSG_DEL_STUDENT_POST = '? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.';
+/* ══ סוף הודעות פר-אפליקציה ═════════════════════════════════════════════ */
 /* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
    ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
    מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
@@ -690,9 +882,17 @@ var MIRROR_CFG = {
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין ארבע האפליקציות; המודול שמתחתיה זהה בכולן.
 var LS_CFG = {
-  app: 'schar',
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+   *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
+   *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
+   *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
+  cachePrefix: 'schar-limud-',
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
+  /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
+   *  המטמון שנדחה, ⛔ **ומה מפיל**: שם בלי תחילית האפליקציה —
+   *  ⭐ ה-origin משותף לארבעתן, וסימן אחד היה נדרס בכל דחייה. */
+  dismissKey: 'sl_sw_dismissed',
 
   // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
   //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
@@ -739,6 +939,8 @@ function _slMarkPushed(t) { _slPushedAt[t] = Date.now(); }
 function _slPushedThrough(t) { return _slPushedAt[t] || 0; }
 function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
 
+/*  ⛔ שם המפתח הישן פר-אפליקציה — ⚠️ וההגירה שמוחקת אותו משותפת:
+ *  ⭐ הקבוע כאן הוא מה שמפריד בין הגוף הזהה לערך שנבדל. */
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
@@ -753,10 +955,11 @@ var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
 var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
 
 // נוסח אחיד בארבע האפליקציות. סמלים: ✅ הצלחה / ⚠️ אזהרה / ❌ שגיאה, בתחילה.
-var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. פנו מקום בהגדרות ← אחסון מקומי.';
+var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו והמקום יתפנה.';
 var MSG_LS_BLOCK  = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
-var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — כדאי לפנות מקום בהגדרות';
-var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — פנו מקום בהגדרות מיד';
+var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — התחברו לרשת, והמקום יתפנה מעצמו';
+var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — התחברו לרשת כדי שהמקום יתפנה';
+var MSG_LS_RESTORED = '✅ האחסון התפנה — הנתונים הישנים חוזרים בסנכרון הזה';
 var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
 
 // כל האפליקציות שחולקות את ה-origin. הקידומת היא מה שמזהה מי תופס מה.
@@ -803,7 +1006,7 @@ function lsUsage() {
       try { v = localStorage.getItem(k) || ''; } catch (e) { }
       var b = lsEntryBytes(k, v), a = lsAppOf(k);
       out.total += b;
-      out.keys.push({ key: k, bytes: b, app: a.id, appName: a.name });
+      out.keys.push({ key: k, bytes: b, app: a.id });
       if (!byApp[a.id]) byApp[a.id] = { id: a.id, name: a.name, bytes: 0, count: 0 };
       byApp[a.id].bytes += b; byApp[a.id].count++;
     }
@@ -856,18 +1059,18 @@ function lsAlert(msg) {
     el = document.createElement('div');
     el.id = 'ls-alert';
     el.setAttribute('role', 'alert');
-    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:#b3261e;' +
-      'color:#fff;direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-      'padding:12px 46px;box-shadow:0 2px 14px rgba(0,0,0,.35)';
+    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:var(--alert);' +
+      'color:var(--on-alert);direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
+      'padding:12px 46px;box-shadow:0 2px 14px var(--sh-3)';
     var sp = document.createElement('span');
     sp.id = 'ls-alert-msg';
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = '✕';
     b.setAttribute('aria-label', 'סגור');
-    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:#fff;' +
+    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:var(--on-alert);' +
       'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
-    b.addEventListener('click', function () { el.style.display = 'none'; });
+    b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
     (document.body || document.documentElement).appendChild(el);
   }
@@ -976,6 +1179,19 @@ function lsClearHorizons() {
   ks.forEach(lsRemove);
   if (ks.length) lsLog('אופק הפינוי נוקה', ks.length + ' מפתחות', 0);
   return ks.length;
+}
+/*  ⛔ אופק הפינוי נוקה מהסנכרון — ⚠️ **מה נכנס**: ירידה מתחת לסף האזהרה,
+ *  ⛔ **ומה מפיל**: השארת האופק על כנו — ⭐ הסימן שהפינוי משאיר אומר «מכאן
+ *  ואילך יש לי, את הישן זרקתי», ⚠️ וכל עוד הוא עומד המשיכה אינה מחזירה את
+ *  הישן: ⛔ סימן שרק המשתמש יכול לנקות נשאר לנצח ביום שבו הכפתור יורד. */
+function lsHorizonRelease() {
+  try {
+    if (!lsHorizonKeys().length) return 0;
+    if (lsUsage().total >= LS_WARN_BYTES) return 0;
+    var n = lsClearHorizons();
+    if (n) { try { lsToast(MSG_LS_RESTORED, 5000, 'good'); } catch (e1) { } }
+    return n;
+  } catch (e) { return 0; }
 }
 // כתיבת מערך מכובדת-אופק. `tsOf(rec)` מחזירה חותמת זמן במילישניות.
 function lsSetArray(key, arr, tsOf) {
@@ -1291,7 +1507,6 @@ function lsBootDeferred() {
     var u = lsUsage();
     if (freed > 0) lsLog('פינוי נדחה הסתיים', lsFmtBytes(freed) + ' · נותרו ' + Math.round(u.pct * 100) + '%', freed);
     lsBootAlert(u);
-    try { lsRenderStatus(); } catch (e) { }
     return { usage: u, freed: freed };
   }
   return p.then(finish, function () { return finish(0); });
@@ -1326,104 +1541,7 @@ function lsBootAlert(u) {
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
-/* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
-function lsStatusHTML() {
-  var u = lsUsage();
-  var pct = Math.min(100, Math.round(u.pct * 100));
-  var col = u.total >= LS_CRIT_BYTES ? '#b3261e' : (u.total >= LS_WARN_BYTES ? '#b26a00' : '#2e7d32');
-  var h = '<div class="ls-status" dir="rtl" style="font-size:13px;line-height:1.7">';
-  h += '<div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:4px">' +
-       '<span>נפח כולל בדומיין</span><span style="color:' + col + '">' + esc(lsFmtBytes(u.total)) +
-       ' / ' + esc(lsFmtBytes(u.quota)) + ' (' + pct + '%)</span></div>';
-  h += '<div style="background:rgba(128,128,128,.25);border-radius:6px;height:9px;overflow:hidden;margin-bottom:8px">' +
-       '<div style="width:' + pct + '%;height:100%;background:' + col + '"></div></div>';
-  h += '<div style="margin-bottom:8px">נשאר: <b>' + esc(lsFmtBytes(u.free)) + '</b></div>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי אפליקציה</div><table style="width:100%;border-collapse:collapse">';
-  u.apps.forEach(function (a) {
-    h += '<tr><td style="padding:2px 0">' + esc(a.name) + (a.id === LS_CFG.app ? ' <b>(זו)</b>' : '') +
-         '</td><td style="text-align:left;padding:2px 0">' + esc(lsFmtBytes(a.bytes)) +
-         ' <span style="opacity:.6">· ' + a.count + ' מפתחות</span></td></tr>';
-  });
-  if (!u.apps.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
-  u.keys.slice(0, 12).forEach(function (k) {
-    h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
-         '<span style="opacity:.6"> · ' + esc(k.appName) + '</span></td>' +
-         '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
-  });
-  if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  var hz = lsHorizonKeys();
-  if (hz.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(178,106,0,.12);color:#b26a00">' +
-         '⚠️ פונו רשומות ישנות מ-' + hz.length + ' מפתחות מחוסר מקום. הן שמורות בענן ויחזרו לתצוגה כשיש רשת.</div>';
-  }
-
-  var vs = lsVerifySpecs();
-  if (vs.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(21,101,192,.12);color:#1565c0">' +
-         '☁️ במכשיר הזה אין עדות דחיפה מקומית עבור: ' +
-         esc(vs.map(function (s) { return s.label || s.key; }).join(', ')) +
-         '. פינוי שלהם נעשה רק אחרי אימות ישיר מול הענן — רשומה שאינה שם לא נמחקת.</div>';
-  }
-
-  var log = lsLogRead();
-  h += '<div style="font-weight:800;margin:10px 0 4px">יומן פינוי</div>';
-  if (!log.length) h += '<div style="opacity:.6">— טרם בוצע פינוי —</div>';
-  else {
-    h += '<div style="font-size:12px;opacity:.85">';
-    for (var i = log.length - 1; i >= 0; i--) {
-      var d = new Date(log[i].t);
-      h += '<div>' + esc(d.toLocaleDateString('he-IL')) + ' ' + esc(d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })) +
-           ' — ' + esc(log[i].a) + (log[i].d ? ' · ' + esc(log[i].d) : '') +
-           (log[i].b ? ' · ' + esc(lsFmtBytes(log[i].b)) : '') + '</div>';
-    }
-    h += '</div>';
-  }
-
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-       '<button type="button" data-act="ls-sweep-now">🧹 פנה מקום עכשיו</button>' +
-       '<button type="button" data-act="ls-refresh-status">↻ רענן</button>';
-  if (hz.length) h += '<button type="button" data-act="ls-restore-all">☁️ טען הכל מחדש מהענן</button>';
-  h += '</div></div>';
-  return h;
-}
-function lsRenderStatus() {
-  var el = document.getElementById('ls-status-box');
-  if (el) el.innerHTML = lsStatusHTML();
-}
-function lsRefreshStatus() { lsRenderStatus(); }
-// מחזירה Promise — הפינוי הידני עובר גם במסלול הסינכרוני וגם באימות מול
-// הענן, ולכן ההודעה למשתמש מחכה לשניהם.
-function lsSweepNow() {
-  var freed = lsSweepGuarded('פינוי ידני מההגדרות', 0);
-  lsRenderStatus();
-  var p = lsHasVerifiers() ? lsSweepVerified('פינוי ידני מההגדרות — אימות מול הענן', 0) : Promise.resolve(0);
-  function finish(extra) {
-    freed += Number(extra) || 0;
-    lsRenderStatus();
-    /*  ⛔ שתי הודעות ולא אחת — ⚠️ הסיווג נגזר מהמסלול: ⭐ פינוי שהצליח
-     *  הוא הודעה נייטרלית, ⛔ ו«אין מה לפנות» היא אזהרה. */
-    try {
-      if (freed > 0) lsToast('✅ פונו ' + lsFmtBytes(freed), 4000);
-      else lsToast('⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000, 'bad');
-    } catch (e) { }
-    return freed;
-  }
-  return p.then(finish, function () { return finish(0); });
-}
-function lsRestoreAll() {
-  lsClearHorizons();
-  lsRenderStatus();
-  try { lsToast('✅ האופק נוקה — הנתונים הישנים יחזרו בסנכרון הבא', 4000); } catch (e) { }
-}
-window.lsSweepNow = lsSweepNow;
-window.lsRefreshStatus = lsRefreshStatus;
-window.lsRestoreAll = lsRestoreAll;
+window.lsHorizonRelease = lsHorizonRelease;
 window.lsSet = lsSet;
 window.lsGet = lsGet;
 window.lsUsage = lsUsage;
@@ -1434,7 +1552,6 @@ window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 /* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
@@ -1469,7 +1586,7 @@ function staleSchemaHalt(e) {
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
-    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
+    try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
 }
@@ -1509,111 +1626,192 @@ function sbWatch(c) {
   return c;
 }
 /* ═══════════════ סוף מודול האזנת הסכימה ════════════════════════════════ */
-
-/* ═══ מידע טכני — מודול משותף (סבב 91) ════════════════════════════════════
-   המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
-   בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
-   הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
-   המנגנון האוטומטי (lsBoot/lsSweep) הוא הדרך היחידה לפינוי.
-   חריג יחיד ומכוון: מעל LS_CRIT_BYTES מוצגת שורת מצב עדינה גם מחוץ
-   לרכיב — רשת הביטחון היחידה שמוצגת ביוזמת המערכת.
-
-   ⚠️ סבב 17: מצב הפתיחה נשמר ב-`_techInfoOpen` (זיכרון בלבד) ולא רק
-   ב-DOM. בגיוס מסך ההגדרות נבנה מחדש בכל `render()`, ולכן העוגן חוזר
-   ריק, ה-`details` הקודם כבר לא קיים — והרכיב היה נסגר בכל שמירה ובכל
-   ציור מושהה של ⏳. המצב חי בזיכרון בלבד בכוונה: זו העדפת תצוגה של
-   הרגע, לא נתון שראוי לצרוך ממנו מכסת אחסון. */
-var _techInfoOpen = false;
-function techInfoHTML() {
-  var crit = '';
-  try {
-    var u = lsUsage();
-    if (u.total >= LS_CRIT_BYTES) {
-      crit = '<div class="ls-crit-line">⚠️ האחסון המקומי כמעט מלא (' + esc(lsFmtBytes(u.total)) +
-             ' מתוך ' + esc(lsFmtBytes(u.quota)) + ') — פרטים ב"מידע טכני"</div>';
-    }
-  } catch (e) { }
-  return crit +
-    '<details class="tech-info" ontoggle="window.techInfoToggle&&window.techInfoToggle(this)">' +
-    '<summary>מידע טכני &rsaquo;</summary>' +
-    '<div id="ls-status-box"></div>' +
-    '</details>';
-}
-function techInfoToggle(el) {
-  if (!el) return;
-  _techInfoOpen = !!el.open;
-  if (el.open) { try { lsRenderStatus(); } catch (e) { } }
-}
-function techInfoMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var prev = box.querySelector('details.tech-info');
-  if (prev) _techInfoOpen = !!prev.open;
-  box.innerHTML = techInfoHTML();
-  // פתיחה מחדש מפעילה `ontoggle` (גם כשהיא תכנותית), וזה מה שמרנדר את
-  // הפירוט — אין צורך לקרוא כאן ל-lsRenderStatus ואין טעם לרנדר פעמיים.
-  if (_techInfoOpen) {
-    var d = box.querySelector('details.tech-info');
-    if (d) d.open = true;
+/* ═══ כפתור עסוק והשומר שבניתוב — מודול משותף (סבב 135) ══════════════════
+   ⛔ **כפתור שמפעיל מסלול שממתין לרשת מושבת עד שהמסלול הסתיים** —
+   ⚠️ וההשבתה יושבת בנקודת הניתוב האחת ⛔ ולא באתר הקריאה: ⭐ מטפל
+   שמחזיר הבטחה מסמן «יש כאן המתנה», ⛔ ואין מה להצהיר בכל אתר בנפרד.
+   ⚠️ הנימוק המדוד: שני מימושים חיו זה לצד זה — ⭐ אחד עם תווית ואחד
+   עם ספינר, ⛔ ובשתיים לא היה אף אחד: לחיצה שנייה על «שמור» בזמן
+   שהראשונה באוויר שלחה בקשה שנייה, ⚠️ ובכתיבת משתמש היא יוצרת שורה
+   כפולה או דורסת עדכון שטרם חזר.
+   ⛔ **ומטפל סינכרוני אינו נכנס** — ⚠️ הוא נגמר לפני שהלחיצה השנייה
+   יכולה לנחות, ⭐ ואין «בזמן» שאפשר להשבית בו. */
+/*  ⛔ התווית היא פרמטר עם ברירת מחדל ⛔ ולא מחרוזת קבועה — ⚠️ יש פעולות
+ *  רשת שאינן שמירה, ⭐ ו«שומר…» עליהן מתאר למשתמש פעולה שאינה מתרחשת. */
+function busy(btn, on, label) {
+  if (!btn) return;
+  if (on) {
+    if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
+    btn.disabled = true; btn.style.opacity = 'var(--op-4)'; btn.style.cursor = 'wait';
+    btn.innerHTML = label || '⏳ שומר…';
+  } else {
+    btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
+    if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
   }
 }
-window.techInfoToggle = techInfoToggle;
-window.techInfoMount = techInfoMount;
-/* ═══════════════ סוף מודול מידע טכני ═══════════════════════════════════ */
-/* ── SYNC_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-var SYNC_CFG = {
-  // `_slLastPullOk` נכתב רק כשכל ארבע הקטגוריות נמשכו בהצלחה — ר' syncAll.
-  // ⚠️ סבב 51 — חותמת **תצוגה**: הגדולה מבין «משיכה מלאה שהצליחה» לבין
-  //    «שיחה מוצלחת עם הענן» (קריאת החותמת בפולינג). ⛔ עֵד הפינוי נשאר
-  //    `_slLastPullOk` לבדו (סבב 51) — ר' `PL_CFG.ok`.
-  lastSync: function () { return Math.max(_slLastPullOk || 0, _slLastSeenOk || 0); },
-  sync: function () { return syncAll(); }
-};
-/* ═══ אזור מצב — בלוק "☁️ סנכרון" — מודול משותף (סבב 17) ══════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   `SYNC_CFG` — הדבר היחיד שנבדל בין האפליקציות — יושב מעל הבלוק. */
-function syncFmtTime(t) {
-  try { return new Date(t).toLocaleString('he-IL'); } catch (e) { return String(t); }
+/*  ⛔ הדגל נדרש גם לאלמנט שאינו כפתור — ⚠️ `disabled` אינו קיים על `div`
+ *  או על שורת טבלה, ⭐ ולחיצה שנייה עליהם הייתה נכנסת. */
+function actRun(el, fn) {
+  if (el._actBusy) return;
+  var out;
+  try { out = fn(el); }
+  catch (e) { console.error('[act] ' + el.getAttribute('data-act'), e); return; }
+  if (!out || typeof out.then !== 'function') return;
+  el._actBusy = true;
+  var isBtn = el.tagName === 'BUTTON';
+  if (isBtn) busy(el, true, '⏳ שומר…');
+  out.then(function () { }, function (e) {
+    console.error('[act] ' + el.getAttribute('data-act'), e);
+  }).then(function () {
+    el._actBusy = false;
+    if (isBtn) busy(el, false);
+  });
 }
-var _syncNowBusy = false;
-function syncLineHTML() {
-  var t = 0;
-  try { t = SYNC_CFG.lastSync() || 0; } catch (e) { t = 0; }
-  return '<div class="sync-line">' +
-    '<div>מצב חיבור: <b>' + (navigator.onLine ? 'מחובר' : 'מנותק') + '</b></div>' +
-    '<div>סנכרון אחרון: <b>' + (t ? esc(syncFmtTime(t)) : '— טרם הסתנכרן —') + '</b></div>' +
-    '<div class="sync-act"><button type="button"' + (_syncNowBusy ? ' disabled' : '') +
-    ' data-act="sync-now-status">' +
-    (_syncNowBusy ? 'מסנכרן…' : '🔄 סנכרן עכשיו') + '</button></div>' +
-    '</div>';
+window.busy = busy;
+window.actRun = actRun;
+/* ═══════════════ סוף מודול כפתור עסוק ═══════════════════════════════════ */
+/* ═══ צינור השמירה — מודול משותף (סבב 136) ═══════════════════════════════
+   ⛔ **כל שמירה מטופס עוברת בצינור אחד** — ⚠️ `runSave` מריצה, ו-`afterSave`
+      סוגרת מודאל · מרעננת · מודיעה · ומתזמנת דחיפה: ⭐ ארבעה שלבים בסדר
+      קבוע, ⛔ ולא ארבעה סדרים בכל אתר.
+   ⚠️ הנימוק המדוד: אותו רצף חי ב-11 אתרי שמירה בשלוש האפליקציות, ⛔ וכל
+      אחד השמיט ממנו שלב אחר — ⭐ אחד לא סגר מודאל, אחד לא הבחין בין מקוון
+      לאופליין, ⚠️ ואחד השאיר את ההודעה על «נשמר» גם כשלא הייתה רשת.
+   ⛔ **ו-`runSave` מחזירה את ההבטחה** — ⚠️ בלעדיה השומר שבניתוב אינו מנטרל
+      דבר: ⭐ מטפל סינכרוני נגמר לפני שהלחיצה השנייה נוחתת.
+   ⛔ **ו-`undefined` מהמטפל הוא «הוולידציה עצרה»** — ⚠️ המודאל נשאר פתוח
+      והמשתמש מתקן את מה שחסר, ⭐ וכל ערך אחר הוא הצלחה.
+   ⛔ **ו-`saveRefresh` פר-אפליקציה** — ⚠️ מה שנטען לזיכרון ומה שמצויר נבדל
+      בין הארבע, ⭐ והסדר שסביבו אינו.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב. */
+function errToast(e) {
+  console.error('[save]', e);
+  toast((e && (e.message || e.error_description)) || 'שגיאה בשמירה', null, 'bad');
 }
-function syncStatusHTML() { return pendStatusHTML() + syncLineHTML(); }
-function syncStatusMount() {
-  var box = document.getElementById('sync-status-box');
-  if (!box) return;
-  box.innerHTML = '<div class="sync-box"><div class="sync-box-ttl">☁️ סנכרון</div>' +
-                  syncStatusHTML() + '</div>';
+function afterSave(msg) {
+  closeModal();
+  saveRefresh();
+  /*  ⛔ בלי רשת ההודעה אומרת «במכשיר» — ⚠️ «נשמר» סתם נקרא «נשמר בענן»,
+   *  ⭐ וזו בדיוק ההטעיה שכתיבה מקומית-תחילה יוצרת. */
+  if (msg) toast(navigator.onLine ? msg : MSG_SAVED_LOCAL, null, 'good');
+  schedulePush();
+  return Promise.resolve();
 }
-function syncNowFromStatus() {
-  if (_syncNowBusy) return;
-  _syncNowBusy = true;
-  syncStatusMount();
-  var p = null;
-  try { p = SYNC_CFG.sync(); } catch (e) { p = null; }
-  Promise.resolve(p)['catch'](function () { })
-    .then(function () { _syncNowBusy = false; syncStatusMount(); });
+function runSave(fn, msg) {
+  return Promise.resolve()
+    .then(fn)
+    .then(function (r) {
+      if (r === undefined) return;
+      /*  ⛔ מחרוזת מהמטפל היא ההודעה — ⚠️ יש שמירות שההודעה בהן נגזרת מהנתון
+       *  שנשמר, ⭐ והיא ידועה רק בתוך המטפל: ⛔ וההצהרה בניתוב נשארת
+       *  ברירת המחדל. */
+      return afterSave(typeof r === 'string' ? r : msg);
+    })
+    .catch(function (e) { errToast(e); });
 }
-// נקודת החיווט היחידה של אזור המצב. כל מסך הגדרות קורא לה, והיא מרכיבה
-// את שני האלמנטים בסדר המחייב. בדיקת האחידות דורשת שתהיה לה קריאה חיה.
-function statusAreaMount() {
-  syncStatusMount();
-  techInfoMount();
+window.errToast = errToast;
+window.afterSave = afterSave;
+window.runSave = runSave;
+/* ═══════════════ סוף צינור השמירה ═══════════════════════════════════════ */
+
+/* ═══ הרשמת service worker — מודול משותף (סבב 128) ══════════════════════
+   ⛔ מנגנון זיהוי אחד — `reg.update()`: ⚠️ ואין מנגנון שני לאותה שאלה.
+   ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר, ⭐ ו-`claim()`
+      של העובד הראשון יורה `controllerchange` על דף שכבר מריץ את החדש.
+   ⛔ ודף שאיש לא נגע בו נטען מחדש מיד — ⚠️ ואחרי מגע מוצג הבאנר, ⭐ שרענון
+      באמצע עבודה מאבד את מה שהוקלד.
+   ⛔ ו-`updateViaCache: 'none'` — ⚠️ ברירת המחדל מתירה לדפדפן לענות מתוך
+      מטמון ה-HTTP, ⛔ כלומר להשוות את `sw.js` מול עותק ישן של עצמו.
+   ⛔ והכפתורים במפת הפעולות — ⚠️ המיכל `#updater` יושב במקור, ⭐ ואין כאן
+      מאזין ישיר שאיש אינו רואה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+/*  ⛔ תקרת ההמתנה להשתלטות — ⚠️ **מה נכנס**: המתנה אחת אחרי
+ *  `SKIP_WAITING`, ⛔ **ומה מפיל**: ערך קצר, שיורה לפני ההשתלטות
+ *  ויהפוך לרענון שני. */
+var SW_APPLY_MS = 10000;
+var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0;
+function swBanner() { return document.getElementById('updater'); }
+/*  ⛔ מזהה הגרסה נקרא משם המטמון החי — ⚠️ ואין לו ליטרל שני בדף: ⭐ הוא
+ *  מסונן בתחילית האפליקציה, ⛔ ובזמן התקנה יש שני שמות — הישן והחדש:
+ *  ⚠️ ולכן הסימן נושא את שניהם, ⭐ והוא משתנה בדיוק כשגרסה נוספת או יורדת. */
+function swVer() {
+  if (typeof caches === 'undefined') return Promise.resolve('');
+  return caches.keys().then(function (ks) {
+    return ks.filter(function (n) { return n.indexOf(LS_CFG.cachePrefix) === 0; }).sort().join('|');
+  }).catch(function () { return ''; });
 }
-window.syncStatusMount = syncStatusMount;
-window.syncNowFromStatus = syncNowFromStatus;
-window.statusAreaMount = statusAreaMount;
-/* ═══ סוף בלוק "☁️ סנכרון" ═══════════════════════════════════════════════ */
+function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); }
+/*  ⛔ סימן הדחייה מתמיד ונושא את הגרסה שנדחתה — ⚠️ סימן בזיכרון מתאפס
+ *  בטעינה, ⭐ והבאנר חוזר בלי שדבר השתנה: ⛔ ועובד ממתין ששרד היה מציג
+ *  אותו בכל טעינה, בלי דרך לצאת. */
+function swShowUpdate() {
+  var el = swBanner();
+  if (!el) { console.error('[sw] אין מיכל לבאנר העדכון — #updater'); return; }
+  swVer().then(function (v) {
+    if (v && v === lsGet(LS_CFG.dismissKey, '')) return;
+    el.classList.add('show');
+  });
+}
+window.showAppUpdateBanner = swShowUpdate;
+function swHideUpdate() {
+  swBannerHide();
+  swVer().then(function (v) { if (v) lsSet(LS_CFG.dismissKey, v); });
+}
+/*  ⛔ הרענון אינו כאן — ⚠️ הוא ב-`controllerchange` בלבד: ⭐ טיימר שמרענן
+ *  בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting` שורד, הבאנר
+ *  חוזר, והלחיצה הבאה חוזרת עליו. */
+function swApply(btn) {
+  _swAccepted = true;
+  busy(btn, true, 'מעדכן…');
+  if (!(_swReg && _swReg.waiting)) { swApplyFail(btn); return; }
+  _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  _swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);
+}
+/*  ⛔ עובד ממתין ששרד את הלחיצה הוא כשל ⛔ ולא מצב — ⚠️ הבאנר יורד
+ *  והכשל נאמר, ⭐ ולא נשאר על המסך ומזמין לחיצה נוספת. */
+function swApplyFail(btn) {
+  _swWait = 0;
+  if (_swReloaded) return;
+  busy(btn, false);
+  swBannerHide();
+  toast('⚠️ העדכון לא הושלם — נסה שוב', 6000, 'bad');
+}
+function swRegister() {
+  if (!('serviceWorker' in navigator)) return;
+  /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
+   *  מפיל**: את הרענון האוטומטי שבהשתלטות. */
+  var touched = false;
+  ['pointerdown', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { touched = true; }, { once: true, capture: true });
+  });
+  var hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (_swWait) { clearTimeout(_swWait); _swWait = 0; }
+    if (_swReloaded || !hadController) return;
+    if (!_swAccepted && touched) { swShowUpdate(); return; }
+    _swReloaded = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+    console.log('[sw] registered:', reg.scope);
+    _swReg = reg;
+    if (reg.waiting && navigator.serviceWorker.controller) swShowUpdate();
+    reg.addEventListener('updatefound', function () {
+      var nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', function () {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) swShowUpdate();
+      });
+    });
+    function checkForUpdate() { try { reg.update().catch(function () {}); } catch (e) {} }
+    checkForUpdate();
+    setInterval(checkForUpdate, 30 * 60 * 1000);
+  }).catch(function (err) { console.warn('[sw] registration failed:', err); });
+}
+window.addEventListener('load', swRegister);
+/* ═══════════════ סוף מודול הרשמת service worker ═════════════════════════ */
+
 
 /* ── BK_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⛔ `sl_users` אינה ברשימה (סבב 30) — היא מחזיקה `password` בטקסט גלוי
@@ -1623,7 +1821,6 @@ window.statusAreaMount = statusAreaMount;
 var BK_CFG = {
   client: function () { return SB; },
   flagKey: 'sl_last_backup',
-  atKey: 'sl_last_backup_at',
   logQueueKey: 'sl_log_queue',
   prefix: '',
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
@@ -1635,14 +1832,16 @@ var BK_CFG = {
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   /*  ⛔ עמודת סדר לכל מקור (סבב 87ג) — ⚠️ שליפה בעמודים חייבת סדר יציב:
    *  ⭐ בלי `ORDER BY` פוסטגרס אינו מבטיח אותו, ⛔ ועמוד שני שמסודר אחרת
-   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⚠️ ל-`sl_settings` אין `id`,
-   *  ⛔ והמפתח שלה הוא `key`. */
+   *  מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⛔ **ואין כאן `id`** — ⚠️ המפתח
+   *  שנוצר במכשיר הוא `client_id`, ⭐ ו-`sl_settings` ממופתחת ב-`key`:
+   *  ⛔ `order` על עמודה שאינה בסכימה מחזיר `42703`, ⚠️ והוא נקרא
+   *  «סכימה מיושנת» ומציג באנר עדכון שאינו קשור לגרסה. */
   sources: function () {
     return [
-      { kind: 'table', name: 'sl_students',     order: 'id',  ts: 'updated_at' },
-      { kind: 'table', name: 'sl_transactions', order: 'id',  ts: 'updated_at' },
-      { kind: 'table', name: 'sl_settings',     order: 'key', ts: 'updated_at' },
-      { kind: 'table', name: 'sl_lists',        order: 'id',  ts: 'updated_at' }
+      { kind: 'table', name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
+      { kind: 'table', name: 'sl_settings',     order: 'key',       ts: 'updated_at' },
+      { kind: 'table', name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
     ];
   }
 };
@@ -1654,7 +1853,6 @@ var BK_CFG = {
 var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
 var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
-var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
 var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
 
@@ -1907,7 +2105,6 @@ async function bkMaybeDaily() {
     if (wrote) { try { await _bkRetention(c, dailyKeys); } catch (e2) { } }
     if (ok) {
       lsSet(flag, today);
-      lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
     } else {
       /* ⛔ בלי כתיבת הדגל הגלובלי — ההזדמנות הבאה באותו יום תנסה שוב
@@ -1940,44 +2137,6 @@ async function _bkRetention(c, keys) {
   return n;
 }
 
-/* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */
-// ⛔ הרכיב נתלה **אחרי** הבלוק הקפוא ואינו עורך אותו (סבב 30) — «מידע
-//    טכני» חתום ב-`check-status-area.mjs`, ועריכתו הייתה מחייבת שינוי
-//    בארבעת הריפו ובחתימות עבור שורת תצוגה אחת.
-function bkLastAt() {
-  var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
-  return isFinite(v) ? v : 0;
-}
-// ⚠️ מחזירה את מספר הימים רק כשהוא חצה את הסף, ו-0 אחרת — כדי שאתר
-//    הקריאה יהיה `if (bkStale())` ולא השוואה שמשוכפלת בכל מקום.
-//    מכשיר שטרם גיבה בכלל מחזיר 0: «— טרם גובה —» כבר אומר את זה, והתרעה
-//    בנוסף לו הייתה רעש בעלייה הראשונה.
-function bkStale() {
-  var t = bkLastAt();
-  if (!t) return 0;
-  var d = Math.floor((Date.now() - t) / 86400000);
-  return (d >= BK_STALE_DAYS) ? d : 0;
-}
-function bkStatusHTML() {
-  var t = bkLastAt(), st = bkStale();
-  return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
-    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
-    (st ? '<div class="bkStale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
-    '</div>';
-}
-function bkStatusMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
-  if (!d) return;
-  var prev = d.querySelector('.bk-line');
-  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
-  var wrap = document.createElement('div');
-  wrap.innerHTML = bkStatusHTML();
-  var node = wrap.firstChild;
-  if (node) d.appendChild(node);
-}
-window.bkStatusMount = bkStatusMount;
 
 /* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
 // ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול (סבב 30, השלמה) — היא
@@ -2192,18 +2351,18 @@ function pendEnsureStyle() {
   var s = document.createElement('style');
   s.id = 'pend-style';
   s.textContent =
-    '.pend-tag{display:inline-block;background:#fde68a;color:#78350f;border:1px solid #f59e0b;' +
-    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:1.6;' +
+    '.pend-tag{display:inline-block;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);' +
+    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:var(--lh-4);' +
     'white-space:nowrap;vertical-align:middle;margin:0 4px}' +
-    '.pend-tag.late{background:#fecaca;color:#7f1d1d;border-color:#dc2626}' +
+    '.pend-tag.late{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}' +
     '#pend-bar{position:fixed;z-index:2147482000;left:0;right:0;bottom:0;padding:8px 12px;' +
-    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:#3d2c00;background:#ffd88a;' +
-    'box-shadow:0 -2px 10px rgba(0,0,0,.18)}' +
-    '#pend-bar.late{background:#ffb4ab;color:#5c1a12}' +
+    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:var(--warn);background:var(--warn-soft);' +
+    'box-shadow:0 -2px 10px var(--sh-1)}' +
+    '#pend-bar.late{background:var(--bad-soft);color:var(--bad)}' +
     '#pend-alert{position:fixed;z-index:2147483000;left:0;right:0;top:0;padding:10px 14px;' +
-    'direction:rtl;font:700 13px/1.6 inherit;color:#fff;background:#b91c1c;' +
-    'box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;justify-content:center}' +
-    '#pend-alert button{background:rgba(255,255,255,.25);color:#fff;border:1px solid #fff;' +
+    'direction:rtl;font:700 13px/1.6 inherit;color:var(--on-alert);background:var(--alert);' +
+    'box-shadow:0 2px 10px var(--sh-2);display:flex;gap:10px;align-items:center;justify-content:center}' +
+    '#pend-alert button{background:var(--fill-dark);color:var(--on-dark);border:1px solid var(--on-dark);' +
     'border-radius:6px;padding:2px 10px;font:inherit;cursor:pointer}';
   (document.head || document.documentElement).appendChild(s);
 }
@@ -2270,31 +2429,13 @@ function pendRenderAlert() {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'הבנתי';
-  btn.onclick = function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); };
+  btn.dataset.act = 'pend-alert-ok';
   el.appendChild(span);
   el.appendChild(btn);
   document.body.appendChild(el);
 }
 
 // פאנל להגדרות — מה בדיוק ממתין, ומאיזה גיל.
-function pendStatusHTML() {
-  var m = pendAll(), keys = Object.keys(m);
-  keys.sort(function (a, b) { return m[a] - m[b]; });
-  var h = '<div style="font-size:13px;line-height:1.8">';
-  h += '<div>מצב רשת: <b>' + (navigator.onLine ? 'מקוון' : 'לא מקוון') + '</b></div>';
-  h += '<div>פעולות ממתינות לסנכרון: <b>' + keys.length + '</b></div>';
-  if (!keys.length) { h += '<div style="color:#16a34a">✅ הכול מסונכרן</div></div>'; return h; }
-  h += '<div style="margin-top:6px;max-height:220px;overflow:auto">';
-  keys.slice(0, 60).forEach(function (k) {
-    var age = Date.now() - m[k], late = age > PEND_LATE_MS;
-    h += '<div style="display:flex;gap:8px;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.08);padding:3px 0">' +
-         '<span>' + esc(k) + '</span><span style="' + (late ? 'color:#b91c1c;font-weight:700' : 'opacity:.7') + '">' +
-         esc(pendFmtAge(age)) + '</span></div>';
-  });
-  if (keys.length > 60) h += '<div style="opacity:.7">…ועוד ' + (keys.length - 60) + '</div>';
-  h += '</div></div>';
-  return h;
-}
 
 // רענון תקופתי — הגיל מוצג בתגיות ובמונה, וסף ה-24 שעות חייב להיחצות
 // גם כשהמשתמש לא נגע בכלום.
@@ -2462,16 +2603,16 @@ function _lkStyle() {
   var s = document.createElement('style');
   s.id = 'lk-css';
   s.textContent =
-    '#lk-warn{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;' +
+    '#lk-warn{position:fixed;inset:0;background:var(--veil-deep);z-index:var(--z-7);' +
     'display:flex;align-items:center;justify-content:center;font:inherit}' +
     '#lk-warn.lk-hidden{display:none}' +
-    '#lk-warn .lk-box{background:#fff;color:#1a2340;border-radius:14px;' +
+    '#lk-warn .lk-box{background:var(--card);color:var(--text);border-radius:14px;' +
     'padding:28px 24px;text-align:center;max-width:280px;width:90%}' +
     '#lk-warn .lk-ico{font-size:2rem;margin-bottom:6px}' +
     '#lk-warn .lk-ttl{font-weight:700;font-size:1.05rem;margin-bottom:8px}' +
-    '#lk-warn .lk-txt{font-size:.88rem;opacity:.75;margin-bottom:18px;line-height:1.6}' +
+    '#lk-warn .lk-txt{font-size:.88rem;opacity:var(--op-6);margin-bottom:18px;line-height:var(--lh-4)}' +
     '#lk-warn button{width:100%;border:0;border-radius:10px;padding:11px 16px;' +
-    'font:inherit;font-weight:600;cursor:pointer;background:#1a3a6b;color:#fff}';
+    'font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:var(--on-brand)}';
   (document.head || document.documentElement).appendChild(s);
 }
 function _lkWarnEl() {
@@ -2496,7 +2637,7 @@ function _lkWarnEl() {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'אני כאן ✋';
-  btn.onclick = function () { lkReset(); };
+  btn.dataset.act = 'lk-stay';
   box.appendChild(ico); box.appendChild(ttl); box.appendChild(txt); box.appendChild(btn);
   el.appendChild(box);
   document.body.appendChild(el);
@@ -2657,7 +2798,7 @@ var PL_CFG = {
     return withTimeout(SB.from('sl_settings').select('value').eq('key', SL_STAMP_KEY).maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(r.data.value) : null };
+        return { ok: true, ts: r.data ? plNum(kvParse(SL_STAMP_KEY, r.data.value).value) : null };
       }, function () { return { ok: false, ts: null }; });
   },
 };
@@ -2719,6 +2860,9 @@ function plTouch(ts) {
 
 function _plFull() {
   var done = function (v) { _plBusy = false; return v; };
+  /*  ⛔ שחרור האופק **לפני** המשיכה ⛔ ולא אחריה — ⚠️ הניקוי הוא שמתיר
+   *  לכתיבה שבסופה להחזיר את הישן, ⭐ וניקוי שאחריה ממתין למשיכה הבאה. */
+  try { lsHorizonRelease(); } catch (e0) { }
   try {
     return Promise.resolve(PL_CFG.pull()).then(
       function () { _plFullAt = Date.now(); return done(true); },
@@ -2955,7 +3099,6 @@ var HW_CFG = {
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
    ══════════════════════════════════════════════════════════════════════ */
 var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה של סבב 14 — רשת אחרי עלייה
-var HW_RESTORE_ARM_MS = 8000;     // חלון האישור הדו-שלבי של כפתור השחזור
 var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
 var _hwSweepBusy = false;
 var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
@@ -3091,47 +3234,6 @@ async function hwPastLoad(key, filter) {
   });
   return { ok: true, rows: out };
 }
-
-/* ── כפתור השחזור — נגישות ל-`lsRestoreAll` ────────────────────────────── */
-// ⛔ הרכיב נתלה אחרי הבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה טכניקה
-//    של `bkStatusMount`: «מידע טכני» חתום ב-`check-status-area.mjs`,
-//    והכפתור מצטרף אליו מבחוץ.
-var _hwRestoreArmed = 0;
-function hwRestoreHTML() {
-  return '<div class="sync-line hw-restore-line"><button type="button" ' +
-    'data-act="hw-restore">' +
-    '☁️ שחזר הכול מהענן</button></div>';
-}
-function hwRestoreMount() {
-  try {
-    if (!(typeof HW_CFG !== 'undefined' && HW_CFG &&
-          typeof HW_CFG.admin === 'function' && HW_CFG.admin())) return;
-  } catch (e) { return; }
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
-  if (!d) return;
-  var prev = d.querySelector('.hw-restore-line');
-  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
-  var wrap = document.createElement('div');
-  wrap.innerHTML = hwRestoreHTML();
-  var node = wrap.firstChild;
-  if (node) d.appendChild(node);
-}
-// אישור דו-שלבי: הלחיצה הראשונה חומשת לחלון קצר, השנייה מבצעת.
-function hwRestoreClick(btn) {
-  var now = Date.now();
-  if (!_hwRestoreArmed || (now - _hwRestoreArmed) > HW_RESTORE_ARM_MS) {
-    _hwRestoreArmed = now;
-    if (btn) btn.textContent = '⚠️ בטוח? לחיצה נוספת משחזרת הכול';
-    return;
-  }
-  _hwRestoreArmed = 0;
-  try { lsRestoreAll(); } catch (e) { }
-  if (btn) btn.textContent = '☁️ שחזר הכול מהענן';
-}
-window.hwRestoreClick = hwRestoreClick;
-window.hwRestoreMount = hwRestoreMount;
 
 /* ── נקודת ההפעלה ──────────────────────────────────────────────────────── */
 // ⛔ נקודת ההפעלה היחידה היא `hwBoot()` מפונקציית העלייה (סבב 35, כלל
@@ -3573,23 +3675,6 @@ function slStripMeta(rows) {
   return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === SL_STAMP_KEY); });
 }
 
-/* ═══ ניקוי חד-פעמי במכשיר — טביעת סיסמת השער (סבב 26) ═══════════════════
-   `sl_admin_pass_h` החזיק טביעת PBKDF2 של סיסמת שער ההגדרות. השער בוטל,
-   ולכן אין מי שיקרא אותו — אבל הוא **לא נעלם מעצמו**: localStorage שורד
-   עדכוני קוד, וערך שאין לו קורא הוא בדיוק הסוג של שריד שסשן עתידי מוצא
-   ומנחש לְמה הוא שימש. המפתח נמחק בעלייה הראשונה אחרי העדכון.
-   ⚠️ הפעולה נרשמת ליומן הפינוי (אף כישלון שקט, ואף מחיקה
-   שקטה): מפתח שנעלם בלי עקבות הוא בדיוק מה שהיומן בא למנוע. */
-var SL_OLD_PASS_HASH_KEY = 'sl_admin_pass_h';
-function slDropLegacyPassHash() {
-  try {
-    if (lsGet(SL_OLD_PASS_HASH_KEY, null) == null) return false;
-    lsRemove(SL_OLD_PASS_HASH_KEY);
-    if (typeof lsLog === 'function') lsLog('ניקוי שריד (סבב 26)', SL_OLD_PASS_HASH_KEY + ' — שער ההגדרות בוטל', 0);
-    return true;
-  } catch (e) { console.warn('[migrate] ניקוי ' + SL_OLD_PASS_HASH_KEY + ' נכשל', e); return false; }
-}
-
 /* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users (סבב 24) ═════════════
    **הבעיה שהסבב הזה בא לפתור.** כל שאר האפליקציה עובדת אופליין מסבב 12,
    אבל `doLogin` שלח שאילתה לענן — ולכן **בלי רשת אי אפשר היה להיכנס
@@ -3806,7 +3891,7 @@ var USER_CFG = {
   /*  ⛔ ההודעה נקראת בזמן הקריאה ⛔ ולא בזמן ההשמה — ⚠️ הקבוע מוצהר
    *  במקום אחר בקובץ בכל אפליקציה, ⭐ וקריאה בהשמה נותנת `undefined`
    *  באחת מהן בשקט. */
-  offMsg: function () { return MSG_OFFLINE; },
+  offMsg: function () { return MSG_OFF_USER_WRITE; },
   from: function () { return SB.from('sl_users'); },
   run: function (q) { return withTimeout(q); },
   /*  ⛔ אין כאן נפילה-חזרה על עמודות הטביעה — ⚠️ הן קיימות בטבלה מאז
@@ -3894,20 +3979,70 @@ async function slEnsurePassFp(u, pass) {
   } catch (e) { console.warn('[pass-fp] השלמה נכשלה', e && e.message); return false; }
 }
 
+/*  ⛔ מסך שינוי הסיסמה קיים כאן אף שהמשתמש יחיד (סבב 132) — ⚠️ משתמש
+ *  שאינו יכול לשנות סיסמה בעצמו תלוי ב-SQL Editor בכל שינוי, ⭐ ושכבת
+ *  הכניסה אחידה בשלוש שיש בהן כניסה. ⛔ **ואין כאן מסך ניהול משתמשים** —
+ *  ⚠️ יצירת משתמש נשארת בלוח הבקרה, ⭐ ואין למי לנהל. */
+function slMyPassword() {
+  var body = ''
+    + '<div class="frm-row"><label for="mp-cur">סיסמה נוכחית</label><input id="mp-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>'
+    + '<div class="frm-row"><label for="mp-new">סיסמה חדשה (שש ספרות)</label><input id="mp-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>'
+    + '<div class="u-mb-3 frm-row"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+  var foot = '<button class="btn out" data-act="modal-close">ביטול</button>'
+           + '<button class="btn" data-act="my-pass-save" data-ksave>שמירה</button>';
+  openModal(MSG_MY_PASS_TITLE, body, foot);
+  var el = document.getElementById('mp-cur');
+  if (el) el.focus();
+}
+
+async function slSaveMyPassword() {
+  var c1 = document.getElementById('mp-cur');
+  var n1 = document.getElementById('mp-new');
+  var n2 = document.getElementById('mp-new2');
+  if (!c1 || !n1 || !n2) { uiNoDialog('slSaveMyPassword', 'mp-cur'); return; }
+  var cur = c1.value.trim(), p1 = n1.value.trim(), p2 = n2.value.trim();
+  if (!cur || !p1 || !p2) { toast(MSG_FILL_ALL, null, 'bad'); return; }
+  if (!PASS_SIX_RE.test(p1)) { toast(MSG_PASS_SIX, null, 'bad'); return; }
+  if (p1 !== p2) { toast(MSG_PASS_MISMATCH, null, 'bad'); return; }
+  var u = sessGet();
+  if (!u || u.client_id == null) { toast(MSG_NO_USER_RELOGIN, null, 'bad'); return; }
+  if (!SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  /*  ⛔ הסיסמה הנוכחית מאומתת מול הטביעה שבענן — ⚠️ ולא מול המראה: ⭐ מראה
+   *  שהתיישנה הייתה מאשרת סיסמה שכבר הוחלפה במכשיר אחר. */
+  var chk;
+  try { chk = await withTimeout(SB.from('sl_users').select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
+  catch (e) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  if (chk && chk.error) { toast(MSG_PASS_VERIFY_FAIL + (chk.error.message || MSG_SERVER_ERR), null, 'bad'); return; }
+  var row = chk && Array.isArray(chk.data) && chk.data[0];
+  if (!row) { toast(MSG_PASS_CUR_BAD, null, 'bad'); return; }
+  var v = await slVerifyOffline(row, cur);
+  if (v === 'no-fp')     { toast('❌ ' + MSG_OFF_NO_FP, null, 'bad'); return; }
+  if (v === 'no-crypto') { toast('❌ ' + MSG_OFF_NO_CRYPTO, null, 'bad'); return; }
+  if (v !== 'ok')        { toast(MSG_PASS_CUR_BAD, null, 'bad'); return; }
+  var body = await slPassFields(p1);
+  var res;
+  try { res = await writeUser(u.client_id, body); }
+  catch (e2) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  if (!res || res.error) { toast(MSG_PASS_UPDATE_FAIL + ((res && res.error && res.error.message) || MSG_SERVER_ERR), null, 'bad'); return; }
+  /*  ⛔ המראה מתעדכנת באותו רגע — ⚠️ בלעדיה הכניסה האופליין הבאה מאמתת
+   *  מול הטביעה שזה עתה הוחלפה. */
+  u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
+  try { slUsersSaveOne(u); } catch (e3) { console.warn('[pass] כתיבה למראה נכשלה', e3); }
+  plTouch();
+  closeModal();
+  if (body.pass_fp) toast(MSG_PASS_UPDATED);
+  else toast(MSG_PASS_UPDATED_NO_FP2, null, 'bad');
+}
+
 /* ---- אימות אופליין מול הטביעה ----
    ⚠️ **ארבעה מצבים, ארבע הודעות שונות.** «המשתמש אינו בעותק המקומי»
    ו«אין לו טביעה» **אינם** אומרים שהסיסמה שגויה — הם אומרים שאין כאן במה
    לאמת אותה. `MSG_BAD_LOGIN` על מצב כזה הוא כשל שקט: הוא מוביל את
    המשתמש להקליד שוב ושוב סיסמה נכונה לחלוטין, במקום לומר לו את הדבר
    היחיד שיפתור — חיבור אחד.
-   ⚠️ ההודעות **פרטיות ל-schar-limud, ובכוונה מחוץ לבלוק ההודעות המשותף**
-   (`MSG_OFFLINE`/`MSG_SAVED`/`MSG_BAD_LOGIN`/`MSG_SYNC_BACK`, סבב 8):
-   הבלוק ההוא מוכרז זהה מילה במילה בארבעת הפרויקטים, והוספת קבוע אליו
-   כאן בלבד הייתה יוצרת בדיוק את הסחיפה שהבלוק המשותף בא למנוע. אותו שיקול
-   בדיוק חל על `MSG_SET_DENIED`/`MSG_SET_NO_ROLE` (סבב 26). */
-var MSG_OFF_UNKNOWN   = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_FP     = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+   ⚠️ **והודעה שיותר מאפליקציה אחת אומרת אינה כאן** — ⛔ היא בבלוק
+   החתום, ⭐ ששם החתימה מודדת את זהות הנוסח; ⚠️ ומה שרק כאן נאמר —
+   `MSG_SET_DENIED`/`MSG_SET_NO_ROLE` (סבב 26) — יושב מחוצה לו. */
 var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת — יש ליצור משתמש ראשון ב-SQL Editor של Supabase';
 // ⭐ שתי הודעות חדשות (סבב 40) — מאז שהאימות המקוון עובר דרך הטביעה, שני
 // מצבי הכישלון האלה קיימים גם **עם** רשת. ⛔ אין לאחד אותם עם
@@ -3916,7 +4051,10 @@ var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת �
    שאפשר לכתוב אליה סיסמה, ⭐ ומה שנקבע ב-SQL Editor הוא **הטביעה**:
    ⛔ הודעה שאומרת «קבע סיסמה» הייתה שולחת את המנהל לעמודה שאינה קיימת. */
 var MSG_NO_FP_ONLINE  = '❌ למשתמש הזה אין טביעת סיסמה במערכת — יש לקבוע לו `pass_salt` ו-`pass_fp` ב-SQL Editor של Supabase';
-var MSG_NO_CRYPTO     = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+// ⭐ תבנית שש הספרות — ⛔ נאכפת במסלולי יצירה ושינוי בלבד: ⚠️ אכיפה
+// במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן.
+var PASS_SIX_RE = /^[0-9]{6}$/;
+var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
 
 // מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
 // ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19) — מסלול כניסה אינו יודע
@@ -3941,7 +4079,12 @@ function slApplyMirror() {
   TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
   SETTINGS = {};
-  (MIRROR.sl_settings || []).forEach(function (r) { if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = r.value; });
+  /*  ⛔ הערך שבעמודה הוא JSON — ⚠️ אילוץ במסד מבטיח זאת, ⭐ וקורא
+   *  שמתייחס אליו כטקסט הוא הנחה שנייה על אותה עמודה: ⛔ `"5"` היה נקרא
+   *  עם הגרשיים, ⛔ ולא כחמש. */
+  (MIRROR.sl_settings || []).forEach(function (r) {
+    if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = kvParse(r.key, r.value).value;
+  });
   LISTS = {};
   // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
   // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
@@ -4234,7 +4377,7 @@ function toast(msg, dur, kind) {
   el.textContent = msg;
   box.appendChild(el);
   setTimeout(function () {
-    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    el.style.transition = 'opacity var(--dur-4)'; el.style.opacity = '0';
     setTimeout(function () { el.remove(); }, 260);
   }, dur || TOAST_DEFAULT_MS);
 }
@@ -4242,6 +4385,22 @@ function toast(msg, dur, kind) {
    כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
 var LS_TOAST_MS = 5000;
 function lsToast(msg, dur, kind) { try { toast(msg, dur || LS_TOAST_MS, kind); } catch (e) {} }
+/*  ⛔ סגירת המודאל היא שני מסלולים שנקראים מהמאזין האחד — ⚠️ לחיצה על
+ *  הרקע ו-`Escape`: ⭐ המנגנון זהה בארבעתן, ⛔ ומאזין נפרד לכל אחד היה
+ *  מפזר את הסגירה על פני שלושה מקומות. */
+function modalBackdrop(e) {
+  if (!e.target) return false;
+  if (e.target.id === 'modal') { closeModal(); return true; }
+  if (e.target.id === 'ask') { closeAsk(false); return true; }
+  return false;
+}
+function modalEsc(e) {
+  if (e.key !== 'Escape') return false;
+  var a = document.getElementById('ask'), m = document.getElementById('modal');
+  if (a && a.classList.contains('open')) { closeAsk(false); return true; }
+  if (m && m.classList.contains('open')) { closeModal(); return true; }
+  return false;
+}
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת
@@ -4293,18 +4452,100 @@ function uniqHas(list, val, keyFn) {
   return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
 }
 /* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
+/* ═══ Enter שומר בשדה עריכה — מודול משותף (סבב 125) ═════════════════════
+   ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
+      ⛔ ולא השדה: ⭐ שדה שנוסף לטופס קיים מקבל את המקש בלי שאיש ייגע בו,
+      ⚠️ ומטפל פר-שדה נשכח בשדה הבא שנוסף.
+   ⛔ והכפתור מסומן — ⚠️ `data-ksave` לשמירה ו-`data-kesc` לביטול: ⭐ בטופס
+      יושב יותר מכפתור אחד, ⛔ ובחירה לפי סדר הייתה מפעילה את הראשון.
+   ⛔ והניתוב הוא **מפת הפעולות** — ⚠️ הכפתור נמצא בתוך ההיקף והפעולה שלו
+      מופעלת: ⭐ מסלול שמירה שני מתיישן ברגע שהראשון משתנה.
+   ⛔ ו-`textarea` אינו נכנס — ⚠️ `Enter` בו הוא שורה חדשה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+function ksFire(scope, attr) {
+  var b = scope.querySelector('[' + attr + ']');
+  if (!b || b.disabled) return false;
+  var act = b.getAttribute('data-act');
+  var fn = DOM_ACTIONS[act];
+  if (!fn) { console.error('[ks] כפתור ' + attr + ' בלי פעולה במפה: ' + act); return false; }
+  fn(b);
+  return true;
+}
+/*  ⛔ המודול אינו רושם מאזין משלו — ⚠️ הוא נקרא מהמאזין האחד שבאפליקציה:
+ *  ⭐ שני מאזינים לאותו אירוע הם שני מקומות שבהם מקש נתפס, ⛔ וסדר
+ *  ההרצה ביניהם אינו מוצהר. */
+function ksKey(e) {
+  if (e.key !== 'Enter' && e.key !== 'Escape') return false;
+  var t = e.target;
+  if (!t || t.tagName !== 'INPUT' || !t.closest) return false;
+  var scope = t.closest('.ksave');
+  if (!scope) return false;
+  if (!ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) return false;
+  e.preventDefault();
+  return true;
+}
+/* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
+
+/* ═══ ערך מפתח-ערך — מודול משותף (סבב 126) ══════════════════════════════
+   ⛔ «אין ערך» ו«ערך פגום» אינן אותה תשובה — ⚠️ שתיהן חזרו «נכשל», ⭐ והמשתמש
+      חיפש רשת שלא נפלה.
+   ⛔ ולכן `null` הוא ערך שאינו קיים ⛔ ואינו כשל, ⚠️ וערך שאינו JSON הוא כשל
+      שנוקב בשם המפתח.
+   ⛔ והנוסח אחד בארבעתן — ⚠️ הודעה שנבדלת בין האפליקציות היא ארבעה חיפושים
+      לאותה תקלה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+var KV_BAD = 'ערך פגום בענן';
+function kvParse(key, raw) {
+  if (raw === null || raw === undefined || raw === '') return { ok: true, value: null, bad: false };
+  try { return { ok: true, value: JSON.parse(raw), bad: false }; }
+  catch (e) {
+    /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
+     *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
+    console.error('[sync] ' + KV_BAD + ' [' + key + ']:', e);
+    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
+    return { ok: false, value: null, bad: true };
+  }
+}
+function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
+/* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
+/* ═══ גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════════
+   ⛔ סדרה מוצגת ברוחב יחסי ⛔ ולא בספריית גרפים — ⚠️ הרוחב הוא התכונה
+      היחידה שנגזרת מהנתון, ⭐ והוא החריג היחיד לסגנון מוטבע.
+   ⛔ פחות משתי נקודות אינו גרף — ⚠️ עמודה אחת אינה משווה דבר, ⭐ והמסך
+      מציג את הטבלה בלבד: ⛔ המחזירה מחרוזת ריקה ⛔ ואינה מציירת מסגרת.
+   ⛔ וכל שורה נושאת `aria-label` עם המספרים — ⚠️ גרף בלי טקסט חלופי אינו
+      נגיש, ⭐ והוא כל מה שקורא-מסך רואה.
+   ⛔ **פס יחיד ופס בסדרה הם רכיב אחד (סבב 139)** — ⚠️ `bar` היא אתר
+      הרוחב הדינמי האחד, ⭐ ו-`barChart` קוראת לה בלולאה: ⛔ שני מימושים
+      באותה אפליקציה הם שני מקומות שבהם הרוחב נכתב ביד, ⚠️ ושניים כאלה
+      נמדדו — הסדרה בבונה, והפס בטבלת הפילוח.
+   ⛔ **מה נכנס**: `lab` תווית · `val` הערך · `tgt` היעד · `txt` הטקסט
+      החלופי · `end` מה שנכתב בסוף השורה. */
+function bar(pct, cls) {
+  return '<span class="btrack' + (cls ? ' ' + cls : '') +
+         '"><i style="width:' + pct + '%"></i></span>';
+}
+function barChart(rows, label) {
+  if (!Array.isArray(rows) || rows.length < 2) return '';
+  var max = 0, i;
+  for (i = 0; i < rows.length; i++) max = Math.max(max, rows[i].val || 0, rows[i].tgt || 0);
+  if (!(max > 0)) return '';
+  var pct = function (v) { return Math.round(((v || 0) / max) * 1000) / 10; };
+  var h = '<div class="bchart" role="img" aria-label="' + esc(label) + '">';
+  for (i = 0; i < rows.length; i++) {
+    h += '<div class="brow" aria-label="' + esc(rows[i].txt) + '">' +
+      '<span class="blab">' + esc(rows[i].lab) + '</span>' +
+      '<span class="bbars">' + bar(pct(rows[i].val)) + bar(pct(rows[i].tgt), 'tgt') +
+      '</span>' +
+      '<span class="bval">' + esc(rows[i].end) + '</span></div>';
+  }
+  return h + '</div>';
+}
+/* ═══════════════ סוף מודול גרף העמודות ══════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלוש הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var a = document.getElementById('ask'), m = document.getElementById('modal');
-  if (a && a.classList.contains('open')) closeAsk(false);
-  else if (m && m.classList.contains('open')) closeModal();
-});
-document.addEventListener('click', function (e) {
-  if (e.target && e.target.id === 'modal') closeModal();
-  if (e.target && e.target.id === 'ask') closeAsk(false);
-});
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
 var _sdData={},_sdSelected={};
 function sdSetOptions(k,o){_sdData[k]=o;}
@@ -4314,7 +4555,7 @@ function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){d
 // onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
 // קוד JS מורכב בתוך HTML.
-function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt" style="color:var(--text3);cursor:default">אין תוצאות</div>';}
+function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'" onmousedown="sdSelectEl(this)">'+esc(x.label)+'</div>';}).join(''):'<div class="u-c-text3 u-cur-def sd-opt">אין תוצאות</div>';}
 // ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
 // ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
@@ -4404,7 +4645,7 @@ async function doLoginOffline(u,p){
   sessSet(slUserPub(cu));
   document.getElementById('auth-spinner').style.display='none';
   enterApp();
-  toast('📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור',5000);
+  toast(MSG_OFFLINE_LOGIN,5000, 'bad');
 }
 function doLogout(){ctxSwitch();sessClear();lkStop();document.getElementById('main-app').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת.
@@ -4462,7 +4703,12 @@ var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'
  *  יציב, ⛔ ובלי `ORDER BY` פוסטגרס אינו מבטיח אותו: ⭐ עמוד שני שמסודר
  *  אחרת מחזיר שורות שכבר הגיעו ומדלג על אחרות. ⛔ ו-`sl_settings` ממוינת
  *  ב-`key` ⛔ ולא ב-`id` — ⚠️ אין לה עמודה כזו. */
-var SYNC_TABLES=[['sl_students','id'],['sl_transactions','id'],['sl_settings','key'],['sl_lists','id']];
+/*  ⛔ עמודת המיון של כל טבלה — ⚠️ **מה נכנס**: שם הטבלה ושם עמודה
+ *  שקיימת בה בפועל, ⛔ **ומה מפיל**: עמודה שאינה בסכימה — ⚠️ `order`
+ *  עליה מחזיר `42703`, ⭐ והוא נקרא «סכימה מיושנת» ומציג באנר עדכון
+ *  שאינו קשור לגרסה. ⛔ **ואין כאן `id`** — ⚠️ המפתח שנוצר במכשיר
+ *  הוא `client_id`, ⭐ ו-`sl_settings` ממופתחת ב-`key`. */
+var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],['sl_settings','key'],['sl_lists','client_id']];
 /*  ⛔ הסנכרון מושך **מלא** ⛔ ואין לו חלון — ⚠️ מנוע ההכרעה חייב את כל
  *  הרשומות: ⭐ רשומה שלא נמשכה נקראת «אין אצלי», ⛔ והמיזוג מבין «נמחקה».
  *  ⚠️ מה שכן נוסף כאן הוא **העימוד** — ⛔ עד כאן `select('*')` הביא את
@@ -4567,7 +4813,7 @@ async function syncAll(){
     // אזהרה פעם אחת ולא כל 3 שניות, וטוסט התאוששות כשהחיבור חוזר
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
-      if(!_syncWarned){_syncWarned=true;toast('⚠️ טעינת הנתונים נכשלה ('+errs.join(', ')+') — המוצג הוא העותק שבמכשיר',4000);}
+      if(!_syncWarned){_syncWarned=true;toast(MSG_LOAD_FAIL_PRE+errs.join(', ')+MSG_LOAD_FAIL_POST,4000, 'bad');}
     }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK);}
   }catch(e){
     _lastSyncOk=false;
@@ -4592,6 +4838,10 @@ var _slPullLogged = false;
 // (כל 3 שניות) היה בונה מחדש רשימות שאיש אינו רואה. עד סבב 26 התנאי היה
 // «השער נפתח»; היום הוא «יש הרשאה **וגם** הפאנל פעיל», כי הרשאה לבדה
 // אינה אומרת שהמסך על המסך.
+/*  ⛔ נקודת הרענון של הצינור — ⚠️ **מה נכנס**: הציור שאחרי כל שמירה,
+ *  ⛔ **ומה מפיל**: המתנה לרשת כאן — ⭐ הכתיבה כבר במראה ובתור,
+ *  ⚠️ והסנכרון מרנדר שוב ברקע כשהוא מביא משהו חדש. */
+function saveRefresh(){ refreshUI(); }
 function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(SC_STUDENT_ID)renderStudentCard();
   var sp=document.getElementById('panel-settings');
   if(slIsAdmin()&&sp&&sp.classList.contains('active'))renderSettingsLists();}
@@ -4607,7 +4857,7 @@ function updateDropdowns(){
   if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
   if(cur)sel.value=cur;
   var dt=document.getElementById('txn-date');if(!dt.value)dt.value=todayStr();
-  var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'2000';
+  var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'';
   txnMethodHint();
 }
 // הבהרה בזמן הרישום — הרגע שבו אפשר עוד למנוע רישום שגוי של זיכוי ככסף
@@ -4616,7 +4866,7 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
   h.style.display=on?'block':'none';
-  if(on)h.innerHTML='<span style="color:var(--credit);font-weight:700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="u-c-credit u-fw-700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 // זריעת הסעיף ב-sl_lists (פעם אחת, אחרי סנכרון תקין). מריצים מהאפליקציה
 // ולא רק ממיגרציה, כדי שהסעיף יופיע בהגדרות גם בלי הרצת SQL ידנית.
@@ -4654,8 +4904,12 @@ function dashPrevYear(){DASH_YEAR--;renderDash();}function dashNextYear(){DASH_Y
 // אותו כלל כמו קודם, רק שעכשיו היא פשוט לא נכנסת לסכום במקום להיות
 // מוצגת ומופחתת בשורה נפרדת.
 function txnMonth(t){var d=new Date(t.date+'T00:00:00');return d.getMonth();}
+/*  ⛔ אין להחזיר סכום קבוע כשההגדרה חסרה — ⚠️ סכום מומצא מחשב חוב מול
+ *  מה שאיש לא הזין, ⭐ והמסך מציג אותו כחוב אמיתי: ⛔ ומסך ההגדרות שמציג
+ *  אותו כותב אותו לענן בשמירה הראשונה, ⚠️ כאילו זו החלטת המנהל.
+ *  ⭐ **הגדרה שלא נקבעה היא 0** ⛔ ולא ניחוש. */
 function studentTuition(s){
-  var cs=(s&&s.card_settings)||{},defT=parseInt(SETTINGS['default_tuition']||2000);
+  var cs=(s&&s.card_settings)||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0);
   return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
 }
 // מפת {student_client_id:{monthIdx:סכום}} לשנת לימודים אחת — תנועות בפועל בלבד.
@@ -4677,7 +4931,7 @@ function monthTarget(year,m){
 }
 function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
 function pctText(got,target){var p=pctNum(got,target);return p===null?'—':p+'%';}
-function pctClass(got,target){var p=pctNum(got,target);return p===null?'':p>=90?'amt-green':p>=60?'amt-yellow':'amt-red';}
+function pctClass(got,target){var p=pctNum(got,target);return p===null?'':p>=90?'amt-ok':p>=60?'amt-warn':'amt-bad';}
 function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך יעד ‎'+fmt(target)+'‎';}
 
 function renderDash(){
@@ -4732,25 +4986,14 @@ function renderDash(){
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
 
-  if(_dashChart)_dashChart.destroy();
-  var ctx=document.getElementById('dash-chart').getContext('2d');
-  // הגרף מציג בדיוק את נתוני הטבלה: עמודה = התנועות שנרשמו בחודש, וקו
-  // היעד לצידה כדי שיהיה ברור מאיפה אחוז הגבייה מגיע.
-  var cD=YEAR_MONTHS.map(function(m){return colT[m]||0;}),cT=YEAR_MONTHS.map(function(m){return tgt[m];});
-  _dashChart=new Chart(ctx,{
-    type:'bar',
-    data:{labels:YEAR_MONTHS.map(function(m){return MONTH_HE_SHORT[m];}),datasets:[
-      {label:'נגבה בפועל',data:cD,backgroundColor:'rgba(30,58,95,0.75)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:4},
-      {label:'יעד',type:'line',data:cT,borderColor:'#c62828',backgroundColor:'#c62828',borderWidth:2,borderDash:[5,4],pointRadius:2,fill:false,tension:.15}
-    ]},
-    options:{responsive:true,plugins:{
-      legend:{labels:{font:{family:'Heebo'}}},
-      tooltip:{callbacks:{afterBody:function(items){
-        var i=items&&items[0]?items[0].dataIndex:-1;if(i<0)return'';
-        return 'אחוז גבייה: '+pctText(cD[i],cT[i]);
-      }}}
-    },scales:{y:{ticks:{font:{family:'Heebo'},callback:function(v){return String.fromCharCode(8362)+v.toLocaleString();}}},x:{ticks:{font:{family:'Heebo'},maxRotation:45}}}}
-  });
+  // הגרף מציג בדיוק את נתוני הטבלה: פס הגבייה של החודש ומתחתיו פס היעד,
+  // כדי שיהיה ברור מאיפה אחוז הגבייה מגיע. ⛔ אין כאן ספריית גרפים —
+  // ⚠️ הרוחב היחסי הוא כל מה שהנתון דורש.
+  document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
+    var v=colT[m]||0,t=tgt[m]||0;
+    return {lab:MONTH_HE_SHORT[m],val:v,tgt:t,end:pctText(v,t),
+            txt:MONTH_HE_SHORT[m]+': נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
+  }),'גבייה חודשית מול היעד')
 }
 function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=monthLabel(year,month);
@@ -4764,12 +5007,12 @@ function showDashMonth(year,month){
   act.forEach(function(s){
     var v=(actual[s.client_id]||{})[month]||0,inM=studentInMonth(s,year,month),req=inM?studentTuition(s):0;
     tot+=v;target+=req;
-    var c=!inM?'':v>=req?'amt-green':v>0?'amt-yellow':'amt-red';
+    var c=!inM?'':v>=req?'amt-ok':v>0?'amt-warn':'amt-bad';
     html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span></div>';
   });
   tot=Math.round(tot*100)/100;
-  html+='<div style="padding:10px 14px;font-weight:700;border-top:2px solid var(--border)">נגבה: <span style="color:var(--green)">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
-    '<div style="font-weight:400;color:var(--text3);font-size:.78rem;margin-top:4px">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
+  html+='<div class="u-p-5-6 u-fw-700 u-bt-2-solid-border">נגבה: <span class="u-c-green">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
+    '<div class="u-fw-400 u-c-text3 u-fs-2 u-mt-2">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
 function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
@@ -4781,7 +5024,7 @@ function closeDashMonth(){document.getElementById('dash-month-card').style.displ
 // (paid = cash + cred), רק מסווגים.
 function calcDistribution(sid,year){
   var s=STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
-  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=s.card_settings||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var txns=TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
@@ -4820,33 +5063,31 @@ function calcDistribution(sid,year){
    ══════════════════════════════════════════════════════════════════════════ */
 async function saveTxn(){
   var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
-  if(!sid){toast('נא לבחור תלמיד');return;}if(!date){toast('נא לבחור תאריך');return;}if(!amount||amount<=0){toast('נא להזין סכום תקין');return;}
+  if(!sid){toast(MSG_PICK_STUDENT_PLAIN);return;}if(!date){toast(MSG_PICK_DATE);return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT);return;}
   // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
   // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
   var row={client_id:cid,student_client_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
   // מסלול קריטי: כשל כתיבה מקומית עוצר כאן ברעש. בכסף אסור
   // בשום מצב להציג "נשמר" על משהו שלא נכתב לשום מקום.
-  if(!slLocalWrite('sl_transactions',row)){toast('❌ השמירה במכשיר נכשלה — התשלום לא נשמר',5000);return;}
+  if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   releaseCid('txn');
-  document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'2000';
+  document.getElementById('txn-amount').value=SETTINGS['default_tuition']||'';
   document.getElementById('txn-note').value='';
-  refreshUI();
-  toast(navigator.onLine?'✅ תשלום נשמר':MSG_SAVED_LOCAL,4000);
-  schedulePush();   // בלי await: המשתמש לא ממתין לרשת
+  return true;
 }
 function renderTxnLog(){
   var fid=document.getElementById('sd-val-txnfilter').value||'';
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span><span style="font-weight:600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span><span class="u-fw-600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
 function txnAmountHtml(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
-  return'<span style="font-weight:700;color:var(--green)">&#8362;'+fmt(t.amount)+'</span>';
+  return'<span class="u-fw-700 u-c-green">&#8362;'+fmt(t.amount)+'</span>';
 }
 function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
@@ -4865,6 +5106,13 @@ function txnMethodPill(t){
    נבנות מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם.
    ══════════════════════════════════════════════════════════════════════════ */
 var DOM_ACTIONS = {
+  'sw-apply':            function (el) { swApply(el); },
+  'sw-dismiss':          function () { swHideUpdate(); },
+  /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
+   *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'pend-alert-ok':       function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); },
+  'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
   'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
@@ -4873,13 +5121,13 @@ var DOM_ACTIONS = {
   'modal-close':  function () { closeModal(); },
   'ask-no':       function () { closeAsk(false); },
   'ask-yes':      function () { closeAsk(true); },
-  'student-add':  function () { saveNewStudent(); },
+  'student-add':  function () { return runSave(saveNewStudent, '✅ תלמיד נוסף'); },
   /*  ⛔ פאנל · אקורדיון · ורשימה עוברים בדלגציה (סבב 79) — ⚠️ `showPanel`
    *  מקבלת את הכפתור שנלחץ, ⛔ ולכן `this` שהיה ב-`onclick` הוא ה-`el`
    *  שכאן: ⭐ אותה פונקציה בדיוק, ⛔ ולא מסלול שני. */
   'show-panel':   function (el) { showPanel(el.getAttribute('data-panel'), el); },
   'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
-  'list-add':     function (el) { addListItem(el.getAttribute('data-list')); },
+  'list-add':     function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
   /*  ⚠️ שנה וחודש הם **מספרים** כאן — ⛔ הם נכנסים לחישוב טווח ולא
    *  להשוואת מפתח, ⭐ וההמרה נעשית באותו קומיט של ההמרה לדלגציה. */
   'dash-month':   function (el) { showDashMonth(Number(el.getAttribute('data-year')),
@@ -4891,34 +5139,43 @@ var DOM_ACTIONS = {
   'sc-past-show':            function () { scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
   'student-open-add':        function () { openAddStudent(); },
-  'student-settings-save':   function () { saveStudentSettings(); },
-  'txn-save':                function () { saveTxn(); },
-  'tuition-save':            function () { saveDefaultTuition(); },
-  'login':                   function () { doLogin(); },
+  'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
+  'txn-save':                function () { return runSave(saveTxn, '✅ תשלום נשמר'); },
+  'tuition-save':            function () { return runSave(saveDefaultTuition, MSG_SAVED); },
+  'my-pass':                 function () { slMyPassword(); },
+  'my-pass-save':            function () { return slSaveMyPassword(); },
+  'login':                   function () { return doLogin(); },
   'logout':                  function () { doLogout(); },
-  'ls-sweep-now':      function () { lsSweepNow(); },
-  'ls-refresh-status': function () { lsRefreshStatus(); },
-  'ls-restore-all':    function () { lsRestoreAll(); },
-  'sync-now-status':   function () { syncNowFromStatus(); },
-  'hw-restore':        function (el) { hwRestoreClick(el); },
 };
+/*  ⛔ מאזין הקליק האחד של האפליקציה — ⚠️ סגירת הרקע קודמת לניתוב:
+ *  ⭐ לחיצה על הרקע אינה נושאת `data-act`, ⛔ ושני מאזינים לאותו אירוע
+ *  הם שני מקומות שבהם לחיצה נתפסת. */
 document.addEventListener('click', function (ev) {
+  if (modalBackdrop(ev)) return;
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
   if (!el) return;
   var fn = DOM_ACTIONS[el.getAttribute('data-act')];
   if (!fn) return;
   ev.preventDefault();
-  fn(el);
+  actRun(el, fn);
+});
+/*  ⛔ מאזין המקלדת האחד של האפליקציה — ⚠️ הוא קורא לשני המסלולים
+ *  המשותפים בסדר מוצהר: ⭐ שמירה בשדה עריכה קודמת לסגירת המודאל,
+ *  ⛔ שאחרת `Escape` בשדה שבתוך מודאל היה סוגר אותו במקום לבטל את השדה. */
+document.addEventListener('keydown', function (e) {
+  if (ksKey(e)) return;
+  modalEsc(e);
 });
 
-function deleteTxn(key){showConfirm('מחיקת תשלום','למחוק תשלום זה?',function(){
+function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
+  if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
-  if(!t){toast('⚠️ התשלום לא נמצא');return;}
+  if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
   var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-  if(!slLocalWrite('sl_transactions',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   refreshUI();
-  toast(navigator.onLine?'✅ תשלום נמחק':MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000);
   schedulePush();
 });}
 /*  ⛔ המזהה נשמר כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא טקסט
@@ -4952,23 +5209,23 @@ function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
 function renderScAnnual(){
   if(!SC_STUDENT_ID||!SC_YEAR)return;
   var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
-  var cs=s.card_settings||{},defT=parseInt(SETTINGS['default_tuition']||2000),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=s.card_settings||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
   var dist=calcDistribution(SC_STUDENT_ID,SC_YEAR),rows='',tR=0,tP=0;
   // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
-    if(i.off){rows+='<tr style="opacity:.45"><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell" colspan="3" style="text-align:center;font-size:.76rem">לא היה בישיבה</td></tr>';return;}
-    var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-green':i.paid>0?'amt-yellow':'amt-red';
-    rows+='<tr><td style="white-space:nowrap">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="'+bc+'" style="text-align:center">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
+    if(i.off){rows+='<tr class="u-op-45"><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="u-ta-c u-fs-2 req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
+    var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-ok':i.paid>0?'amt-warn':'amt-bad';
+    rows+='<tr><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="u-ta-c '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   document.getElementById('sc-annual-tbody').innerHTML=rows;
-  var tb=tP-tR,tf='<tr style="background:var(--bgsec);font-weight:700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="'+(tb>=0?'amt-green':'amt-red')+'" style="text-align:center">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  var tb=tP-tR,tf='<tr class="u-bg-bg u-fw-700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="u-ta-c '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   /* ⭐ חוב משנים קודמות (סבב 35) — הזנה ידנית בלבד, בלי העברה אוטומטית
      בין שנים בכוונה: המנהל קובע מה נגרר. שורה נפרדת ומסומנת — ⛔ אינו
      מתווסף לשורת סה"כ של השנה (סבב 35) — ערבובו היה מסתיר האם החוב
      נולד השנה או נגרר, בדיוק ההבחנה שהשדה בא לתת. */
   var pd=parseInt(cs.prev_debt)||0;
-  if(pd>0)tf+='<tr style="background:var(--bgsec)"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="amt-red" style="text-align:center">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span style="font-size:.72rem;color:var(--text3)">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
+  if(pd>0)tf+='<tr class="u-bg-bg"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="u-ta-c amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="u-fs-2 u-c-text3">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
   document.getElementById('sc-annual-tfoot').innerHTML=tf;
   // יתרת זכות: שולם בשנה זו מעבר לסך החיוב בטווח החודשים של התלמיד. מוצגת
   // מתחת לטבלה כשורה נפרדת ובצבע נפרד — **אינה** נכנסת ל"סה"כ שולם" ואינה
@@ -4976,10 +5233,10 @@ function renderScAnnual(){
   var cr=distCredit(dist),applied=distCredApplied(dist),ce=document.getElementById('sc-credit'),ch='';
   if(cr>0)ch+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)ch+='<div class="credit-sub" style="color:var(--credit);font-weight:600">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
+  if(applied>0)ch+='<div class="u-c-credit u-fw-600 credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_client_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
@@ -4988,46 +5245,46 @@ async function scPastShow(){
   var r=await hwPastLoad(mirrorKey('sl_transactions'),function(t){return t.student_client_id===sid;});
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
-  box.innerHTML='<div style="font-size:.78rem;color:var(--text3);padding:4px">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span style="color:var(--text3);font-size:.78rem">'+esc(t.date||'')+'</span><span style="flex:1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
+  box.innerHTML='<div class="u-fs-2 u-c-text3 u-p-2">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
+    r.rows.map(function(t){return'<div class="txn-row"><span class="u-c-text3 u-fs-2">'+esc(t.date||'')+'</span><span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
-  if(!slLocalWrite('sl_students',row)){toast('❌ השינוי לא נשמר במכשיר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));refreshUI();
-  toast(row.active?'✅ תלמיד הופעל':'✅ תלמיד הושהה');schedulePush();}
+  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF);schedulePush();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
 // ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
 function readMonthRange(startId,endId){
   var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
   var sm=normMonth(rawS),em=normMonth(rawE);
-  if(rawS&&!sm){toast('❌ חודש הצטרפות לא תקין — פורמט YYYY-MM');return null;}
-  if(rawE&&!em){toast('❌ חודש עזיבה לא תקין — פורמט YYYY-MM');return null;}
-  if(sm&&em&&em<sm){toast('❌ חודש העזיבה מוקדם מחודש ההצטרפות');return null;}
+  if(rawS&&!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
+  if(rawE&&!em){toast(MSG_END_MONTH_BAD, null, 'bad');return null;}
+  if(sm&&em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
   return {start_month:sm||null,end_month:em||null};
 }
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
-  if(!name){toast('שם חובה');return;}
+  if(!name){toast(MSG_NAME_REQUIRED);return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
-  var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+  var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // ⛔ אימות מפורש ולא הסתמכות על הדפדפן (סבב 67) — `type=number` החזיר
   // מחרוזת ריקה על קלט פגום ולכן התנאי דילג עליו; בשדה טקסט אותו קלט
   // מגיע כמות שהוא, ו-`parseInt` היה כותב `NaN` לתוך `card_settings`.
   var tuitionVal=parseInt(tuition,10);
-  if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}
+  if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}
   if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
   if(section)cs.section=section;else delete cs.section;
   var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
   var debtVal=parseInt(debtRaw);
-  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast('❌ חוב קודם חייב להיות מספר חיובי');return;}
+  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast(MSG_DEBT_POSITIVE, null, 'bad');return;}
   if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
   var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
-  if(!slLocalWrite('sl_students',row)){toast('❌ ההגדרות לא נשמרו במכשיר',5000);return;}
-  pendMark(pendStuKey(row));refreshUI();
-  toast(navigator.onLine?'✅ הגדרות נשמרו':MSG_SAVED_LOCAL,4000);schedulePush();
+  if(!slLocalWrite('sl_students',row)){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
+  pendMark(pendStuKey(row));
+  return true;
 }
 
 /* ⛔⛔ אזור ההגדרות — הערת הגנה משותפת לארבע האפליקציות (סבב 26)
@@ -5083,21 +5340,19 @@ function renderSettingsPanel(){
     if(m)m.innerHTML=(acc==='no-role')?MSG_SET_NO_ROLE:MSG_SET_DENIED;
     return;
   }
-  document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'2000';
+  document.getElementById('set-def-tuition').value=SETTINGS['default_tuition']||'';
   renderSettingsLists();
 }
 // כתיבה מקומית-תחילה (009). `guardOnline` הוסר — שכר לימוד ברירת מחדל הוא
 // הגדרה רגילה, והמיזוג יודע להכריע עליה לפי `updated_at` כמו על כל שורה.
 function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
-  if(!v||isNaN(v)){toast('ערך לא תקין');return;}
+  if(!v||isNaN(v)){toast(MSG_VALUE_BAD);return;}
   var cur=(MIRROR.sl_settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
-  var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:String(v)});
-  if(!slLocalWrite('sl_settings',row)){toast('❌ השמירה במכשיר נכשלה — הערך לא נשמר',5000);return;}
+  var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
+  if(!slLocalWrite('sl_settings',row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendSetKey(row));
-  refreshUI();
-  toast(navigator.onLine?MSG_SAVED:MSG_SAVED_LOCAL,4000);
-  schedulePush();
+  return true;
 }
 /* ⛔ אין להחזיר כאן שער סיסמה ואת אכיפת הפורמט שנלוותה לו (סבב 26).
    ⚠️ זו אינה נסיגה מכלל שש הספרות: הכלל נאכף
@@ -5110,11 +5365,8 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(todayStr());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span style="font-weight:600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="u-fw-600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
-  statusAreaMount();
-  bkStatusMount();
-  hwRestoreMount();
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
@@ -5133,28 +5385,27 @@ function addListItem(cat){
   /*  ⛔ ערך שכבר ברשימה אינו נוסף שוב — ⚠️ **וההשוואה על הערך** ⛔ ולא על
    *  ה-`client_id`: ⭐ הרשימה מזינה בוררים, ⛔ ושתי אפשרויות באותו טקסט
    *  אינן ניתנות להבחנה — ⚠️ ומחיקת אחת מהן משאירה את השנייה. */
-  if(uniqHas(LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast('⚠️ הערך כבר קיים ברשימה',4000);return;}
+  if(uniqHas(LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
   var row={client_id:newClientId(),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
-  if(!slLocalWrite('sl_lists',row)){toast('❌ השמירה במכשיר נכשלה — הפריט לא נוסף',5000);return;}
+  if(!slLocalWrite('sl_lists',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendLstKey(row));
-  refreshUI();
-  toast(navigator.onLine?'✅ נוסף':MSG_SAVED_LOCAL,4000);
-  schedulePush();
+  return true;
 }
 // ⛔ מחיקה = soft-delete (סבב 13, מיגרציה 009) — מחיקה פיזית הייתה נמחקת מקומית וחוזרת
 // מהענן בסנכרון הבא, כי היעדר רשומה אצל צד אחד אינו מחיקה.
 function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט: גם אם הכפתור הוצג מרינדור ישן.
   var it=findListItem(key);
-  if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+'» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות',4200);return;}
-  showConfirm('מחיקה','למחוק פריט זה?',function(){
+  if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'bad');return;}
+  ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM).then(function(yes){
+    if(!yes)return;
     var r0=(MIRROR.sl_lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
-    if(!r0){toast('⚠️ הפריט לא נמצא');return;}
+    if(!r0){toast(MSG_ITEM_MISSING, null, 'bad');return;}
     var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-    if(!slLocalWrite('sl_lists',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+    if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     pendMark(pendLstKey(row));
     refreshUI();
-    toast(navigator.onLine?'✅ נמחק':MSG_SAVED_LOCAL,4000);
+    toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000);
     schedulePush();
   });}
 function openAddStudent(){
@@ -5167,39 +5418,34 @@ function openAddStudent(){
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
-    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" style="text-align:right" value="'+esc(curMonthKey())+'"></div>'
-    +'<div class="frm-row" style="margin-bottom:6px"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" style="text-align:right"></div>'
-    +'<div style="font-size:.72rem;color:var(--text3);margin-bottom:4px;line-height:1.5">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(curMonthKey())+'"></div>'
+    +'<div class="u-mb-3 frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r"></div>'
+    +'<div class="u-fs-2 u-c-text3 u-mb-2 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
-          +'<button class="btn" data-act="student-add">הוסף</button>';
-  openModal('הוספת תלמיד', body, foot);
+          +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
+  openModal(MSG_ADD_STUDENT, body, foot);
 }
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast('שם חובה');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast('❌ שכר לימוד חייב להיות מספר חיובי');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED);return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
-  if(!slLocalWrite('sl_students',row)){toast('❌ השמירה במכשיר נכשלה — התלמיד לא נשמר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   releaseCid('student');
-  closeModal();
-  refreshUI();
-  toast(navigator.onLine?'✅ תלמיד נוסף':MSG_SAVED_LOCAL,4000);
-  schedulePush();}
+  return true;}
 // מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
 // sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
 function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return slKey(x)===String(key);})[0];
- showConfirm('מחיקת תלמיד','למחוק את '+(s?s.name:'תלמיד')+'? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.',function(){
-  if(!s){toast('⚠️ התלמיד לא נמצא');return;}
+ ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
+  if(!yes)return;
+  if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
-  if(!slLocalWrite('sl_students',row)){toast('❌ המחיקה לא נשמרה במכשיר',5000);return;}
+  if(!slLocalWrite('sl_students',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
-  toast(navigator.onLine?'✅ תלמיד נמחק':MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000);
   schedulePush();
 });}
-/*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
- *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
-function showConfirm(title,msg,cb){ ask(title,msg,'אישור').then(function(yes){ if(yes&&cb) cb(); }); }
 /* ══════════════════════════════════════════════════════════════════════════
    פונקציית העלייה של האפליקציה
    ══════════════════════════════════════════════════════════════════════════
@@ -5240,9 +5486,6 @@ async function slBoot(){
   // מול מה לאמת (סבב 24). ⛔ אין בה סיסמאות; רק `pass_salt`+`pass_fp`
   // ו-`role` (סבב 26).
   try { slUsersLoad(); } catch (e) { console.warn('[users] load', e); }
-  // ניקוי חד-פעמי של שריד שער ההגדרות שבוטל (סבב 26).
-  try { slDropLegacyPassHash(); } catch (e) { console.warn('[migrate] legacy hash', e); }
-
   // ⛔ **אין כאן שחזור סשן (סבב 53)** — כל עלייה מתחילה במסך הכניסה, גם
   //    כשהמשתמש נכנס לפני דקה. ⛔ אין להחזיר: סשן שנשמר בלי תפוגה הוא
   //    כניסה קבועה על מכשיר משותף, ר' «המשתמש המחובר» למעלה.
@@ -5254,91 +5497,6 @@ async function slBoot(){
   setTimeout(function(){document.getElementById('au-user').focus();},50);
 }
 document.addEventListener('DOMContentLoaded', slBoot);
-/* ══════════════════════════════════════════════════════════════════════════
-   עדכון גרסה ואתחול האפליקציה
-   ══════════════════════════════════════════════════════════════════════════ */
-// ===== עדכון גרסה: באנר "גרסה חדשה זמינה" =====
-// דפוס משותף לשלושת הפרויקטים (סבב 8), לפי המימוש של hanhala-ruchanit:
-// הבאנר נבנה ב-JS (לא HTML סטטי), מזהה 'sw-update-banner', שמירה על עותק
-// יחיד, והתנאי הוא **state === 'installed' בלבד**. 'activated' היה מיותר —
-// statechange עובר תמיד דרך 'installed' לפני 'activating'/'activated',
-// והמאזין מחובר כבר ב-updatefound, כך שהוא תופס את המעבר הראשון.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    var userAccepted = false;
-    var reloaded = false;
-
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      // רענון רק אחרי לחיצת משתמש, ופעם אחת בלבד
-      if (!userAccepted || reloaded) return;
-      reloaded = true;
-      location.reload();
-    });
-
-    /*  ⛔ שם אחד שמתפרסם החוצה — ⚠️ המימוש פרטי, ⭐ והקורא היחיד
-     *  מבחוץ הוא זיהוי הקוד המיושן. */
-    window.showAppUpdateBanner = function () { showUpdateBanner(null); };
-    function showUpdateBanner(reg) {
-      if (document.getElementById('sw-update-banner')) return;
-      var bar = document.createElement('div');
-      bar.id = 'sw-update-banner';
-      bar.setAttribute('dir', 'rtl');
-      bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:16px;font-family:Heebo,sans-serif;font-size:.86rem;font-weight:600;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.15);direction:rtl;white-space:nowrap;max-width:calc(100vw - 24px)';
-      var txt = document.createElement('span');
-      txt.textContent = '🔄 גרסה חדשה זמינה';
-      var btn = document.createElement('button');
-      btn.textContent = 'עדכן עכשיו';
-      btn.style.cssText = 'background:#9fe870;color:#1a1a1a;border:none;border-radius:999px;padding:8px 16px;font-family:Heebo,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer';
-      btn.onclick = function() {
-        userAccepted = true;
-        btn.disabled = true;
-        btn.textContent = 'מעדכן...';
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({type: 'SKIP_WAITING'});
-          // גיבוי: אם controllerchange לא הגיע תוך 1.5 שניות — רענון ישיר
-          setTimeout(function() {
-            if (!reloaded) { reloaded = true; location.reload(); }
-          }, 1500);
-        } else {
-          // ה-sw מפעיל skipWaiting ב-install, לכן לרוב אין עובד ממתין — רענון ישיר
-          reloaded = true;
-          location.reload();
-        }
-      };
-      var close = document.createElement('button');
-      close.textContent = '✕';
-      close.setAttribute('aria-label', 'סגור');
-      close.style.cssText = 'background:none;border:none;color:#8a97b0;font-size:1rem;cursor:pointer;padding:2px 6px;font-family:Heebo,sans-serif;line-height:1';
-      close.onclick = function() { if (bar.parentNode) bar.parentNode.removeChild(bar); };
-      bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
-      document.body.appendChild(bar);
-    }
-
-    navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      console.log('[sw] registered:', reg.scope);
-
-      if (reg.waiting && navigator.serviceWorker.controller) { showUpdateBanner(reg); }
-
-      reg.addEventListener('updatefound', function() {
-        var nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', function() {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner(reg);
-          }
-        });
-      });
-
-      function checkForUpdate() {
-        try { reg.update().catch(function() {}); } catch (e) {}
-      }
-      checkForUpdate();
-      setInterval(checkForUpdate, 30 * 60 * 1000);
-    }).catch(function(err) {
-      console.warn('[sw] registration failed:', err);
-    });
-  });
-}
 </script>
 </body>
 </html>

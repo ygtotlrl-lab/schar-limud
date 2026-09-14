@@ -1,0 +1,508 @@
+#!/usr/bin/env node
+/* ───────────────────────────────────────────────────────────────────────────
+   test_declscan.mjs — כל הצהרה ב-`APP` נאכפת (סבב 141)
+
+   **מה נאכף:** ⛔ חמישה כיוונים על כל בלוק `APP` שבארבעת הריפו — ⚠️ כל מפתח
+   נקרא · כל קורא מוצהר · מפתח פרטי נושא נימוק **תפקידי** · ערך ריק
+   נושא נימוק · ⭐ והנימוק אומר מה התפקיד ⛔ ולא איפה הוא אינו.
+
+   **הנימוק המדוד:** ⚠️ 269 מפתחות חיים בארבעת הריפו, ⛔ וההצהרות עצמן מעולם לא
+   נאכפו: ⭐ מי שהוסיף מפתח לא נדרש לקורא, ⛔ ומי שהסיר קורא לא
+   נדרש להסיר את המפתח — ⚠️ והרשימה גדלה בשקט.
+
+   **מה יישבר בלעדיו:** ⛔ הצהרה בלי קורא נקראת כהוראה שמישהו מקיים — ⚠️ ואיש אינו,
+   ⭐ ומי שמיישר אליה מיישר לעולם שאינו קיים.
+
+   **מה אינו נאכף כאן:** ⚠️ **האם הערך עצמו נכון** — ⛔ זו מדידה של השער שקורא אותו ·
+   ⛔ ושער פרטי לאפליקציה אחת, שאין לו מול מה להישוות.
+   ──────────────────────────────────────────────────────────────────────── */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
+const APP = {
+  app: 'schar-limud',
+  /* ⚠️ ארבעת הריפו זה לצד זה — ⛔ ההשוואה היא ביניהם */
+  repos: ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius'],
+  idKeys: ['app', 'name'],
+  readerExempt: {
+    'check-capabilities.mjs': 'הבודק המרוכז פורס את בלוקי ה-APP של שאר השערים ומודד אותם — ⚠️ והאזכורים בגופו מפנים לבלוק שנפרס',
+    'test_rulesdocs.mjs': 'רתמת המוטציות שלו מזריקה מפתחות מדומים לבלוק כדי לאמת שהשער נופל עליהם',
+  },
+  /*  ⛔ ההצהרות שהסבב הוסיף — ⚠️ **מה נכנס**: זוג `[קובץ, מפתח]` לכל
+   *  הצהרה חדשה; ⛔ **ומה מפיל**: רשימה ריקה, וזוג שאין לו מפתח בבלוק.
+   *  ⭐ **ולמה המבנה קיים**: הכיוונים שמעליו סורקים את **כל** ההצהרות,
+   *  ⚠️ והרשימה הזו היא מה שמוודא שמה שנוסף עכשיו אכן נסרק. */
+  newDecls: [
+    ['test_dbscan.mjs', 'project'],
+    ['test_dbscan.mjs', 'dbSchema'],
+    ['test_dbscan.mjs', 'dbTables'],
+    ['test_dbscan.mjs', 'dbPager'],
+    ['test_dbscan.mjs', 'dbTableGone'],
+    ['test_dbscan.mjs', 'dbDyn'],
+    ['test_dbscan.mjs', 'dbOrderDyn'],
+  ],
+};
+/* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
+ *  רשימה שנייה בבודק. */
+export const ROWS = [30];
+
+/*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
+ *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+let pass = 0, fail = 0;
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+/*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
+ *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בארבעתן. */
+const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const EXPECTED = FLOOR.shared + FLOOR.app;
+let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
+ *  לשם, ⛔ ואפס הוא שער שכל גופו מוטציות. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+const FLOOR_MAX = (() => {
+  const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
+  return r ? Number(r[2]) : EXPECTED;
+})();
+process.on('exit', () => {
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — עדכן את \`FLOOR\`.`);
+    process.exitCode = 1;
+  }
+});
+const t = (c, m) => { RAN++; if (c) { pass++; console.log('  ok   ' + m); }
+                      else { fail++; console.error('  FAIL ' + m); } };
+const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+
+/*  ⛔ הריפו האחיות זה לצד זה — ⚠️ ההשוואה היא **בין** הריפו, ⭐ ולכן
+ *  היעדרן אינו דילוג: ⛔ שער שמדלג בשתיקה כשאין מול מה להשוות אינו
+ *  יכול להיכשל. */
+const SIBS = path.resolve(ROOT, '..');
+const REPOS = APP.repos;
+
+/*  ⛔ חילוץ בלוק ה-`APP` — ⚠️ **מה נכנס**: גוף קובץ שער; ⛔ **ומה מפיל**:
+ *  בלוק שנפתח ואינו נסגר. ⭐ **ולמה המבנה קיים**: ארבעה שערים בשם אחד
+ *  מצהירים ארבע רשימות, ⛔ והשוואה ביניהן דורשת חילוץ זהה בדיוק. */
+function appBlock(src) {
+  const i = src.indexOf('/* ── APP —');
+  if (i < 0) return null;
+  const j = src.indexOf('/* ── סוף APP', i);
+  return j < 0 ? null : src.slice(i, j);
+}
+
+/*  ⛔ מונה שמדלג על מחרוזת · תבנית · הערה **ותבנית `regex`** — ⚠️ ארבעתן
+ *  נושאות סוגריים שאינם מבנה: ⭐ הנימוק המדוד — `\(` בתוך תבנית נספר
+ *  כפותח שאין לו סוגר, ⛔ והעומק לא חזר לאפס עד סוף הבלוק, ⚠️ ו-20
+ *  מפתחות אחרי אותה שורה לא נספרו כלל. */
+const RE_OK_BEFORE = /[({[,;:!&|?+\-*%~^<=>]$/;
+const RE_KW_BEFORE = /\b(return|typeof|instanceof|case|in|of|new|delete|void|do|else|yield|await)$/;
+function* toks(body) {
+  let i = 0, prev = '', tail = '';
+  while (i < body.length) {
+    const c = body[i], c2 = body[i + 1];
+    if (c === '/' && c2 === '/') { const e = body.indexOf('\n', i); i = e < 0 ? body.length : e; continue; }
+    if (c === '/' && c2 === '*') { const e = body.indexOf('*/', i + 2); i = e < 0 ? body.length : e + 2; continue; }
+    if (c === '"' || c === "'" || c === '`') {
+      const q = c; i++;
+      while (i < body.length) { if (body[i] === '\\') { i += 2; continue; } if (body[i] === q) { i++; break; } i++; }
+      prev = 'x'; tail = 'x'; continue;
+    }
+    if (c === '/') {
+      const t = tail.replace(/\s+$/, '');
+      if (t === '' || RE_OK_BEFORE.test(t) || RE_KW_BEFORE.test(t)) {
+        i++; let cls = false;
+        while (i < body.length) {
+          if (body[i] === '\\') { i += 2; continue; }
+          if (body[i] === '[') cls = true;
+          else if (body[i] === ']') cls = false;
+          else if (body[i] === '/' && !cls) { i++; break; }
+          else if (body[i] === '\n') break;
+          i++;
+        }
+        while (i < body.length && /[a-z]/.test(body[i])) i++;
+        prev = 'x'; tail = 'x'; continue;
+      }
+    }
+    if (/\s/.test(c)) { tail = (tail + c).slice(-40); i++; continue; }
+    yield { i, c, prev };
+    prev = c; tail = (tail + c).slice(-40); i++;
+  }
+}
+const MARK = 'const APP = {';
+function topKeys(block) {
+  const at = block.indexOf(MARK);
+  if (at < 0) return [];
+  const body = block.slice(at + MARK.length);
+  const out = [];
+  let d = 0;
+  for (const { i, c, prev } of toks(body)) {
+    if ('{[('.includes(c)) { d++; continue; }
+    if ('}])'.includes(c)) { if (d === 0) break; d--; continue; }
+    if (d === 0 && (prev === '' || prev === ',')) {
+      const m = /^([A-Za-z_$][\w$]*|'[^']+'|"[^"]+")\s*:/.exec(body.slice(i));
+      if (m) out.push(m[1].replace(/^['"]|['"]$/g, ''));
+    }
+  }
+  return [...new Set(out)];
+}
+function keyAt(block, key) {
+  const at = block.indexOf(MARK);
+  if (at < 0) return -1;
+  const body = block.slice(at + MARK.length);
+  let d = 0;
+  for (const { i, c, prev } of toks(body)) {
+    if ('{[('.includes(c)) { d++; continue; }
+    if ('}])'.includes(c)) { if (d === 0) break; d--; continue; }
+    if (d === 0 && (prev === '' || prev === ',')) {
+      const m = new RegExp('^(?:' + key + "|'" + key + "'|\"" + key + '")\\s*:').exec(body.slice(i));
+      if (m) return at + MARK.length + i + m[0].length;
+    }
+  }
+  return -1;
+}
+function valueOf(block, key) {
+  const from = keyAt(block, key);
+  if (from < 0) return null;
+  let d = 0, end = block.length;
+  for (const { i, c } of toks(block.slice(from))) {
+    if ('{[('.includes(c)) { d++; continue; }
+    if ('}])'.includes(c)) { if (d === 0) { end = from + i; break; } d--; continue; }
+    if (c === ',' && d === 0) { end = from + i; break; }
+  }
+  return block.slice(from, end).trim();
+}
+/*  ⛔ הסרת הערות בלבד ⛔ **ולא מחרוזות** — ⚠️ `${APP.x}` בתוך תבנית הוא
+ *  קריאה חיה, ⭐ והלבנה גורפת הייתה מוחקת אותה ומדווחת «מפתח בלי קורא». */
+function noCmt(src) {
+  let out = '', i = 0;
+  while (i < src.length) {
+    const c = src[i], c2 = src[i + 1];
+    if (c === '/' && c2 === '/') { const e = src.indexOf('\n', i); const k = (e < 0 ? src.length : e) - i; out += ' '.repeat(k); i += k; continue; }
+    if (c === '/' && c2 === '*') { const e = src.indexOf('*/', i + 2); const k = (e < 0 ? src.length : e + 2) - i;
+      out += src.slice(i, i + k).replace(/[^\n]/g, ' '); i += k; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+/*  ⛔ הנימוק הוא ההערה שמעל המפתח — ⚠️ **או שמעל הקבוצה הרצופה שהוא
+ *  שייך לה**: ⭐ זו המוסכמה בפועל — הערה אחת מעל שלושה שדות שמתארים
+ *  יחד יכולת אחת, ⛔ ודרישה להערה לכל שדה הייתה שלושים ושש הערות
+ *  שחוזרות זו על זו. ⚠️ **ושורה ריקה חותכת** — ⛔ הערה שמעברה השני של
+ *  שורה ריקה אינה נימוק של המפתח, ⭐ והיא שייכת למה שלפניה. */
+function reasonOf(block, key) {
+  const at = keyAt(block, key);
+  if (at < 0) return '';
+  let before = block.slice(0, block.lastIndexOf('\n', at) + 1);
+  for (;;) {
+    /*  ⛔ ההערה האחרונה ⛔ ולא הראשונה — ⚠️ הנימוק המדוד: ביטוי לא-חמדני
+     *  שעוגן לסוף תפס מה-`/*` הראשון **בקובץ** ועד הסוגר האחרון, ⭐ והחזיר
+     *  את כל הערות הקובץ כנימוק אחד: ⛔ ואז «יש נימוק» היה נכון תמיד,
+     *  ⚠️ ובדיוק זה probe שאינו יכול להיכשל. */
+    const tail = before.replace(/\s+$/, '');
+    if (tail.endsWith('*/')) {
+      const open = tail.lastIndexOf('/*');
+      if (open >= 0) return tail.slice(open + 2, tail.length - 2);
+    }
+    /* ⚠️ מדלג אחורה מעל שורות מפתח בלבד — ⛔ שורה ריקה עוצרת */
+    const cut = before.replace(/\n$/, '');
+    const nl = cut.lastIndexOf('\n');
+    const line = cut.slice(nl + 1);
+    if (!line.trim() || !/^\s{2,}/.test(line)) return '';
+    before = cut.slice(0, nl + 1);
+  }
+}
+/*  ⛔ נימוק תפקידי ⛔ ולא נוכחות — ⚠️ «אינו בארבעתן» הוא המדידה ⛔ ולא
+ *  הנימוק: ⭐ הנימוק אומר **מה תפקיד המפתח**, ⛔ ולמה התפקיד אינו קיים שם. */
+const PRESENCE = /אינו בארבעתן|אינה בארבעתן|לא קיים בשאר|אין כאן\s*$|קיים רק ב|אינו קיים בשאר/;
+const isFunctional = (why) => {
+  const t = String(why).replace(/[⛔⚠️⭐*]/g, ' ').trim();
+  if (t.length < 12) return false;
+  if (PRESENCE.test(t) && t.length < 60) return false;
+  return true;
+};
+
+/*  ⛔ מרשם הדפוסים והמוטציות — ⚠️ **מה נכנס**: שם כל דפוס שהשער מכריז,
+ *  ⛔ ושם כל דפוס שיש לו מוטציה; ⛔ **ומה מפיל**: דפוס בלי מוטציה,
+ *  ומוטציה בלי דפוס. ⭐ **ולמה המבנה קיים**: הוא מה שמאפשר להצליב
+ *  את השער מבחוץ — ⛔ דפוס בלי מוטציה נשחק בשקט. */
+export const PATTERNS = ['א', 'ב', 'ג', 'ד', 'ה'];
+export const MUTS = ['א', 'ב', 'ג', 'ד', 'ה'];
+
+/*  ⛔ קובצי `tools/` שקיימים בארבעת הריפו — ⚠️ ההשוואה היא ביניהם,
+ *  ⭐ ושער פרטי לאפליקציה אחת אין לו מול מה להישוות. */
+const present = APP.repos.map((r) => fs.existsSync(path.join(SIBS, r, 'tools')));
+const missing = APP.repos.filter((r, i) => !present[i]);
+const FILES = present[0]
+  ? fs.readdirSync(path.join(SIBS, APP.repos[0], 'tools'))
+      .filter((x) => x.endsWith('.mjs'))
+      .filter((f) => APP.repos.every((r, i) => present[i] &&
+        fs.existsSync(path.join(SIBS, r, 'tools', f)))).sort()
+  : [];
+
+/*  ⛔ המצב נקרא פעם אחת לזיכרון — ⚠️ **מה נכנס**: ריפו ⟵ קובץ ⟵ מקור;
+ *  ⛔ **ומה מפיל**: כלום. ⭐ **ולמה המבנה קיים**: חמשת הכיוונים מודדים
+ *  את אותו טקסט, ⚠️ והמוטציות מחליפות אותו בזיכרון ⛔ בלי לכתוב לעץ. */
+function snapshot() {
+  const st = {};
+  for (const r of APP.repos) {
+    if (missing.includes(r)) continue;
+    st[r] = {};
+    for (const f of FILES) st[r][f] = fs.readFileSync(path.join(SIBS, r, 'tools', f), 'utf8');
+  }
+  return st;
+}
+
+/* א · כל מפתח נקרא */
+function keyNoReader(st) {
+  const out = [];
+  for (const r of Object.keys(st)) for (const f of FILES) {
+    const src = st[r][f]; const b = appBlock(src); if (!b) continue;
+    if (APP.readerExempt[f]) continue;
+    const after = noCmt(src).slice(src.indexOf('/* ── סוף APP'));
+    for (const k of topKeys(b)) {
+      if (APP.idKeys.includes(k)) continue;
+      if (!new RegExp('APP\\.' + k + '\\b|APP\\[[\'"]' + k + '[\'"]\\]').test(after))
+        out.push(`${r}/${f}::${k}`);
+    }
+  }
+  return out;
+}
+
+/* ב · כל קורא מוצהר */
+function readerNoKey(st) {
+  const out = new Set();
+  for (const r of Object.keys(st)) for (const f of FILES) {
+    if (APP.readerExempt[f]) continue;
+    const src = st[r][f]; const b = appBlock(src); if (!b) continue;
+    const keys = topKeys(b);
+    const after = noCmt(src).slice(src.indexOf('/* ── סוף APP'));
+    /*  ⛔ `APP.${…}` בתוך תבנית אינו קריאה — ⚠️ הוא **טקסט בהודעה**
+     *  שמרכיב שם מפתח לקורא: ⭐ קריאה חיה נכתבת `${APP.x}`, ⛔ והיפוך
+     *  הסדר הוא בדיוק ההבדל. */
+    for (const m of after.matchAll(/APP\.([A-Za-z_$][\w$]*)/g)) {
+      if (m[1] === '$' || after[m.index + 4] === '$') continue;
+      if (!keys.includes(m[1])) out.add(`${r}/${f}::${m[1]}`);
+    }
+  }
+  return [...out];
+}
+
+/* ג · מפתח שאינו בארבעתן נושא נימוק תפקידי */
+function privateNoWhy(st) {
+  const out = [];
+  const repos = Object.keys(st);
+  for (const f of FILES) {
+    const bl = repos.map((r) => appBlock(st[r][f]));
+    if (bl.some((b) => !b)) continue;
+    const ks = bl.map(topKeys);
+    for (const k of [...new Set(ks.flat())]) {
+      const n = ks.filter((x) => x.includes(k)).length;
+      if (n === repos.length) continue;
+      bl.forEach((b, i) => {
+        if (!ks[i].includes(k)) return;
+        if (!isFunctional(reasonOf(b, k))) out.push(`${repos[i]}/${f}::${k} (${n}/${repos.length})`);
+      });
+    }
+  }
+  return out;
+}
+
+/*  ד · ערך ריק הוא «נמדד ואין» — ⛔ **והנימוק נדרש כשהשדה נבדל בין
+ *  הארבע**: ⚠️ שדה שריק בארבעתן אינו הבדל, ⭐ והוא נקרא כ«אין כאן
+ *  מקרה» בלי שאיש צריך להסביר; ⛔ אבל שדה שריק כאן ומלא באחות הוא
+ *  **הבדל פר-אפליקציה**, ⚠️ והוא נושא נימוק במקומו. */
+function emptyNoWhy(st) {
+  const out = [];
+  const repos = Object.keys(st);
+  for (const f of FILES) {
+    const bl = repos.map((r) => appBlock(st[r][f]));
+    if (bl.some((b) => !b)) continue;
+    const ks = bl.map(topKeys);
+    for (const k of [...new Set(ks.flat())]) {
+      const vals = bl.map((b, i) => (ks[i].includes(k) ? valueOf(b, k) : null));
+      const isEmpty = (v) => v === '[]' || v === '{}' || v === "''" || v === '""';
+      /* ⛔ ריק בכולן אינו הבדל — ⚠️ ואינו דורש נימוק */
+      if (vals.length && vals.every((v) => v === null || isEmpty(v))) continue;
+      bl.forEach((b, i) => {
+        if (!ks[i].includes(k) || !isEmpty(vals[i])) return;
+        if (!reasonOf(b, k).trim()) out.push(`${repos[i]}/${f}::${k}`);
+      });
+    }
+  }
+  return out;
+}
+
+/* ה · הנימוק תפקידי ⛔ ולא נוכחות — ⚠️ «אינו בשאר» הוא המדידה, ולא הסיבה */
+function whyIsPresence(st) {
+  const out = [];
+  for (const r of Object.keys(st)) for (const f of FILES) {
+    const b = appBlock(st[r][f]); if (!b) continue;
+    for (const k of topKeys(b)) {
+      const why = reasonOf(b, k).replace(/[⛔⚠️⭐*]/g, ' ').trim();
+      if (why && PRESENCE.test(why) && why.length < 60) out.push(`${r}/${f}::${k}`);
+    }
+  }
+  return out;
+}
+
+const ST = snapshot();
+/*  ⛔ **אפס אחיות אינו «אחות חסרה»** — ⚠️ הוא עותק בודד של הריפו: ⭐ שער
+ *  הקריאה-בלבד מריץ את הסט על עותק בתיקייה זמנית, ⛔ ואין שם ולא אמורות
+ *  להיות אחיות. ⚠️ **וחלקן על הדיסק הוא המקרה המסוכן** — ⛔ שם ההשוואה
+ *  רצה על תת-קבוצה ומדווחת «נקי». */
+/*  ⚠️ **והעותק אינו נושא את שם הריפו** — ⛔ שער הקריאה-בלבד מעתיק לתיקייה
+ *  זמנית בשם אחר, ⭐ ואז חסר גם הריפו עצמו: ⛔ ולכן «לכל היותר אחת». */
+const LONE = missing.length >= APP.repos.length - 1;
+if (LONE) console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${missing.join(' · ')} ` +
+                      `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם ארבעת הריפו זה לצד זה`);
+t(LONE || (missing.length === 0 && FILES.length > 0),
+  `הריפו האחיות — נמדדו ${APP.repos.length - missing.length} מתוך ${APP.repos.length} ` +
+  `ו-${FILES.length} קובצי \`tools/\` משותפים` +
+  (missing.length ? `; חסרות: ${missing.join(', ')}. מעמידים אותן זו לצד זו` : ''));
+
+{ const g = keyNoReader(ST);
+  t(g.length === 0, `א · כל מפתח נקרא — נמדדו ${g.length} בלי קורא והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. מסירים את המפתח, או מחווטים לו קורא` : '')); }
+{ const g = readerNoKey(ST);
+  t(g.length === 0, `ב · כל קורא מוצהר — נמדדו ${g.length} בלי הצהרה והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. מצהירים את המפתח, או מסירים את הקורא` : '')); }
+{ const g = privateNoWhy(ST);
+  t(g.length === 0, `ג · מפתח פרטי נושא נימוק תפקידי — נמדדו ${g.length} בלעדיו והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מנסחים **מה תפקיד המפתח**, ⛔ ולא שאינו בשאר` : '')); }
+{ const g = emptyNoWhy(ST);
+  t(g.length === 0, `ד · ערך ריק נושא נימוק — נמדדו ${g.length} בלעדיו והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 10).join(' · ')}. מוסיפים «נמדד ואין» — ⛔ ריק בלי נימוק נקרא «לא נשאל»` : '')); }
+{ const g = whyIsPresence(ST);
+  t(g.length === 0, `ה · הנימוק תפקידי — נמדדו ${g.length} שנוקבים בנוכחות בלבד והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. אומרים מה התפקיד, ⛔ ולא איפה הוא אינו` : '')); }
+
+/* ⛔ ורשימות ההחרגה נמדדות משני צדדיהן — ⚠️ הצהרה שאין לה מקרה היא היתר שלא נסגר */
+{
+  const ghostRd = Object.keys(APP.readerExempt).filter((f) => !FILES.includes(f));
+  const bareRd = Object.entries(APP.readerExempt).filter(([, w]) => !isFunctional(w)).map(([f]) => f);
+  const ghostId = APP.idKeys.filter((k) => !FILES.some((f) => {
+    const b = appBlock(ST[APP.repos[0]][f]); return b && topKeys(b).includes(k); }));
+  t(LONE || (ghostRd.length === 0 && bareRd.length === 0 && ghostId.length === 0),
+    `ההחרגות נמדדות משני צדדיהן — נמדדו ${ghostRd.length + ghostId.length} בלי מקרה ` +
+    `ו-${bareRd.length} בלי נימוק תפקידי; והצפוי אפס` +
+    (ghostRd.length + ghostId.length + bareRd.length
+      ? `: ${[...ghostRd, ...ghostId, ...bareRd].join(' · ')}. מסירים מהרשימה` : ''));
+}
+
+/* ⛔ וההצהרות שהסבב הוסיף נסרקות כאן — ⚠️ רשימה ריקה הופכת את ארבעת הכיוונים שמעליה לבדיקה שאינה יכולה להיכשל */
+{
+  const found = APP.newDecls.filter(([f, k]) => {
+    const b = ST[APP.app] && ST[APP.app][f] ? appBlock(ST[APP.app][f]) : null;
+    return b && topKeys(b).includes(k);
+  });
+  t(LONE || (APP.newDecls.length > 0 && found.length === APP.newDecls.length),
+    `ההצהרות שהסבב הוסיף נסרקות — נמדדו ${found.length} מתוך ${APP.newDecls.length} והצפוי כולן` +
+    (found.length !== APP.newDecls.length
+      ? `; חסרות: ${APP.newDecls.filter((x) => !found.includes(x)).map((x) => x.join('::')).join(' · ')}` : ''));
+}
+
+mutStage();
+if (RUN_MUT) {
+  /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מחליפה מקור אחד במפה, ⭐ ואינה
+   *  כותבת לעץ ⛔ ואינה פותחת תהליך: ⚠️ הזמן נגזר ממספרן. */
+  const R0 = APP.repos.find((r) => ST[r]);
+  const clone = (edit) => {
+    const c = {};
+    for (const r of Object.keys(ST)) { c[r] = {}; for (const f of FILES) c[r][f] = ST[r][f]; }
+    edit(c); return c;
+  };
+  /*  ⛔ הקובץ שהמוטציות נשענות עליו נבחר ⛔ ואינו הראשון שנמצא — ⚠️ קובץ
+   *  שאין בו בלוק `APP` היה מייצר מוטציה שאינה נוגעת בדבר. */
+  /*  ⛔ והוא אינו קובץ מוחרג — ⚠️ הסורק מדלג על מוחרגים, ⭐ ומוטציה
+   *  שנשתלה בהם אינה נמדדת כלל: ⛔ וזו מוטציה שאינה יכולה להפיל. */
+  const HOST = FILES.find((f) => !APP.readerExempt[f] &&
+    appBlock(ST[R0][f]) && topKeys(appBlock(ST[R0][f])).length > 1);
+  const put = (c, f, src) => { c[R0][f] = src; };
+  /*  ⛔ שם ההצהרה נבנה בשרשור ⛔ ואינו ליטרל — ⚠️ הסורק היה מונה את
+   *  מחרוזת המוטציה עצמה כקריאה חיה, ⭐ ומדווח על עצמו: ⛔ ובדיוק זה
+   *  «probe שנופל על שינוי תקין». */
+  const REF = (k) => 'APP' + '.' + k;
+  const inject = (src, line) => src.replace(/(const APP = \{)/, '$1\n' + line);
+  /*  ⛔ הקורא נשתל **אחרי** סוגר בלוק ה-`APP` — ⚠️ הסורק מודד את מה
+   *  שאחרי הסוגר בלבד, ⭐ וקורא שנשתל לפניו אינו נסרק כלל: ⛔ ואז
+   *  המוטציה «לא הפילה» מפני שלא נמדדה. */
+  const after = (src, line) => src.replace(/(\/\* ── סוף APP[^\n]*\n)/, '$1' + line + '\n');
+
+  const MUT = [
+    { m: 'מ1', claim: 'א', lbl: 'מפתח שאין לו קורא',
+      run: () => keyNoReader(clone((c) => put(c, HOST,
+        inject(ST[R0][HOST], "  zzNoReader: 'x',")))).length > keyNoReader(ST).length },
+    { m: 'מ2', claim: 'ב', lbl: 'קורא שאין לו הצהרה',
+      run: () => readerNoKey(clone((c) => put(c, HOST,
+        after(ST[R0][HOST], 'const _zz = ' + REF('zzNoDecl') + ';')))).length >
+        readerNoKey(ST).length },
+    { m: 'מ3', claim: 'ג', lbl: 'מפתח פרטי בלי נימוק תפקידי',
+      run: () => privateNoWhy(clone((c) => {
+        const b = appBlock(c[R0][HOST]);
+        const k = topKeys(b).find((x) => !APP.idKeys.includes(x));
+        for (const r of Object.keys(c)) if (r !== R0)
+          c[r][HOST] = c[r][HOST].replace(new RegExp('(^|\\n)(\\s*)' + k + '\\s*:', 'm'), '$1$2zzGone:');
+        c[R0][HOST] = c[R0][HOST].replace(new RegExp('\\/\\*[^*]*\\*\\/\\s*(\\n\\s*' + k + '\\s*:)'), '$1');
+      })).length > privateNoWhy(ST).length },
+    { m: 'מ4', claim: 'ד', lbl: 'ערך ריק בלי נימוק',
+      /*  ⛔ ריק **שנבדל** — ⚠️ ריק בארבעתן אינו הבדל ואינו דורש נימוק,
+       *  ⭐ ולכן המוטציה מציבה ריק כאן ומלא באחות. */
+      run: () => emptyNoWhy(clone((c) => {
+        put(c, HOST, inject(ST[R0][HOST], "  zzEmpty: [],"));
+        for (const r of Object.keys(c)) if (r !== R0)
+          c[r][HOST] = inject(c[r][HOST], "  zzEmpty: ['x'],");
+      })).length > emptyNoWhy(ST).length },
+    { m: 'מ5', claim: 'ה', lbl: 'נימוק שנוקב בנוכחות בלבד',
+      run: () => whyIsPresence(clone((c) => put(c, HOST,
+        inject(ST[R0][HOST], "  /* אינו בארבעתן */\n  zzWhy: 'x',")))).length >
+        whyIsPresence(ST).length },
+  ];
+  for (const r of MUT) {
+    const got = r.run();
+    t(got === true, `${r.m} · ${r.lbl} **מפיל** את «${r.claim}»`);
+  }
+  /*  ⭐ מוטציית-נגד: מפתח חדש **שמוצהר כהלכה ונקרא** ⛔ אינו מפיל —
+   *  ⚠️ הנמדד הוא ההצהרה מול הקורא, ⛔ ולא מספר המפתחות. */
+  const anti = clone((c) => put(c, HOST,
+    after(inject(ST[R0][HOST],
+      "  /*  ⛔ מפתח בדיקה — ⚠️ תפקידו לאמת שהצהרה תקינה ונקראת אינה מפילה */\n  zzOk: 'x',"),
+      'const _z4 = ' + REF('zzOk') + ';')));
+  t(keyNoReader(anti).length === keyNoReader(ST).length &&
+    readerNoKey(anti).length === readerNoKey(ST).length &&
+    emptyNoWhy(anti).length === emptyNoWhy(ST).length &&
+    whyIsPresence(anti).length === whyIsPresence(ST).length,
+    'נ1 · מפתח שמוצהר כהלכה ונקרא — ⛔ אינו מפיל');
+}
+
+if (fail) {
+  console.error(`\n❌ ${GATE_ID}: ${fail} כשלים מתוך ${pass + fail}`);
+  process.exit(1);
+}
+console.log(`\n✅ ${GATE_ID}: ${pass} טענות`);
