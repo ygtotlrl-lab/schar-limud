@@ -109,6 +109,7 @@ const SHARED = [
   'tools/test_caps_ui.mjs',
   'tools/test_codescan.mjs',
   'tools/test_cron.mjs',
+  'tools/test_declscan.mjs',
   'tools/test_devid.mjs',
   'tools/test_crossgate.mjs',
   'tools/test_filesets.mjs',
