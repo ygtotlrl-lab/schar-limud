@@ -132,6 +132,7 @@ const SHARED = [
   'tools/test_orphans.mjs',
   'tools/test_removals.mjs',
   'tools/test_readonly.mjs',
+  'tools/test_rowscan.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_dbfacts.mjs',
   'tools/test_scanscan.mjs',

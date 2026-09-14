@@ -29,7 +29,8 @@ const APP = {
    *  קובץ, ושם שאינו מחווט. ⭐ **ולמה המבנה קיים**: רשימה ריקה הופכת את
    *  שלוש הבדיקות שמעליה לבדיקות שאינן יכולות להיכשל. */
   scanners: ['test_visual.mjs', 'test_codescan.mjs', 'test_dbfacts.mjs',
-             'test_textscan.mjs', 'test_declscan.mjs', 'test_scanscan.mjs'],
+             'test_textscan.mjs', 'test_declscan.mjs', 'test_scanscan.mjs',
+             'test_rowscan.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
