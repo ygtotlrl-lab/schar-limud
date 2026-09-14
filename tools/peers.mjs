@@ -16,7 +16,7 @@
 
 /*  ⛔ הסדר קנוני ⛔ ואינו אלפביתי — ⚠️ הוא סדר עמודות טבלת התשתית, ⭐ ושער
  *  שמצליב עמודה לאפליקציה נשען עליו: ⛔ סדר אחר כאן מזיז כל תא. */
-export const PEERS = ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius'];
+export const PEERS = ['yoman-avoda', 'hanhala-ruchanit', 'schar-limud', 'gius', 'ha-kupa'];
 
 /*  ⛔ ה-`scope` נגזר מהשם ⛔ ואינו מוקלד — ⚠️ ערך יחסי נפתר לכתובת מוחלטת,
  *  ⭐ ובכולן זה אותו origin: ⛔ והדפדפן ראה אפליקציה אחת. */
