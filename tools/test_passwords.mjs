@@ -32,17 +32,16 @@ import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 15,
   app: 'schar-limud',
   usersTable: 'sl_users',
   plainCol: 'password',
   verifyFn: 'slVerifyOffline',
   backfillFn: 'slBackfillPassFp',
-  /*  ⛔ מסלול אימות אחד בלבד — ⚠️ אין כאן מסך ניהול משתמשים ואין מעבר
-      משתמש: ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר
-      לו טביעה בעצמו (הנוסח בבאנר המיגרציה). */
-  authPaths: [['async function doLogin', 'הכניסה המקוונת']],
+  /*  ⛔ שני מסלולי אימות ואין מעבר משתמש — ⚠️ אין כאן מסך ניהול משתמשים:
+      ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר לו טביעה
+      בעצמו (הנוסח בבאנר המיגרציה). */
+  authPaths: [['async function doLogin', 'הכניסה המקוונת'],
+              ['async function slSaveMyPassword', 'שינוי סיסמה עצמי']],
   migrationA: '015_users_drop_plaintext_password.sql',
   migrationB: '016_drop_sl_users_password.sql',
 };
@@ -51,7 +50,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [158];
+export const ROWS = [169];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -96,19 +95,33 @@ const code = stripComments(js);
 
 let n = 0, bad = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
- *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
- *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.expected;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+/* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת בין הארבע לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
+const FLOOR = { shared: 5, app: 11, appWhy: 'מסלולי הסיסמה — גזירת הטביעה, האימות והמראה קיימים בשלוש שיש בהן כניסה' };
+/* ⚠️ סוף פר-אפליקציה */
+const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
@@ -120,14 +133,22 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-  if (RAN < EXPECTED) {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+   *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
+   *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
     process.exitCode = 1;
-  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-      'עדכן את `EXPECTED`.');
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `FLOOR`.');
     process.exitCode = 1;
   }
 });
@@ -193,14 +214,14 @@ is(!strCmp.test(code), '⛔ ואין השוואת מחרוזות ישירה מו
 for (const [needle, label] of APP.authPaths) {
   const i = code.indexOf(needle);
   const body = i < 0 ? '' : code.slice(i, i + 4000);
-  is(body.length > 0 && new RegExp(`${APP.verifyFn}\\s*\\(`).test(body),
+  is(body.length > 0 && new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`).test(body),
      `${label} מאמת דרך \`${APP.verifyFn}\` (הטביעה)`);
 }
 
 /* ── ג. ההשלמה החד-פעמית הוסרה ─────────────────────────────────────────── */
 is(!new RegExp(`function\\s+${APP.backfillFn}`).test(code),
    `⛔ \`${APP.backfillFn}\` הוסרה — היא הייתה הקורא האחרון של הסיסמה הגלויה`);
-is(!new RegExp(`${APP.backfillFn}\\s*\\(`).test(code), '⛔ ואין לה אף אתר קריאה');
+is(!new RegExp(`(?<![\\w$.])${APP.backfillFn}\\s*\\(`).test(code), '⛔ ואין לה אף אתר קריאה');
 
 /* ── ד. צעד ב — אפס כתיבה ואפס קריאה ───────────────────────────────────── */
 const writes = writeSites(code);
@@ -248,14 +269,15 @@ if (fs.existsSync(MIG_B)) {
 }
 
 if (RUN_MUT) {
+  mutStage();
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 const m1 = code.replace(/\.eq\(\s*'username'/, `.eq('${COL}', pass).eq('username'`);
 is((m1.match(EQ_PLAIN) || []).length > 0,
    '⛔ מוטציה: החזרת השוואה מול הטקסט הגלוי — טענה 1 הייתה נכשלת');
 
-const m2 = code.replace(new RegExp(`${APP.verifyFn}\\s*\\(`, 'g'), 'noopVerify(');
-is(!new RegExp(`${APP.verifyFn}\\s*\\(`).test(m2),
+const m2 = code.replace(new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`, 'g'), 'noopVerify(');
+is(!new RegExp(`(?<![\\w$.])${APP.verifyFn}\\s*\\(`).test(m2),
    '⛔ מוטציה: ניתוק האימות מהטביעה — טענות המסלולים היו נכשלות');
 
 /*  ⛔ המוטציה מחזירה **כתיבה** ולא אזכור (סבב 85) — ⚠️ שורת `strip` או

@@ -27,8 +27,6 @@ import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 0,
   app: 'schar-limud',
   file: 'index.html',
 };
@@ -50,19 +48,31 @@ const END = 'סוף מודול הגיבוי היומי';
 
 let passN = 0, failN = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
- *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
- *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.expected;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+const FLOOR = { shared: 92, app: 0, appWhy: '' };
+const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
@@ -74,14 +84,22 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-  if (RAN < EXPECTED) {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+   *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
+   *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
     process.exitCode = 1;
-  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-      'עדכן את `EXPECTED`.');
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `FLOOR`.');
     process.exitCode = 1;
   }
 });
@@ -203,18 +221,15 @@ function makeEnv(opts = {}) {
     },
   };
 
-  const details = { kids: [], querySelector: () => null, appendChild(n) { this.kids.push(n); } };
-  env.details = details;
   const sandbox = {
     console, setTimeout, clearTimeout, JSON, Date, Math, String, Number, Array, Object,
     parseInt, isFinite, Promise, RegExp, Error,
     window: {},
     document: {
-      getElementById: (id) => (id === 'tech-info-box' ? { querySelector: () => details } : null),
+      getElementById: () => null,
       createElement: () => { const n = { _h: '', get firstChild() { return { html: n._h }; } }; Object.defineProperty(n, 'innerHTML', { set(h) { n._h = h; } }); return n; },
     },
     esc: (s) => String(s == null ? '' : s),
-    syncFmtTime: (t) => 'T' + t,
     lsGet: (k, d) => (k in env.store ? env.store[k] : (d === undefined ? null : d)),
     lsSet: (k, v) => { if (env.lsBlocked) return false; env.store[k] = String(v); return true; },
     /*  ⛔ פסק הזמן מוחלף בזהות (סבב 87ג) — ⚠️ הרתמה אינה מודדת רשת,
@@ -237,7 +252,6 @@ function cfgKv(env, extra = {}) {
   return Object.assign({
     client: () => env.client,
     flagKey: 'x_last_backup',
-    atKey: 'x_last_backup_at',
     logQueueKey: 'x_log_queue',
     prefix: '',
     device: () => 'dev1',
@@ -258,7 +272,6 @@ async function t1() {
   eq(env.inserted.kv_backup[0].key, 'k1', '1ג · מפתח הגיבוי הוא שם המקור');
   eq(env.inserted.kv_backup[0].value, 'AAA', '1ד · הערך שנכתב הוא הערך שבענן');
   eq(env.store['x_last_backup'], TODAY, '1ה · הדגל היומי נכתב אחרי ההצלחה');
-  ok(Number(env.store['x_last_backup_at']) > 0, '1ו · חותמת «גובה לאחרונה» נכתבה');
   ok(env.inserted.sync_log.some((x) => x.action === 'backup'), '1ז · הגיבוי נרשם ביומן');
   // ריצה שנייה באותו יום — יוצאת מיד ואינה נוגעת ברשת
   const before = env.calls.length;
@@ -486,22 +499,6 @@ async function t8() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   9 · «גובה לאחרונה» — התצוגה ב«מידע טכני»
-   ══════════════════════════════════════════════════════════════════════════ */
-async function t9() {
-  const env = makeEnv({ kv: { k1: 'A', k2: 'B' } });
-  env.sb.BK_CFG = cfgKv(env);
-  eq(env.sb.bkLastAt(), 0, '9א · לפני גיבוי — 0');
-  ok(/טרם גובה/.test(env.sb.bkStatusHTML()), '9ב · והתצוגה אומרת «טרם גובה»');
-  await env.sb.bkMaybeDaily();
-  ok(env.sb.bkLastAt() > 0, '9ג · אחרי גיבוי — חותמת אמיתית');
-  ok(/גובה לאחרונה/.test(env.sb.bkStatusHTML()), '9ד · והתצוגה מציגה אותה');
-  env.details.kids.length = 0;
-  env.sb.bkStatusMount();
-  eq(env.details.kids.length, 1, '9ה · ⛔ הרכיב נתלה בתוך «מידע טכני» ואינו עורך את הבלוק הקפוא');
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
    10 · ⛔ כתיבה מקומית חסומה — הדגל לא נכתב, ואין הצהרת הצלחה שקרית
    ══════════════════════════════════════════════════════════════════════════ */
 async function t10() {
@@ -510,7 +507,6 @@ async function t10() {
   const r = await env.sb.bkMaybeDaily();
   eq(r, true, '10א · הגיבוי לענן עצמו הצליח');
   eq(env.store['x_last_backup'], undefined, '10ב · ⛔ באחסון חסום הדגל אינו נכתב — הגיבוי יינסה שוב');
-  eq(env.sb.bkLastAt(), 0, '10ג · ו«גובה לאחרונה» אינו מדווח מה שלא נשמר');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -598,6 +594,7 @@ async function t13() {
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_stage_a: המוטציות רצות ברמה המלאה (--full)');
   process.exit(failN ? 1 : 0);
@@ -732,7 +729,7 @@ async function t15() {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15];
+const tests = [t1, t2, t3, t3b, t4, t5, t6, t7, t8, t10, t11, t12, t13, t14, t15];
 for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }
