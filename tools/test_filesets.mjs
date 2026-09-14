@@ -101,6 +101,7 @@ const SHARED = [
   'tools/test_anchors.mjs',
   'tools/test_android.mjs',
   'tools/test_backup_policy.mjs',
+  'tools/test_behavior.mjs',
   'tools/test_budget.mjs',
   'tools/test_build.mjs',
   'tools/test_bump.mjs',

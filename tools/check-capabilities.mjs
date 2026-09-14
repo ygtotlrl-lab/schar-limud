@@ -202,6 +202,7 @@ const APP = {
    *  ⛔ ו-`raw` בלי נימוק מפיל אף הוא. ⭐ הנימוק המדוד: 18 מ-22 שערים
    *  נפלו כשהמקור הולבן — ⛔ הנמדד בהם חי במחרוזות. */
   scanKind: {
+    'test_behavior': 'raw — הדף מוגש לדפדפן כפי שהוא, והלבנה הייתה משנה בדיוק את מה שנמדד',
     'test_textscan': 'whiten',
     'test_codescan': 'whiten',
     'test_visual': 'raw — הערך החזותי יושב גם בתוך מחרוזת CSS שנכתבת מ-JS, וההלבנה מוחקת את מה שהוא מודד',
@@ -403,6 +404,7 @@ const APP = {
    *  ⭐ ומעליהם הסתירה: ⛔ `text` שמריץ תהליך, ⚠️ ו-`behavior` שאין בו לא
    *  תהליך ולא רשת — ⭐ בלי הצד הזה `behavior` היה מסלול עקיפה. */
   gateKind: {
+    'test_behavior': 'behavior — מפעיל דפדפן אמיתי ומודד DOM חי: ⛔ בזיכרון הוא היה מודד טקסט ולא התנהגות',
     'test_rowscan': 'text',
     'test_scanscan': 'text',
     'test_declscan': 'text',
@@ -2439,8 +2441,8 @@ function monthFormGaps() {
  *  עצמו `behavior` ⛔ ופוטר את עצמו מהכלל.
  *  ⛔ **והשם מזוהה בלי נקודה שלפניו** — ⚠️ `_c.spawnSync(` הוא קריאת
  *  תהליך לכל דבר, ⭐ ושלושת השמות אינם משמשים כמתודה של דבר אחר. */
-const PROC_CALL = /\b(?:spawnSync|execFileSync|execSync)\s*\(/;
-const NET_CALL = /\bfetch\s*\(/;
+const PROC_CALL = /\b(?:spawnSync|execFileSync|execSync|spawn|fork)\s*\(/;
+const NET_CALL = /\b(?:fetch|createServer)\s*\(|\bnew WebSocket\s*\(/;
 const KIND_HEAD = 'behavior — ';
 /*  ⛔ שער שמריץ את הסט האמיתי (סבב 130) — ⚠️ הוא מודד שהסט **נופל**,
  *  ⭐ ובזיכרון הוא היה מודד את עצמו: ⛔ ולכן אינו מומר לעולם.
@@ -6517,6 +6519,7 @@ function idSites() {
  *  ⛔ מה שנשאר כאן הוא **שם הטענה** — המנגנון שאוכף את השורה בגופו —
  *  ⛔ או נימוק כתוב לשורה שאינה ניתנת לאכיפה מכנית. */
 const GATES = {
+  195: { claim: 'מסלול «' },
   194: { claim: 'א · אין שתי שורות על אותו probe' },
   193: { claim: 'א · כל דפוס מוכרז נושא מוטציה' },
   192: { claim: 'א · כל מפתח נקרא' },

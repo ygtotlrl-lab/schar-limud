@@ -375,7 +375,16 @@ function whyIsPresence(st) {
 }
 
 const ST = snapshot();
-t(missing.length === 0 && FILES.length > 0,
+/*  ⛔ **אפס אחיות אינו «אחות חסרה»** — ⚠️ הוא עותק בודד של הריפו: ⭐ שער
+ *  הקריאה-בלבד מריץ את הסט על עותק בתיקייה זמנית, ⛔ ואין שם ולא אמורות
+ *  להיות אחיות. ⚠️ **וחלקן על הדיסק הוא המקרה המסוכן** — ⛔ שם ההשוואה
+ *  רצה על תת-קבוצה ומדווחת «נקי». */
+/*  ⚠️ **והעותק אינו נושא את שם הריפו** — ⛔ שער הקריאה-בלבד מעתיק לתיקייה
+ *  זמנית בשם אחר, ⭐ ואז חסר גם הריפו עצמו: ⛔ ולכן «לכל היותר אחת». */
+const LONE = missing.length >= APP.repos.length - 1;
+if (LONE) console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${missing.join(' · ')} ` +
+                      `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם ארבעת הריפו זה לצד זה`);
+t(LONE || (missing.length === 0 && FILES.length > 0),
   `הריפו האחיות — נמדדו ${APP.repos.length - missing.length} מתוך ${APP.repos.length} ` +
   `ו-${FILES.length} קובצי \`tools/\` משותפים` +
   (missing.length ? `; חסרות: ${missing.join(', ')}. מעמידים אותן זו לצד זו` : ''));
@@ -402,7 +411,7 @@ t(missing.length === 0 && FILES.length > 0,
   const bareRd = Object.entries(APP.readerExempt).filter(([, w]) => !isFunctional(w)).map(([f]) => f);
   const ghostId = APP.idKeys.filter((k) => !FILES.some((f) => {
     const b = appBlock(ST[APP.repos[0]][f]); return b && topKeys(b).includes(k); }));
-  t(ghostRd.length === 0 && bareRd.length === 0 && ghostId.length === 0,
+  t(LONE || (ghostRd.length === 0 && bareRd.length === 0 && ghostId.length === 0),
     `ההחרגות נמדדות משני צדדיהן — נמדדו ${ghostRd.length + ghostId.length} בלי מקרה ` +
     `ו-${bareRd.length} בלי נימוק תפקידי; והצפוי אפס` +
     (ghostRd.length + ghostId.length + bareRd.length
@@ -415,7 +424,7 @@ t(missing.length === 0 && FILES.length > 0,
     const b = ST[APP.app] && ST[APP.app][f] ? appBlock(ST[APP.app][f]) : null;
     return b && topKeys(b).includes(k);
   });
-  t(APP.newDecls.length > 0 && found.length === APP.newDecls.length,
+  t(LONE || (APP.newDecls.length > 0 && found.length === APP.newDecls.length),
     `ההצהרות שהסבב הוסיף נסרקות — נמדדו ${found.length} מתוך ${APP.newDecls.length} והצפוי כולן` +
     (found.length !== APP.newDecls.length
       ? `; חסרות: ${APP.newDecls.filter((x) => !found.includes(x)).map((x) => x.join('::')).join(' · ')}` : ''));
