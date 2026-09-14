@@ -140,6 +140,7 @@ const SHARED = [
   'tools/test_sources.mjs',
   'tools/test_stage_a.mjs',
   'tools/test_swcore.mjs',
+  'tools/test_textscan.mjs',
   'tools/test_toolsid.mjs',
   'tools/test_visual.mjs',
   'tools/test_wiring.mjs',

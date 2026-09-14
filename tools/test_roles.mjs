@@ -105,6 +105,10 @@ const { fn, decl, body, hasFn } = extract(SRC);
 const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
 const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
 
+/*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
+ *  הצהרותיהן, ⭐ שאם לא כן מטפל שמציג הודעה זורק `ReferenceError`,
+ *  ⛔ והכשל נקרא ככשל התנהגות ולא כחוסר בסביבה. */
+const MSG_DECLS = (SRC.match(/^var MSG_[A-Z_0-9]* = '(?:[^'\\]|\\.)*';$/gm) || []).join('\n');
 const NAMES_VAR = [
   'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_NEVER_MIRROR_SETTINGS',
@@ -228,7 +232,7 @@ function makeCtx(opts = {}) {
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
+  vm.runInContext(MSG_DECLS + '\n' + NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
   return { ctx, store, calls, dom };
 }
 

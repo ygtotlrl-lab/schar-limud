@@ -151,6 +151,10 @@ const UKEY  = (h) => h.ctx.mirrorKey(h.ctx.SL_USERS_TABLE);
 const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
 const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
 
+/*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
+ *  הצהרותיהן, ⭐ שאם לא כן מטפל שמציג הודעה זורק `ReferenceError`,
+ *  ⛔ והכשל נקרא ככשל התנהגות ולא כחוסר בסביבה. */
+const MSG_DECLS = (SRC.match(/^var MSG_[A-Z_0-9]* = '(?:[^'\\]|\\.)*';$/gm) || []).join('\n');
 const NAMES_VAR = [
   'SL_USERS_TABLE', 'SL_USER_COLS', 'SL_PASS_ITER_USER', 'SL_PASS_CTX',
   'SL_NEVER_MIRROR_SETTINGS', 'MIRROR_CFG', 'SL_TABLES', 'MIRROR', 'PUSH_TABLES',
@@ -258,7 +262,7 @@ function makeCtx(opts = {}) {
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
+  vm.runInContext(MSG_DECLS + '\n' + NAMES_VAR.map(decl).join('\n') + '\n' + NAMES_FN.map(fn).join('\n'), ctx);
   return { ctx, store, calls, fields };
 }
 
@@ -534,8 +538,10 @@ async function main() {
     const h = makeCtx();
     const m = [h.ctx.MSG_OFF_UNKNOWN, h.ctx.MSG_OFF_NO_FP, h.ctx.MSG_OFF_NO_CRYPTO, h.ctx.MSG_BAD_LOGIN];
     eq('ארבע ההודעות נבדלות זו מזו', new Set(m).size, 4);
-    ok('⛔ שלוש החדשות מחוץ לבלוק ההודעות המשותף',
-      !/^var MSG_OFFLINE[\s\S]{0,400}MSG_OFF_UNKNOWN/m.test(SRC));
+    /*  ⭐ שלוש ההודעות עברו לבלוק החתום — ⚠️ הן זהות בשלוש שיש בהן
+     *  כניסה, ⛔ והחתימה היא מה שמודד את זהות הנוסח. */
+    ok('⭐ שלוש החדשות בתוך הבלוק החתום',
+      /מחרוזות ההודעה המשותפות[\s\S]*?MSG_OFF_UNKNOWN[\s\S]*?סוף מודול מחרוזות ההודעה/.test(SRC));
   }
   {
     // ⛔ מטמון מפורמט ישן — סיסמה גלויה אינה מתקבלת כטביעה.
