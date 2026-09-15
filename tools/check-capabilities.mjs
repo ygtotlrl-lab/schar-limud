@@ -424,6 +424,7 @@ const APP = {
     'test_behavior': 'behavior — מפעיל דפדפן אמיתי ומודד DOM חי: ⛔ בזיכרון הוא היה מודד טקסט ולא התנהגות',
     'test_rowscan': 'text',
     'test_schema_source': 'text',
+    'test_secrets':       'behavior — קורא את סט הקבצים מ-`git ls-files`: ⛔ מה שנדחף הוא מה שציבורי, ⚠️ ומצב הדיסק אינו אומר עליו דבר',
     'test_users_patch': 'text',
     'test_scanscan': 'text',
     'test_declscan': 'text',
@@ -621,7 +622,7 @@ const APP = {
     '131|שיתוף קבצים': 'src',
     '116|מעטפת APK (WebView)': 'src',
     '119|אין נכסים מוטבעים': 'src',
-    '135|מפתח חתימה קבוע בריפו': 'src',
+    '135|מפתח חתימה קבוע': 'src',
     '141|מקור אמת יחיד לסכימה': 'src',
     '142|קובץ התקנה מלא': 'src',
     '59|גיבוי יומי אוטומטי': 'src',
@@ -3860,12 +3861,21 @@ function shellIsWebView() {
   return !twa.test(xml) && !twa.test(main) && !twa.test(shell);
 }
 
-/*  ⛔ מפתח החתימה קבוע (סבב 91) — ⚠️ ה-probe מדד ש**קיים** קובץ `.keystore`:
+/*  ⛔ מפתח החתימה קבוע — ⚠️ ה-probe מדד ש**קיים** קובץ `.keystore`:
  *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ והשורה אומרת «לעולם לא חדש».
- *  ⛔ **ולכן נמדדת זהותו** — ⚠️ חתימת התוכן מול הערך המוצהר ב-`APP.keystoreSha`. */
+ *  ⛔ **ולכן נמדדת זהותו** — ⚠️ חתימת התוכן מול הערך המוצהר ב-`APP.keystoreSha`.
+ *  ⛔ **והקובץ עצמו אינו בריפו (סבב 148)** — ⚠️ הוא ב-GitHub Secrets ונמשך
+ *  בזמן בנייה, ⭐ ולכן ההצהרה היא מה שנמדד תמיד: ⛔ שש-עשרה ספרות הקס
+ *  ולא מציין-מקום. ⚠️ **ועותק מקומי, כשהוא קיים, מושווה אליה** — ⭐ זה מה
+ *  שהופך את ההצהרה לניתנת להפרכה על המכונה שמחזיקה את המפתח: ⛔ ושני
+ *  עותקים בתיקייה הם שני מפתחות שאיש לא הכריע ביניהם.
+ *  ⛔ **והיעדרו מהמעקב אינו נמדד כאן** — ⚠️ הוא הטענה של שער הסודות,
+ *  ⭐ ושתי שורות על אותו קלט הן שתי הכרעות על אותה ראיה. */
 function keystoreFixed() {
-  if (!hasPath('signing')) return false;
+  if (!/^[0-9a-f]{16}$/.test(APP.keystoreSha || '')) return false;
+  if (!hasPath('signing')) return true;
   const ks = fs.readdirSync('signing').filter((f) => f.endsWith('.keystore'));
+  if (ks.length === 0) return true;
   if (ks.length !== 1) return false;
   const sha = crypto.createHash('sha256')
                 .update(fs.readFileSync('signing/' + ks[0])).digest('hex').slice(0, 16);
@@ -6328,7 +6338,7 @@ const MATRIX = [
   { row: 119, name: 'אין נכסים מוטבעים',
     probe: () => !hasPath('android/app/src/main/assets/index.html') &&
                  !hasPath('android/app/src/main/assets/sw.js') },
-  { row: 135, name: 'מפתח חתימה קבוע בריפו',
+  { row: 135, name: 'מפתח חתימה קבוע',
     probe: () => keystoreFixed() },
   { row: 141, name: 'מקור אמת יחיד לסכימה', probe: () => schemaSingleSource() },
   { row: 142, name: 'קובץ התקנה מלא',       probe: () => schemaIdempotent() },
@@ -6895,7 +6905,9 @@ const GATES = {
    *  החתימה היא מה שמודד אותו, ⛔ ובשכר ובגיוס ההיעדר מוצהר ב-`skipCaps`. */
   63: { claims: { 'check-capabilities': ['hebdate', 'monthFormGaps'] } },
   177: { claim: 'pass_salt' },
-  182: { manual: 'היעדר סוד נסרק ידנית; ⛔ שער טקסטואלי היה נכשל על כל מחרוזת' },
+  /*  ⭐ סבב 148 — ⛔ סריקה הפוכה: ⚠️ כל אתר חשוד מפיל אלא אם הוא
+   *  מוכרז עם נימוקו, ⭐ ורשימת דפוסים הייתה מוצאת את מה שכבר תוקן. */
+  182: { claim: '[sec-keyfile]' },
   185: { claim: '⏳' },
   187: { claim: 'כל קובץ בעץ מוזכר במקום אחר' },
   196: { claim: 'ט. ערך נגזר שהתיישן' },

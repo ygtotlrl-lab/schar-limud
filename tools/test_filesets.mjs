@@ -59,6 +59,7 @@ import { reasonGaps } from './scope.mjs';
 const SHARED = [
   '.github/workflows/build-apk.yml',
   '.github/workflows/cleanup-merged-branches.yml',
+  '.gitignore',
   '.nojekyll',
   'CLAUDE.md',
   'CONTEXT.md',
@@ -141,6 +142,7 @@ const SHARED = [
   'tools/test_readonly.mjs',
   'tools/test_rowscan.mjs',
   'tools/test_schema_source.mjs',
+  'tools/test_secrets.mjs',
   'tools/test_rulesdocs.mjs',
   'tools/test_dbfacts.mjs',
   'tools/test_dbscan.mjs',

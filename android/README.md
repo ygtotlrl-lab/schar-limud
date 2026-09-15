@@ -121,9 +121,9 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 
 | | |
 |---|---|
-| **קובץ** | `signing/schar.keystore` (PKCS12, RSA 2048) |
-| **alias** | `schar` |
-| **storepass / keypass** | `schar123` (זהה לשניהם) |
+| **קובץ** | ⛔ אינו בריפו — GitHub Secret `KEYSTORE_B64`, מפוענח לקובץ זמני בזמן בנייה ונמחק אחריה (PKCS12, RSA 2048) |
+| **alias** | ⛔ אינו מוקלד — `sign-apk.sh` גוזר אותו מהמפתח עצמו |
+| **storepass / keypass** | ⛔ אינה בריפו — GitHub Secret `KEYSTORE_PASS` |
 | **תוקף** | 10,000 יום — 08.08.2026 עד 23.12.2053 |
 | **SHA256** | `29:32:D9:B5:94:69:D4:E4:53:EF:C7:EE:3B:10:55:C9:CE:4B:EE:D6:9B:BB:78:EC:EE:18:BD:C6:BE:2D:0F:87` |
 | **SHA1** | `F5:BD:6A:6E:BE:EF:B5:85:78:9F:70:B1:19:60:8F:1B:DE:90:1B:D4` |
@@ -132,7 +132,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ⭐ **מסלול חתימה אחד ויחיד** (סבב 53) — `signing/sign-apk.sh`. ⛔ החלופות
 הידניות אינן מתועדות כאן: מסלול חתימה שני בתיעוד הוא בדיוק הדרך שבה APK
 נחתם במפתח הלא-נכון. אימות:
-`keytool -list -v -keystore signing/schar.keystore -storepass schar123`.
+`keytool -list -v -keystore <עותק מקומי> -storepass <הערך שב-KEYSTORE_PASS>`.
 
 ⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית
 היא ה-workflow. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
@@ -161,8 +161,8 @@ apktool d <app>.apk -o /tmp/schar_work -f
 rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
 apktool b /tmp/schar_work -o built.apk
 zipalign -f 4 built.apk aligned.apk
-apksigner sign --ks signing/schar.keystore --ks-key-alias schar \
-  --ks-pass pass:schar123 --key-pass pass:schar123 --out output.apk aligned.apk
+SIGN_KEYSTORE=<עותק מקומי של המפתח> SIGN_PASS=<הערך שב-KEYSTORE_PASS> \
+  signing/sign-apk.sh aligned.apk output.apk
 ```
 
 ⚠️ **כאן אין APK ותיק בלי מקור** — המעטפת הראשונה בריפו הזה נבנתה מ-`android/`

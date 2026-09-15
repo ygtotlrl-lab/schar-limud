@@ -349,7 +349,7 @@ const ALL_SLUGS = PEERS;
 const BUILD_SHA   = '81016a096b25c107';
 const CLEANUP_SHA = 'a48da4dd75a3245c';
 const PRIV = /^(EXPECTED_SHA256=|OUT=)/;
-const SHARED_SHA = '53c4a109a51fca29';
+const SHARED_SHA = '7604a64b1efb7457';
 
 const FILE = 'signing/sign-apk.sh';
 const t = (c, m) => (c ? pass(m) : fail(m));
