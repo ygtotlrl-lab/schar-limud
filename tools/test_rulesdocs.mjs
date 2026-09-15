@@ -970,7 +970,7 @@ t(!capsFails((doc) => {
    *  ⚠️ ומי שמחזיר אחת מהן מחזיר חצי רכיב. */
   {
     const idx = rd('index.html');
-    const at = idx.indexOf('window.lsHorizonRelease = lsHorizonRelease;');
+    const at = idx.indexOf('window.actRun = actRun;');
     if (at < 0) t(true, 'מ67 · ⭕ אין כאן נקודת הזרקה — ⛔ ואין מה למוטט');
     else t(runGateOn({ 'index.html': idx.slice(0, at) +
              'function bkLastAt() { return 0; }\nwindow.bkLastAt = bkLastAt;\n' + idx.slice(at) },
