@@ -2324,7 +2324,6 @@ function pendLateCount() {
   for (var i = 0; i < keys.length; i++) if (m[keys[i]] < cut) n++;
   return n;
 }
-function pendReset() { _pendMap = {}; _pendDrawHold = {}; pendSave(); pendRender(); }
 
 function pendFmtAge(ms) {
   if (!isFinite(ms) || ms < 0) ms = 0;
@@ -2472,6 +2471,8 @@ function _rtyVisible() {
 /*  ⛔ קוד מיושן עוצר את הניסיון החוזר — ⚠️ סכימה שהשתנתה אינה כשל
  *  חולף, ⭐ והלולאה שניסתה שוב ושוב היא ה«איטיות» שדווחה מהשטח. */
 function rtyReady() { return !_staleSchema && _rtyPending() && _rtyOnline() && _rtyVisible(); }
+/*  ⛔ הידית אומרת «יש ניסיון חוזר באוויר, או שאנחנו בתוך נסיגה» — ⚠️ פולינג
+ *  שדוחף נשען עליה כדי לא להציף, ⭐ והמצב הוא לאבחון ולשערים. */
 function rtyGate()  { return _rtyBusy || _rtyDelay > RTY_BASE_MS; }
 function rtyState() { return { armed: !!_rtyTimer, delay: _rtyDelay, busy: _rtyBusy }; }
 
@@ -2632,10 +2633,6 @@ function lkBoot() {
   return lkReset();
 }
 
-function lkState() {
-  return { armed: !!_lkLockT, warned: !!_lkWarnT, shown: lkShown(),
-           lockMs: LK_LOCK_MS, warnMs: LK_WARN_MS };
-}
 /* ═══════════════ סוף מודול נעילת חוסר-הפעילות ═══════════════════════════ */
 
 /* ── SESS_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
@@ -2760,9 +2757,7 @@ function plNum(v) {
   return parseInt(v, 10) || 0;
 }
 
-function plBusy() { return _plBusy; }
 function _plSeen() { try { return plNum(PL_CFG.seen()); } catch (e) { return 0; } }
-function plState() { return { busy: _plBusy, armed: !!_plTimer, fullAt: _plFullAt, seen: _plSeen() }; }
 
 /* ⭐ נקראת אחרי כל כתיבה מוצלחת לענן. היא מקדמת קודם את «מה שכבר נראה»
    מקומית — כדי שהתקתוק הבא לא ימשוך מלא בגלל השינוי של המכשיר הזה
@@ -2810,7 +2805,6 @@ function plTick() {
   }, function () { return done(false); });
 }
 
-function plStop() { if (_plTimer) { clearInterval(_plTimer); _plTimer = null; } }
 
 function plBoot() {
   if (!_plWired) {

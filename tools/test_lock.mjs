@@ -370,7 +370,7 @@ for (const r of base) { if (r.ok) pass('10. ' + r.name); else fail('10. ' + r.na
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_lock: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_lock: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failures ? 1 : 0);
 }
 /* ══════════════════════════════════════════════════════════════════════════

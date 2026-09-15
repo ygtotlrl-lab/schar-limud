@@ -412,7 +412,7 @@ console.log('\n· ' + APP.app + ' — סבב 148: עידן הנתונים');
 
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_merge_pending: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_merge_pending: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failed ? 1 : 0);
 }
 /* ── 3 · המוטציה — הסרת ההגנה חייבת להיתפס ─────────────────────────────── */

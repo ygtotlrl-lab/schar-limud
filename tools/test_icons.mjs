@@ -131,7 +131,7 @@ t(n++, /icon-master\\\.\(svg\|png\)/.test(struct),
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_icons: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_icons: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(fail ? 1 : 0);
 }
 /* ⛔ מוטציה על עותק, לעולם לא על העץ (הלקח של סבב 42ג) — קובץ שנכתב

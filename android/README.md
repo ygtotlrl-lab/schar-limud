@@ -65,9 +65,8 @@ Built in the exact pattern of the organisation's round-13 shell (the network-loa
 ⚠️ **המקור עצמו נבדל פר-אפליקציה**, והוא מתועד בשורה שמתחת.
 <!-- SHARED:end -->
 
-⚠️ **המקור כאן:** `icons/master-green-1024.png` — אותה גיאומטריה של המאסטר
-הארגוני, באלפא-דיו ירוק `#307535`; `ic_launcher` מלא על לבן,
-ו-`ic_launcher_foreground` על שקוף ב-66% מהקנבס.
+⚠️ **המאסטר הוא `design/icon-master.png`** — ⛔ המחולל קורא אותו וגוזר ממנו את 16 הנכסים,
+⚠️ ואין נכס שנערך ביד: ⭐ והצורה מוצהרת ב-`APP.art` שבמחולל.
 
 <!-- SHARED:start id="android-shell-split" -->
 ## המעטפת — ליבה משותפת ומעטפת פר-אפליקציה (סבב 41)

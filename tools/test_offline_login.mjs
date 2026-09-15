@@ -817,7 +817,7 @@ await main().catch((e) => { console.error(e); process.exit(1); });
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_offline_login: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_offline_login: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(fail ? 1 : 0);
 }
 /* ───────────────────────────────────────────────────────────────────────────

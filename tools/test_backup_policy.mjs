@@ -246,7 +246,7 @@ function t4(sql) {
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_backup_policy: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_backup_policy: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failed ? 1 : 0);
 }
 /* ── 5. מוטציות — ⛔ בזיכרון בלבד ───────────────────────────────────────── */

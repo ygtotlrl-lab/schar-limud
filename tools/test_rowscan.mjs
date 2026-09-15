@@ -32,6 +32,23 @@ const APP = {
    *  ⭐ **ולמה ריק**: נמדד ואין. */
   probeDeclOnly: {},
   sharedDecl: [],
+  /*  ⛔ מרשם חישוב שאין בו מקרה ריק ⛔ והוא אינו אפשרי בו — ⚠️ **מה נכנס**:
+   *  `<קובץ>::<שם>` ⟵ למה אפס רשומות אינן קלט אפשרי; ⛔ **ומה מפיל**: מרשם
+   *  כזה שאינו כאן, הכרזה שאין לה מרשם, והכרזה בלי נימוק. ⭐ **ולמה ריק**:
+   *  נמדד ואין — ⚠️ המקרה הריק אפשרי בכל מרשם חישוב שבעץ. */
+  noEmpty: {},
+  /*  ⛔ הסעיפים שאינם נאכפים בשורה ⭕ — ⚠️ **מה נכנס**: מספר השורה ⟵ ציטוט
+   *  כל סעיף שאינו נאכף, כפי שהוא בתקן של אותה שורה; ⛔ **ומה מפיל**: ציטוט
+   *  שאינו בהערה, ציטוט שאינו בתקן, שורה «בחלקו» בלי הכרזה, והכרזה בלי שורה.
+   *  ⭐ **ולמה המבנה קיים**: נימוק שמונה סעיף אחד ומשמיט שני מסתיר סעיף פרוץ
+   *  בתוך שורה שנראית מוכרעת, ⛔ ואיש לא יחפש אותו. */
+  gapClauses: {
+    31: ['שני שערים על אותו נושא'],
+    32: ['טענה שהשער מפיל עליה כתובה בתקן'],
+    50: ['ההערה מסבירה **למה**', 'וספירה שנמדדה בכלי חיצוני היא ספירת אירוע'],
+    108: ['יופתע'],
+    115: ['סטייה מדפוס'],
+  },
   /*  ⛔ מפקד שאינו מפקד — ⚠️ **מה נכנס**: קטע טקסט שהמספר בו הוא
    *  שם של מבנה או תיאורו, והנימוק למה; ⛔ **ומה מפיל**: הכרזה שאין לה
    *  אתר בהיקף של מרשם. ⭐ **ולמה המבנה קיים**: הסריקה הפוכה
@@ -76,7 +93,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [57, 52, 53];
+export const ROWS = [59, 52, 54, 53, 56];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -93,7 +110,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 11, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -311,6 +328,11 @@ const CTX = () => ({
   rows: Object.fromEntries(fs.readdirSync(path.join(ROOT, 'tools'))
     .filter((x) => x.endsWith('.mjs'))
     .map((f) => [f, (/export const ROWS = \[([^\]]*)\]/.exec(rd('tools/' + f)) || [, ''])[1]])),
+  /*  ⛔ מקורות השערים **מולבנים** — ⚠️ מחרוזת שנראית כמרשם אינה מרשם,
+   *  ⭐ ורשימת שמות שמחרוזותיה הולבנו נבדלת ממרשם חישוב בדיוק בזה. */
+  srcs: Object.fromEntries(fs.readdirSync(path.join(ROOT, 'tools'))
+    .filter((x) => /^test_.*\.mjs$/.test(x))
+    .map((f) => [f, whitenJs(rd('tools/' + f))])),
 });
 
 /* א · שתי שורות שה-probe שלהן נופל על אותו קלט */
@@ -481,6 +503,119 @@ function probeDeclOnly(c) {
   return out;
 }
 
+/* ── י · מרשם חישוב נושא את המקרה הריק (סבב 148) ───────────────────────── */
+/*  ⛔ **ההגדרה המכנית יושבת בשורה שבטבלה** — ⚠️ וכאן היא מיושמת: ⭐ מרשם
+ *  שפריטיו נושאים שדה מספרי, או שדה מערך שאינו רשימת שמות, הוא **מרשם
+ *  חישוב**: ⛔ ומה שאינו כזה הוא רשימת שמות, מרשם מוטציות, או מרשם טענות.
+ *  ⛔ **ומרשם שאינו נופל לאף סוג מפיל** — ⚠️ פריטים שאינם מאותו סוג הם
+ *  מבנה שאיש אינו יודע מה נכנס אליו, ⭐ ובדיוק עליו אין מה למדוד. */
+export function topRegistries(W) {
+  const out = [];
+  const re = /(?:^|\n)(?:export\s+)?const\s+([A-Z][A-Z0-9_]*)\s*=\s*\[/g;
+  let m;
+  while ((m = re.exec(W)) !== null) {
+    const i = W.indexOf('[', m.index + m[0].length - 1);
+    let d = 0, j = i;
+    for (; j < W.length; j++) { if (W[j] === '[') d++; else if (W[j] === ']' && --d === 0) break; }
+    if (j >= W.length) continue;
+    out.push({ name: m[1], w: W.slice(i, j + 1) });
+  }
+  return out;
+}
+/*  ⛔ הפריטים נחתכים בפסיק שבעומק אפס — ⚠️ פסיק בתוך אובייקט או מערך
+ *  מקונן אינו גבול פריט, ⭐ וחיתוך תמים היה מסווג כל מרשם כמעורב. */
+export function regItems(w) {
+  const inner = w.slice(1, -1), out = [];
+  let d = 0, s = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const c = inner[i];
+    if (c === '[' || c === '{' || c === '(') d++;
+    else if (c === ']' || c === '}' || c === ')') d--;
+    else if (c === ',' && d === 0) { out.push(inner.slice(s, i)); s = i + 1; }
+  }
+  out.push(inner.slice(s));
+  return out.map((x) => x.trim()).filter((x) => x.length);
+}
+const R_ASSERT = /[\s{,](?:ok|must|never|re|why)\s*:/;
+const R_MUT = /[\s{,](?:m|lbl|mut|from|to|txt|at|run|claim)\s*:/;
+const R_FN = /=>|function\s*[({]/;
+const R_NUM = /[\s{,][A-Za-z_$][\w$]*\s*:\s*-?\d/;
+/*  ⛔ שדה מערך שתוכנו המולבן ריק הוא **רשימת שמות** ⛔ ולא נתון לחישוב —
+ *  ⚠️ ההלבנה מוחקת את המחרוזות, ⭐ ומה שנותר הוא פסיקים ורווחים בלבד. */
+function arrField(it) {
+  for (const m of it.matchAll(/[\s{,][A-Za-z_$][\w$]*\s*:\s*\[/g)) {
+    const i = it.indexOf('[', m.index);
+    let d = 0, j = i;
+    for (; j < it.length; j++) { if (it[j] === '[') d++; else if (it[j] === ']' && --d === 0) break; }
+    if (/[^\s,]/.test(it.slice(i + 1, j))) return true;
+  }
+  return false;
+}
+export function regKind(w) {
+  const items = regItems(w);
+  if (!items.length) return 'names';
+  const objs = items.filter((x) => x.charAt(0) === '{');
+  const scal = items.filter((x) => x.charAt(0) !== '{');
+  if (objs.some((x) => R_ASSERT.test(x))) return 'assert';
+  if (objs.some((x) => R_MUT.test(x)) || items.some((x) => R_FN.test(x))) return 'mut';
+  if (objs.some((x) => R_NUM.test(x) || arrField(x))) return 'calc';
+  if (!objs.length || !scal.length) return 'names';
+  return '';
+}
+/*  ⛔ המקרה הריק הוא **ערך ריק בשדה של פריט** — ⚠️ מערך ריק או אפס:
+ *  ⭐ פריט כזה הוא ההתקנה הטרייה, ⛔ והוא מה שאינו נבדק. */
+export function emptyCase(w) {
+  return regItems(w).some((it) => /[\s{,][A-Za-z_$][\w$]*\s*:\s*(?:\[\s*\]|0)\s*[,}]/.test(it));
+}
+export function emptyGaps(srcs, allow) {
+  const kinds = { calc: 0, names: 0, mut: 0, assert: 0 };
+  const bad = [], noEmpty = [];
+  for (const [f, W] of Object.entries(srcs)) {
+    for (const g of topRegistries(W)) {
+      const k = regKind(g.w);
+      if (!k) { bad.push(f + '::' + g.name); continue; }
+      kinds[k]++;
+      if (k !== 'calc') continue;
+      if (emptyCase(g.w)) continue;
+      const key = f + '::' + g.name;
+      if (!Object.prototype.hasOwnProperty.call(allow || {}, key)) noEmpty.push(key);
+    }
+  }
+  const live = new Set();
+  for (const [f, W] of Object.entries(srcs))
+    for (const g of topRegistries(W)) if (regKind(g.w) === 'calc') live.add(f + '::' + g.name);
+  const ghost = Object.keys(allow || {}).filter((k) => !live.has(k));
+  const bare = Object.entries(allow || {}).filter(([, v]) => !v || String(v).trim().length < 15).map(([k]) => k);
+  return { kinds, bad, noEmpty, ghost, bare };
+}
+
+/* ── יא · נימוק ⭕ מונה את מה שאינו נאכף (סבב 148) ──────────────────────── */
+/*  ⛔ פתיחת ההערה נמדדת **מול הסימון** — ⚠️ «נמדד» היא פתיחת ✅, ⭐ ותא ⭕
+ *  שנפתח בה הוא סתירה בין שני חלקי אותה שורה: ⛔ והפתיחה נמדדת כאן ⛔ ולא
+ *  בבודק ההערות, ⚠️ ששם היא נמדדת בלי הסימון שלצידה. */
+const GAP_OPEN = /^[\s*⛔⚠️⭐️\uFE0F]*\*\*(?:הבדל מכוון|אינו ניתן לאכיפה)\*\*/;
+export function gapNoteGaps(rows, decl) {
+  const out = [];
+  for (const r of rows) {
+    const gap = r.marks.some((x) => x === '⭕');
+    if (!gap) {
+      if (Object.prototype.hasOwnProperty.call(decl || {}, r.n)) out.push('[הכרזה בלי ⭕] ' + r.n);
+      continue;
+    }
+    if (!GAP_OPEN.test(r.note)) { out.push('[פתיחה] ' + r.n + ': «' + r.note.slice(0, 24) + '»'); continue; }
+    const partial = r.note.indexOf('בחלקו') >= 0;
+    const d = (decl || {})[r.n];
+    if (partial && !d) { out.push('[בלי הכרזה] ' + r.n); continue; }
+    if (!partial && d) { out.push('[הכרזה בלי «בחלקו»] ' + r.n); continue; }
+    if (!d) continue;
+    for (const q of d) {
+      if (r.note.indexOf('«' + q + '»') < 0) out.push('[סעיף שאינו בהערה] ' + r.n + ': «' + q + '»');
+      else if (r.std.indexOf(q) < 0) out.push('[סעיף שאינו בתקן] ' + r.n + ': «' + q + '»');
+    }
+  }
+  return out;
+}
+
 const C0 = CTX();
 t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
   `טבלת התשתית נקראה — נמדדו ${(tableRows(C0.md) || []).length} שורות והצפוי לפחות אחת`);
@@ -549,6 +684,26 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
       : ` (${g.length} מוכרזים)`));
 }
 
+
+{
+  const g = emptyGaps(C0.srcs, APP.noEmpty);
+  const bad = g.bad.length + g.noEmpty.length + g.ghost.length + g.bare.length;
+  t(bad === 0,
+    `י · מרשם חישוב נושא את המקרה הריק — נמדדו ${g.kinds.calc} מרשמי חישוב · ` +
+    `${g.kinds.names} רשימות שמות · ${g.kinds.mut} מרשמי מוטציות · ${g.kinds.assert} מרשמי טענות; ` +
+    `${g.bad.length} שאינם נופלים לאף סוג, ${g.noEmpty.length} בלי מקרה ריק ובלי הכרזה, ` +
+    `${g.ghost.length} הכרזות בלי מרשם ו-${g.bare.length} בלי נימוק — והצפוי אפס` +
+    (bad ? `: ${[...g.bad, ...g.noEmpty, ...g.ghost, ...g.bare].slice(0, 8).join(' · ')}. ` +
+           'מוסיפים למרשם פריט ריק, או מכריזים ב-`APP.noEmpty` עם נימוקו' : ''));
+}
+{
+  const g = gapNoteGaps(tableRows(C0.md) || [], APP.gapClauses);
+  t(g.length === 0,
+    `יא · נימוק ⭕ מונה את מה שאינו נאכף — נמדדו ${g.length} פערים מתוך ` +
+    `${Object.keys(APP.gapClauses || {}).length} הכרזות והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. מונים בהערה כל סעיף שאינו נאכף, ` +
+                'בציטוט מהתקן, ומצהירים אותו ב-`APP.gapClauses`' : ''));
+}
 
 mutStage();
 if (RUN_MUT) {
@@ -703,6 +858,91 @@ if (RUN_MUT) {
     const c2 = { ...C0, [r.src]: C0[r.src].replace(r.at, () => r.txt + r.at) };
     t(censusGaps(c2).length === censusGaps(C0).length,
       `${r.m} · «${r.lbl}» ⛔ אינו מפיל את «ח»`);
+  }
+  /*  ⛔ מ11 — מרשם חישוב בלי מקרה ריק: ⚠️ המוטציה בזיכרון, ⭐ והיא מזינה
+   *  לאותה פונקציה מרשם שפריטיו נושאים שדה מספרי ⛔ ואין בו פריט ריק. */
+  {
+    const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n];\n" };
+    const got = emptyGaps(one, {});
+    t(got.noEmpty.length === 1 && got.kinds.calc === 1,
+      'מ11 · מרשם חישוב בלי מקרה ריק **מפיל** את «י» — ' +
+      `נמדדו ${got.kinds.calc} מרשמי חישוב ו-${got.noEmpty.length} בלי מקרה ריק, והצפוי 1 ו-1`);
+  }
+  /*  ⛔ מ12 — מרשם שאינו נופל לאף סוג: ⚠️ פריט אובייקט לצד פריט מחרוזת,
+   *  ⭐ ואין דרך לדעת מה נכנס אליו. */
+  {
+    const one = { 'zz.mjs': "\nconst ZZ = [\n  { a: b },\n  c,\n];\n" };
+    const got = emptyGaps(one, {});
+    t(got.bad.length === 1,
+      'מ12 · מרשם שאינו נופל לאף סוג **מפיל** את «י» — ' +
+      `נמדדו ${got.bad.length} והצפוי 1`);
+  }
+  /*  ⛔ מ13 — הכרזה ב-`noEmpty` בלי נימוק. */
+  {
+    const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n];\n" };
+    const got = emptyGaps(one, { 'zz.mjs::ZZ': 'קצר' });
+    t(got.bare.length === 1 && got.noEmpty.length === 0,
+      'מ13 · הכרזה ב-`noEmpty` בלי נימוק **מפילה** את «י» — ' +
+      `נמדדו ${got.bare.length} בלי נימוק והצפוי 1`);
+  }
+  /*  ⭐ נ5 · מוטציית-נגד: אותו מרשם עם פריט ריק ⛔ אינו מפיל — הריק הוא בדיוק מה שנדרש. */
+  {
+    const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n  { key: 'b', year: 0, rows: [] },\n];\n" };
+    const got = emptyGaps(one, {});
+    t(got.noEmpty.length === 0 && got.kinds.calc === 1,
+      'נ5 · ⭐ מרשם חישוב עם מקרה ריק ⛔ **אינו** מפיל — ' +
+      `נמדדו ${got.noEmpty.length} והצפוי 0`);
+  }
+  /*  ⭐ נ6 · מוטציית-נגד: רשימת שמות בלי ערך ריק ⛔ אינה מפילה — ⚠️ המקרה
+   *  הריק אינו מוגדר בה, ⭐ ודרישה ממנה הייתה רשימה שאיש לא יקרא. */
+  {
+    const one = { 'zz.mjs': "\nconst ZZ = ['a', 'b', 'c'];\n" };
+    const got = emptyGaps(one, {});
+    t(got.noEmpty.length === 0 && got.kinds.names === 1,
+      'נ6 · ⭐ רשימת שמות בלי ערך ריק ⛔ **אינה** מפילה — ' +
+      `נמדדו ${got.kinds.names} רשימות שמות והצפוי 1`);
+  }
+  /*  ⛔ מ14 — סעיף שהושמט מנימוק ⭕: ⚠️ ההכרזה מונה שניים, ⭐ וההערה
+   *  מצטטת אחד. */
+  {
+    const row = { n: 9, name: 'zz', std: 'אלף · בית', note: '⛔ **אינו ניתן לאכיפה** בחלקו: «אלף» אינו נגזר', marks: ['⭕'] };
+    const got = gapNoteGaps([row], { 9: ['אלף', 'בית'] });
+    t(got.length === 1 && got[0].indexOf('[סעיף שאינו בהערה]') === 0,
+      'מ14 · סעיף שהושמט מנימוק ⭕ **מפיל** את «יא» — ' +
+      `נמדדו ${got.length} והצפוי 1`);
+  }
+  /*  ⛔ מ15 — תא ⭕ שהערתו נפתחת ב«נמדד». */
+  {
+    const row = { n: 9, name: 'zz', std: 'אלף', note: '⚠️ **נמדד**: אלף', marks: ['⭕'] };
+    const got = gapNoteGaps([row], {});
+    t(got.length === 1 && got[0].indexOf('[פתיחה]') === 0,
+      'מ15 · תא ⭕ שנפתח ב«נמדד» **מפיל** את «יא» — ' +
+      `נמדדו ${got.length} והצפוי 1`);
+  }
+  /*  ⛔ מ16 — ציטוט שאינו בתקן של אותה שורה: ⚠️ הפניה לטקסט שאינו קיים. */
+  {
+    const row = { n: 9, name: 'zz', std: 'אלף · בית', note: '⛔ **אינו ניתן לאכיפה** בחלקו: «גימל» אינו נגזר', marks: ['⭕'] };
+    const got = gapNoteGaps([row], { 9: ['גימל'] });
+    t(got.length === 1 && got[0].indexOf('[סעיף שאינו בתקן]') === 0,
+      'מ16 · ציטוט שאינו בתקן **מפיל** את «יא» — ' +
+      `נמדדו ${got.length} והצפוי 1`);
+  }
+  /*  ⭐ נ7 · מוטציית-נגד: נימוק שמונה את כל הסעיפים ⛔ אינו מפיל — זו הדרישה עצמה. */
+  {
+    const row = { n: 9, name: 'zz', std: 'אלף · בית', note: '⛔ **אינו ניתן לאכיפה** בחלקו: «אלף» ו«בית» אינם נגזרים', marks: ['⭕'] };
+    const got = gapNoteGaps([row], { 9: ['אלף', 'בית'] });
+    t(got.length === 0,
+      'נ7 · ⭐ נימוק שמונה את כל הסעיפים ⛔ **אינו** מפיל — ' +
+      `נמדדו ${got.length} והצפוי 0`);
+  }
+  /*  ⭐ נ8 · מוטציית-נגד: תא ✅ שנפתח ב«נמדד» ⛔ אינו מפיל — ⚠️ שם זו
+   *  הפתיחה הנכונה, ⭐ והנמדד הוא הצימוד לסימון. */
+  {
+    const row = { n: 9, name: 'zz', std: 'אלף', note: '⚠️ **נמדד**: אלף', marks: ['✅'] };
+    const got = gapNoteGaps([row], {});
+    t(got.length === 0,
+      'נ8 · ⭐ תא ✅ שנפתח ב«נמדד» ⛔ **אינו** מפיל — ' +
+      `נמדדו ${got.length} והצפוי 0`);
   }
   /*  ⛔ מוטציה: שם מרשם שהוסב — ⚠️ ההכרזה נשארת במרשם, ⭐ והאתר החי נעלם. */
   {

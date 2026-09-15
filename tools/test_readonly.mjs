@@ -104,7 +104,7 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 /*  ⛔ הריצה הפנימית מדלגת — ⚠️ בלעדיה הוא מריץ `check-js` שמריץ אותו,
  *  והרקורסיה אינה נעצרת. */
 if (process.env.R33_INNER) {
-  console.log('test_readonly: ריצה פנימית — מדלג (מניעת רקורסיה)');
+  console.log('test_readonly: ריצה פנימית — ⛔ מדלג, והשער אינו נמדד כאן (מניעת רקורסיה)');
   process.exit(0);
 }
 
@@ -112,7 +112,7 @@ if (process.env.R33_INNER) {
  *  הוא כולו מדלג ברמה המהירה, ⛔ ורץ ברמה המלאה בלבד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('test_readonly: המוטציות רצות ברמה המלאה (--full) — מדלג');
+  console.log('test_readonly: המוטציות רצות ברמה המלאה (--full) — ⛔ מדלג, ואינן נמדדות כאן');
   process.exit(0);
 }
 

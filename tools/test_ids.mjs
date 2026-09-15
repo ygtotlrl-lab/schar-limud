@@ -43,7 +43,7 @@ export const ROWS = [];
 const RUN_MUT = process.env.GATE_MUT === '1';
 
 if (process.env.R33_INNER) {
-  console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
+  console.log('test_ids: ריצה פנימית — ⛔ מדלג, והשער אינו נמדד כאן (מניעת רקורסיה)');
   process.exit(0);
 }
 

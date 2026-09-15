@@ -246,7 +246,7 @@ const ids = (rows) => (rows || []).map((r) => r.id).join(',');
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_hotwin: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_hotwin: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failed ? 1 : 0);
 }
 /* ── 2. מוטציות על המודול ──────────────────────────────────────────────── */

@@ -284,7 +284,7 @@ console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער המע
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_shell: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_shell: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failures ? 1 : 0);
 }
 /*  ⛔ היציאה עברה לסוף (סבב 67) — המוטציות רצות אחרי הטענות. */

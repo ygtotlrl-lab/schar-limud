@@ -169,7 +169,7 @@ t(n++, /const DOC_MAX_ROUND_LINES\s*=\s*10;/.test(docs),
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_budget: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_budget: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(fail ? 1 : 0);
 }
 /* ── מוטציות: העץ אינו נגוע, העותק בתיקייה זמנית ───────────────────────── */

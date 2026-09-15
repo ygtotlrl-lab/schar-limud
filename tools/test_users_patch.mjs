@@ -368,7 +368,7 @@ async function run() {
   /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
   mutStage();
   if (!RUN_MUT) {
-    console.log('\n⏭ test_users_patch: המוטציות רצות ברמה המלאה (--full)');
+    console.log('\n⏭ test_users_patch: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
     console.log(`\n[${APP.app}] ${passN} עברו, ${failN} נכשלו`);
     process.exit(failN ? 1 : 0);
   }

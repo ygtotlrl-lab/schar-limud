@@ -40,7 +40,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 22, 23, 124, 189];
+export const ROWS = [17, 19, 22, 23, 127, 194];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -121,6 +121,8 @@ const SHARED = [
   'tools/test_cron.mjs',
   'tools/test_declscan.mjs',
   'tools/test_devid.mjs',
+  'tools/test_docfacts.mjs',
+  'tools/test_signeddead.mjs',
   'tools/test_crossgate.mjs',
   'tools/test_filesets.mjs',
   'tools/test_hotwin.mjs',
@@ -426,7 +428,7 @@ const clone = (name) => {
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_filesets: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_filesets: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failed ? 1 : 0);
 }
 /*  ⛔ המוטציה נכתבת לעותק ולא לעץ (הלקח של סבב 42ג). ⚠️ `git ls-files`

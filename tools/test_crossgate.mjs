@@ -110,7 +110,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  *  בלבד, ⭐ כמו המוטציות. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('test_crossgate: ההשוואה בין השערים רצה ברמה המלאה (--full) — מדלג');
+  console.log('test_crossgate: ההשוואה בין השערים רצה ברמה המלאה (--full) — ⛔ מדלג, והפער בין השערים אינו נמדד כאן');
   process.exit(0);
 }
 

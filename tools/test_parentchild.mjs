@@ -56,6 +56,21 @@ const APP = {
   /*  ⛔ מפת האב-ובן החיה שבמקור — ⚠️ **מה נכנס**: שם המשתנה שמונה
    *  אב ⟵ בניו, ⭐ **בסדר שבו הם כתובים**; ⛔ **ומה מפיל**: שם שאין
    *  לו מפה במקור, ⛔ וסדר הורים שנבדל מ-`twoParents`. */
+  /*  ⛔ מפתח הזהות של השורה בכל שכבותיה — ⚠️ **מה נכנס**: שמות השכבות ·
+   *  מפתח ברירת המחדל · מטפל מפתח הסימון ושם ארגומנט הטבלה שלו · מפתח
+   *  לכל טבלה ב-`PUSH_TABLES` · ונימוק לכל טבלה שמפתחה נבדל.
+   *  ⛔ **ומה מפיל**: טבלה שנדחפת ואין לה רשומה, רשומה שאין לה טבלה
+   *  שנדחפת, מפתח נבדל בלי נימוק, ונימוק לטבלה שמפתחה כברירת המחדל.
+   *  ⭐ **ולמה המבנה קיים**: שני מפתחות לאותה שורה הם שתי זהויות,
+   *  ⚠️ והסתירה מתגלה רק כשנכתב מסלול הכתיבה הראשון. */
+  rowKeys: {
+    layers: ['merge', 'pend'],
+    defaultKey: 'client_id',
+    keyFn: { name: 'slKeyOf', arg: 't', why: '' },
+    tables: { sl_students: 'client_id', sl_transactions: 'client_id',
+              sl_settings: 'key', sl_lists: 'client_id' },
+    gapWhy: { sl_settings: 'ההגדרה ממופתחת בשם המפתח ⛔ ולא במזהה שנוצר במכשיר — ⚠️ ולכן הסימון נגזר מהטבלה ב-`slKeyOf`' },
+  },
   childMap: 'PC_CHILDREN',
   pushWriter: null,
   /*  ⚠️ רתמת הירושה — ⛔ הבן הוא שורה עצמאית, ⭐ ולכן הירושה היא פונקציה
@@ -84,7 +99,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ הרשימה ריקה עד שהשורה
  *  נכנסת לטבלה, ⛔ והשער מוכרז עד אז ב-`gateNoRows` עם נימוקו: ⭐ הצהרה
  *  ריקה ולא היעדר — ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
-export const ROWS = [168];
+export const ROWS = [171, 172];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -103,7 +118,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ שש הטענות רצות בכולן, ⭐ וכל אחת
  *  נושאת ענף מדוד גם באפליקציה שאין בה אב-ובן: ⛔ טענה שהייתה מדולגת שם
  *  הייתה מדווחת «עבר» על מה שלא נמדד. */
-const FLOOR = { shared: 7, app: 0, appWhy: '' };
+const FLOOR = { shared: 9, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -296,6 +311,73 @@ function parentsOf(map, child) {
 }
 
 const PAIRS = APP.parentChild;
+/*  ⛔ מטפל הסימון מקבל **מפתח אחד** — ⚠️ קריאה בשני ארגומנטים מסמנת את
+ *  שם הטבלה ⛔ ולא את השורה: ⭐ והקורא, שמחפש `<טבלה>:<מפתח>`, אינו
+ *  מוצא אותה לעולם. ⛔ **והספירה היא של פסיקים בעומק אפס** — ⚠️ פסיק
+ *  בתוך קריאה מקוננת אינו גבול ארגומנט. */
+const PEND_FNS = ['pendMark', 'pendClear', 'pendHas', 'pendTag', 'pendSince'];
+export function arityGaps(src, names) {
+  const out = [];
+  for (const nm of names) {
+    const re = new RegExp('(?<![\\w$.])' + nm + '\\s*\\(', 'g');
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      let i = m.index + m[0].length - 1, d = 0, args = 1, j = i;
+      for (; j < src.length; j++) {
+        const c = src[j];
+        if (c === '(' || c === '[' || c === '{') d++;
+        else if (c === ')' || c === ']' || c === '}') { d--; if (!d) break; }
+        else if (c === ',' && d === 1) args++;
+      }
+      if (src.slice(i + 1, j).trim() === '') args = 0;
+      if (args > 1) out.push(nm + ' (' + src.slice(0, m.index).split('\n').length + '): ' + args);
+    }
+  }
+  return out;
+}
+/*  ⛔ הטבלאות הנדחפות נקראות מהמקור ⛔ ואינן רשימה שנייה — ⚠️ מרשם
+ *  שמוצהר פעמיים נסחף באחד מהם. */
+export function pushTables(src) {
+  const m = /\bPUSH_TABLES\s*=\s*\[([\s\S]*?)\]/.exec(src);
+  return m ? [...m[1].matchAll(/'([\w]+)'/g)].map((x) => x[1]) : [];
+}
+/*  ⛔ המפתח נגזר מהטבלה כשיש יותר ממפתח אחד — ⚠️ מטפל שנוקב במפתח
+ *  אחד בגופו מסמן בו את כל הטבלאות, ⭐ וזו בדיוק הסתירה: ⛔ והמדידה היא
+ *  שהגוף **בוחר לפי הטבלה** — השוואה לשם טבלה, או קריאה למטא שלה. */
+export function rowKeyGaps(src, cfg) {
+  const out = [];
+  const live = pushTables(src);
+  const decl = cfg.tables || {};
+  for (const t of live) if (!(t in decl)) out.push('[טבלה בלי רשומה] ' + t);
+  for (const t of Object.keys(decl)) if (live.indexOf(t) < 0) out.push('[רשומה בלי טבלה] ' + t);
+  for (const [t, k] of Object.entries(decl)) {
+    const differs = k !== cfg.defaultKey;
+    const why = (cfg.gapWhy || {})[t];
+    if (differs && (!why || String(why).trim().length < 15)) out.push('[פער בלי נימוק] ' + t);
+    if (!differs && why) out.push('[נימוק בלי פער] ' + t);
+    if (!new RegExp("'" + k + "'").test(src)) out.push('[מפתח שאין לו אתר] ' + t + ':' + k);
+  }
+  const distinct = new Set(Object.values(decl));
+  const fn = cfg.keyFn || {};
+  /*  ⛔ ההצהרה נמדדת מול המקור — ⚠️ שם שאין לו גוף הוא הצהרה על כלום,
+   *  ⭐ וריק בלי נימוק אינו נבדל משם שנשמט. */
+  if (!fn.name) {
+    if (!fn.why || String(fn.why).trim().length < 15) out.push('[מטפל ריק בלי נימוק]');
+    if (distinct.size > 1) out.push('[יותר ממפתח אחד ואין מטפל] ' + [...distinct].join('+'));
+  } else if (!cutFn(src, fn.name)) {
+    out.push('[מטפל בלי גוף] ' + fn.name);
+  }
+  if (distinct.size > 1 && fn.name) {
+    const body = cutFn(src, fn.name);
+    if (body) {
+      const a = String(fn.arg || '');
+      const byTable = new RegExp('\\b' + a + '\\s*===|Meta\\s*\\(|\\[\\s*' + a + '\\s*\\]').test(body);
+      if (!byTable) out.push('[מפתח שאינו נגזר מהטבלה] ' + fn.name);
+    }
+  }
+  return out;
+}
+
 const LIVE = liveKids(APP.dbSchema);
 const TABLES = new Set(APP.dbSchema.map((r) => r.t));
 {
@@ -410,9 +492,28 @@ const TABLES = new Set(APP.dbSchema.map((r) => r.t));
     'מה עושים: מסדרים את המפה שבמקור לפי הסדר המוצהר, או מתקנים את `APP.twoParents`');
 }
 
+{
+  /*  ⛔ מפתח הסימון הוא מפתח המיזוג — ⚠️ הרשומות מוצלבות ל-`PUSH_TABLES`
+   *  שבמקור, ⭐ והמטפל נמדד בגופו: ⛔ הצהרה שמושווית להצהרה עוברת תמיד. */
+  const g = rowKeyGaps(SRC, APP.rowKeys);
+  const live = pushTables(SRC);
+  t(g.length === 0,
+    `8 · [pc-rowkey] מפתח הסימון הוא מפתח המיזוג — נמדדו ${live.length} טבלאות נדחפות, ` +
+    `${Object.keys(APP.rowKeys.tables).length} רשומות ו-${g.length} פערים, והצפוי אפס` +
+    `${g.length ? ' (' + g.slice(0, 6).join(' · ') + ')' : ''}. ` +
+    'מה עושים: גוזרים את מפתח הסימון מהטבלה, או מנמקים את הפער ב-`APP.rowKeys.gapWhy`');
+}
+{
+  const g = arityGaps(SRC, PEND_FNS);
+  t(g.length === 0,
+    `9 · [pc-rowkey] מטפל הסימון מקבל מפתח אחד — נמדדו ${g.length} אתרי קריאה ` +
+    `ביותר מארגומנט אחד והצפוי אפס${g.length ? ' (' + g.join(' · ') + ')' : ''}. ` +
+    'מה עושים: בונים את המפתח לפני הקריאה — ⛔ ארגומנט שני מסמן את שם הטבלה ולא את השורה');
+}
+
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_parentchild: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_parentchild: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failed ? 1 : 0);
 }
 
@@ -454,7 +555,7 @@ console.log('\n— מוטציות —');
   }
   /*  ⛔ הדילוג מוכרז ⛔ ואינו שקט — ⚠️ אין כאן זוג אב-ובן שאפשר להפוך
    *  את סדרו, ⭐ והמצב הזה עצמו נמדד בטענות 1 ו-2. */
-  if (mut === SRC) console.log('  ⏭ מ3 · אין כאן זוג אב-ובן — אין סדר שאפשר להפוך');
+  if (mut === SRC) console.log('  ⏭ מ3 · אין כאן זוג אב-ובן — אין סדר שאפשר להפוך, ⛔ ומ3 אינה נמדדת כאן');
   else t(orderViolations(mut).length > 0,
     `מ3 · [pc-order] מוטציה: הבן קודם לאב ב${tag} — נתפסה (טענה 4 הייתה נכשלת)`);
 }
@@ -476,14 +577,14 @@ if (APP.inherit) {
   /*  ⛔ הדילוג מוכרז ⛔ ואינו שקט — ⚠️ אין כאן פונקציית ירושה למוטט,
    *  ⭐ והטענה שמכסה את המצב הזה היא 5 עצמה: ⛔ היא מודדת ששני צדדי
    *  ההצהרה מסכימים. */
-  console.log('  ⏭ מ4/מ5 · אין פונקציית ירושה באפליקציה הזו — אין מה למוטט');
+  console.log('  ⏭ מ4/מ5 · אין פונקציית ירושה באפליקציה הזו — אין מה למוטט, ⛔ ואינן נמדדות כאן');
 }
 {
   /*  ⛔ המוטציה מהפכת את סדר ההורים **במפה החיה** — ⚠️ היא שוברת את
    *  המנגנון: ⭐ ההצהרה נשארת כשהייתה, ⛔ והקוד אומר משהו אחר. */
   const map0 = APP.childMap ? childMapOrder(SRC, APP.childMap) : null;
   const two = map0 ? Object.keys(APP.twoParents).filter((c) => parentsOf(map0, c).length > 1) : [];
-  if (!two.length) console.log('  ⏭ מ6/נ2 · אין כאן בן לשני הורים במפה החיה — אין סדר שאפשר להפוך');
+  if (!two.length) console.log('  ⏭ מ6/נ2 · אין כאן בן לשני הורים במפה החיה — אין סדר שאפשר להפוך, ⛔ ואינן נמדדות כאן');
   else {
     const flipped = map0.slice().reverse();
     const got = parentsOf(flipped, two[0]);
@@ -505,6 +606,55 @@ if (APP.inherit) {
   const undecl = liveKids(mut).filter((l) => !PAIRS.some((p) => p.child === l.child && p.fk === l.fk));
   t(undecl.length === 0 && liveKids(mut).length === LIVE.length,
     'נ1 · ⭐ מוטציית-נגד: טבלה שנוספה ואין בה מפתח אב ⛔ אינה מפילה');
+
+  /*  ⛔ מ7 — מפתח שהוצהר ואין לו אתר במקור: ⚠️ ההצהרה מנותקת מהקוד,
+   *  ⭐ וזה בדיוק «הצהרה שמושווית להצהרה». */
+  {
+    const cfg = { defaultKey: APP.rowKeys.defaultKey, keyFn: APP.rowKeys.keyFn,
+                  tables: Object.assign({}, APP.rowKeys.tables), gapWhy: APP.rowKeys.gapWhy };
+    cfg.tables[Object.keys(cfg.tables)[0]] = 'zz_no_such_key';
+    const got = rowKeyGaps(SRC, cfg);
+    t(got.some((x) => x.indexOf('[מפתח שאין לו אתר]') === 0),
+      `מ7 · ⛔ מוטציה: מפתח שאין לו אתר במקור מפיל את «[pc-rowkey]» — נמדדו ${got.length} פערים והצפוי לפחות אחד`);
+  }
+  /*  ⛔ מ10 — מפתח שנבדל מברירת המחדל ואין לו נימוק. */
+  {
+    const cfg = { defaultKey: APP.rowKeys.defaultKey, keyFn: APP.rowKeys.keyFn,
+                  tables: Object.assign({}, APP.rowKeys.tables), gapWhy: APP.rowKeys.gapWhy };
+    const same = Object.keys(cfg.tables).find((k) => cfg.tables[k] === cfg.defaultKey);
+    cfg.tables[same] = 'updated_at';
+    const got = rowKeyGaps(SRC, cfg);
+    t(got.some((x) => x.indexOf('[פער בלי נימוק]') === 0),
+      `מ10 · ⛔ מוטציה: פער בלי נימוק מפיל את «[pc-rowkey]» — נמדדו ${got.length} פערים והצפוי לפחות אחד`);
+  }
+  /*  ⛔ מ8 — טבלה נדחפת בלי רשומה במרשם. */
+  {
+    const cfg = { defaultKey: APP.rowKeys.defaultKey, keyFn: APP.rowKeys.keyFn,
+                  tables: Object.assign({}, APP.rowKeys.tables), gapWhy: APP.rowKeys.gapWhy };
+    delete cfg.tables[pushTables(SRC)[0]];
+    const got = rowKeyGaps(SRC, cfg);
+    t(got.some((x) => x.indexOf('[טבלה בלי רשומה]') === 0),
+      `מ8 · ⛔ מוטציה: טבלה נדחפת בלי רשומה מפילה את «[pc-rowkey]» — נמדדו ${got.length} פערים והצפוי לפחות אחד`);
+  }
+  /*  ⛔ מ9 — קריאה למטפל הסימון בשני ארגומנטים. */
+  {
+    const got = arityGaps("localPut(t, r); pendMark(table, row.client_id); pendHas(k);", PEND_FNS);
+    t(got.length === 1,
+      `מ9 · ⛔ מוטציה: קריאה בשני ארגומנטים מפילה את «[pc-rowkey]» — נמדדו ${got.length} והצפוי 1`);
+  }
+  /*  ⭐ נ4 · מוטציית-נגד: קריאה במפתח אחד ⛔ אינה מפילה — ⚠️ גם כשהיא
+   *  בונה אותו מקריאה מקוננת שיש בה פסיק. */
+  {
+    const got = arityGaps("pendMark(kpPendKey(table, row)); pendHas(t + ':' + k);", PEND_FNS);
+    t(got.length === 0,
+      `נ4 · ⭐ מוטציית-נגד: קריאה במפתח אחד ⛔ **אינה** מפילה — נמדדו ${got.length} והצפוי 0`);
+  }
+  /*  ⭐ נ5 · מוטציית-נגד: פער מוצהר עם נימוקו ⛔ אינו מפיל — ההצהרה היא מה שנמדד. */
+  {
+    const got = rowKeyGaps(SRC, APP.rowKeys);
+    t(got.length === 0,
+      `נ5 · ⭐ מוטציית-נגד: פער מוצהר עם נימוקו ⛔ **אינו** מפיל — נמדדו ${got.length} והצפוי 0`);
+  }
 }
 
 console.log('\n' + (failed === 0 ? '✅' : '❌') +

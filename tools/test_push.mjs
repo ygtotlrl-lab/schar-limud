@@ -74,7 +74,7 @@ const APP = {
 
 /*  ⛔ שורת טבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן, ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [70, 71, 61, 187];
+export const ROWS = [72, 73, 63, 192];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -727,7 +727,7 @@ export function syncLogGaps(src, pts) {
 
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_push: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_push: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   console.log(failures ? '\n❌ בדיקת שכבת הדחיפה נכשלה (' + failures + ')'
                        : '\n✓ שכבת הדחיפה — ' + base.length + ' תרחישים עברו');
   process.exit(failures ? 1 : 0);

@@ -145,7 +145,7 @@ const run = async (cwd) => {
  *  רתמה מעל הסוגר רצה בכל הרצה, וזה בדיוק מה שהועבר. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_md: הרתמה והמוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_md: הרתמה והמוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(bad ? 1 : 0);
 }
 
