@@ -178,7 +178,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 3, app: 0, appWhy: '' };
+const FLOOR = { shared: 4, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -228,6 +228,19 @@ process.on('exit', () => {
 });
 const ok  = (m) => { RAN++; pass++;   console.log('  ok   ' + m); };
 const bad = (m) => { RAN++; failed++; console.log('  FAIL ' + m); };
+
+/*  ⛔ תוצר שהוצהר כחד-פעמי נושא את סבבו — ⚠️ **מה נכנס**: הכרזה
+ *  ברשימת-ההיתר או ב-`appGates` שמכריזה על התוצר כזמני;
+ *  ⛔ **ומה מפיל**: הכרזה כזו בלי מספר סבב. ⭐ **ולמה המבנה
+ *  קיים**: מסמך עבודה שנכתב לסבב אחד ונשאר הופך למקור אמת
+ *  שני, ⚠️ ואין מה שיאמר מתי הוא נצרך ומתי הוא יורד. */
+const ONEOFF_RE = /חד-פעמי|חד-פעמית|חד פעמי|מסמך עבודה|זמני לסבב/;
+const ROUND_RE = /סבב\s+\d+/;
+export function oneoffGaps(decls) {
+  return Object.entries(decls)
+    .filter(([, why]) => ONEOFF_RE.test(String(why)) && !ROUND_RE.test(String(why)))
+    .map(([k]) => k);
+}
 
 export function audit(root) {
   /*  ⛔ נפילה-חזרה לסריקת דיסק כשאין git (סבב 67) — הרתמות מריצות את
@@ -302,6 +315,17 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
           'כותבים «מה השער מודד — ולמה היכולת אינה קיימת בשאר»');
 }
 
+{
+  const decls = { ...APP.only, ...APP.appGates };
+  const g4 = oneoffGaps(decls);
+  g4.length === 0
+    ? ok('4 · [oneoff-round] כל הכרזת תוצר חד-פעמי נושאת את סבבה — נמדדו ' +
+         Object.keys(decls).length + ' הכרזות ואפס בלי סבב נקוב')
+    : bad('4 · [oneoff-round] הכרזת תוצר חד-פעמי בלי סבב — נמדדו ' + g4.length +
+          ' מתוך ' + Object.keys(decls).length + ' והצפוי אפס (' + g4.join(' · ') +
+          '). נוקבים בסבב שבו נכתב, ⛔ שהוא מה שאומר מתי הוא יורד');
+}
+
 console.log('\n— מוטציות —');
 /*  ⛔ כותב על עותק — ⚠️ המוטציה משנה את סט הקבצים של הריפו, ⛔ ואין סט שאפשר למסור בזיכרון. */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fset-'));
@@ -372,6 +396,30 @@ if (!RUN_MUT) {
   APP.appGates[key] = keep;
   hit ? ok('מ4 · [gate-reason] נימוק שנוקב בנוכחות בלבד מפיל את טענה 3')
       : bad('מ4 · נימוק שהוא נוכחות בלבד לא נתפס');
+}
+
+/*  ⛔ מ6 — הכרזת תוצר חד-פעמי בלי סבב (סבב 147). ⚠️ מסמך
+ *  עבודה שנכתב לסבב אחד ונשאר הוא מקור אמת שני. */
+{
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  APP.appGates[key] = 'מסמך עבודה חד-פעמי להכרעת השורות';
+  const hit = oneoffGaps(APP.appGates).includes(key);
+  APP.appGates[key] = keep;
+  hit ? ok('מ6 · [oneoff-round] הכרזת תוצר חד-פעמי בלי סבב מפילה את טענה 4')
+      : bad('מ6 · הכרזה חד-פעמית בלי סבב לא נתפסה');
+}
+
+/*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית שנוקבת בסבבה אינה מפילה:
+ *  ⚠️ בלעדיה הטענה אינה מבחינה בין «חסר סבב» ל«המילה מופיעה». */
+{
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב 147';
+  const clean = oneoffGaps(APP.appGates).length === 0;
+  APP.appGates[key] = keep;
+  clean ? ok('נ3 · ⭐ מוטציית-נגד: הכרזה חד-פעמית שנוקבת בסבבה ⛔ אינה מפילה')
+        : bad('נ3 · הכרזה תקינה נספרה בטעות כחסרת סבב');
 }
 
 /*  ⛔ מ5 — הצהרה שאין לה שער (סבב 144). ⚠️ הצהרה שהתיישנה היא בעצמה

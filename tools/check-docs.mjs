@@ -56,7 +56,7 @@ export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 125, 199];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', '99cca09e32eaeb2c'],
+  ['table', '3cca9252fd2d8896'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -140,6 +140,10 @@ process.on('exit', () => {
 const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
 const pass = (m) => (RAN++, console.log('✅ ' + m));
 const warn = (m) => console.warn('⚠️ ' + m);   // אזהרה שאינה מפילה את השער
+/*  ⛔ דילוג הוא הכרעה ⛔ ולא טענה שלא רצה — ⚠️ השער שאל אם יש בסיס
+ *  להשוואה וענה «אין»: ⭐ ומונה שאינו סופר אותו מדווח ריצה חלקית
+ *  ⛔ ומפיל שער שהבאנר שלו מצהיר שהדילוג אינו מפיל. */
+const skipped = (m) => { RAN++; warn(m); };
 
 if (!fs.existsSync(APP.file)) {
   console.error(`❌ ${APP.file} לא נמצא — יש להריץ את הבדיקה משורש הריפו`);
@@ -287,7 +291,7 @@ for (const [id, sha] of CANON) {
  *  ⛔ אין בסיס להשוואה ⇒ מדלגים באזהרה. אין להפוך זאת לכישלון. */
 {
   const git = (...args) => spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  const skip = (why) => warn(`דילוג על בדיקת קידום שורת העדכון — ${why}. ` +
+  const skip = (why) => skipped(`דילוג על בדיקת קידום שורת העדכון — ${why}. ` +
                              'זו אזהרה בלבד; השער אינו נופל (סבב 20).');
 
   const ver = git('--version');
@@ -328,7 +332,7 @@ for (const [id, sha] of CANON) {
  *  לעולם. ⚠️ אין בסיס להשוואה ⇒ מדלגים באזהרה, ⛔ ואין להפוך זאת לכישלון. */
 {
   const git = (...args) => spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  const skip = (why) => warn(`דילוג על בדיקת קידום \`CACHE_NAME\` — ${why}. ` +
+  const skip = (why) => skipped(`דילוג על בדיקת קידום \`CACHE_NAME\` — ${why}. ` +
                              'זו אזהרה בלבד; השער אינו נופל.');
   /*  ⛔ השם נקרא מהקובץ ⛔ ואינו מוצהר כאן — ⚠️ הקידומת נבדלת בין הריפו,
    *  ⭐ ומה שנמדד הוא **השינוי** ולא הערך. */
