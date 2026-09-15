@@ -230,15 +230,34 @@ function assertions(yml, sh, mode) {
 /* ── הריצה האמיתית ─────────────────────────────────────────────────────── */
 for (const [ok, msg] of assertions(ymlSrc, shSrc)) (ok ? pass : fail)(msg);
 
-/* ז. הרשאת הרצה — נקראת מה-index של git, לא ממצב הדיסק, כי זה מה
- *    שנדחף בפועל. ⚠️ מדלגת ואינה מפילה כשאין git. */
-try {
-  const mode = execFileSync('git', ['-C', ROOT, 'ls-files', '-s', SH],
-                            { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-                 .trim().split(/\s+/)[0];
-  if (mode === '100755') pass('signing/sign-apk.sh בר-הרצה (100755)');
-  else fail(`signing/sign-apk.sh במצב ${mode} ולא 100755 — ה-workflow קורא לו ישירות`);
-} catch (_) { console.log('⏭️  אין git — בדיקת הרשאת ההרצה מדולגת'); }
+/*  ז. הרשאת הרצה — ⛔ **הטענה היא על מה שנדחף**, ⚠️ ולכן היא נקראת
+ *  מה-index של git ⛔ ולא ממצב הדיסק: ⭐ ה-runner מקבל בצ׳קאאוט את מצב
+ *  ה-index, ⚠️ ומצב דיסק יכול להיבדל ממנו — `core.fileMode=false` שומר
+ *  בו 100755 על קובץ שאיבד את הסיבית.
+ *  ⛔ **ובעץ שאינו מאגר אין מצב מעקב כלל** — ⚠️ שם נמדד מצב הדיסק,
+ *  ⭐ והטענה אומרת זאת בשמה: ⛔ היא מדידה **חלשה יותר**, ⚠️ ולא אותה
+ *  מדידה במילים אחרות.
+ *  ⛔⛔ **ואינה מדלגת** — ⚠️ דילוג הוריד את המונה ל-28 מתוך 29, ⭐ והוא
+ *  נבלע ב-`GATE_SUBRUN` של שער הקריאה-בלבד: ⛔ כלומר «עבר» על טענה
+ *  שלא רצה. ⚠️ **והנפילה-חזרה ניתנת להפרכה** — ⛔ `fs.cpSync` משמר את
+ *  המצב, ⭐ ו-`chmod 644` על העותק מפיל אותה. */
+{
+  let mode = null, src = 'index של git';
+  try {
+    mode = execFileSync('git', ['-C', ROOT, 'ls-files', '-s', SH],
+                        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+             .trim().split(/\s+/)[0] || null;
+  } catch (_) { mode = null; }
+  if (!mode) {
+    /*  ⚠️ שמונה הביטים התחתונים בלבד — ⛔ `100755` של git הוא הטיפוס
+     *  ועוד ההרשאות, ⭐ ו-`statSync().mode` נושא את שניהם באותו מספר. */
+    mode = '100' + (fs.statSync(join(ROOT, SH)).mode & 0o777).toString(8);
+    src = 'מצב הדיסק — ⚠️ אין כאן מאגר git, ⛔ ומצב מעקב אינו קיים';
+  }
+  if (mode === '100755') pass(`signing/sign-apk.sh בר-הרצה (100755, נקרא מ-${src})`);
+  else fail(`signing/sign-apk.sh: נמדד ${mode} והצפוי 100755 (נקרא מ-${src}) — ` +
+            'ה-workflow קורא לו ישירות; מה עושים: `git update-index --chmod=+x signing/sign-apk.sh`');
+}
 
 /*  ז2. ⛔ הנרמול ושער האלפבית נמדדים **בהתנהגות**, ובשני הכיוונים —
  *  ⚠️ ולא בנוכחות שלוש מחרוזות במקור: ⭐ ערך שנושא תו בלתי-נראה חוזר
