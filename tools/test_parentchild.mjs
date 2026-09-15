@@ -53,6 +53,10 @@ const APP = {
   /*  ⛔ בן לשני הורים — ⚠️ **ולמה ריק**: נמדד ואין, ⭐ ולכל בן כאן אב
    *  אחד: ⛔ הצהרה שאין לה בן בעל שני הורים מפילה. */
   twoParents: {},
+  /*  ⛔ מפת האב-ובן החיה שבמקור — ⚠️ **מה נכנס**: שם המשתנה שמונה
+   *  אב ⟵ בניו, ⭐ **בסדר שבו הם כתובים**; ⛔ **ומה מפיל**: שם שאין
+   *  לו מפה במקור, ⛔ וסדר הורים שנבדל מ-`twoParents`. */
+  childMap: 'PC_CHILDREN',
   pushWriter: null,
   /*  ⚠️ רתמת הירושה — ⛔ הבן הוא שורה עצמאית, ⭐ ולכן הירושה היא פונקציה
    *  שמקבלת את האב ואת הבן: ⛔ הרתמה חותכת אותה מהמקור ומריצה אותה. */
@@ -99,7 +103,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ שש הטענות רצות בכולן, ⭐ וכל אחת
  *  נושאת ענף מדוד גם באפליקציה שאין בה אב-ובן: ⛔ טענה שהייתה מדולגת שם
  *  הייתה מדווחת «עבר» על מה שלא נמדד. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+const FLOOR = { shared: 7, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -263,6 +267,34 @@ function runInherit(code) {
    ══════════════════════════════════════════════════════════════════════════ */
 console.log(`\n— אב-ובן (${APP.app}) —`);
 
+/*  ⛔ סדר ההורים נקרא **מהמפה החיה שבמקור** ⛔ ולא מההצהרה — ⚠️ זה ההבדל
+ *  בין «מוצהר» ל«נאכף»: ⭐ הצהרה שמושווית להצהרה עוברת תמיד, ⛔ ושתי
+ *  הצהרות שנכתבו בשני סבבים אינן ראיה זו לזו.
+ *  ⛔ **והקריאה על המקור הגולמי** — ⚠️ שמות הטבלאות שבמפה הם **מחרוזות**,
+ *  ⭐ והלבנה הייתה מוחקת בדיוק את מה שנמדד כאן. */
+function childMapOrder(src, varName) {
+  const m = new RegExp('(?:var|const|let)\\s+' + varName + '\\s*=\\s*\\{').exec(src);
+  if (!m) return null;
+  const a = src.indexOf('{', m.index);
+  let d = 0, end = -1;
+  for (let k = a; k < src.length; k++) {
+    if (src[k] === '{') d++;
+    else if (src[k] === '}') { d--; if (!d) { end = k + 1; break; } }
+  }
+  if (end < 0) return null;
+  const body = src.slice(a + 1, end - 1);
+  const out = [];
+  for (const e of body.matchAll(/(^|[,{\s])([a-z_][a-z_0-9]*)\s*:\s*\[([\s\S]*?)\]/g))
+    out.push({ parent: e[2], kids: [...e[3].matchAll(/\b(?:t|table)\s*:\s*'([a-z_0-9]+)'/g)].map((x) => x[1]) });
+  return out;
+}
+
+/*  ⛔ ההורים של בן, בסדר שבו הם כתובים במפה — ⚠️ זה הסדר שבו הם נשאלים,
+ *  ⭐ ומי שנשאל ראשון הוא שמכריע. */
+function parentsOf(map, child) {
+  return (map || []).filter((e) => e.kids.indexOf(child) >= 0).map((e) => e.parent);
+}
+
 const PAIRS = APP.parentChild;
 const LIVE = liveKids(APP.dbSchema);
 const TABLES = new Set(APP.dbSchema.map((r) => r.t));
@@ -347,6 +379,37 @@ const TABLES = new Set(APP.dbSchema.map((r) => r.t));
 
 /*  ⛔ מכאן ולמטה מוטציות — ⚠️ הן רצות ברמה המלאה בלבד: ⛔ הרמה המהירה
  *  עוצרת כאן עם קוד היציאה של הטענות שכבר רצו, ⭐ והכיסוי אינו יורד. */
+{
+  /*  ⛔ סדר ההורים נאכף ⛔ ואינו מוצהר בלבד — ⚠️ **מה נכנס**: המפה החיה
+   *  שבמקור; ⛔ **ומה מפיל**: בן שסדר הורותיו במפה נבדל מההצהרה, ⛔ בן
+   *  בעל שני הורים במפה שאינו מוצהר, ⛔ ושם מפה שאין לו מפה במקור.
+   *  ⭐ **ומה אינו נאכף כאן**: מרוץ בין שתי מחיקות בזמן ריצה — ⚠️ הוא
+   *  אינו כתוב בקוד באף מקום, ⛔ והמפה היא המקום היחיד שבו שני ההורים
+   *  כתובים זה לצד זה. */
+  const LIVE_MAP = APP.childMap ? childMapOrder(SRC, APP.childMap) : null;
+  const decl = Object.keys(APP.twoParents);
+  const bad = [];
+  if (APP.childMap && !LIVE_MAP) bad.push(`\`${APP.childMap}\` אינה במקור`);
+  if (!APP.childMap && decl.length) bad.push('יש הצהרת שני הורים ואין מפה חיה שתאכוף אותה');
+  const liveTwo = [];
+  if (LIVE_MAP) {
+    const kids = new Set();
+    for (const e of LIVE_MAP) for (const c of e.kids) kids.add(c);
+    for (const c of kids) if (parentsOf(LIVE_MAP, c).length > 1) liveTwo.push(c);
+    for (const c of liveTwo) if (decl.indexOf(c) < 0) bad.push(`${c}: שני הורים במפה בלי הצהרה`);
+    for (const c of decl) {
+      const got = parentsOf(LIVE_MAP, c);
+      if (got.join('|') !== APP.twoParents[c].order.join('|'))
+        bad.push(`${c}: נמדד «${got.join(' ⟵ ') || 'אין'}» והצפוי «${APP.twoParents[c].order.join(' ⟵ ')}»`);
+    }
+  }
+  t(bad.length === 0,
+    `7 · [pc-order-live] סדר ההורים שבמפה החיה מול ההצהרה — נמדדו ${liveTwo.length} בנים ` +
+    `בעלי שני הורים במפה ו-${decl.length} הצהרות, ו-${bad.length} חריגות והצפוי אפס` +
+    `${bad.length ? ' (' + bad.join(' · ') + ')' : ''}. ` +
+    'מה עושים: מסדרים את המפה שבמקור לפי הסדר המוצהר, או מתקנים את `APP.twoParents`');
+}
+
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_parentchild: המוטציות רצות ברמה המלאה (--full)');
@@ -414,6 +477,25 @@ if (APP.inherit) {
    *  ⭐ והטענה שמכסה את המצב הזה היא 5 עצמה: ⛔ היא מודדת ששני צדדי
    *  ההצהרה מסכימים. */
   console.log('  ⏭ מ4/מ5 · אין פונקציית ירושה באפליקציה הזו — אין מה למוטט');
+}
+{
+  /*  ⛔ המוטציה מהפכת את סדר ההורים **במפה החיה** — ⚠️ היא שוברת את
+   *  המנגנון: ⭐ ההצהרה נשארת כשהייתה, ⛔ והקוד אומר משהו אחר. */
+  const map0 = APP.childMap ? childMapOrder(SRC, APP.childMap) : null;
+  const two = map0 ? Object.keys(APP.twoParents).filter((c) => parentsOf(map0, c).length > 1) : [];
+  if (!two.length) console.log('  ⏭ מ6/נ2 · אין כאן בן לשני הורים במפה החיה — אין סדר שאפשר להפוך');
+  else {
+    const flipped = map0.slice().reverse();
+    const got = parentsOf(flipped, two[0]);
+    t(got.join('|') !== APP.twoParents[two[0]].order.join('|'),
+      `מ6 · [pc-order-live] מוטציה: סדר ההורים במפה הופך — נתפסה (טענה 7 הייתה נכשלת)`);
+    /*  ⭐ מוטציית-נגד: סדר **הבנים** בתוך אב אחד מתהפך ⛔ ואינו מפיל —
+     *  ⚠️ הוא אינו סדר ההכרעה בין אבות, ⭐ ושער שהיה נופל עליו היה חוסם
+     *  עריכה תקינה. */
+    const inner = map0.map((e) => ({ parent: e.parent, kids: e.kids.slice().reverse() }));
+    t(parentsOf(inner, two[0]).join('|') === APP.twoParents[two[0]].order.join('|'),
+      'נ2 · ⭐ היפוך סדר הבנים בתוך אב אחד ⛔ **אינו** מפיל');
+  }
 }
 {
   /*  ⭐ מוטציית-נגד: **הצהרה שנוספה כדין** ⛔ אינה מפילה — ⚠️ הטענות

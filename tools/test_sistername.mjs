@@ -7,7 +7,10 @@
    הריפו או בשמה העברי, ⭐ שנגזר מכותרת טבלת התשתית: ⛔ הערה מתארת את
    הריפו שהיא חיה בו ⛔ ולא את מצבו של אחר. ⛔ **ואפס נכס `icons/` שזהה
    בית-לבית לאחות** — ⚠️ נכס שלא נגזר מחדש הוא הגזירה עצמה, ⭐ והוא נראה
-   על המסך.
+   על המסך. ⛔ **ואפס קבוצת מנגנון שאין לה צרכן כאן** — ⚠️ הקבוצות נגזרות
+   מתחיליות השמות שבמקור ⛔ ואינן רשימה מוקלדת, ⭐ והצרכן נמדד על המקור
+   בלי הערות: ⛔ מנגנון שהועתק ואיש אינו קורא לו הוא שארית גזירה גם כשאינו
+   נושא את שם האחות.
 
    **הנימוק המדוד:** «הקופה» נגזרה מגיוס בהעתקה — ⚠️ והשם `gius` נשאר
    במעטפת האנדרואיד, בהערת ה-`build.gradle` ובתיעוד: ⭐ ושישה נכסי אייקון
@@ -42,6 +45,15 @@ const APP = {
    *  עושה שאי-אפשר בלעדיו; ⛔ **ומה מפיל**: הכרזה שאין לה אזכור בפועל,
    *  ⛔ ואזכור שאינו כאן. ⭐ **ולמה ריק**: נמדד ואין. */
   nameAllow: {},
+  /*  ⛔ מנגנון שאין לו צרכן כאן ⛔ ונשאר בכוונה — ⚠️ **מה נכנס**: תחילית
+   *  הקבוצה ⟵ מה המנגנון עושה ולמה הוא נשאר; ⛔ **ומה מפיל**: קבוצה בלי
+   *  צרכן שאינה כאן, ⛔ והכרזה שיש לקבוצה שלה צרכן. ⭐ **ולמה המבנה
+   *  קיים**: קוד נגזר מביא מנגנונים שלמים, ⚠️ והשם אינו הסימן — הצרכן
+   *  הוא: ⛔ ומנגנון שיושב בבלוק חתום אינו נמדד בשער היתומים כלל. */
+  mechNoConsumer: {
+    legacy:
+      'מחלצת חותמת שנשמרה בשדה המזהה בגרסה ישנה — ⛔ והתקן מחייב נקודת מעבר אחת בכל האפליקציות: ⚠️ ואין כאן היום רשומה ישנה שעוברת דרכה',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -67,7 +79,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ סט הקבצים הנסרק זהה בכולן, ⭐ ומספר
  *  הטענות אינו תלוי במה שיש באפליקציה. */
-const FLOOR = { shared: 7, app: 0, appWhy: '' };
+const FLOOR = { shared: 9, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -289,6 +301,69 @@ export function sisterCmtHits(text, cmts, sealed, sisters, shorts) {
   return out;
 }
 
+/*  ⛔ צורות ההגדרה ברמת המודול — ⚠️ הן זהות לאלה שבשער הפונקציות החלקיות,
+ *  ⭐ ומה שנמדד כאן הוא **הצרכן** ⛔ ולא השם עצמו. */
+const MECH_FORMS = [
+  /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/gm,
+  /^window\s*\.\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\b/gm,
+  /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\b/gm,
+  /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^()]*\)\s*=>/gm,
+  /^window\s*\.\s*([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^()]*\)\s*=>/gm,
+];
+
+/*  ⛔ הקבוצות נגזרות מהמקור ⛔ ואינן רשימת תחיליות מוקלדת — ⚠️ רשימה
+ *  שנכתבה היום תופסת את מה שהיה, ⭐ ותחילית שתיכנס מחר נתפסת אף היא. */
+export function mechGroups(src, isHtml) {
+  /*  ⛔ ההגדרות נסרקות על המקור **בלי הערות** ⛔ ולא על מקור מולבן —
+   *  ⚠️ הלבנה מוחקת גם את המחרוזות, ⭐ והצרכן כאן עשוי לחיות במחרוזת
+   *  שבונה סימון: ⛔ ושני מקורות — אחד להגדרה ואחד לצרכן — הם שתי
+   *  מדידות על אותה ראיה. */
+  const w = noComments(src, isHtml !== false);
+  const names = new Set();
+  for (const re of MECH_FORMS) { re.lastIndex = 0; let m; while ((m = re.exec(w)) !== null) names.add(m[1]); }
+  const g = new Map();
+  for (const nm of names) {
+    const m = /^_?([a-z]{2,})[A-Z]/.exec(nm);
+    if (!m) continue;
+    if (!g.has(m[1])) g.set(m[1], []);
+    g.get(m[1]).push(nm);
+  }
+  return { groups: g, whitened: w };
+}
+
+/*  ⛔ הצרכן נמדד על המקור **בלי הערות** — ⚠️ הערה לעולם אינה צרכן, ⭐ אבל
+ *  מחרוזת שבונה סימון כן: ⛔ מדידה על המקור המולבן הייתה סופרת מנגנון חי
+ *  כמת, ⚠️ ומדידה על הגולמי הייתה מחזיקה מנגנון מת בחיים בזכות הערה. */
+export function noComments(src, isHtml) {
+  const out = src.split('');
+  for (const [a, b] of commentRanges(src, isHtml))
+    for (let i = a; i < b; i++) if (out[i] !== '\n') out[i] = ' ';
+  return out.join('');
+}
+
+/*  ⛔ קבוצה בלי צרכן — ⚠️ **מה נכנס**: המקור; ⛔ **ומה מפיל**: קבוצה שאף
+ *  אחד מחבריה אינו נקרא ממקום שאינו הגדרתו. ⭐ **ולמה הקבוצה ולא השם**:
+ *  קוד נגזר מביא מנגנון שלם, ⚠️ ומדידת שם בודד הייתה מדווחת על עוזר
+ *  פנימי שהמנגנון עצמו קורא לו. */
+export function mechNoConsumer(src, isHtml) {
+  const { groups, whitened } = mechGroups(src, isHtml);
+  const R = whitened;
+  const dead = [];
+  for (const [pf, mem] of groups) {
+    let used = false;
+    for (const nm of mem) {
+      const esc = nm.replace(/\$/g, '\\$');
+      const bound = new RegExp('(?<![\\w$])' + esc + '(?![\\w$])', 'g');
+      const refs = (R.match(bound) || []).length;
+      let defs = 0;
+      for (const re of MECH_FORMS) { re.lastIndex = 0; let m; while ((m = re.exec(whitened)) !== null) if (m[1] === nm) defs++; }
+      if (refs - defs > 0) { used = true; break; }
+    }
+    if (!used) dead.push(pf);
+  }
+  return dead.sort();
+}
+
 const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8');
 const SISTERS = PEERS.filter((p) => p !== APP.name);
 
@@ -371,6 +446,33 @@ t(n++, cmtHits.length === 0,
     `[sister-ambig] הכרזת שם דו-משמעי שאין לה אתר — נמדדו ${bad.length} מתוך ` +
     `${Object.keys(AMBIG).length} והצפוי 0${bad.length ? ` (${bad.join(' · ')})` : ''}. ` +
     'מסירים מ-AMBIG שם שאינו דו-משמעי עוד');
+}
+
+/* ── 3ב. מנגנון שאין לו צרכן — שארית גזירה שאינה נושאת את שם האחות ─────── */
+/*  ⛔ השם אינו הסימן — הצרכן הוא — ⚠️ סעיף הניקוי של הסבב הקודם חיפש את
+ *  שם האחות, ⭐ ומנגנון שלם שהועתק ואין לו כאן צרכן אינו נושא אותו:
+ *  ⛔ והוא שרד גם את שער היתומים, ⚠️ שמדלג על מה שיושב בבלוק חתום. */
+{
+  const MECH = APP.mechNoConsumer || {};
+  const dead = mechNoConsumer(SRC, true);
+  const names = Object.keys(MECH);
+  const undecl = dead.filter((p) => names.indexOf(p) < 0);
+  const staleM = names.filter((p) => dead.indexOf(p) < 0);
+  const reasons = Object.entries(MECH).filter(([, w]) => {
+    const s = String(w || '').trim(), i = s.indexOf(' — ');
+    return i < 15 || s.length - i < 18;
+  }).map(([k]) => k);
+  t(n++, undecl.length === 0 && reasons.length === 0,
+    `[sister-orphan] קבוצת מנגנון שאין לה צרכן כאן — נמדדו ${undecl.length} ` +
+    `מתוך ${mechGroups(SRC, true).groups.size} קבוצות והצפוי 0` +
+    (undecl.length ? ` (${undecl.join(' · ')})` : '') +
+    (reasons.length ? ` · נימוק חסר: ${reasons.join(' · ')}` : '') +
+    '. מסירים את המנגנון, או מכריזים ב-APP.mechNoConsumer עם מה שהוא עושה ולמה נשאר');
+  t(n++, staleM.length === 0,
+    `[sister-orphan-stale] הכרזה שיש לקבוצה שלה צרכן — נמדדו ${staleM.length} ` +
+    `מתוך ${names.length} והצפוי 0` +
+    (staleM.length ? ` (${staleM.join(' · ')})` : '') +
+    '. מסירים מ-APP.mechNoConsumer קבוצה שכבר נקראת מקוד חי');
 }
 
 /* ── 3. אפס נכס `icons/` שזהה בית-לבית לאחות ───────────────────────────── */
@@ -500,6 +602,26 @@ if (RUN_MUT) {
     t(n++, got.length === 0,
       'נ4 · ⭐ מוטציית-נגד: שם קצר דו-משמעי בשימושו הרגיל ⛔ אינו מפיל — ' +
       `נמדדו ${got.length} אזכורים והצפוי 0`);
+  }
+
+  /* ── 12. מוטציה — מנגנון שנוסף בלי צרכן **חייב** להיתפס ──────────────── */
+  /*  ⛔ המוטציה שוברת את המנגנון ⛔ ולא את הצורה — ⚠️ היא מוסיפה למקור
+   *  פונקציה ברמת המודול שאיש אינו קורא לה, ⭐ והמדידה היא **הצרכן**:
+   *  ⛔ והיא רצה על מחרוזת ⛔ ואינה נכתבת לעץ. */
+  {
+    const at = SRC.lastIndexOf('</script>');
+    const inject = (extra) => SRC.slice(0, at) +
+      '\nfunction zzGraftKick() { return 1; }\n' + extra + SRC.slice(at);
+    const dead1 = mechNoConsumer(inject(''), true);
+    t(n++, dead1.indexOf('zz') >= 0,
+      'מ5 · ⛔ מוטציה: מנגנון שנוסף בלי צרכן מפיל את «[sister-orphan] קבוצת מנגנון ' +
+      `שאין לה צרכן כאן» — נמדדו ${dead1.length} קבוצות מתות והצפוי שתכלול את «zz»`);
+    /*  ⭐ מוטציית-נגד: אותו מנגנון **עם צרכן חי** ⛔ אינו מפיל — ⚠️ זו
+     *  העבודה היומיומית, ⛔ ושער שנופל עליה חוסם כל פונקציה חדשה. */
+    const dead2 = mechNoConsumer(inject('var zzGraftSeen = zzGraftKick();\n'), true);
+    t(n++, dead2.indexOf('zz') < 0,
+      'נ5 · ⭐ מוטציית-נגד: אותו מנגנון עם קורא חי ⛔ אינו מפיל — ' +
+      `נמדדו ${dead2.length} קבוצות מתות והצפוי בלי «zz»`);
   }
 
 }
