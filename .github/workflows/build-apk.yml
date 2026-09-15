@@ -79,7 +79,24 @@ jobs:
           # ⛔ המפתח נכתב מחוץ לעץ העבודה — ⚠️ קובץ בעץ נכנס ל-artifact
           # ולסטטוס של git, והמפתח חוזר לריפו בדלת האחורית.
           umask 077
-          printf '%s' "$KEYSTORE_B64" | base64 -d > "$SIGN_KEYSTORE"
+          # ⛔ שלושת השלבים בסדר הזה: נרמול ⟵ שער האלפבית ⟵ פענוח.
+          # ⚠️ שער שרץ לפני הנרמול מפיל ערך שהנרמול היה מציל, ⛔ וההודעה
+          # שולחת את הקורא לחפש סיסמה שגויה במקום הדבקה מזוהמת.
+          #
+          # ⛔ וערך שמגיע מסוד מנורמל לפני שהוא נצרך — ⚠️ רווח, תווי סוף
+          # שורה וסימנים בלתי-נראים מוסרים: ⭐ ערך שעבר דרך ממשק אנושי
+          # נושא אותם — BOM, סימני כיווניות, רווח קשיח — ⛔ ואין להם
+          # משמעות בתוכן. ⚠️ ומה שאינו באלפבית עדיין מפיל — נרמול אינו סליחה.
+          B64=$(printf '%s' "$KEYSTORE_B64" \
+                | LC_ALL=C tr -d ' \t\r\n' \
+                | LC_ALL=C sed -e 's/\xEF\xBB\xBF//g' \
+                               -e 's/\xE2\x80[\x8B-\x8F]//g' \
+                               -e 's/\xC2[\xA0\xAD]//g')
+          if ! printf '%s' "$B64" | LC_ALL=C grep -qE '^[A-Za-z0-9+/]+=*$'; then
+            echo "❌ KEYSTORE_B64 carries a character outside the base64 alphabet — a contaminated paste, not a wrong password" >&2
+            exit 1
+          fi
+          printf '%s' "$B64" | base64 -d > "$SIGN_KEYSTORE"
           [ -s "$SIGN_KEYSTORE" ] || { echo "❌ KEYSTORE_B64 decoded to an empty file" >&2; exit 1; }
           # The signing tools live in build-tools, which is not on PATH by default.
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)

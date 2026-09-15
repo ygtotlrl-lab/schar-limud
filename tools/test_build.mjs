@@ -69,7 +69,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 24, app: 0, appWhy: '' };
+const FLOOR = { shared: 29, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -211,6 +211,18 @@ function assertions(yml, sh, mode) {
   add(/^ALIAS="\$\(printf/m.test(sh) && !/^ALIAS='/m.test(sh),
       '⛔ ה-alias נגזר מהמפתח ואינו מוקלד');
 
+  /* ה3. ⭐ שלושת שלבי הסוד, ובסדר הזה: נרמול ⟵ שער האלפבית ⟵ פענוח */
+  {
+    const st = (code.split('Sign with the permanent key')[1] || '').split('- name:')[0];
+    const iNorm = st.indexOf("tr -d ' \\t\\r\\n'");
+    const iGate = st.indexOf("grep -qE '^[A-Za-z0-9+/]+=*$'");
+    const iDec  = st.indexOf('base64 -d > "$SIGN_KEYSTORE"');
+    add(iNorm >= 0 && iGate >= 0 && iDec >= 0,
+        '⛔ שלושת שלבי הסוד קיימים — נרמול · שער האלפבית · פענוח');
+    add(iNorm >= 0 && iGate > iNorm && iDec > iGate,
+        `⛔ והם בסדר נרמול ⟵ שער ⟵ פענוח (נמדדו ${iNorm}/${iGate}/${iDec})`);
+  }
+
   if (mode === 'count') return out.filter(([ok]) => !ok).length;
   return out;
 }
@@ -227,6 +239,47 @@ try {
   if (mode === '100755') pass('signing/sign-apk.sh בר-הרצה (100755)');
   else fail(`signing/sign-apk.sh במצב ${mode} ולא 100755 — ה-workflow קורא לו ישירות`);
 } catch (_) { console.log('⏭️  אין git — בדיקת הרשאת ההרצה מדולגת'); }
+
+/*  ז2. ⛔ הנרמול ושער האלפבית נמדדים **בהתנהגות**, ובשני הכיוונים —
+ *  ⚠️ ולא בנוכחות שלוש מחרוזות במקור: ⭐ ערך שנושא תו בלתי-נראה חוזר
+ *  מ-`base64` כ«invalid input», ⛔ וההודעה שהמשתמש ראה אמרה «סיסמה
+ *  שגויה». ⚠️ הקטע נחתך מה-workflow החי ורץ כפי שהוא — ⛔ עותק שלו כאן
+ *  היה מקור אמת שני. */
+{
+  const ls = ymlSrc.split('Sign with the permanent key')[1] || '';
+  const step = ls.split('- name:')[0].split('\n');
+  const a = step.findIndex((l) => l.includes('B64=$(printf'));
+  const b = step.findIndex((l, i) => i > a && l.trim() === 'fi');
+  if (a < 0 || b <= a) {
+    fail('ז2 · קטע הנרמול והשער לא נמצא ב-build-apk.yml — ' +
+         'נמדד a=' + a + ' b=' + b + ' מול שני העוגנים שבצעד — ' +
+         'מה עושים: ודא ש-`B64=$(printf` ו-`fi` שאחריו בגוף הצעד.');
+  } else {
+    const pipe = step.slice(a, b + 1).map((l) => l.replace(/^ {10}/, '')).join('\n');
+    const PAY = Buffer.from('infra-normalisation-probe', 'utf8');
+    const CLEAN = PAY.toString('base64');
+    /*  ⚠️ שבעת הזיהומים שנמדדו בפועל: BOM · RLM · LRM · ZWSP · NBSP ·
+     *  מקף רך · CR · רווח — ⭐ כולם מנורמלים החוצה ⛔ ואינם מפילים. */
+    const DIRTY = '\uFEFF' + CLEAN.slice(0, 4) + '\u200F \r\n\u00A0\u200B\u00AD' +
+                  CLEAN.slice(4) + '\u200E';
+    const FOREIGN = CLEAN.slice(0, 4) + '!' + CLEAN.slice(4);
+    const run = (v) => {
+      try {
+        const out = execFileSync('sh', ['-c', 'set -eu\n' + pipe + '\nprintf %s "$B64"'],
+          { env: { ...process.env, KEYSTORE_B64: v },
+            encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        return { ok: true, out };
+      } catch (_) { return { ok: false, out: '' }; }
+    };
+    const same = (r) => r.ok && Buffer.from(r.out, 'base64').equals(PAY);
+    (same(run(CLEAN)) ? pass : fail)(
+      'ז2 · ⭐ מוטציית-נגד: ערך נקי עובר את השער ומפוענח בית-לבית');
+    (same(run(DIRTY)) ? pass : fail)(
+      'ז2 · ⭐ ערך עם BOM · RLM · LRM · ZWSP · NBSP · מקף רך · CR · רווח — מנורמל ומפוענח בית-לבית');
+    (!run(FOREIGN).ok ? pass : fail)(
+      'ז2 · מוטציה: תו שאינו באלפבית base64 **נופל** בשער, לפני הפענוח');
+  }
+}
 
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
@@ -266,6 +319,16 @@ const MUTATIONS = [
    (y, s) => [y, s.replace(/^PASS="\$\{SIGN_PASS:\?[^\n]*$/m, "PASS='literal'")]],
   ['⭐ ה-alias הוקלד חזרה',
    (y, s) => [y, s.replace(/^ALIAS="\$\(printf[^\n]*$/m, "ALIAS='typed'")]],
+  ['⭐ הנרמול הוסר',
+   (y, s) => [y.replace("| LC_ALL=C tr -d ' \\t\\r\\n' \\", '\\'), s]],
+  ['⭐ שער האלפבית הוסר',
+   (y, s) => [y.replace(/^ +if ! printf[\s\S]*?^ +fi\n/m, ''), s]],
+  ['⭐ השער הוקדם אל **לפני** הנרמול',
+   (y, s) => {
+     const g = y.match(/^ +if ! printf[\s\S]*?^ +fi\n/m)[0];
+     const n = y.match(/^ +B64=\$\(printf[\s\S]*?\\xAD\]\/\/g'\)\n/m)[0];
+     return [y.replace(g, '').replace(n, (m) => g + m), s];
+   }],
   ['שער הטביעה שלפני החתימה הוסר',
    (y, s) => [y, s.replace(/grep -qF "SHA256: \$EXPECTED_SHA256"/, 'grep -q .')]],
 ];
@@ -283,7 +346,7 @@ for (const [label, mut] of MUTATIONS) {
 const BUILD    = '.github/workflows/build-apk.yml';
 const CLEANUP  = '.github/workflows/cleanup-merged-branches.yml';
 const ALL_SLUGS = PEERS;
-const BUILD_SHA   = 'abc188a49b06625f';
+const BUILD_SHA   = '81016a096b25c107';
 const CLEANUP_SHA = 'a48da4dd75a3245c';
 const PRIV = /^(EXPECTED_SHA256=|OUT=)/;
 const SHARED_SHA = '53c4a109a51fca29';
