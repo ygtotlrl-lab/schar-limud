@@ -40,7 +40,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 21, 117, 182];
+export const ROWS = [17, 18, 21, 22, 118, 183];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -51,6 +51,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { builtinModules } from 'node:module';
 import { reasonGaps } from './scope.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בכל העותקים (סבב 67). ⚠️ קובץ שיורד
@@ -178,7 +179,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -267,10 +268,10 @@ export function currentRound(root) {
   } catch { return 0; }
 }
 
-export function audit(root) {
-  /*  ⛔ נפילה-חזרה לסריקת דיסק כשאין git (סבב 67) — הרתמות מריצות את
-   *  השער על עותק בתיקייה זמנית שאין בו `.git`, ⚠️ ושער שהיה מוותר שם
-   *  היה עובר בשקט בדיוק במקום שבו מודדים אותו. */
+/*  ⛔ נפילה-חזרה לסריקת דיסק כשאין git (סבב 67) — הרתמות מריצות את
+ *  השער על עותק בתיקייה זמנית שאין בו `.git`, ⚠️ ושער שהיה מוותר שם
+ *  היה עובר בשקט בדיוק במקום שבו מודדים אותו. */
+export function trackedFiles(root) {
   let files;
   try {
     files = execFileSync('git', ['-C', root, 'ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
@@ -279,13 +280,46 @@ export function audit(root) {
     files = [];
     const walk = (d, rel) => {
       for (const e of fs.readdirSync(d, { withFileTypes: true })) {
-        if (e.name === '.git' || e.name === 'node_modules') continue;
+        if (e.name === '.git') continue;
         const abs = path.join(d, e.name), r2 = rel ? rel + '/' + e.name : e.name;
         if (e.isDirectory()) walk(abs, r2); else files.push(r2);
       }
     };
     walk(root, '');
   }
+  return files;
+}
+
+/*  ⛔ הריפו רץ מקלון טרי בלי התקנה (סבב 148) — ⚠️ **מה נכנס**: שורש הריפו
+ *  ורשימת הקבצים שבמעקב; ⛔ **ומה מפיל**: `package.json` · תיקיית
+ *  `node_modules` · ו-`import` שאינו מודול Node מובנה ואינו נתיב מקומי.
+ *  ⭐ **ולמה המבנה קיים**: תלות חיצונית נשברת בלי שאיש שינה קוד, ⛔ ושער
+ *  שמעתיק עץ מאבד אותה בשקט — ⚠️ והעותק שהוא מודד בו אינו העץ שרץ. */
+const BUILTIN = new Set(builtinModules);
+export function depGaps(root, files) {
+  const out = [];
+  for (const name of ['package.json', 'package-lock.json', 'node_modules'])
+    if (fs.existsSync(path.join(root, name))) out.push('[dep-root] ' + name);
+  for (const f of files) {
+    if (/(^|\/)package(-lock)?\.json$/.test(f)) out.push('[dep-manifest] ' + f);
+    if (/(^|\/)node_modules(\/|$)/.test(f)) out.push('[dep-tree] ' + f);
+    if (!f.endsWith('.mjs') && !f.endsWith('.js')) continue;
+    let src = '';
+    try { src = fs.readFileSync(path.join(root, f), 'utf8'); } catch (e) { continue; }
+    for (const m of src.matchAll(/(?:^|\n)\s*import\s[^;\n]*?from\s+['"]([^'"]+)['"]/g)) {
+      const spec = m[1];
+      /*  ⛔ רשימת המובנים נגזרת מ-Node ⛔ ואינה מוקלדת — ⚠️ `node:fs` ו-`fs`
+          הם אותו מודול, ⭐ ורשימה שתוקלד כאן מתיישנת בגרסה הבאה. */
+      if (spec.startsWith('node:') || BUILTIN.has(spec) ||
+          spec.startsWith('./') || spec.startsWith('../')) continue;
+      out.push('[dep-import] ' + f + ' ⟵ ' + spec);
+    }
+  }
+  return out;
+}
+
+export function audit(root) {
+  let files = trackedFiles(root);
   /*  ⛔ הצלבה מול הדיסק ולא מול האינדקס בלבד (סבב 67) — `git ls-files`
    *  קורא את האינדקס, ⚠️ ולכן קובץ שנמחק מהעץ עדיין מופיע בו; בלי
    *  ההצלבה השער היה עיוור בדיוק למקרה שהוא בא לתפוס. */
@@ -361,6 +395,15 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
     : bad('5 · [oneoff-stale] תוצר חד-פעמי ששרד את סבבו — נמדדו ' + g5.length +
           ' מתוך ' + Object.keys(decls).length + ' והצפוי אפס (' + g5.join(' · ') +
           '). מורידים את התוצר, ⛔ שהוא מה ש«חד-פעמי» הבטיח');
+}
+
+{
+  const g6 = depGaps(ROOT, trackedFiles(ROOT));
+  g6.length === 0
+    ? ok('6 · [no-deps] אפס תלות חיצונית — נמדדו ' + trackedFiles(ROOT).length +
+         ' קבצים במעקב, ואפס `package.json`, אפס `node_modules` ואפס `import` שאינו מודול מובנה')
+    : bad('6 · [no-deps] תלות חיצונית — נמדדו ' + g6.length + ' אתרים והצפוי אפס (' +
+          g6.join(' · ') + '). כותבים את היכולת בפנים, ⛔ שקלון טרי רץ בלי התקנה');
 }
 
 console.log('\n— מוטציות —');
@@ -503,6 +546,33 @@ if (!RUN_MUT) {
     ? bad('נ2 · שער מוצהר נתפס בטעות')
     : ok('נ2 · ⭐ מוטציית-נגד: שער שמוצהר ב-appGates ⛔ אינו מפיל');
 }
+/*  ⛔ מ6 — תלות חיצונית (סבב 148). ⚠️ המוטציה **לוגית** ואינה על העץ,
+ *  ⭐ שהרשימה נמסרת לפונקציה: ⛔ ושני הצדדים מפילים. */
+{
+  depGaps(ROOT, ['package.json']).some((x) => x.startsWith('[dep-manifest]'))
+    ? ok('מ6 · `package.json` בעץ מפיל את טענה 6')
+    : bad('מ6 · `package.json` לא נתפס');
+  depGaps(ROOT, ['node_modules/x/index.js']).some((x) => x.startsWith('[dep-tree]'))
+    ? ok('מ7 · תיקיית `node_modules` מפילה את טענה 6')
+    : bad('מ7 · `node_modules` לא נתפסה');
+}
+
+/*  ⭐ מוטציית-נגד — ⛔ `import` ממודול Node מובנה וממודול מקומי ⛔ אינם
+ *  מפילים, ⚠️ אחרת הטענה הייתה אוסרת כל ייבוא. */
+{
+  const d = clone('m6');
+  fs.writeFileSync(path.join(d, 'tools', 'probe-dep.mjs'),
+    "import fs2 from 'node:fs';\nimport { PEERS } from './peers.mjs';\nexport const X = [fs2, PEERS];\n");
+  const clean = depGaps(d, ['tools/probe-dep.mjs']).length === 0;
+  fs.writeFileSync(path.join(d, 'tools', 'probe-dep.mjs'),
+    "import { resvg } from '@resvg/resvg-js';\nexport const X = resvg;\n");
+  const hit = depGaps(d, ['tools/probe-dep.mjs']).some((x) => x.startsWith('[dep-import]'));
+  clean && hit
+    ? ok('נ5 · ⭐ מוטציית-נגד: ייבוא מובנה ומקומי ⛔ אינו מפיל, ⛔ וחבילה חיצונית כן')
+    : bad('נ5 · נמדד מובנה ' + (clean ? 'נקי' : 'נתפס') + ' וחיצוני ' +
+          (hit ? 'נתפס' : 'נקי') + ' — והצפוי נקי/נתפס');
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
 
 console.log('\n' + (failed === 0 ? '✅' : '❌') +

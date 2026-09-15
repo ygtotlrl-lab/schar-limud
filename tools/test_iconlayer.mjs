@@ -42,9 +42,12 @@ const APP = {
      ואינה מושמטת — והכבד ביותר נמדד ומודפס,
      ולכן חריגה כאן פירושה נכס שנכנס בטעות ולא צורך אמיתי. */
   heavyMipmapAllow: {},
-  /* ⛔ דיו ה-foreground — הצהרה ולא גזירה (סבב 68):
-     ⚠️ ממוצע שנגזר מהתמונה עצמה היה מאשר כל סטייה בדיעבד. */
-  fgInk: [60, 125, 65],
+  /*  ⛔ פלטת החזית — הצהרה ולא גזירה (סבב 68): ⚠️ ממוצע שנגזר מהתמונה
+      עצמה היה מאשר כל סטייה בדיעבד. ⛔ **והיא רשימה ולא צבע יחיד
+      (סבב 148)** — ⚠️ מאסטר גיאומטרי נושא כמה צבעים, ⭐ ונעילת דיו אחד
+      הפילה נכס שנגזר כהלכה: ⛔ והסדר הוא סדר הכיסוי, ⚠️ והראשון הוא
+      הדומיננטי שהאריח נמדד מולו. */
+  fgInks: [[60, 125, 65]],
   tileFlat: true,
   /* ⛔ הסף המשותף הוא 8, ⚠️ והערך כאן הוא ההיתר **המוצהר** של
      האפליקציה הזו — ⚠️ נמדד 0 — ⛔ בתוך הסף המשותף, ולכן אין כאן היתר. */
@@ -58,13 +61,17 @@ const APP = {
       בסף אחר; ⛔ `null` מצהיר «אין מאסטר רסטרי» ⛔ ואינו נשמט. */
   masterBox: [166, 202, 166, 202],
   fgDriftMax: 8,
+  /*  ⛔ צלע שהסמל שבמאסטר מגיע אליה (סבב 148) — ⚠️ שם האריח אינו רקע,
+      ⭐ ושכבת הרקע של ה-adaptive אינה יכולה לשחזר אותו: ⛔ וההצהרה נמדדת
+      משני צדדיה — צלע שמוצהרת ואינה נגועה, וצלע נגועה שאינה מוצהרת. */
+  tileBleed: [],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [118, 119, 121, 122, 124];
+export const ROWS = [119, 120, 122, 123, 125];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -106,7 +113,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 22, app: 0, appWhy: '' };
+const FLOOR = { shared: 27, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -273,6 +280,30 @@ function predict(bg, x, y, W, H) {
 /*  ⛔ סף הדיו — ההצהרה חייבת לתאר את מה שיש (סבב 68). ⚠️ 4 ולא 0:
     הקטנה תקינה עדיין מזיזה ממוצע בפיקסל-שניים. */
 const INK_TOL = 4;
+/*  ⛔ צבע שמכסה פחות מאחוז מפיקסלי החזית האטומים אינו פריט בפלטה (סבב 148)
+    — ⚠️ הוא גבול אנטי-אליאסינג בין שתי צורות: ⭐ מספר פיקסלי הגבול גדל עם
+    ההיקף והשטח גדל בריבועו, ⛔ ולכן היחס מפריד ביניהם בכל רזולוציה. */
+const PAL_MIN_PCT = 1;
+const near = (a, b, tol) => Math.max(...a.map((v, i) => Math.abs(v - b[i]))) <= tol;
+/*  ⛔ המרחק הוא לצבע מוצהר **או למיזוג של שניים** (סבב 148) — ⚠️ פיקסל גבול
+    בין שתי צורות בדיו נבדל יושב על הקטע שביניהן, ⭐ והכפלה מוקדמת שבורה
+    מסיטה אותו לעבר השחור ⛔ ומורידה אותו מכל קטע: ⚠️ ובפלטה של צבע אחד
+    זהו בדיוק המרחק שנמדד עד כאן, ⛔ ולכן אין כאן הרפיה. */
+const palGap = (c, pal) => {
+  let best = Infinity;
+  for (let i = 0; i < pal.length; i++)
+    for (let j = i; j < pal.length; j++) {
+      let num = 0, den = 0;
+      for (let ch = 0; ch < 3; ch++) { const e = pal[j][ch] - pal[i][ch];
+        num += (c[ch] - pal[i][ch]) * e; den += e * e; }
+      const u = den ? Math.max(0, Math.min(1, num / den)) : 0;
+      let d = 0;
+      for (let ch = 0; ch < 3; ch++)
+        d = Math.max(d, Math.abs(c[ch] - (pal[i][ch] + (pal[j][ch] - pal[i][ch]) * u)));
+      if (d < best) best = d;
+    }
+  return best;
+};
 
 /*  ⛔ ששה-עשר הנכסים — ⚠️ הרשימה נגזרת מהדיסק ומ-`FRAME`, ⛔ ואינה מוקלדת:
     ⭐ נכס שנוסף לתיקייה נמדד גם הוא.
@@ -366,7 +397,7 @@ function audit(root) {
       ⭐ ולכן הצבע שנמדד בהם חייב להיות אחד, ⛔ ושניהם מול ה**מוצהר**.
       ⚠️ `tileFlat` הוא מחרוזת באפליקציה שהאריח שלה אינו נייר-ודיו אלא רקע
       וסמל: ⛔ שם אין «צבע דיו» למדוד, והמדידה מנוטרלת בנימוק כתוב. */
-  if (APP.tileFlat === true && APP.fgInk) {
+  if (APP.tileFlat === true && APP.fgInks) {
     const rel = `${RES}/mipmap-xxxhdpi/ic_launcher.png`;
     const p = join(root, rel);
     if (existsSync(p)) {
@@ -374,7 +405,7 @@ function audit(root) {
       try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
       if (im) {
         const hist = new Map();
-        const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+        const lim = (APP.fgInks[0].reduce((a, b) => a + b, 0) / 3 + 255) / 2;
         for (let k = 0; k < im.w * im.h; k++) {
           const [r, g, b] = [im.data[k*4], im.data[k*4+1], im.data[k*4+2]];
           if ((r + g + b) / 3 >= lim) continue;
@@ -385,9 +416,9 @@ function audit(root) {
         if (!top) v.push({ kind: 'tile-ink', rel, msg: 'אין פיקסלי דיו למדוד באריח' });
         else {
           const got = top[0].split(',').map(Number);
-          const d = Math.max(...got.map((x, c) => Math.abs(x - APP.fgInk[c])));
+          const d = Math.max(...got.map((x, c) => Math.abs(x - APP.fgInks[0][c])));
           if (d > INK_TOL)
-            v.push({ kind: 'tile-ink', rel, msg: `דיו האריח [${got}] מול המוצהר [${APP.fgInk}] — ${d} > ${INK_TOL}` });
+            v.push({ kind: 'tile-ink', rel, msg: `דיו האריח [${got}] מול המוצהר [${APP.fgInks[0]}] — ${d} > ${INK_TOL}` });
         }
       }
     }
@@ -414,29 +445,33 @@ function audit(root) {
   {
     const rel = `${RES}/mipmap-xxxhdpi/ic_launcher_foreground.png`;
     const p = join(root, rel);
-    if (existsSync(p) && APP.fgInk) {
+    if (existsSync(p) && APP.fgInks) {
       let im = null;
       try { im = decodePNG(readFileSync(p)); } catch (e) { im = null; }
       if (im) {   /* ⚠️ `decodePNG` מחזיר תמיד RGBA — ⛔ אין כאן ערוץ לבדוק */
-        let op = 0, pa = 0; const so = [0, 0, 0], sp = [0, 0, 0];
+        let op = 0, pa = 0, sum = 0; const hist = new Map();
         for (let k = 0; k < im.w * im.h; k++) {
           const a = im.data[k * 4 + 3];
-          if (a >= 250) { op++; for (let c = 0; c < 3; c++) so[c] += im.data[k * 4 + c]; }
-          else if (a >= ALPHA_MIN) { pa++; for (let c = 0; c < 3; c++) sp[c] += im.data[k * 4 + c]; }
+          const c = [im.data[k * 4], im.data[k * 4 + 1], im.data[k * 4 + 2]];
+          if (a >= OPAQUE) { op++; hist.set(c.join(','), (hist.get(c.join(',')) || 0) + 1); }
+          else if (a >= ALPHA_MIN) { pa++; sum += palGap(c, APP.fgInks); }
         }
         if (!op || !pa) {
           v.push({ kind: 'fg-alpha', rel, msg: `אין די פיקסלים למדוד (אטומים ${op}, חלקיים ${pa})` });
         } else {
-          /*  ⚠️ שתי טענות ולא אחת: הדיו המוצהר חייב לתאר את הפיקסלים
+          /*  ⚠️ שתי טענות ולא אחת: הפלטה המוצהרת חייבת לתאר את הפיקסלים
               האטומים (אחרת ההצהרה עצמה נסחפה), ⛔ והפיקסלים החלקיים חייבים
-              להיות קרובים אליו — זו ההכפלה המוקדמת. */
-          const mo = so.map(x => Math.round(x / op)), mp = sp.map(x => Math.round(x / pa));
-          const dInk = Math.max(...mo.map((x, c) => Math.abs(x - APP.fgInk[c])));
-          if (dInk > INK_TOL)
-            v.push({ kind: 'fg-ink', rel, msg: `הדיו המוצהר [${APP.fgInk}] מול הנמדד [${mo}] — ${dInk} > ${INK_TOL}` });
-          const dPre = Math.max(...mp.map((x, c) => Math.abs(x - APP.fgInk[c])));
-          if (dPre > APP.fgDriftMax)
-            v.push({ kind: 'fg-alpha', rel, msg: `אזור אלפא חלקית [${mp}] מול הדיו [${APP.fgInk}] — ${dPre} > ${APP.fgDriftMax}` });
+              לשבת עליה או על מיזוג של שניים מפריטיה — זו ההכפלה המוקדמת. */
+          const major = [...hist.entries()].filter(([, q]) => q * 100 >= op * PAL_MIN_PCT)
+            .map(([k2]) => k2.split(',').map(Number));
+          const extra = major.filter((c) => !APP.fgInks.some((q) => near(c, q, INK_TOL)));
+          const missing = APP.fgInks.filter((q) => !major.some((c) => near(c, q, INK_TOL)));
+          if (extra.length || missing.length)
+            v.push({ kind: 'fg-ink', rel, msg: `הפלטה המוצהרת ${APP.fgInks.length} פריטים מול ${major.length} שנמדדו — ` +
+              `עודפים [${extra.join(' · ')}], חסרים [${missing.join(' · ')}]` });
+          const drift = sum / pa;
+          if (drift > APP.fgDriftMax)
+            v.push({ kind: 'fg-alpha', rel, msg: `אזור אלפא חלקית — מרחק ממוצע ${drift.toFixed(2)} מהפלטה > ${APP.fgDriftMax}` });
         }
       }
     }
@@ -452,10 +487,15 @@ function audit(root) {
      ממוצע** — לא ממוצע של הפרשים. ⚠️ ההבחנה היא כל ההצדקה של ג(2):
      ממוצע-של-הפרשים היה תופס בעצמו את החלפת המדרג בצבע אחיד, וג(2)
      הייתה הופכת לקישוט שאיש לא ראה נכשל. */
+  /*  ⛔ הצלע שהסמל מגיע אליה אינה נמדדת כרקע (סבב 148) — ⚠️ היא מוצהרת,
+      ⭐ ושלוש האחרות ממשיכות להימדד: ⛔ דילוג גורף היה מבטל את הטענה כולה. */
+  const EDGES = { top: (x, y) => y < RING, bottom: (x, y) => y >= img.h - RING,
+                  left: (x, y) => x < RING, right: (x, y) => x >= img.w - RING };
   let n = 0, sumPred = [0, 0, 0], sumReal = [0, 0, 0], worst = 0;
   for (let y = 0; y < img.h; y++)
     for (let x = 0; x < img.w; x++) {
       if (!(x < RING || y < RING || x >= img.w - RING || y >= img.h - RING)) continue;
+      if (APP.tileBleed.some((name) => EDGES[name](x, y))) continue;
       const d = (y * img.w + x) * 4;
       if (img.data[d + 3] < OPAQUE) continue;   /* ⚠️ פינה מעוגלת — אינה שוליים. */
       const pr = predict(bg, x, y, img.w, img.h);
@@ -472,6 +512,25 @@ function audit(root) {
   const meanGap = Math.max(...[0, 1, 2].map(c => Math.abs(sumPred[c] - sumReal[c]) / n));
   if (meanGap > MEAN_TOL) v.push({ kind: 'bg-mean', msg: `הפרש ממוצעים ${meanGap.toFixed(2)} > ${MEAN_TOL} לערוץ` });
   if (worst > PIXEL_TOL) v.push({ kind: 'bg-pixel', msg: `סטייה מרבית ${worst} > ${PIXEL_TOL}` });
+  /*  ⛔ הנגיעה נמדדת רק כשהרקע עצמו תואם (סבב 148) — ⚠️ רקע שאינו תואם כלל
+      גורם לכל ארבע הצלעות להיראות נגועות, ⭐ והמדידה הייתה חוזרת על הטענה
+      שמעליה: ⛔ שתי הכרעות על אותה ראיה. */
+  if (worst <= PIXEL_TOL)
+    for (const name of Object.keys(EDGES)) {
+      let hit = 0;
+      for (let y = 0; y < img.h; y++)
+        for (let x = 0; x < img.w; x++) {
+          const d = (y * img.w + x) * 4;
+          if (!EDGES[name](x, y) || img.data[d + 3] < OPAQUE) continue;
+          const pr = predict(bg, x, y, img.w, img.h);
+          if (Math.max(...[0, 1, 2].map((c) => Math.abs(pr[c] - img.data[d + c]))) > PIXEL_TOL) hit++;
+        }
+      const declared = APP.tileBleed.includes(name);
+      if (declared !== (hit > 0))
+        v.push({ kind: 'bleed', rel: name,
+                 msg: `הצלע ${name} — נמדדו ${hit} פיקסלים שאינם רקע, והמוצהר ` +
+                      `${declared ? 'נגועה' : 'נקייה'}; מיישרים את ההצהרה` });
+    }
   return v;
 }
 
@@ -497,15 +556,17 @@ t(n++, !base.some(x => x.kind === 'content'), `ב. צלע התוכן בסף אל
 t(n++, !base.some(x => x.kind === 'bg-parse' || x.kind === 'bg-sample'),
   `ג. הרקע נקרא ויש שוליים אטומים למדוד ${of('bg-parse')}${of('bg-sample')}`);
 t(n++, !base.some(x => x.kind === 'bg-mean'), `ג(1). הרקע מול השוליים — הפרש ממוצעים ≤ ${MEAN_TOL} ${of('bg-mean')}`);
+t(n++, !base.some(x => x.kind === 'bleed'),
+  `ג(3). כל צלע שהסמל מגיע אליה מוצהרת — ${APP.tileBleed.length} מוצהרות ${of('bleed')}`);
 t(n++, !base.some(x => x.kind === 'bg-pixel'), `ג(2). הרקע מול השוליים — פיקסל-פיקסל ≤ ${PIXEL_TOL} ${of('bg-pixel')}`);
 t(n++, !base.some(x => x.kind === 'fg-ink'),
-  `ה(1). הדיו המוצהר [${APP.fgInk}] מתאר את הפיקסלים האטומים ${of('fg-ink')}`);
+  `ה(1). הפלטה המוצהרת (${APP.fgInks.length} פריטים) היא פלטת החזית — כל צבע מעל ${PAL_MIN_PCT}% ${of('fg-ink')}`);
 t(n++, !base.some(x => x.kind === 'fg-alpha'),
-  `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהדיו ${of('fg-alpha')}`);
+  `ה(2). הכפלה מוקדמת באלפא — אזור אלפא חלקית ≤ ${APP.fgDriftMax} מהפלטה ${of('fg-alpha')}`);
 t(n++, !base.some(x => x.kind === 'tile-bg'),
   `ה(4). רקע האריח שווה למוצהר בדיוק — ⛔ אין רעש מסכה ${of('tile-bg')}`);
 t(n++, !base.some(x => x.kind === 'tile-ink'),
-  `ה(3). דיו האריח והחזית — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
+  `ה(3). דיו האריח והפריט הדומיננטי בפלטה — אותו צבע, ומול המוצהר ב-APP ${of('tile-ink')}`);
 /*  ⛔ הטענה מודדת את **כל** 16 הנכסים (סבב 75) — ⚠️ עשרת ה-mipmap ושישה
     שב-`icons/`, ⛔ ולא רק אלה שיש להם מסגרת מוצהרת. */
 t(n++, !base.some(x => x.kind === 'margin'),
@@ -528,6 +589,38 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
    כ«לא נשאל», ושדה ריק נקרא כ«נמדד ואין». */
 t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
   `ד. רשימת-ההיתר לקבצים כבדים מוצהרת (${Object.keys(APP.heavyMipmapAllow).length} רשומות)`);
+
+/* ────── ⛔ ח. המאסטר שב-`design/` הוא המקור (סבב 148) ───────────────────────
+   ⛔ **מה נאכף:** המאסטר מוצהר ב-`APP.master` וקיים בעץ · ⛔ `APP.art` תואם
+   את סיומתו · ⛔ אין בו `<text>` · ⛔ והמחולל קורא אותו ואינו מתאר אותו מחדש.
+   ⚠️ **הנימוק המדוד:** שלושה מאסטרים ישבו ב-`design/` והמחולל תיאר את הסמל
+   מחדש בצורות — ⭐ ונמדד שהתיאור נבדל מהמאסטר בצבע הדיו ובשקיפויות:
+   ⛔ שני ציורים שאיש אינו מצליב נפרדים בשקט.
+   ⛔ **מה יישבר בלעדיו:** ⚠️ נכס שיצויר בקוד במקום להיגזר מהמאסטר, ⭐ וטקסט
+   במאסטר שמרונדר לפי הגופן שבמכונה: ⛔ ומה שתלוי בסביבה אינו מקור אמת.
+   ⛔ **מה אינו נאכף כאן:** ⚠️ **תוכן** הציור — ⭐ הוא נמדד בזהות הבייטים
+   שבטענה ו, ⛔ ולא כאן.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const gen = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
+  const mm = /^ {2}master: '([^']+)',$/m.exec(gen), am = /^ {2}art: '([^']+)',$/m.exec(gen);
+  const master = mm ? mm[1] : null, art = am ? am[1] : null;
+  t(n++, !!master && !!art && existsSync(join(ROOT, master)),
+    `ח(1). המאסטר מוצהר וקיים — נמדד ${master || 'אין'} והצפוי קובץ בעץ; מחזירים אותו ל-design/`);
+  const want = art === 'svg' ? '.svg' : '.png';
+  t(n++, !!master && !!art && master.endsWith(want),
+    `ח(2). הצורה ${art} תואמת את סיומת המאסטר — נמדד ${master} והצפוי ${want}; מיישרים את ההצהרה`);
+  const raw = master && existsSync(join(ROOT, master)) ? readFileSync(join(ROOT, master)) : Buffer.alloc(0);
+  const texts = (raw.toString('latin1').match(/<text[\s>]/g) || []).length;
+  t(n++, texts === 0,
+    `ח(3). המאסטר נושא צורות בלבד — נמדדו ${texts} אתרי טקסט והצפוי אפס; ` +
+    'ממירים את הטקסט למתאר, שגופן שבמכונה אינו מקור אמת');
+  const reads = (gen.match(/readFileSync\(join\(ROOT, APP\.master\)/g) || []).length;
+  const redraw = (gen.match(/APP\.mark\.shapes/g) || []).length;
+  t(n++, reads > 0 && redraw === 0,
+    `ח(4). המחולל קורא את המאסטר ואינו מתאר אותו מחדש — נמדדו ${reads} אתרי קריאה ` +
+    `ו-${redraw} אתרי תיאור-סמל, והצפוי קריאה אחת לפחות ואפס תיאור; מוחקים את הציור השני`);
+}
 
 /* ── מחולל האייקונים — משחזר את מה שבעץ ────────────────────────────────── */
 /*  ⛔ הטענה מריצה את המחולל **על עותק** ומשווה בית-בית (סבב 71) — ⚠️ מחולל
@@ -728,8 +821,7 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
    שנדרש מהם הוא נימוק כתוב ולא זהות.
    ──────────────────────────────────────────────────────────────────────── */
 {
-  const GEN_KEYS = ['name', 'art', 'ink', 'bg', 'tileRadius', 'tileBox', 'mark',
-                    'master', 'bgKey', 'keyTol'];
+  const GEN_KEYS = ['name', 'art', 'master', 'ink', 'bg', 'mark', 'bgKey', 'keyTol'];
   const src = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
   const blk = /^const APP = \{$([\s\S]*?)^\};$/m.exec(src);
   t(n++, !!blk, 'ט. בלוק `APP` של המחולל נמצא');
@@ -770,14 +862,14 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
     return (b ? b[1] : '').split('\n')
       .map((l) => /^ {2}([A-Za-z][\w]*):/.exec(l)).filter(Boolean).map((m) => m[1]);
   };
-  t(n++, !GEN_KEYS.every((k) => keysOf(drop('tileRadius')).includes(k)),
+  t(n++, !GEN_KEYS.every((k) => keysOf(drop('bgKey')).includes(k)),
     'ט. ⛔ מוטציה: השמטת שדה מ-`APP` מפילה את «מצהיר את המפתחות הקנוניים»');
   /*  ⭐ מוטציית-נגד **חיה**: השדות מסודרים מחדש — ⛔ סדר אינו מפתח, ⚠️ ושתי
       האפליקציות שהסמל שלהן מצויר בקוד מצהירות אותם בסוף ולא בהתחלה. */
   const reordered = (() => {
     const b = /^const APP = \{$([\s\S]*?)^\};$/m.exec(src);
     const ls2 = b[1].split('\n');
-    const at = ls2.findIndex((l) => /^ {2}tileRadius:/.test(l));
+    const at = ls2.findIndex((l) => /^ {2}bgKey:/.test(l));
     const [moved] = ls2.splice(at, 1); ls2.push(moved);
     return src.replace(b[1], ls2.join('\n'));
   })();
@@ -842,7 +934,7 @@ t(n++, audit(tmp).length === 0, 'נגד: עותק נקי עובר את הביק�
 /* ⚠️ `kinds` מכיל `__none__` כשהציפייה היא **אפס** הפרות — ⛔ מוטציית-נגד
    שאין לה ציפייה מפורשת הייתה עוברת על כל תוצאה. */
 const ALL_KINDS = ['missing', 'decode', 'frame', 'content', 'extra', 'heavy',
-                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'margin'];
+                   'bg-parse', 'bg-sample', 'bg-mean', 'bg-pixel', 'margin', 'bleed'];
 const mutate = (label, fn, kinds, notKinds = []) => {
   const bak = join(tmp, 'bak');
   rmSync(bak, { recursive: true, force: true });
@@ -897,11 +989,12 @@ mutate('⭐ מוטציית-נגד: החשכת פיקסלים שקופים לגמ
 mutate('צלע התוכן גדלה ביחידה אחת — mdpi', () => {
   const p = mip('mdpi', 'ic_launcher_foreground');
   const img = decodePNG(readFileSync(p));
-  let x1 = -1, ym = 0;
-  for (let y = 0; y < img.h; y++)
-    for (let x = 0; x < img.w; x++)
-      if (img.data[(y * img.w + x) * 4 + 3] >= ALPHA_MIN && x > x1) { x1 = x; ym = y; }
-  img.data[(ym * img.w + x1 + 1) * 4 + 3] = 255;
+  /*  ⛔ ההארכה על הצלע **הארוכה** (סבב 148) — ⚠️ הטענה מודדת אותה, ⭐ וסמל
+      גבוה מרוחבו היה מקבל פיקסל בציר שאינו נמדד: ⛔ והמוטציה הייתה מפילה
+      טענה אחרת. */
+  const bb = contentBox(img);
+  if (bb.w >= bb.h) img.data[((bb.y) * img.w + (bb.x + bb.w)) * 4 + 3] = 255;
+  else img.data[((bb.y + bb.h) * img.w + bb.x) * 4 + 3] = 255;
   writeFileSync(p, encodePNG(img));
 }, ['content']);
 
@@ -978,7 +1071,7 @@ mutate('הזזת התוכן בפיקסל אנכית — xxxhdpi', () => {
 if (APP.tileFlat === true) mutate('דיו האריח נבדל מדיו החזית — xxxhdpi', () => {
   const p = mip('xxxhdpi', 'ic_launcher');
   const img = decodePNG(readFileSync(p));
-  const lim = (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2;
+  const lim = (APP.fgInks[0].reduce((a, b) => a + b, 0) / 3 + 255) / 2;
   for (let k = 0; k < img.w * img.h; k++)
     if ((img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3 < lim)
       for (let c = 0; c < 3; c++) img.data[k*4+c] = Math.max(0, img.data[k*4+c] - 20);
@@ -991,7 +1084,7 @@ if (APP.tileFlat === true) mutate('דיו האריח נבדל מדיו החזי�
 if (APP.tileFlat === true) mutate('⭐ מוטציית-נגד: הבהרת רמפת הקצה באריח ⛔ אינה מפילה', () => {
   const p = mip('xxxhdpi', 'ic_launcher');
   const img = decodePNG(readFileSync(p));
-  const ink = APP.fgInk.reduce((a, b) => a + b, 0) / 3, lim = (ink + 255) / 2;
+  const ink = APP.fgInks[0].reduce((a, b) => a + b, 0) / 3, lim = (ink + 255) / 2;
   for (let k = 0; k < img.w * img.h; k++) {
     const m = (img.data[k*4] + img.data[k*4+1] + img.data[k*4+2]) / 3;
     if (m > ink + 20 && m < lim)
@@ -1032,6 +1125,8 @@ mutate('צבע שאינו תואם — רקע שחור', () => writeBg(
    כלומר המוטציה הייתה נכשלת בשלוש מארבע, ⛔ ומוכיחה על המנגנון כלום.
    כאן נצבע מדרג 315° ידוע, מאומת מול XML תואם, ואז מוחלף בממוצעו. */
 {
+  writeBg(bgSrc);
+  const realBg = readBackground(tmp);
   const GRAD = { kind: 'gradient', angle: 315, start: [0x2B, 0x50, 0x8F], end: [0x0D, 0x1F, 0x42] };
   const gradXml = `<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n    <gradient android:type="linear" android:angle="315" android:startColor="#2B508F" android:endColor="#0D1F42"/>\n</shape>\n`;
   /*  ⛔ המדרג נצבע מסביב לסמל ⛔ ולא מעליו (סבב 72) — ⚠️ אריח בלי סמל
@@ -1040,16 +1135,15 @@ mutate('צבע שאינו תואם — רקע שחור', () => writeBg(
   const paint = () => {
     const W = 192, img = { w: W, h: W, data: Buffer.alloc(W * W * 4) };
     const cur = decodePNG(readFileSync(mip('xxxhdpi', 'ic_launcher')));
-    /*  ⚠️ רק באריח של נייר-ודיו (סבב 72) — ⛔ באפליקציה שהאריח שלה הוא רקע
-        מלא וסמל בהיר, «הפיקסלים הכהים» הם הרקע עצמו: ⭐ שימורם היה מבטל
-        את המוטציה כולה. */
-    const lim = APP.tileFlat === true && APP.fgInk
-      ? (APP.fgInk.reduce((a, b) => a + b, 0) / 3 + 255) / 2 : -1;
+    /*  ⛔ הסמל נשמר, ⛔ והרקע בלבד נצבע מחדש (סבב 148) — ⚠️ «פיקסל כהה» היה
+        הרקע עצמו באפליקציה שהאריח שלה רקע מלא וסמל בהיר, ⭐ והמדידה כאן היא
+        סטייה מהרקע **המוצהר של האפליקציה**: ⛔ היא מחזיקה גם סמל שנוגע בצלע. */
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
         const d = (y * W + x) * 4;
-        const ink = cur.w === W &&
-          (cur.data[d] + cur.data[d + 1] + cur.data[d + 2]) / 3 < lim;
+        const pr0 = realBg ? predict(realBg, x, y, W, W) : null;
+        const ink = cur.w === W && !!pr0 && cur.data[d + 3] >= OPAQUE &&
+          Math.max(...[0, 1, 2].map((c) => Math.abs(cur.data[d + c] - pr0[c]))) > PIXEL_TOL;
         const c = ink ? [cur.data[d], cur.data[d + 1], cur.data[d + 2]]
                       : predict(GRAD, x, y, W, W);
         img.data[d] = c[0]; img.data[d + 1] = c[1]; img.data[d + 2] = c[2]; img.data[d + 3] = 255;
@@ -1066,6 +1160,10 @@ mutate('צבע שאינו תואם — רקע שחור', () => writeBg(
     for (let y = 0; y < painted.h; y++)
       for (let x = 0; x < painted.w; x++) {
         if (!(x < RING || y < RING || x >= painted.w - RING || y >= painted.h - RING)) continue;
+        if (APP.tileBleed.includes('top') && y < RING) continue;
+        if (APP.tileBleed.includes('bottom') && y >= painted.h - RING) continue;
+        if (APP.tileBleed.includes('left') && x < RING) continue;
+        if (APP.tileBleed.includes('right') && x >= painted.w - RING) continue;
         for (let k = 0; k < 3; k++) s[k] += painted.data[(y * painted.w + x) * 4 + k];
         c++;
       }
@@ -1093,6 +1191,41 @@ mutate('קובץ mipmap כבד מדי', () => {
   const p = mip('mdpi', 'ic_launcher');
   writeFileSync(p, Buffer.concat([readFileSync(p), Buffer.alloc(41 * 1024)]));
 }, ['heavy']);
+
+/* ────── ⛔ ח. מוטציות המאסטר — על עץ נפרד (סבב 148) ─────────────────────────
+   ⛔ העותק כאן נפרד מ-`tmp` ⛔ ואינו עותק-לכל-מוטציה — ⚠️ המוטציות משנות את
+   **סט הקבצים** של `design/` ואת בלוק ה-`APP` של המחולל, ⭐ ו-`tmp` מחזיק
+   את `RES` בלבד: ⛔ ושחזור סט הוא בעצמו העתקה. */
+{
+  const md = mkdtempSync(join(tmpdir(), 'r148m-'));
+  try {
+    for (const d of ['tools', 'design']) cpSync(join(ROOT, d), join(md, d), { recursive: true });
+    cpSync(join(ROOT, RES), join(md, RES), { recursive: true });
+    const gp = join(md, 'tools', 'gen-icons.mjs');
+    const src = readFileSync(gp, 'utf8');
+    const run = () => spawnSync(process.execPath, [gp], { cwd: md, encoding: 'utf8' }).status;
+    const mrel = /^ {2}master: '([^']+)',$/m.exec(src)[1];
+    rmSync(join(md, mrel));
+    t(n++, run() !== 0, 'ח. ⛔ מוטציה: מחיקת המאסטר מפילה את «המחולל קורא את המאסטר»');
+    cpSync(join(ROOT, mrel), join(md, mrel));
+    const other = mrel.endsWith('.svg') ? 'master' : 'svg';
+    writeFileSync(gp, src.replace(/^ {2}art: '[^']+',$/m, `  art: '${other}',`));
+    t(n++, run() !== 0,
+      `ח. ⛔ מוטציה: הצורה המוצהרת ⟵ ${other} מפילה את «הצורה תואמת את סיומת המאסטר»`);
+    /*  ⛔ המאסטר הסינתטי גיאומטרי לגמרי — ⚠️ רקע מלא וריבוע ממורכז: ⭐ הוא
+        נגזר לכל 16 הנכסים, ⛔ ולכן ההבדל היחיד בין השתיים הוא הטקסט. */
+    const prel = 'design/probe-master.svg';
+    const geom = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
+      '<rect width="512" height="512" fill="#123456"/>' +
+      '<rect x="156" y="156" width="200" height="200" fill="#FEDCBA"/>';
+    writeFileSync(gp, src.replace(/^ {2}art: '[^']+',$/m, "  art: 'svg',")
+                        .replace(/^ {2}master: '[^']+',$/m, `  master: '${prel}',`));
+    writeFileSync(join(md, prel), geom + '<text x="256" y="400" fill="#FEDCBA">A</text></svg>');
+    t(n++, run() !== 0, 'ח. ⛔ מוטציה: טקסט במאסטר מפיל את «המאסטר נושא צורות בלבד»');
+    writeFileSync(join(md, prel), geom + '</svg>');
+    t(n++, run() === 0, 'ח. ⭐ מוטציית-נגד: אותו מאסטר בלי טקסט ⛔ אינו מפיל');
+  } finally { rmSync(md, { recursive: true, force: true }); }
+}
 
 rmSync(tmp, { recursive: true, force: true });
 
