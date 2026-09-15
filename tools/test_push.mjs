@@ -59,12 +59,22 @@ const APP = {
   /*  ⛔ אין כאן מסך ניהול משתמשים — ⚠️ משתמש יחיד, ⭐ ואין למי לנהל:
    *  ⛔ ומוצהר ריק ⛔ ואינו נשמט. */
   usersScreen: '',
+  /*  ⛔ נקודות הרישום ליומן הסנכרון — ⚠️ **מה נכנס**: שם העוטף שרושם,
+   *  והפעולות שהוא נוקב בהן; ⛔ **ומה מפיל**: פעולה מוצהרת שאין לה אתר
+   *  קריאה, ואתר קריאה שאין לו הצהרה. ⭐ **ולמה המבנה קיים**: מסלול
+   *  דחיפה שמפסיק לכתוב ליומן נעלם בשקט, ⚠️ ויומן ראיות שחסרה בו דחיפה
+   *  אינו ראיה. */
+  syncLogPoints: { fn: 'slSyncLog', actions: ['pull', 'push'] },
+  /*  ⛔ מה נרשם ב-`user_name` — ⚠️ יש כאן כניסה — ⛔ `user_name` הוא שם המשתמש המחובר: ⭐ **וההיעדר
+   *  מוצהר `null`** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק
+   *  נקרא «נמדד ואין». */
+  syncLogUser: 'sessGet().username',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ שורת טבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן, ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [65, 66, 56];
+export const ROWS = [65, 66, 56, 180];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -109,7 +119,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 38, app: 0, appWhy: '' };
+const FLOOR = { shared: 43, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -660,6 +670,61 @@ for (const r of base) { if (r.ok) pass('12. ' + r.name); else fail('12. ' + r.na
          `(${swapped.sent.length} שליחות). מוסיפים את בדיקת ctxStale ל-PUSH_CFG.mark`);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   15 · יומן הסנכרון — כל דחיפה נרשמת, והמסלולים מוצהרים
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ `sh_sync_log` הוא יומן ראיות ב-insert בלבד; ⛔ מסלול שמפסיק לכתוב
+   אליו אינו משאיר סימן, ⭐ ולכן המרשם מוצלב מול המקור בשני הכיוונים. */
+export function syncLogGaps(src, pts) {
+  const fn = pts && pts.fn;
+  if (!fn) return { missing: [], undeclared: [], defined: false, sites: [] };
+  const re = new RegExp('\\b' + fn + "\\('([^']*)'", 'g');
+  const sites = [];
+  let m;
+  while ((m = re.exec(src))) sites.push(m[1]);
+  const declared = pts.actions || [];
+  return {
+    missing: declared.filter((a) => sites.indexOf(a) < 0),
+    undeclared: sites.filter((a) => declared.indexOf(a) < 0)
+                     .filter((a, i, all) => all.indexOf(a) === i),
+    defined: new RegExp('function\\s+' + fn + '\\s*\\(').test(src),
+    sites,
+  };
+}
+
+{
+  const g = syncLogGaps(src, APP.syncLogPoints);
+  g.defined
+    ? pass('15א · [synclog-fn] עוטף היומן `' + APP.syncLogPoints.fn + '` מוגדר במקור')
+    : fail('15א · [synclog-fn] עוטף היומן `' + APP.syncLogPoints.fn + '` מוצהר ואינו מוגדר — ' +
+           'נמדדו 0 הגדרות והצפוי 1. מגדירים אותו, ⛔ או מסירים את ההצהרה');
+  g.missing.length === 0
+    ? pass('15ב · [synclog-decl] כל פעולה מוצהרת נקראת מהקוד — נמדדו ' +
+           APP.syncLogPoints.actions.length + ' פעולות ואפס בלי אתר')
+    : fail('15ב · [synclog-decl] פעולה מוצהרת בלי אתר קריאה — נמדדו ' + g.missing.length +
+           ' מתוך ' + APP.syncLogPoints.actions.length + ' והצפוי אפס (' + g.missing.join(' · ') +
+           '). מחווטים את הקריאה, ⛔ או מסירים מההצהרה');
+  g.undeclared.length === 0
+    ? pass('15ג · [synclog-site] כל אתר קריאה מוצהר — נמדדו ' + g.sites.length + ' אתרים ואפס בלי הצהרה')
+    : fail('15ג · [synclog-site] אתר קריאה שאין לו הצהרה — נמדדו ' + g.undeclared.length +
+           ' מתוך ' + g.sites.length + ' והצפוי אפס (' + g.undeclared.join(' · ') +
+           '). מוסיפים אותו ל-`APP.syncLogPoints.actions`');
+  APP.syncLogPoints.actions.indexOf('push') >= 0
+    ? pass('15ד · [synclog-push] מסלול הדחיפה נרשם ביומן — הפעולה «push» מוצהרת ונקראת')
+    : fail('15ד · [synclog-push] מסלול הדחיפה אינו נרשם ביומן — נמדדה אפס פעולת «push» ' +
+           'והצפוי אחת. רושמים את הדחיפה עם מספר השורות שעלו');
+  /*  ⛔ `user_name` נמדד מול מה שהמקור באמת כותב — ⚠️ הצהרה שאינה תואמת
+   *  מתארת יומן אחר מזה שרץ. */
+  const noLogin = /user:\s*function\s*\(\)\s*\{\s*return null;/.test(src);
+  (APP.syncLogUser === null) === noLogin
+    ? pass('15ה · [synclog-user] הצהרת `user_name` תואמת למקור — ' +
+           (noLogin ? 'אין כניסה, ונרשם null' : 'יש כניסה, ונרשם שם המשתמש'))
+    : fail('15ה · [synclog-user] הצהרת `user_name` אינה תואמת למקור — נמדד ' +
+           (noLogin ? '«null»' : '«שם משתמש»') + ' והוצהר ' +
+           (APP.syncLogUser === null ? '«null»' : '«' + APP.syncLogUser + '»') +
+           '. מיישרים את ההצהרה למה שנכתב בפועל');
+}
+
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_push: המוטציות רצות ברמה המלאה (--full)');
@@ -722,6 +787,40 @@ for (const mu of MUTATIONS) {
     else fail('נ1 · ⛔ שם פנימי שהוחלף בעקביות הפיל ' + broke.length +
               ' טענות והצפוי אפס — הראשונה «' + broke[0].name + '»');
   }
+}
+
+
+/*  ⛔ מ9 — פעולה מוצהרת שאיבדה את אתר הקריאה (סבב 148). ⚠️ זה בדיוק
+ *  המצב שבו מסלול מפסיק לכתוב ליומן ואיש אינו רואה. */
+{
+  const g = syncLogGaps(src, { fn: APP.syncLogPoints.fn,
+                               actions: APP.syncLogPoints.actions.concat('__ghost__') });
+  g.missing.indexOf('__ghost__') >= 0
+    ? pass('מ9 · [synclog-decl] פעולה מוצהרת בלי אתר קריאה מפילה את טענה 15ב')
+    : fail('מ9 · פעולה מוצהרת בלי אתר קריאה לא נתפסה');
+}
+
+/*  ⛔ מ10 — אתר קריאה שאין לו הצהרה (סבב 148). ⚠️ הצד השני של אותו
+ *  חצי-חיווט, ⭐ ומדידת צד אחד בלבד מאשרת את השני. */
+{
+  const injected = src + '\n' + APP.syncLogPoints.fn + "('__ghost__', null, 1);\n";
+  const g = syncLogGaps(injected, APP.syncLogPoints);
+  g.undeclared.indexOf('__ghost__') >= 0
+    ? pass('מ10 · [synclog-site] אתר קריאה בלי הצהרה מפיל את טענה 15ג')
+    : fail('מ10 · אתר קריאה בלי הצהרה לא נתפס');
+}
+
+/*  ⭐ מוטציית-נגד — ⛔ שם העוטף שהוחלף בעקביות ⛔ אינו מפיל: ⚠️ נמדד
+ *  החיווט, ⛔ ולא השם שנבחר לו. */
+{
+  const fn = APP.syncLogPoints.fn;
+  const renamed = src.split(fn).join('_syncLogRenamed');
+  const g = syncLogGaps(renamed, { fn: '_syncLogRenamed', actions: APP.syncLogPoints.actions });
+  (g.defined && !g.missing.length && !g.undeclared.length)
+    ? pass('נ2 · ⭐ מוטציית-נגד: שם העוטף שהוחלף בעקביות ⛔ אינו מפיל')
+    : fail('נ2 · שם שהוחלף בעקביות הפיל את טענה 15 — נמדד ' +
+           (g.defined ? '' : 'חסרה הגדרה · ') + g.missing.length + ' חסרות · ' +
+           g.undeclared.length + ' בלי הצהרה, והצפוי אפס');
 }
 
 console.log(failures ? '\n❌ בדיקת שכבת הדחיפה נכשלה (' + failures + ')'
