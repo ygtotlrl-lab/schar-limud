@@ -1,9 +1,10 @@
 name: Build APK
 
 # Builds the native WebView shell in android/ (NOT a TWA — see CLAUDE.md) and
-# signs it with the project's permanent key, which lives in the repo. No secret,
-# no manual input: there is no way to accidentally produce an APK signed with a
-# different key.
+# signs it with the project's permanent key. The key is NOT in the repo: the
+# repo is public, and a committed key is a public key. It lives in the
+# KEYSTORE_B64 / KEYSTORE_PASS secrets, is decoded to a temp file for the
+# signing step only, and is removed when the job ends.
 #
 # Signing runs through signing/sign-apk.sh — the same script used by hand — so
 # the fingerprint gate exists in exactly one place.
@@ -24,6 +25,11 @@ on:
       - 'android/**'
       - 'signing/**'
       - '.github/workflows/build-apk.yml'
+
+env:
+  # ⛔ נתיב אחד לשלב שכותב ולשלב שמוחק — ⚠️ שני נתיבים הם מפתח שנשאר
+  # על הדיסק של הרץ אחרי שהמחיקה "הצליחה".
+  SIGN_KEYSTORE: /tmp/apk-signing.keystore
 
 jobs:
   build:
@@ -60,8 +66,16 @@ jobs:
           ./gradlew :app:assembleRelease --no-daemon
 
       - name: Sign with the permanent key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          SIGN_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
           set -euo pipefail
+          # ⛔ המפתח נכתב מחוץ לעץ העבודה — ⚠️ קובץ בעץ נכנס ל-artifact
+          # ולסטטוס של git, והמפתח חוזר לריפו בדלת האחורית.
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$SIGN_KEYSTORE"
+          [ -s "$SIGN_KEYSTORE" ] || { echo "❌ KEYSTORE_B64 decoded to an empty file" >&2; exit 1; }
           # The signing tools live in build-tools, which is not on PATH by default.
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using build-tools: $BT"
@@ -70,6 +84,12 @@ jobs:
           ./signing/sign-apk.sh \
             android/app/build/outputs/apk/release/app-release-unsigned.apk \
             schar-limud.apk
+
+      # ⛔ המחיקה רצה גם כשהחתימה נפלה — ⚠️ שלב שרץ רק בהצלחה משאיר את
+      # המפתח על הרץ בדיוק בריצות שנעצרו באמצע.
+      - name: Remove the decoded key
+        if: always()
+        run: rm -f "$SIGN_KEYSTORE"
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4

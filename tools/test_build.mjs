@@ -42,9 +42,6 @@ const APP = {
   repo: 'schar-limud',
   /* שם הריפו — מוכרז פרטי בחתימת ה-workflows ומנורמל החוצה. */
   slug: 'schar-limud',
-  keystore: 'schar.keystore',
-  alias: 'schar',
-  pass: 'schar123',
   out: 'schar-limud.apk',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -72,7 +69,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 18, app: 0, appWhy: '' };
+const FLOOR = { shared: 24, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -195,6 +192,25 @@ function assertions(yml, sh, mode) {
   add(/apksigner verify --print-certs "\$OUT"[\s\S]*WANT.*!=.*GOT|\$WANT" != "\$GOT/.test(sh),
       'אימות התעודה שנחתמה **בפועל**, אחרי החתימה');
 
+  /* ה2. ⭐ המפתח מגיע מהסודות ואינו בעץ */
+  add(/secrets\.KEYSTORE_B64/.test(code) && /secrets\.KEYSTORE_PASS/.test(code),
+      '⭐ ה-workflow מושך את המפתח ואת מילת המעבר מ-GitHub Secrets');
+  add(/base64 -d\s*>\s*"\$SIGN_KEYSTORE"/.test(code),
+      'המפתח מפוענח לקובץ זמני שמחוץ לעץ העבודה');
+  {
+    const rm = (code.split('Remove the decoded key')[1] || '').split('- name:')[0];
+    add(/if:\s*always\(\)/.test(rm) && /rm -f "\$SIGN_KEYSTORE"/.test(rm),
+        '⛔ המפתח המפוענח נמחק בשלב שרץ גם כשהחתימה נפלה');
+  }
+
+  /* ו2. ⭐ הסקריפט אינו מקליד את מה שאינו שלו */
+  add(/^KS="\$\{SIGN_KEYSTORE:\?/m.test(sh),
+      '⛔ נתיב המפתח מגיע מהסביבה ונופל ברעש כשהוא חסר');
+  add(/^PASS="\$\{SIGN_PASS:\?/m.test(sh),
+      '⛔ מילת המעבר מגיעה מהסביבה ונופלת ברעש כשהיא חסרה');
+  add(/^ALIAS="\$\(printf/m.test(sh) && !/^ALIAS='/m.test(sh),
+      '⛔ ה-alias נגזר מהמפתח ואינו מוקלד');
+
   if (mode === 'count') return out.filter(([ok]) => !ok).length;
   return out;
 }
@@ -240,6 +256,16 @@ const MUTATIONS = [
    (y, s) => [y, s.replace(/^EXPECTED_SHA256='[^']*'/m, "EXPECTED_SHA256='__FILL_ME__'")]],
   ['⭐ EXPECTED_SHA256 רוקן',
    (y, s) => [y, s.replace(/^EXPECTED_SHA256='[^']*'/m, "EXPECTED_SHA256=''")]],
+  ['⭐ המפתח חזר להיות ליטרל במקום סוד',
+   (y, s) => [y.replace('secrets.KEYSTORE_B64', 'vars.PLAIN'), s]],
+  ['⭐ מחיקת המפתח המפוענח אינה רצה בכשל',
+   (y, s) => [y.replace(/\n        if: always\(\)/, ''), s]],
+  ['⭐ נתיב המפתח חזר להיות מוקלד בסקריפט',
+   (y, s) => [y, s.replace(/^KS="\$\{SIGN_KEYSTORE:\?[^\n]*$/m, 'KS="$HERE/key.store"')]],
+  ['⭐ מילת המעבר חזרה להיות ליטרל בסקריפט',
+   (y, s) => [y, s.replace(/^PASS="\$\{SIGN_PASS:\?[^\n]*$/m, "PASS='literal'")]],
+  ['⭐ ה-alias הוקלד חזרה',
+   (y, s) => [y, s.replace(/^ALIAS="\$\(printf[^\n]*$/m, "ALIAS='typed'")]],
   ['שער הטביעה שלפני החתימה הוסר',
    (y, s) => [y, s.replace(/grep -qF "SHA256: \$EXPECTED_SHA256"/, 'grep -q .')]],
 ];
@@ -257,10 +283,10 @@ for (const [label, mut] of MUTATIONS) {
 const BUILD    = '.github/workflows/build-apk.yml';
 const CLEANUP  = '.github/workflows/cleanup-merged-branches.yml';
 const ALL_SLUGS = PEERS;
-const BUILD_SHA   = 'bf38b751de2f1c33';
+const BUILD_SHA   = '7c7e9d50f48a6bd5';
 const CLEANUP_SHA = 'a48da4dd75a3245c';
-const PRIV = /^(# Sign an APK with the PERMANENT |KS=|ALIAS=|PASS=|EXPECTED_SHA256=|OUT=|echo "✅ Signed with the permanent )/;
-const SHARED_SHA = 'eb0af5fdba30e4e6';
+const PRIV = /^(EXPECTED_SHA256=|OUT=)/;
+const SHARED_SHA = '53c4a109a51fca29';
 
 const FILE = 'signing/sign-apk.sh';
 const t = (c, m) => (c ? pass(m) : fail(m));
@@ -268,14 +294,18 @@ const shScript = fs.readFileSync(join(ROOT, FILE), 'utf8');
 const sharedOf = (txt) => txt.split('\n').map((l) => (PRIV.test(l) ? '' : l)).join('\n');
 const sig = (txt) => crypto.createHash('sha256').update(sharedOf(txt)).digest('hex').slice(0, 16);
 
-/* ── ה. ששת השדות הפרטיים ──────────────────────────────────────────────── */
-t(shScript.includes(`KS="$HERE/${APP.keystore}"`), `א1 · ה-keystore הוא ${APP.keystore}`);
-t(shScript.includes(`ALIAS='${APP.alias}'`),       `א2 · ה-alias הוא ${APP.alias}`);
-t(shScript.includes(`PASS='${APP.pass}'`),         'א3 · הסיסמה תואמת לבלוק APP');
-t(shScript.includes(`OUT="\${2:-${APP.out}}"`),    `א4 · שם הפלט הוא ${APP.out}`);
+/* ── ה. שני הערכים הפרטיים ─────────────────────────────────────────────── */
+t(shScript.includes(`OUT="\${2:-${APP.out}}"`),    `א1 · שם הפלט הוא ${APP.out}`);
 {
   const m = /EXPECTED_SHA256='([0-9A-F:]{95})'/.exec(shScript);
-  t(!!m, 'א5 · ⛔ טביעה מלאה (32 בתים) ולא מציין-מקום');
+  t(!!m, 'א2 · ⛔ טביעה מלאה (32 בתים) ולא מציין-מקום');
+}
+/*  ⛔ הספירה היא הטענה (סבב 148) — ⚠️ המפתח עצמו ומה שפותח אותו יצאו
+ *  מהעץ, ⭐ ומה שנשאר פרטי הוא הטביעה המוצהרת ושם הפלט: ⛔ ערך שלישי
+ *  שיחזור לכאן הוא ערך שאיש לא יבחין בו, והחתימה המשותפת תמשיך לתאום. */
+{
+  const n = shScript.split('\n').filter((l) => PRIV.test(l)).length;
+  t(n === 2, `א3 · ⛔ בדיוק שני ערכים פרטיים בסקריפט — נמדדו ${n}`);
 }
 
 /* ── ו. החתימה על החלק המשותף ──────────────────────────────────────────── */
@@ -293,7 +323,7 @@ t(shScript.indexOf('EXPECTED_SHA256') < shScript.indexOf('apksigner sign'),
  *  שורדת כשלון באמצע הריצה. */
 t(sig(shScript.replace('set -e', 'set -eu')) !== SHARED_SHA,
   'ד1 · מוטציה בחלק המשותף מזיזה את החתימה');
-t(sig(shScript.replace(`ALIAS='${APP.alias}'`, "ALIAS='zzz'")) === SHARED_SHA,
+t(sig(shScript.replace(`OUT="\${2:-${APP.out}}"`, 'OUT="${2:-other.apk}"')) === SHARED_SHA,
   'ד2 · ⭐ מוטציית-נגד: שינוי שדה פרטי ⛔ אינו מזיז את החתימה');
 t(sig(shScript.replace('apksigner verify --print-certs', 'true')) !== SHARED_SHA,
   'ד3 · הסרת אימות התעודה מזיזה את החתימה');
