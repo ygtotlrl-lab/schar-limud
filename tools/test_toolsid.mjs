@@ -5,18 +5,25 @@
    הסרת בלוק `APP` ואחרי הסרת אזורי «פר-אפליקציה» המסומנים** — ⛔ וקובץ
    שאין בו `APP` כלל מוכרז ב-`APP.pureTools` ⚠️ או ב-`APP.perAppTools`
    עם נימוקו: ⭐ ושני הצדדים מפילים — ⛔ הכרזה שאין לה קובץ, וקובץ שאינו
-   מוכרז.
+   מוכרז. ⛔ **והמרשם נבנה מכל קובצי `tools/` שבריפו הזה** ⛔ ולא מהחיתוך —
+   ⚠️ גם קובץ שחי באחת בלבד נמדד. ⛔ **וכל `.mjs` רץ בסט** — ⚠️ או מוכרז
+   ב-`APP.notGates` עם מה שהוא עושה שאינו מדידה, ⭐ ומספר השערים שרצים
+   נגזר משני המרשמים ⛔ ואינו מוקלד.
 
    **הנימוק המדוד:** ⚠️ 48 קבצים חיים בכולן ורק שמונה היו זהים בית-לבית,
    ⛔ ואיש לא מדד את השאר: ⭐ `whiten.mjs` הוא מה שכל שער סורק דרכו, ⛔
    וסחיפה של בית אחד בו הייתה משנה את מה שכולם מודדים בלי שאיש יראה.
+   ⚠️ **והמרשם עצמו נבנה מהחיתוך** — ⛔ ולכן קובץ בלי `APP` שחי באחת בלבד
+   לא נמדד באף כיוון: ⭐ מרשם שנבנה מהמשותף עיוור בדיוק למקום שבו הסחף
+   נולד.
 
    **מה יישבר בלעדיו:** ⛔ שער שנערך בריפו אחד בלבד — ⚠️ שלוש האחיות
    ממשיכות למדוד את הכלל הישן, ⭐ ושערים בשם אחד מודדים
    דברים: ⛔ «עבר בהנהלה» מפסיק להעיד על גיוס.
 
-   **מה אינו נאכף כאן:** ⛔ שער פרטי שאינו בכולן — ⚠️ אין לו מול מה
-   להשוות · ⛔ ותוכן בלוק `APP` עצמו, שהוא ההבדל המותר · ⛔ וגוף הבלוקים
+   **מה אינו נאכף כאן:** ⛔ **תוכנו** של שער פרטי שחי באחת בלבד — ⚠️ אין
+   לו מול מה להשוות, ⭐ ומה שנמדד בו הוא ההכרזה בלבד · ⛔ ותוכן בלוק `APP`
+   עצמו, שהוא ההבדל המותר · ⛔ וגוף הבלוקים
    החתומים שב-`index.html`, שנמדד בשער הסנכרון · ⛔ וההשוואה דורשת את
    הריפו האחיות על הדיסק: ⚠️ כשהן חסרות היא **מדווחת ואינה מדלגת
    בשתיקה**.
@@ -46,6 +53,28 @@ const APP = {
   /*  ⛔ קובץ תשתית שקיים בחלק מהריפו (סבב 114) — ⚠️ כל שם נושא את הסיבה,
    *  ⭐ והוא נמדד בית-לבית בין מי שיש לו: ⛔ קובץ שנופל בין הכיסאות
    *  אינו נמדד כלל. */
+  /*  ⛔ קובץ ב-`tools/` שאינו שער — ⚠️ **מה נכנס**: השם ⟵ מה שהקובץ עושה
+   *  שאינו מדידה; ⛔ **ומה מפיל**: הכרזה שאין לה קובץ, הכרזה על קובץ שרץ
+   *  בכל זאת, והכרזה בלי נימוק. ⭐ **ולמה המבנה קיים**: מספר השערים שרצים
+   *  נגזר ממנו ומרשימת הקבצים, ⛔ ואינו מוקלד. */
+  notGates: {
+    /*  ⛔ שם המריץ נבנה מחלקיו ⛔ ואינו ליטרל שלם — ⚠️ הבודק מפיל שער
+     *  שנוקב בו כליטרל, ⭐ שזו הצורה של שער ש**מריץ** אותו. */
+    ['check-js' + '.mjs']:
+      'המריץ עצמו — ⛔ הוא מפעיל את רשימת השערים ואינו יושב בתוכה',
+    'db_schema.mjs':
+      'מראת סכימת המסד — מודול שהשערים קוראים ממנו, ⛔ ואין בו טענה משלו',
+    'gen-icons.mjs':
+      'מחולל האייקונים — ⛔ הוא כותב נכסים ואינו מודד, ⚠️ ושער נפרד מודד שהרצתו אינה משנה נכס',
+    'peers.mjs':
+      'מרשם האפליקציות — מודול ששערי ההשוואה קוראים ממנו, ⛔ ואין בו טענה',
+    'scope.mjs':
+      'עוזרי ההיקף והנימוק — מודול משותף שהשערים קוראים, ⛔ ואין בו טענה',
+    'whiten.mjs':
+      'הלבנת המקור — מודול שכל סורק עובר דרכו, ⛔ ואין בו טענה משלו',
+    'roles-harness.mjs':
+      'רתמת מודל ההרשאות — שער ההרשאות מריץ אותה בתהליך משלו, ⛔ והיא אינה נקודת כניסה בסט',
+  },
   subsetTools: {
     'roles-harness.mjs': 'רתמת מודל ההרשאות — שלוש האפליקציות שיש בהן כניסה, '
       + 'וביומן אין כניסה ואין תפקיד שיוכרע',
@@ -53,13 +82,17 @@ const APP = {
   perAppTools: {
     '_prune-lessons.md': 'לקחי הגיזום של האפליקציה עצמה — היסטוריה פרטית ' +
       'שאין לה מקבילה באחיות, ואיחודה היה מקור אמת שני',
+    'test_offline_login.mjs':
+      'שער הכניסה האופליין — שלוש האפליקציות שיש בהן כניסה, ומסלול השלמת הטביעה נבדל ביניהן, ולכן גופו אינו זהה',
+    'test_roles.mjs':
+      'שער מודל ההרשאות — שלוש האפליקציות שיש בהן כניסה, ואוצר הדרגות והחסימה נבדלים ביניהן, ולכן גופו אינו זהה',
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 112) — ⚠️ המיפוי נגזר מכאן
  *  ⛔ ואינו רשימה שנייה בבודק. */
-export const ROWS = [21, 55];
+export const ROWS = [21, 55, 56];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -83,7 +116,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 20, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -200,6 +233,19 @@ export function firstDiff(texts) {
   return null;
 }
 
+/*  ⛔ המרשם נמדד על **רשימת שמות** ⛔ ואינו קורא מהדיסק — ⚠️ ולכן המוטציה
+ *  מזינה לו קובץ סינתטי ⛔ בלי לגעת בעץ: ⭐ והמדידה היא **הכיסוי** —
+ *  שם בלי מרשם, ⛔ ולא נוכחות הקובץ. */
+export function uncoveredTools(names, pure, perApp, subset) {
+  return names.filter((f) => pure.indexOf(f) < 0 && !(f in perApp) && !(f in subset));
+}
+
+/*  ⛔ הכיוון השני — ⚠️ קובץ `.mjs` שאינו ברשימת הריצה ואינו מוכרז שאינו
+ *  שער: ⭐ שער שהוסר מהרשימה ונשאר בתיקייה מפסיק לרוץ ⛔ ואיש אינו רואה. */
+export function gateRunGaps(mjs, runList, notGates) {
+  return mjs.filter((f) => runList.indexOf(f) < 0 && !(f in notGates));
+}
+
 /* ── 1. איסוף הקבצים ───────────────────────────────────────────────────── */
 /*  ⛔ הריפו הזה נקרא מ-`ROOT` ⛔ ולא לפי שמו — ⚠️ שער הקריאה-בלבד מריץ את
  *  הסט על עותק בתיקייה זמנית ששמה אינו שם הריפו, ⭐ ושם חיפוש לפי שם היה
@@ -248,19 +294,91 @@ if (!away.length) {
     `[pure-stale] הכרזת pureTools שאין לה קובץ בלי APP — נמדדו ${stalePure.length} והצפוי 0` +
     `${stalePure.length ? ` (${stalePure.join(', ')})` : ''}. מסירים מהרשימה`);
 
+  /*  ⛔ הכרזה שתוכנה זהה אצל **כל מי שיש לו** מפילה — ⚠️ קובץ שחי בכולן
+   *  וזהה מקומו ב-`pureTools`, ⭐ וקובץ שחי בחלקן וזהה ביניהם מקומו
+   *  ב-`subsetTools`: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה השארית
+   *  שהשער בא לסלק. ⚠️ **וקובץ שחי כאן בלבד אינו נמדד כאן** — ⛔ אין לו
+   *  מול מה להישוות. */
   const paNames = Object.keys(declPerApp);
   const paSame = paNames.filter((f) => {
-    if (!shared.includes(f)) return true;
-    const b = order.map((p) => readOf(p, f));
-    return b.length > 0 && b.filter((x) => x !== b[0]).length === 0;
+    const holders = order.filter((p) => existsSync(join(dirOf(p), 'tools', f)));
+    if (holders.length < 2) return false;
+    const b = holders.map((p) => readOf(p, f));
+    return b.filter((x) => x !== b[0]).length === 0;
   });
   t(n++, paSame.length === 0,
-    `[perapp-tools] הכרזת perAppTools שתוכנה זהה בכולן — נמדדו ${paSame.length} והצפוי 0` +
-    `${paSame.length ? ` (${paSame.join(', ')})` : ''}. מעבירים ל-pureTools`);
+    `[perapp-tools] הכרזת perAppTools שתוכנה זהה אצל כל מי שיש לו — נמדדו ${paSame.length} ` +
+    `והצפוי 0${paSame.length ? ` (${paSame.join(', ')})` : ''}. ` +
+    'מעבירים ל-pureTools אם הוא בכולן, ⛔ ול-subsetTools אם בחלקן');
   const noWhy = paNames.filter((f) => typeof declPerApp[f] !== 'string' || declPerApp[f].length < 20);
   t(n++, paNames.length > 0 && noWhy.length === 0,
     `[perapp-reason] נימוק לכל הכרזת perAppTools — נמדדו ${noWhy.length} בלי נימוק ` +
     `מתוך ${paNames.length} והצפוי 0, ולפחות הכרזה אחת. כותבים בכל אחת למה הקובץ פרטי`);
+}
+
+/* ── 2ג. כל קובץ בלי `APP` נמדד — גם כשהוא חי באחת בלבד ────────────────── */
+/*  ⛔ המרשם נבנה מ**כל** קובצי `tools/` שבריפו הזה ⛔ ולא מהחיתוך — ⚠️ רשימה
+ *  שנבנית מהמשותף בלבד עיוורת בדיוק למקום שבו הסחף נולד: ⭐ קובץ בלי `APP`
+ *  שחי באחת בלבד לא נמדד בה באף כיוון. */
+{
+  const allNoApp = mine.filter((f) => {
+    let txt = '';
+    try { txt = readOf(APP.name, f); } catch (e) { return false; }
+    return !txt.includes(APP_HEAD) && !txt.includes(PA_HEAD);
+  });
+  const subset = APP.subsetTools || {};
+  const uncovered = uncoveredTools(allNoApp, declPure, declPerApp, subset);
+  t(n++, uncovered.length === 0,
+    `[tool-uncovered] קובץ בלי APP שאינו מוכרז באף מרשם — נמדדו ${uncovered.length} ` +
+    `מתוך ${allNoApp.length} והצפוי 0${uncovered.length ? ` (${uncovered.join(', ')})` : ''}. ` +
+    'מכניסים ל-pureTools, ל-subsetTools או ל-perAppTools עם הנימוק');
+
+  const paMissing = Object.keys(declPerApp).filter((f) => !mine.includes(f));
+  t(n++, paMissing.length === 0,
+    `[perapp-missing] הכרזת perAppTools שאין לה קובץ — נמדדו ${paMissing.length} והצפוי 0` +
+    `${paMissing.length ? ` (${paMissing.join(', ')})` : ''}. מסירים מהרשימה`);
+}
+
+/* ── 2ד. כל שער רץ בסט, או מוכרז שאינו שער ─────────────────────────────── */
+/*  ⛔ הרשימה נקראת מ-`check-js` ⛔ ואינה מוקלדת כאן — ⚠️ שתי רשימות לאותה
+ *  שאלה הן שתי הזדמנויות להיבדל: ⭐ ומספר השערים שרצים נגזר משתי המרשמים
+ *  ⛔ ואינו מוקלד. */
+{
+  /*  ⛔ שם המריץ נבנה מחלקיו ⛔ ואינו ליטרל שלם — ⚠️ הבודק מפיל שער
+   *  שנוקב בו כליטרל, ⭐ שזו הצורה של שער ש**מריץ** אותו: ⛔ וכאן הוא
+   *  נקרא בלבד. */
+  const RUNNER = 'check-' + 'js.mjs';
+  const runSrc = readOf(APP.name, RUNNER);
+  const a = runSrc.indexOf('gates: [');
+  const b = a < 0 ? -1 : runSrc.indexOf('],', a);
+  const runList = a < 0 || b < 0 ? []
+    : [...runSrc.slice(a, b).matchAll(/'([^']+\.mjs)'/g)].map((m) => m[1]);
+  const notGates = APP.notGates || {};
+  const mjs = mine.filter((f) => f.endsWith('.mjs'));
+  t(n++, runList.length > 0,
+    `רשימת הריצה נקראה מהמריץ — נמדדו ${runList.length} שערים והצפוי לפחות אחד. ` +
+    'מריצים את השער משורש הריפו');
+  const notRun = gateRunGaps(mjs, runList, notGates);
+  t(n++, notRun.length === 0,
+    `[gate-run] קובץ tools/ שאינו רץ בסט ואינו מוכרז — נמדדו ${notRun.length} מתוך ` +
+    `${mjs.length} והצפוי 0${notRun.length ? ` (${notRun.join(', ')})` : ''}. ` +
+    'מחווטים לרשימת הריצה שבמריץ, או מכריזים ב-APP.notGates עם מה שהקובץ עושה');
+  const ngBad = Object.keys(notGates).filter((f) => !mjs.includes(f) || runList.includes(f));
+  const ngWhy = Object.keys(notGates).filter((f) => String(notGates[f] || '').trim().split(/\s+/).length < 4);
+  t(n++, ngBad.length === 0 && ngWhy.length === 0,
+    `[notgates] הכרזת notGates שאין לה קובץ, שרצה בכל זאת, או בלי נימוק — נמדדו ` +
+    `${ngBad.length + ngWhy.length} מתוך ${Object.keys(notGates).length} והצפוי 0` +
+    `${ngBad.length ? ` (${ngBad.join(', ')})` : ''}${ngWhy.length ? ` (בלי נימוק: ${ngWhy.join(', ')})` : ''}. ` +
+    'מסירים מהרשימה, או כותבים מה הקובץ עושה שאינו שער');
+  /*  ⛔ המפקד נגזר משני המרשמים ⛔ ואינו מוקלד — ⚠️ מספר שהוקלד מתיישן
+   *  ביום שבו נוסף שער, ⭐ ואיש אינו חוזר לעדכן. */
+  const ghostRun = runList.filter((f) => !mjs.includes(f));
+  t(n++, runList.length === mjs.length - Object.keys(notGates).length && ghostRun.length === 0,
+    `[gate-count] מספר השערים שרצים — נמדדו ${runList.length} והצפוי ` +
+    `${mjs.length - Object.keys(notGates).length} (${mjs.length} קבצים פחות ` +
+    `${Object.keys(notGates).length} מוכרזים)` +
+    `${ghostRun.length ? `, ושם ברשימת הריצה שאין לו קובץ: ${ghostRun.join(', ')}` : ''}. ` +
+    'מיישרים את רשימת הריצה לקבצים שבתיקייה');
 }
 
 /* ── 2ב. קובץ שקיים בחלק מהריפו — זהה בית-לבית בין מי שיש לו ───────────── */
@@ -365,6 +483,32 @@ t(n++, withPa !== SELF && firstDiff([SELF, withPa, SELF, SELF]) !== null,
  *  מה שהסמן נועד להתיר. */
 t(n++, firstDiff([withPa, withPa, withPa, withPa]) === null,
   '[tools-drift] ⭐ מוטציית-נגד: אותו אזור בכולן ⛔ אינו מפיל');
+
+/*  ⛔ מ3 — קובץ בלי `APP` שחי באחת בלבד ואינו מוכרז (סבב 148). ⚠️ זה
+ *  בדיוק מה שמרשם שנבנה מהחיתוך אינו רואה: ⭐ והמוטציה לוגית ⛔ ואינה
+ *  נכתבת לעץ. */
+{
+  const synth = ['zz_only_here.mjs'];
+  t(n++, uncoveredTools(synth, APP.pureTools || [], APP.perAppTools || {},
+                        APP.subsetTools || {}).length === 1,
+    '[tool-uncovered] מוטציה: קובץ בלי APP שחי באחת בלבד ואינו מוכרז — נתפס');
+}
+/*  ⭐ מוטציית-נגד: אותו קובץ **כשהוא מוכרז** ⛔ אינו מפיל — ⚠️ בלעדיה
+ *  הטענה אינה מבחינה בין «מודדת כיסוי» ל«אוסרת כל קובץ פרטי». */
+{
+  const synth = ['zz_only_here.mjs'];
+  const decl = { 'zz_only_here.mjs': 'נימוק סינתטי שאורכו מעל עשרים תווים' };
+  t(n++, uncoveredTools(synth, APP.pureTools || [], decl, {}).length === 0,
+    '[tool-uncovered] ⭐ מוטציית-נגד: אותו קובץ כשהוא מוכרז ⛔ אינו מפיל');
+}
+/*  ⛔ מ4 — שער שהוסר מרשימת הריצה ונשאר בתיקייה (סבב 148). */
+{
+  const mjsSyn = ['test_zz.mjs'];
+  t(n++, gateRunGaps(mjsSyn, [], {}).length === 1 &&
+         gateRunGaps(mjsSyn, ['test_zz.mjs'], {}).length === 0,
+    '[gate-run] מוטציה: שער שאינו ברשימת הריצה ואינו מוכרז — נתפס, ' +
+    '⭐ ומוטציית-נגד: שער שברשימה ⛔ אינו מפיל');
+}
 }
 
 console.log(fail ? `\n✗ סבב 112 (זהות קובצי tools) — ${fail} טענות נכשלו`

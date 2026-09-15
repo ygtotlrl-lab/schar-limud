@@ -36,7 +36,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר השורות בקטגוריה נגזר מהטבלה,
  *  ⭐ והטבלה משותפת בית-לבית: כל תא מוסיף טענה אחת בכל אחת מהן. */
-const FLOOR = { shared: 29, app: 0, appWhy: '' };
+const FLOOR = { shared: 30, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
