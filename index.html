@@ -4269,8 +4269,11 @@ function monthLabel(y,m){return MONTH_HE[m]+' '+(m>=8?y:y+1);}
 var MONTH_RE=/^[0-9]{4}-(0[1-9]|1[0-2])$/;
 // אינדקס החודש m הוא 0=ינואר; בשנת לימודים y חודשי ספט'–דצמ' שייכים ל-y
 // והשאר ל-y+1 — בדיוק ההיפוך של acadYearOf.
-function monthKey(y,m){return (m>=8?y:y+1)+'-'+String(m+1).padStart(2,'0');}
-function curMonthKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function acadMonthKey(y,m){return (m>=8?y:y+1)+'-'+String(m+1).padStart(2,'0');}
+// ⛔ מפתח החודש של רשומה — ⚠️ הוא `YYYY-MM` של תאריכה, ⭐ ואותו שם בכל
+// האפליקציות שיש בהן מפתח חודש: ⛔ ארבעה שמות לשאלה אחת מסתירים שארבעתם
+// אותה עבודה, ⚠️ ומונעים הוצאה למודול.
+function monthKeyOf(iso){return String(iso||'').slice(0,7);}
 // ערך שאינו YYYY-MM היה משתתף בהשוואה ומחזיר טווח שגוי בשקט — לכן כל
 // קריאה עוברת דרך כאן, וערך פסול נחשב "לא הוגדר".
 function normMonth(v){v=(v==null?'':String(v)).trim();return MONTH_RE.test(v)?v:'';}
@@ -4283,7 +4286,7 @@ function studentInMonth(s,y,m){
   if(!s)return false;
   var sm=normMonth(s.start_month),em=normMonth(s.end_month);
   if(!sm&&!em)return true;
-  var k=monthKey(y,m);
+  var k=acadMonthKey(y,m);
   return (!sm||k>=sm)&&(!em||k<=em);
 }
 function countInMonth(y,m){return STUDENTS.filter(function(s){return s.active&&studentInMonth(s,y,m);}).length;}
@@ -5460,7 +5463,7 @@ function openAddStudent(){
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
-    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(curMonthKey())+'"></div>'
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(monthKeyOf(todayStr()))+'"></div>'
     +'<div class="u-mb-3 frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r"></div>'
     +'<div class="u-fs-2 u-c-text3 u-mb-2 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'

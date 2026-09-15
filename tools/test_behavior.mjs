@@ -37,12 +37,20 @@ const APP = {
   /*  ⚠️ הפותח של אותו היקף — ⛔ ריק כשהטופס כבר על המסך הראשון:
    *  ⭐ שדה חסר נקרא «לא נשאל», וריק נקרא «נמדד ואין». */
   ksaveOpen: '',
+  /*  ⛔ המסך הראשון בהתקנה טרייה — ⚠️ **מה נכנס**: הבורר של האלמנט
+   *  שנושא את תוכן המסך הראשון ⟵ מה הוא, ולמה הוא מעיד; ⛔ **ומה מפיל**:
+   *  בורר שאין לו אלמנט, ⛔ ואלמנט שטקסטו ריק. ⭐ **ולמה המבנה קיים**:
+   *  הריצה כאן היא מול לקוח שמחזיר אפס שורות ואחסון שנוקה — ⚠️ כלומר
+   *  התקנה טרייה מול סכימה ריקה בדיוק, ⛔ ומה שדורש זריעה ידנית נופל כאן.
+   */
+  fresh: { sel: '#auth-btn',
+    why: 'כפתור הכניסה שבמסך הראשון — ⛔ ובהתקנה טרייה אין משתמש במסד: ⚠️ ומה שנמדד הוא שהמסך נפתח ושמיש, ⭐ ולא שהכניסה מצליחה' },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [33];
+export const ROWS = [33, 207];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -59,7 +67,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -180,8 +188,8 @@ async function connect(ws) {
  *  ⛔ ושם כל דפוס שיש לו מוטציה; ⛔ **ומה מפיל**: דפוס בלי מוטציה,
  *  ומוטציה בלי דפוס. ⭐ **ולמה המבנה קיים**: הוא מה שמאפשר להצליב
  *  את השער מבחוץ — ⛔ דפוס בלי מוטציה נשחק בשקט. */
-export const PATTERNS = ['load', 'enter', 'busy', 'escape', 'contrast'];
-export const MUTS = ['load', 'enter', 'busy', 'escape', 'contrast'];
+export const PATTERNS = ['load', 'fresh', 'enter', 'busy', 'escape', 'contrast'];
+export const MUTS = ['load', 'fresh', 'enter', 'busy', 'escape', 'contrast'];
 
 /*  ⛔ כל בקשה חיצונית נענית מקומית — ⚠️ **מה נכנס**: כתובת שאינה
  *  `127.0.0.1`; ⛔ **ומה מפיל**: כלום — ⭐ **ולמה המבנה קיים**: גיליון
@@ -254,6 +262,18 @@ async function paths(D, port) {
                  : (e.params.exceptionDetails || {}).text || '') || '');
   out.push({ k: 'load', ok: up && rendered && errs.length === 0,
              info: up ? (rendered ? (errs.length ? errs.slice(0, 2).join(' | ') : 'נקי') : 'לא רונדר') : 'לא נטען' });
+
+  /* 6 · המסך הראשון בהתקנה טרייה — נושא תוכן ⛔ ואינו שלד */
+  /*  ⛔ הריצה כאן היא **התקנה טרייה** — ⚠️ האחסון נוקה, ⭐ והלקוח מחזיר
+   *  אפס שורות: ⛔ ולכן מסך שדורש זריעה ידנית נופל כאן ⚠️ ובו בלבד. */
+  const fresh = await ev(`(function () {
+    var e = document.querySelector('${APP.fresh.sel}');
+    if (!e) return 'אין אלמנט';
+    var s = (e.value !== undefined && e.value !== null && e.value !== '' ? e.value
+             : (e.textContent || '')).trim();
+    return s ? 'תוכן=' + s.slice(0, 40) : 'ריק';
+  })()`);
+  out.push({ k: 'fresh', ok: /^תוכן=/.test(String(fresh)), info: String(fresh) });
 
   /* 3 · `Enter` בשדה עריכה — שומר */
   /*  ⛔ הנמדד הוא **`preventDefault`** — ⚠️ זה בדיוק חוזה המודול: המקש
@@ -388,6 +408,13 @@ const MUT = [
   { m: 'מ5', k: 'contrast', lbl: 'הטוסט נצבע בצמד שאינו עומד ביחס',
     edit: (s) => atEnd(s, '<style>.toast{background:#8a8a8a !important;' +
       'color:#909090 !important}</style>') },
+  /*  ⛔ המוטציה מרוקנת את תוכן המסך הראשון ⛔ ואינה מסירה את האלמנט —
+   *  ⚠️ האלמנט נושא גם `data-ksave` בחלק מהאפליקציות, ⭐ והסרתו הייתה
+   *  מפילה את מסלול ה-`Enter` יחד איתו: ⛔ ואז המוטציה מודדת שני מסלולים. */
+  { m: 'מ6', k: 'fresh', lbl: 'המסך הראשון נפתח ריק',
+    edit: (s) => atEnd(s, "<script>setInterval(function(){var e=document.querySelector('" +
+      APP.fresh.sel + "');if(e){if(e.value!==undefined&&e.value!==null)e.value='';" +
+      "if(e.textContent)e.textContent='';}},10);</script>") },
 ];
 
 /*  ⭐ מוטציית-נגד: שם מקומי שהוחלף בעקביות ⛔ אינו מפיל — ⚠️ הנמדד הוא
