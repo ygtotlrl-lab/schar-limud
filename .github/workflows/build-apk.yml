@@ -44,8 +44,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # ⛔ החבילות מוצהרות ואינן ברירת המחדל — ⚠️ ברירת המחדל של הפעולה
+      # מבקשת את החבילה `tools`, שהוסרה ממאגר ה-SDK: ⭐ ומאז היא נופלת
+      # בכל בנייה, לפני שהחתימה בכלל מתחילה.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       # ⛔ No "copy web assets" step, and it must never be added.
       # The shell loads https://ygtotlrl-lab.github.io/schar-limud/ over the network,

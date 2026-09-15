@@ -283,7 +283,7 @@ for (const [label, mut] of MUTATIONS) {
 const BUILD    = '.github/workflows/build-apk.yml';
 const CLEANUP  = '.github/workflows/cleanup-merged-branches.yml';
 const ALL_SLUGS = PEERS;
-const BUILD_SHA   = '7c7e9d50f48a6bd5';
+const BUILD_SHA   = 'abc188a49b06625f';
 const CLEANUP_SHA = 'a48da4dd75a3245c';
 const PRIV = /^(EXPECTED_SHA256=|OUT=)/;
 const SHARED_SHA = '53c4a109a51fca29';
