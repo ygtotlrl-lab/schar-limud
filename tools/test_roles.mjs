@@ -124,7 +124,7 @@ const NAMES_FN = [
   /*  ⛔ שכבת המראה (סבב 118) — ⚠️ מראת המשתמשים היא טבלה בתוכה, ⭐ ורתמה
    *  שאינה מחלצת את השכבה מקבלת `ReferenceError` שנבלע ב-`catch`. */
   'mirrorKey', 'mirrorTables', 'mirrorLoadOne', 'mirrorSave',
-  'slSanitizeRows', 'slStripMeta', 'slAdoptLegacyId', 'slTs',
+  'slSanitizeRows', 'slStripMeta', 'slTs',
   'slSettingsAccess', 'slIsAdmin',
   /*  ⭐ סבב 113 — ההשוואה לתפקיד עברה לבלוק המשותף. ⛔ הרתמה מחלצת
    *  אותו, ⚠️ ובלעדיו `slSettingsAccess` נופלת ב-ReferenceError. */

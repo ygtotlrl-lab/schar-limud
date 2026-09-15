@@ -28,10 +28,17 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { appSrc } from './appsrc.mjs';
+import { whitenJs } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
+  /*  ⛔ עידן הנתונים — ⚠️ **מה נכנס**: הבסיס שזהה בכל הריפו, העידן
+   *  שבמקור, והנימוק להפרש; ⛔ **ומה מפיל**: עידן שאינו מה שבמקור,
+   *  הפרש בלי נימוק, ⛔ ונימוק בלי הפרש. ⭐ **ולמה המבנה קיים**:
+   *  קידום עידן מוחק עותק מקומי במכשירים חיים, ⛔ והוא נעשה רק כשצורת
+   *  השורה השתנתה. */
+  dataEra: { base: 1, era: 2, why: 'שכבת האימוץ ירדה בסבב 148 — ⚠️ ורשומת מראה שנכתבה לפניה נושאת שמות מזהים שאין להם קורא: ⭐ הצורה השתנתה, ⛔ והעותק המקומי נזרק פעם אחת' },
   names: ['slTs', 'slKey', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'slMerge'],
   vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
   /*  ⛔ גלובלים שהארגז חול צריך מעבר לבדלים המשותפים — ⚠️ **מה נכנס**:
@@ -97,7 +104,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 7, app: 0, appWhy: '' };
+const FLOOR = { shared: 20, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -264,6 +271,145 @@ assert(APP.tag(tie) === 'CLOUD',
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   עידן הנתונים — המנגנון, ולא ההצהרה
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ הזריקה היא הפעולה ההרסנית היחידה במערכת — ⚠️ ולכן נמדד כאן
+   **המנגנון**: שלושת התנאים רצים בארגז חול על הקוד שנחתך מהמקור, ⭐ וכל
+   אחד מהם מופל בנפרד. ⛔ ומה שנמדד בטקסט הוא רק מה שאין לו התנהגות —
+   ⚠️ שם החותמת, ההצהרה על העידן, ודפוס האימוץ שירד.
+   ══════════════════════════════════════════════════════════════════════════ */
+const ERA_FNS = ['eraMayThrow', 'eraResetKey', 'eraStamp', 'eraBehind', 'eraThrow'];
+/*  ⛔ ארגז חול לפונקציות העידן — ⚠️ הן טהורות, ⭐ והמוחק והשומר נמסרים
+ *  להן: ⛔ ולכן אפשר להריץ אותן על טקסט ממוטט בלי לגעת בעץ. */
+function eraBox(src) {
+  const sandbox = { console, JSON, Date, Math, String, Number, Array, Object,
+                    Boolean, isFinite, parseInt };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  for (const n of ERA_FNS) vm.runInContext(cut(n, src), sandbox, { filename: n + '.js' });
+  return sandbox;
+}
+/*  ⛔ מכשיר מדומה — ⚠️ **מה נכנס**: העידן שעל הדיסק, העידן בענן, ושלושת
+ *  התנאים; ⛔ **ומה מפיל**: זריקה שלא הייתה צריכה לקרות, ⭐ ומחיקה
+ *  שקרתה בלי שהעידן קודם. ⚠️ **ולמה המבנה קיים**: הוא מודד את התוצאה
+ *  על הדיסק ⛔ ולא את ערך ההחזרה בלבד. */
+function eraRun(sb, o) {
+  const disk = { era: o.era, rows: ['ישן'], stamp: null };
+  let wipes = 0, err = null, threw = null;
+  try {
+    threw = sb.eraThrow({
+      local: disk.era, cloud: o.cloud, prefix: 'x_',
+      online: o.online, push: o.push, pending: o.pending,
+      wipe: function () { wipes++; disk.rows = []; if (o.crash) throw new Error('נקטע'); },
+      save: function (era, key, stamp) { disk.era = era; disk.stampKey = key; disk.stamp = stamp; },
+    });
+  } catch (e) { err = e.message; }
+  return { disk, threw, wipes, err };
+}
+const ERA_OK_PUSH = { ok: true, still: [] };
+/*  ⛔ דפוס האימוץ — ⚠️ «השדה החדש ריק והישן מלא» הוא בדיוק מה שהעידן
+ *  מחליף: ⭐ קורא לצורה ישנה שאין לו עידן נשאר לנצח, ⛔ כי איש אינו יכול
+ *  להוכיח שאין מכשיר שעוד מחזיק אותה. ⚠️ **והסריקה על קוד מולבן** —
+ *  ⛔ הדפוס חי בהערות שמסבירות אותו. */
+const ERA_ADOPT = /\b([A-Za-z_$][\w$]*)(?:\.[\w$]+|\[[^\]]{1,20}\])\s*==\s*null\s*&&\s*\1(?:\.[\w$]+|\[[^\]]{1,20}\])\s*!=\s*null/;
+function eraAdoptSites(src) {
+  const w = whitenJs(src);
+  const out = [];
+  w.split('\n').forEach((l, i) => { if (ERA_ADOPT.test(l)) out.push('index.html:' + (i + 1)); });
+  return out;
+}
+/*  ⛔ ההצהרה על העידן נמדדת משני צדדיה — ⚠️ עידן שנבדל מהבסיס בלי נימוק,
+ *  ⛔ ונימוק לעידן שאינו נבדל: ⭐ «נבדל» הוא המדידה ⛔ ואינו הנימוק. */
+function eraDeclGaps(src) {
+  const d = APP.dataEra || {};
+  const out = [];
+  const m = /\bvar DATA_ERA = (\d+);/.exec(src);
+  if (!m) return ['`DATA_ERA` אינו מוגדר במקור'];
+  const inSrc = Number(m[1]);
+  if (inSrc !== d.era) out.push(`המקור מצהיר ${inSrc} ו-APP.dataEra מצהיר ${d.era}`);
+  if (!(d.base > 0)) out.push('`APP.dataEra.base` אינו מספר חיובי');
+  const differs = d.era !== d.base;
+  const why = String(d.why || '').trim();
+  if (differs && why.length < 20) out.push('עידן שנבדל מהבסיס בלי נימוק כתוב');
+  if (!differs && why.length) out.push('נימוק לעידן שאינו נבדל מהבסיס');
+  return out;
+}
+
+console.log('\n· ' + APP.app + ' — סבב 148: עידן הנתונים');
+{
+  const g = eraDeclGaps(SRC);
+  assert(g.length === 0,
+    'ע1 · ⛔ [era-decl] העידן מוצהר ונמדד משני צדדיו — נמדדו ' + g.length +
+    ' פערים והצפוי 0' + (g.length ? ' (' + g.join(' · ') + ')' : '') +
+    '. מיישרים את `APP.dataEra` למקור, או כותבים את הנימוק');
+}
+{
+  const n = eraAdoptSites(SRC).length;
+  assert(n === 0,
+    'ע2 · ⛔ [era-adopt] אפס דפוס אימוץ במקור — נמדדו ' + n + ' אתרים והצפוי 0. ' +
+    'מסירים את ההסבה ומקדמים את `DATA_ERA` באותו סבב');
+}
+{
+  const sb = eraBox(SRC);
+  const key = sb.eraResetKey('x_');
+  assert(key === 'x_era_reset',
+    'ע3 · ⛔ [era-stamp] סימן הזריקה נגזר מהתחילית ונגמר ב-`_era_reset` — נמדד «' +
+    key + '» והצפוי «x_era_reset». מיישרים את `eraResetKey`');
+  const clean = eraRun(sb, { era: 1, cloud: 2, online: true, push: ERA_OK_PUSH, pending: {} });
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(clean.disk.stamp));
+  assert(clean.threw === true && clean.disk.rows.length === 0 && clean.disk.era === 2 && iso,
+    'ע4 · ⛔ [era-clean] מכשיר נקי נזרק, והסימן חותמת ISO — נמדד זריקה=' + clean.threw +
+    ' שורות=' + clean.disk.rows.length + ' עידן=' + clean.disk.era +
+    ' חותמת=' + clean.disk.stamp + ' והצפוי true/0/2/ISO');
+  assert(clean.disk.stampKey === 'x_era_reset',
+    'ע5 · ⛔ [era-stamp-key] החותמת נכתבת במפתח שנגזר — נמדד «' + clean.disk.stampKey +
+    '» והצפוי «x_era_reset»');
+  const off = eraRun(sb, { era: 1, cloud: 2, online: false, push: ERA_OK_PUSH, pending: {} });
+  assert(off.threw === false && off.wipes === 0,
+    'ע6 · ⛔ [era-net] אין רשת ⟵ אינו נזרק — נמדד זריקה=' + off.threw +
+    ' מחיקות=' + off.wipes + ' והצפוי false/0');
+  const stl = eraRun(sb, { era: 1, cloud: 2, online: true,
+                           push: { ok: true, still: ['t:9'] }, pending: {} });
+  assert(stl.threw === false && stl.wipes === 0,
+    'ע7 · ⛔ [era-still] שורה שנשארה בדחיפה ⟵ אינו נזרק — נמדד זריקה=' + stl.threw +
+    ' מחיקות=' + stl.wipes + ' והצפוי false/0');
+  const nok = eraRun(sb, { era: 1, cloud: 2, online: true,
+                           push: { ok: false, still: [] }, pending: {} });
+  assert(nok.threw === false && nok.wipes === 0,
+    'ע8 · ⛔ [era-ok] דחיפה שלא החזירה `ok` ⟵ אינו נזרק — נמדד זריקה=' + nok.threw +
+    ' מחיקות=' + nok.wipes + ' והצפוי false/0');
+  const q = eraRun(sb, { era: 1, cloud: 2, online: true, push: ERA_OK_PUSH,
+                         pending: { 'k:1': 7 } });
+  assert(q.threw === false && q.wipes === 0,
+    'ע9 · ⛔ [era-queue] תור שאינו ריק ⟵ אינו נזרק — נמדד זריקה=' + q.threw +
+    ' מחיקות=' + q.wipes + ' והצפוי false/0');
+  const same = eraRun(sb, { era: 2, cloud: 2, online: true, push: ERA_OK_PUSH, pending: {} });
+  assert(same.threw === false && same.wipes === 0,
+    'ע10 · ⛔ [era-behind] עידן שאינו מאחור ⟵ אינו נזרק — נמדד זריקה=' + same.threw +
+    ' והצפוי false');
+  const nul = eraRun(sb, { era: 1, cloud: null, online: true, push: ERA_OK_PUSH, pending: {} });
+  assert(nul.threw === false && nul.wipes === 0,
+    'ע11 · ⛔ [era-closed] עידן ענני שלא נקרא ⟵ נכשל סגור — נמדד זריקה=' + nul.threw +
+    ' והצפוי false');
+  const cut1 = eraRun(sb, { era: 1, cloud: 2, online: true, push: ERA_OK_PUSH,
+                            pending: {}, crash: true });
+  const next = eraRun(sb, { era: cut1.disk.era, cloud: 2, online: true,
+                            push: ERA_OK_PUSH, pending: {} });
+  assert(cut1.disk.era === 1 && cut1.disk.stamp === null && next.threw === true,
+    'ע12 · ⛔ [era-resume] זריקה שנקטעה ⟵ העלייה הבאה זורקת ומושכת — נמדד עידן=' +
+    cut1.disk.era + ' חותמת=' + cut1.disk.stamp + ' ובעלייה הבאה זריקה=' + next.threw +
+    ' והצפוי 1/null/true');
+}
+{
+  const w = whitenJs(SRC);
+  const kick = (w.match(/(?:^|[^\w$.])eraKick\s*\(/g) || []).length;
+  assert(kick >= 2,
+    'ע13 · ⛔ [era-wired] נקודת ההפעלה חיה — נמדדו ' + kick +
+    ' אתרים ל-`eraKick` והצפוי לפחות שניים (הגדרה וקריאה מהעלייה). מחווטים אותה לעלייה');
+}
+
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_merge_pending: המוטציות רצות ברמה המלאה (--full)');
@@ -438,6 +584,86 @@ console.log('  — מוטציות —');
   assert(before !== after,
     '19 · ⛔ היפוך `' + C.knobs[0] + '` משנה את התוצאה — הידית אמיתית ולא קישוט' +
     ' (' + before + ' → ' + after + ')');
+}
+
+
+/* ── מוטציות העידן — שש, וכולן חייבות להפיל ────────────────────────────── */
+/*  ⛔ המוטציה שוברת את המנגנון ⛔ ולא את הצורה — ⚠️ היא מסירה תנאי שלם
+ *  מגוף `eraMayThrow`, ⭐ והמדידה היא **שהמכשיר שלא היה צריך להיזרק
+ *  נזרק**: ⛔ והיא רצה על מחרוזת ⛔ ואינה נכתבת לעץ. */
+console.log('  — מוטציות העידן —');
+{
+  const body = cut('eraResetKey', SRC);
+  const mut = SRC.replace(body, body.replace("+ 'era_reset'", "+ 'era'"));
+  assert(mut !== SRC, 'ע-מ1א · המוטציה שינתה את המקור בפועל');
+  assert(eraBox(mut).eraResetKey('x_') !== 'x_era_reset',
+    'ע-מ1ב · ⛔ מוטציה: הסרת הסיומת מפילה את «[era-stamp] סימן הזריקה נגזר מהתחילית» — ' +
+    'נמדד «' + eraBox(mut).eraResetKey('x_') + '» והצפוי שיתהפך');
+}
+{
+  const body = cut('eraMayThrow', SRC);
+  const mut = SRC.replace(body, body.replace('  if (!s.online) return false;\n', ''));
+  assert(mut !== SRC, 'ע-מ2א · המוטציה שינתה את המקור בפועל');
+  const r = eraRun(eraBox(mut), { era: 1, cloud: 2, online: false,
+                                  push: ERA_OK_PUSH, pending: {} });
+  assert(r.threw === true,
+    'ע-מ2ב · ⛔ מוטציה: הסרת תנאי הרשת מפילה את «[era-net] אין רשת ⟵ אינו נזרק» — ' +
+    'נמדד זריקה=' + r.threw + ' והצפוי שתתהפך ל-true');
+}
+{
+  const body = cut('eraMayThrow', SRC);
+  const mut = SRC.replace(body, body.replace(
+    '  if (!Array.isArray(s.push.still) || s.push.still.length !== 0) return false;\n', ''));
+  assert(mut !== SRC, 'ע-מ3א · המוטציה שינתה את המקור בפועל');
+  const r = eraRun(eraBox(mut), { era: 1, cloud: 2, online: true,
+                                  push: { ok: true, still: ['t:9'] }, pending: {} });
+  assert(r.threw === true,
+    'ע-מ3ב · ⛔ מוטציה: הסרת תנאי ה-`still` מפילה את «[era-still] שורה שנשארה בדחיפה» — ' +
+    'נמדד זריקה=' + r.threw + ' והצפוי שתתהפך ל-true');
+}
+{
+  const body = cut('eraMayThrow', SRC);
+  const mut = SRC.replace(body, body.replace(
+    '  if (Object.keys(s.pending).length !== 0) return false;\n', ''));
+  assert(mut !== SRC, 'ע-מ4א · המוטציה שינתה את המקור בפועל');
+  const r = eraRun(eraBox(mut), { era: 1, cloud: 2, online: true,
+                                  push: ERA_OK_PUSH, pending: { 'k:1': 7 } });
+  assert(r.threw === true,
+    'ע-מ4ב · ⛔ מוטציה: הסרת תנאי התור מפילה את «[era-queue] תור שאינו ריק» — ' +
+    'נמדד זריקה=' + r.threw + ' והצפוי שתתהפך ל-true');
+}
+{
+  const at = SRC.lastIndexOf('</script>');
+  const mut = SRC.slice(0, at) +
+    '\nfunction zzEraGraft(r) { if (r.newKey == null && r.oldKey != null) r.newKey = r.oldKey; }\n' +
+    SRC.slice(at);
+  const n = eraAdoptSites(mut).length;
+  assert(n > 0,
+    'ע-מ5 · ⛔ מוטציה: דפוס אימוץ שנוסף מפיל את «[era-adopt] אפס דפוס אימוץ» — ' +
+    'נמדדו ' + n + ' אתרים והצפוי לפחות אחד');
+}
+{
+  const m = /\bvar DATA_ERA = (\d+);/.exec(SRC);
+  const mut = SRC.replace(m[0], 'var DATA_ERA = ' + (Number(m[1]) + 7) + ';');
+  const n = eraDeclGaps(mut).length;
+  assert(n > 0,
+    'ע-מ6 · ⛔ מוטציה: עידן שנבדל מההצהרה מפיל את «[era-decl] העידן מוצהר» — ' +
+    'נמדדו ' + n + ' פערים והצפוי לפחות אחד');
+}
+/*  ⭐ מוטציית-נגד: עידן זהה בין הריפו ⛔ אינו מפיל — ⚠️ זה המצב הרגיל
+ *  בשלוש שלא היה בהן שינוי צורה, ⛔ ושער שנופל עליו חוסם כל אפליקציה
+ *  שאינה מקדמת. */
+{
+  const saved = { era: APP.dataEra.era, why: APP.dataEra.why };
+  APP.dataEra.era = APP.dataEra.base;
+  APP.dataEra.why = '';
+  const mut = SRC.replace(/\bvar DATA_ERA = \d+;/, 'var DATA_ERA = ' + APP.dataEra.base + ';');
+  const n = eraDeclGaps(mut).length;
+  APP.dataEra.era = saved.era;
+  APP.dataEra.why = saved.why;
+  assert(n === 0,
+    'ע-נ1 · ⭐ מוטציית-נגד: עידן זהה לבסיס ובלי נימוק ⛔ אינו מפיל — ' +
+    'נמדדו ' + n + ' פערים והצפוי 0');
 }
 
 console.log(failed ? `\n✗ סבב 72 (מנוע המיזוג) — ${failed} טענות נכשלו`

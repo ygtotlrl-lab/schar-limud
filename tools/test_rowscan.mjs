@@ -21,11 +21,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS, COL_FIRST, COL_NOTE, ROW_CELLS } from './peers.mjs';
+import { whitenJs } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
   sameProbeOk: [],
+  /*  ⛔ `probe` של שורה ✅ שאינו נוגע במקור — ⚠️ **מה נכנס**: `<מספר>|<שם>` ⟵ למה
+   *  נוכחות מספיקה שם; ⛔ **ומה מפיל**: probe כזה שאינו כאן, ⛔ והכרזה שאין לה מקרה.
+   *  ⭐ **ולמה ריק**: נמדד ואין. */
+  probeDeclOnly: {},
   sharedDecl: [],
   /*  ⛔ מפקד שאינו מפקד — ⚠️ **מה נכנס**: קטע טקסט שהמספר בו הוא
    *  שם של מבנה או תיאורו, והנימוק למה; ⛔ **ומה מפיל**: הכרזה שאין לה
@@ -55,8 +60,8 @@ const APP = {
     'test_lists.mjs':            'שקילות שתי רשימות המודולים המשותפים — ⚠️ צד שני של אותה מדידה, ⛔ והשורה עצמה ב-`MATRIX`',
     'test_lock.mjs':             'נעילת חוסר-הפעילות — ⚠️ גוף המודול המשותף אות-באות, ⛔ והשורה עצמה ב-`MATRIX`',
     'test_md.mjs':               'שלד שלושת קובצי ה-md הנלווים — ⚠️ הפסקאות עצמן, ⛔ והשורות נאכפות בבודק התיעוד',
-    'test_merge_pending.mjs':    'ליבת המיזוג והגנת ה-⏳ — ⚠️ גוף המודול המשותף, ⛔ והשורה עצמה ב-`MATRIX`',
     'test_offline_login.mjs':    'כניסה אופליין מרובת-משתמשים — ⚠️ המסלול עצמו, ⛔ והשורה עצמה ב-`MATRIX`',
+    'test_merge_pending.mjs':    'ליבת המיזוג, הגנת ה-⏳ ועידן הנתונים — ⚠️ גוף המודולים המשותפים בארגז חול, ⛔ ושתי השורות עצמן ב-`MATRIX`',
     'test_pendflush.mjs':        'הניסיון החוזר ואישור ה-⏳ בריקון התור — ⚠️ גוף המודול, ⛔ והשורה עצמה ב-`MATRIX`',
     'test_pull.mjs':             'מנגנון המשיכה המאוחד — ⚠️ גוף המודול, ⛔ והשורה עצמה ב-`MATRIX`',
     'test_roles.mjs':            'מודל ההרשאות — ⚠️ המסלול עצמו, ⛔ והשורה עצמה ב-`MATRIX`',
@@ -71,7 +76,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [56, 52];
+export const ROWS = [57, 52, 53];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -88,7 +93,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const FLOOR = { shared: 9, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -362,6 +367,120 @@ function silentGates(c) {
   };
 }
 
+
+/* ── ט · probe מודד מימוש ולא הצהרה (סבב 148) ──────────────────────────── */
+/*  ⛔ **המוטציה היא הסרת המנגנון והשארת ההצהרה** — ⚠️ ו-`probe` שכל גופו,
+ *  וגוף כל עוזר שהוא קורא לו, אינו נוגע במקור האפליקציה ולא בעץ, ⭐ אינו
+ *  יכול ליפול בה: ⛔ הוא מחזיר את אותה תשובה גם על עץ שרוקן,
+ *  ⚠️ והוא הופך תא ירוק לעדות על עצמו.
+ *  ⛔ **והסריקה נכשלת סגור** — ⚠️ עוזר שגופו לא נחתך נספר כנוגע במקור:
+ *  ⭐ פספוס נשאר פספוס, ⛔ ואינו הופך להאשמה על מנגנון תקין.
+ *  ⛔ **וההכרעה על המקור המולבן** — ⚠️ מחרוזת ותבנית נושאות סוגריים,
+ *  ⭐ והתאמת סוגריים עליהן מחזירה גוף ריק: ⛔ וגוף ריק נקרא «אינו נוגע
+ *  במקור», ⚠️ וזה בדיוק היפוך התשובה.
+ *  ⚠️ **ומה שאינו נאכף כאן**: ⛔ שורה שאין לה `probe` כלל — ⭐ היא נמדדת
+ *  בטענה ד, ⛔ ותא ⭕ שהוכרע בהצהרה בכוונה אינו נסרק. */
+const PROBE_SRC = new RegExp('\\b(?:' + [
+  'present', 'src', 'code', 'srcRefs', 'readOnce', 'readSafe', 'readFileSync',
+  'hasSrc', 'hasCode', 'fnBody', 'fnBodyRaw', 'fnRange', 'callSites', 'cfgBlock',
+  'bodyOf', 'domEntry', 'whitenJs', 'whiten', 'grab', 'fileHas', 'existsSync',
+  'readdirSync', 'inputAudit', 'ranges',
+].join('|') + ')\\b');
+const PROBE_KW = ['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'typeof'];
+const probeBal = (s, i) => {
+  const open = s[i], close = { '(': ')', '{': '}', '[': ']' }[open];
+  let d = 0;
+  for (let j = i; j < s.length; j++) {
+    if (s[j] === open) d++;
+    else if (s[j] === close) { d--; if (!d) return s.slice(i, j + 1); }
+  }
+  return null;
+};
+function probeBodies(W) {
+  const map = new Map();
+  for (const m of W.matchAll(/(?:^|\n)\s*(?:export\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/g)) {
+    const open = W.indexOf('{', m.index + m[0].length - 1);
+    const b = open > 0 ? probeBal(W, open) : null;
+    map.set(m[1], b === null ? '' : b);
+  }
+  const re = /(?:^|\n)\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=\s*(?:async\s+)?(?:function\s*)?(?:\([^)]*\)|[A-Za-z0-9_$]+)?\s*(?:=>)?\s*/g;
+  for (const m of W.matchAll(re)) {
+    if (map.has(m[1])) continue;
+    const at = m.index + m[0].length;
+    if (W[at] === '{') { const b = probeBal(W, at); map.set(m[1], b === null ? '' : b); continue; }
+    let j = at, d = 0;
+    for (; j < W.length; j++) {
+      const c = W[j];
+      if ('([{'.indexOf(c) >= 0) d++;
+      else if (')]}'.indexOf(c) >= 0) d--;
+      else if (c === ';' && d <= 0) break;
+    }
+    map.set(m[1], W.slice(at, Math.min(j, at + 6000)));
+  }
+  return map;
+}
+function probeTouches(body, map, depth, seen) {
+  if (PROBE_SRC.test(body)) return true;
+  if (depth > 8) return true;
+  for (const m of body.matchAll(/\b([A-Za-z0-9_$]+)\s*\(/g)) {
+    const id = m[1];
+    if (PROBE_KW.indexOf(id) >= 0 || seen.has(id)) continue;
+    seen.add(id);
+    const b = map.get(id);
+    if (b === undefined) continue;
+    if (!b.length) return true;
+    if (probeTouches(b, map, depth + 1, seen)) return true;
+  }
+  return false;
+}
+/*  ⛔ ה-probe-ים נקראים משני המרשמים ⛔ ולא מרשימה מוקלדת — ⚠️ `MATRIX`
+ *  הוא המרוכז ו-`tableProbe` הוא הפר-אפליקציתי: ⭐ probe שייכתב מחר
+ *  נסרק אף הוא. */
+function probeEntries(RAWC, W) {
+  const out = [];
+  const a = W.indexOf('const MATRIX = [');
+  if (a >= 0) {
+    const b = W.indexOf('\n];', a);
+    const mxW = W.slice(a, b), mxR = RAWC.slice(a, b);
+    const marks = [...mxW.matchAll(/\n  \{ row: (\d+),/g)];
+    for (let k = 0; k < marks.length; k++) {
+      const from = marks[k].index;
+      const to = k + 1 < marks.length ? marks[k + 1].index : mxW.length;
+      const nm = /name: '([^']*)'/.exec(mxR.slice(from, to));
+      const pr = /probe:\s*([\s\S]*)$/.exec(mxW.slice(from, to));
+      if (pr) out.push({ row: Number(marks[k][1]), name: nm ? nm[1] : '?', body: pr[1] });
+    }
+  }
+  const tp = W.indexOf('\n  tableProbe: {');
+  if (tp >= 0) {
+    const i = W.indexOf('{', tp), j = W.indexOf('\n  },', i);
+    const blk = W.slice(i, j);
+    const marks = [...blk.matchAll(/\n    (\d+): /g)];
+    for (let k = 0; k < marks.length; k++) {
+      const from = marks[k].index;
+      const to = k + 1 < marks.length ? marks[k + 1].index : blk.length;
+      out.push({ row: Number(marks[k][1]), name: 'tableProbe', body: blk.slice(from, to) });
+    }
+  }
+  return out;
+}
+/*  ⛔ המדידה על שורות ✅ בלבד — ⚠️ תא ⭕ מוכרע בהצהרה **בכוונה**: ⭐ «אין
+ *  כאן כניסה» הוא `() => false`, ⛔ והוא אינו שורה ירוקה בלי מנגנון. */
+function probeDeclOnly(c) {
+  const W = whitenJs(c.cap);
+  const map = probeBodies(W);
+  const col = COL_FIRST + PEERS.indexOf(APP.app);
+  const green = new Set();
+  for (const r of (tableRows(c.md) || []))
+    if ((r.marks[col - COL_FIRST] || '') === '✅') green.add(r.n);
+  const out = [];
+  for (const e of probeEntries(c.cap, W)) {
+    if (!green.has(e.row)) continue;
+    if (!probeTouches(e.body, map, 0, new Set())) out.push(e.row + '|' + e.name);
+  }
+  return out;
+}
+
 const C0 = CTX();
 t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
   `טבלת התשתית נקראה — נמדדו ${(tableRows(C0.md) || []).length} שורות והצפוי לפחות אחת`);
@@ -417,8 +536,49 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
     (g.length + a.length ? `: ${[...g, ...a].slice(0, 8).join(' · ')}. גוזרים את המספר מהמרשם, או מכריזים ב-\`APP.censusAllow\` עם נימוקו` : ''));
 }
 
+{
+  const g = probeDeclOnly(C0);
+  const allow = APP.probeDeclOnly || {};
+  const undeclared = g.filter((x) => !allow[x]);
+  const stale = Object.keys(allow).filter((x) => g.indexOf(x) < 0);
+  t(undeclared.length + stale.length === 0,
+    `ט · probe מודד מימוש ולא הצהרה — נמדדו ${undeclared.length} probe של שורה ✅ ` +
+    `שאינם נוגעים במקור ו-${stale.length} הכרזות בלי מקרה, והצפוי אפס ואפס` +
+    (undeclared.length + stale.length
+      ? `: ${undeclared.concat(stale).join(' · ')}. מעגנים את ה-probe במקור, או מכריזים ב-\`APP.probeDeclOnly\` עם נימוקו`
+      : ` (${g.length} מוכרזים)`));
+}
+
+
 mutStage();
 if (RUN_MUT) {
+  /*  ⛔ מ10: probe של שורה ✅ שכל גופו הצהרה — ⚠️ זו בדיוק המוטציה
+   *  שהשורה מתארת: ⭐ המנגנון הוסר וההצהרה נשארה, ⛔ והשורה נשארת ✅.
+   *  ⚠️ **וההזרקה היא רשומה שלמה במרשם** — ⛔ ואינה הלחמת טקסט לתוך
+   *  רשומה קיימת: ⭐ רשומה שנחתכה אחרת בפרסור הייתה מדווחת «לא נפל»
+   *  על מנגנון תקין. */
+  {
+    const base = probeDeclOnly(C0).length;
+    const green = (tableRows(C0.md) || []).find((r) =>
+      (r.marks[PEERS.indexOf(APP.app)] || '') === '✅');
+    const a = C0.cap.indexOf('const MATRIX = [');
+    const b = C0.cap.indexOf('\n];', a);
+    const inj = (body) => C0.cap.slice(0, b) +
+      "\n  { row: " + green.n + ", name: 'zzהזרקה',\n    probe: () => " + body + " }," +
+      C0.cap.slice(b);
+    const after = probeDeclOnly({ ...C0, cap: inj('APP.app === APP.app') }).length;
+    t(after > base,
+      'מ10 · ⛔ מוטציה: probe שכל גופו הצהרה מפיל את טענה ט — ' +
+      `נמדדו ${after} מול ${base} בקו הבסיס, והצפוי יותר`);
+    /*  ⭐ מוטציית-נגד: אותה רשומה בדיוק, ⛔ עם קריאה למקור — ⚠️ שינוי חי
+     *  שאסור לו להפיל: ⭐ זו העבודה היומיומית, ⛔ ושער שנופל עליה חוסם
+     *  כל probe חדש. */
+    const anti = probeDeclOnly({ ...C0, cap: inj('src.indexOf(APP.app) >= 0') }).length;
+    t(anti === base,
+      'נ10 · ⭐ מוטציית-נגד: probe שנוגע במקור ⛔ אינו מפיל — ' +
+      `נמדדו ${anti} והצפוי ${base}`);
+  }
+
   /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מוסרת טקסט שונה לאותה פונקציה,
    *  ⭐ ואינה כותבת לעץ ⛔ ואינה פותחת תהליך. */
   const firstRow = (tableRows(C0.md) || [])[0];

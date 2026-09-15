@@ -180,7 +180,7 @@ const NAMES_FN = [
   'slSanitizeRows', 'mirrorSave', 'slLocalWrite', 'slWhoName',
   /*  ⛔ שכבת המראה עצמה (סבב 114) — ⚠️ ההגירה החד-פעמית, הטעינה והחלתה
    *  על מצב התצוגה: ⭐ רתמה שמדמה אותן אינה מודדת את מה שירוץ. */
-  'slKeyOf', 'slAdoptLegacyId', 'mirrorKey', 'mirrorTables',
+  'slKeyOf', 'mirrorKey', 'mirrorTables',
   'mirrorLoadOne', 'mirrorLoad', 'mirrorBoot', 'slApplyMirror',
   /*  ⛔ נקודת המעבר האחת אל טבלת המשתמשים (סבב 102) — ⚠️ השלמת הטביעה
    *  עוברת בה, ⭐ ורתמה שאינה מחלצת אותה מקבלת `false` שקט. */

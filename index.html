@@ -867,7 +867,6 @@ var MIRROR_CFG = {
   empty:  function () { return []; },
   ts:     function (r) { return slTs(r); },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
-  adopt:  function (r) { return slAdoptLegacyId(r); },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
 };
 
@@ -3198,7 +3197,6 @@ function mirrorLoadOne(t) {
   catch (e) { console.warn('[mirror] ' + t + ' פגום — נטען ריק', e); v = null; }
   if (!Array.isArray(v)) { MIRROR[t] = MIRROR_CFG.empty(); return MIRROR[t]; }
   MIRROR[t] = v.filter(function (r) { return r && typeof r === 'object'; });
-  MIRROR[t].forEach(MIRROR_CFG.adopt);
   return MIRROR[t];
 }
 function mirrorLoad() { mirrorTables().forEach(mirrorLoadOne); }
@@ -3215,6 +3213,152 @@ function mirrorWrite(t, rows) {
  *  שהמפתחות הישנים כבר אינם על אף מכשיר שנטען מאז. */
 function mirrorBoot() { mirrorLoad(); }
 /* ═══════════════ סוף מודול שכבת המראה ═══════════════════════════════════ */
+
+/* ── ERA_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
+/*  ⛔ העידן שהקוד הזה כותב בו — ⚠️ הוא עולה **רק בשינוי צורת שורה**:
+ *  ⭐ שכבת האימוץ ירדה, ⛔ ורשומת מראה ישנה נושאת את שמות המזהים שקדמו
+ *  להסבה ואיש כבר אינו קורא — ⚠️ והיא נזרקת פעם אחת. */
+var DATA_ERA = 2;
+var ERA_CFG = {
+  prefix: 'sl_',
+  client: function () { return SB; },
+  table:  function () { return 'sl_settings'; },
+  /*  ⛔ המוחק — ⚠️ מפתחות המראה **ואופק הפינוי שלהם**: ⭐ אופק ששרד מסנן
+   *  בכתיבה את מה שהמשיכה מחזירה, ⛔ והמכשיר היה נשאר ריק אחרי הזריקה. */
+  wipe:   function () {
+    mirrorTables().forEach(function (t) { MIRROR[t] = MIRROR_CFG.empty(); lsRemove(mirrorKey(t)); });
+    lsClearHorizons();
+  },
+  /*  ⛔ התוצאה נאספת ממחזור הדחיפה של האפליקציה — ⚠️ מחזור הסנכרון בונה את מפות הענן, ⛔ ובלעדיהן שכבת הדחיפה מחזירה «אין ראיה»:
+   *  ⭐ והמחזור מוסר אותה ב-`eraNotePush`. */
+  push:   function () { return syncAll().then(function () { return _eraPush; }); },
+  refresh: function () { return syncAll(); }
+};
+
+/* ═══ עידן הנתונים — מודול משותף (סבב 148) ═════════════════════════════════
+   ⛔ **העותק המקומי מזדקן בדיוק כמו ערך** — ⚠️ רשומת מראה שנכתבה בצורה
+      ישנה נשארת על הדיסק לנצח: ⭐ תיקון בקוד אינו מנקה מכשיר שכבר מזוהם,
+      ⛔ והעידן הוא הכלי היחיד שמגיע אליו מהענן.
+   ⛔ **וזו הפעולה ההרסנית היחידה במערכת** — ⚠️ נתון שלא נדחף ונזרק אבוד
+      ואינו ניתן לשחזור: ⭐ ולכן שלושת התנאים, ⛔ וכולם חובה.
+   ⛔ **ומכשיר שמחכה עדיף על מכשיר ריק** — ⚠️ תנאי שאינו מתקיים אינו
+      «נזרוק בכל זאת»: ⭐ הוא «ננסה שוב בעלייה הבאה».
+   ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בארבעה.
+   ⚠️ מה שאינו נאכף כאן: **המספר עצמו ומי שנמחק** — ⭐ שניהם ב-`ERA_CFG`,
+      ⛔ וצורת השורה נבדלת בין האפליקציות.
+   ══════════════════════════════════════════════════════════════════════ */
+var ERA_CLOUD_KEY = 'data_era';
+var _eraPush = null;
+var _eraTried = false;
+/*  ⛔ שלושת התנאים לזריקה, ⛔ וכולם חובה — ⚠️ **מה נכנס**: מצב הרשת,
+ *  תוצאת הדחיפה (`ok` ו-`still`), ומפת ה-⏳; ⛔ **ומה מפיל**: היעדר רשת,
+ *  דחיפה שלא החזירה `ok`, שורה שנשארה ב-`still`, ⛔ ותור שאינו ריק.
+ *  ⭐ **ולמה שלושתם**: ⚠️ «הדחיפה הצליחה» אינה «אין מה לדחוף» — ⛔ שורה
+ *  שנכתבה אחרי המחזור אינה ב-`still` והיא בתור, ⚠️ ושורה שנדחתה ברשת
+ *  היא ב-`still` ואינה בתור. */
+function eraMayThrow(o) {
+  var s = o || {};
+  /*  ⛔ 1 · יש רשת — ⚠️ בלעדיה אין ראיה שהענן קיבל דבר. */
+  if (!s.online) return false;
+  /*  ⛔ 2 · הדחיפה החזירה `ok` ⛔ ואפס `still` — ⚠️ `still` הוא מה שלא
+   *  עלה, ⭐ ושורה אחת שנשארה בו היא נתון שיימחק ואינו ניתן לשחזור. */
+  if (!s.push || s.push.ok !== true) return false;
+  if (!Array.isArray(s.push.still) || s.push.still.length !== 0) return false;
+  /*  ⛔ 3 · והתור ריק — ⚠️ מפת ה-⏳ היא מה שנכתב מקומית ולא הוכרע. */
+  if (!s.pending || typeof s.pending !== 'object') return false;
+  if (Object.keys(s.pending).length !== 0) return false;
+  return true;
+}
+/*  ⛔ הסימן הוא **חותמת** ⛔ ואינו מונה — ⚠️ מספר סידורי אינו אומר מה
+ *  נוקה ומתי, ⭐ וחותמת מתעדת את עצמה. */
+function eraResetKey(prefix) { return String(prefix == null ? '' : prefix) + 'era_reset'; }
+function eraStamp(now) {
+  return new Date(typeof now === 'number' && isFinite(now) ? now : Date.now()).toISOString();
+}
+/*  ⛔ ההשוואה נכשלת **סגור** — ⚠️ ערך שאינו מספר אינו «הענן חדש»: ⭐ אימוץ
+ *  זריקה על סמך כשל הוא הסקה ולא ראיה, ⛔ והיא מוחקת נתונים. */
+function eraBehind(local, cloud) {
+  var c = Number(cloud), l = Number(local);
+  if (!isFinite(c) || !isFinite(l)) return false;
+  return c > l;
+}
+/*  ⛔ הזריקה — ⚠️ **מה נכנס**: העידן המקומי והענני, שלושת התנאים, מוחק
+ *  ושומר; ⛔ **ומה מפיל**: כל תנאי שאינו מתקיים — ⭐ ואז לא נמחק דבר.
+ *  ⛔ **והמחיקה קודמת לכתיבה** — ⚠️ זריקה שנקטעת באמצע משאירה עידן ישן
+ *  מול ענן חדש, ⭐ והעלייה הבאה זורקת שוב ומושכת: ⛔ הסדר ההפוך היה
+ *  משאיר מכשיר חצי-ריק שסבור שהוא מעודכן. */
+function eraThrow(o) {
+  var s = o || {};
+  if (!eraBehind(s.local, s.cloud)) return false;
+  if (!eraMayThrow(s)) return false;
+  s.wipe();
+  s.save(Number(s.cloud), eraResetKey(s.prefix), eraStamp());
+  return true;
+}
+/*  ⛔ העידן של **העותק שעל הדיסק** — ⚠️ התקנה טרייה נושאת את עידן הקוד:
+ *  ⭐ אין בה עותק ישן שיזדקן, ⛔ ואפס היה זורק אותה בעלייה הראשונה. */
+function eraLocalKey() { return ERA_CFG.prefix + 'era'; }
+function eraLocal() {
+  var v = parseInt(lsGet(eraLocalKey(), ''), 10);
+  return isFinite(v) ? v : DATA_ERA;
+}
+/*  ⛔ השומר — ⚠️ העידן החדש **וחותמת ה-ISO**: ⭐ שניהם על הדיסק, ⛔ ומי
+ *  שפותח את האחסון רואה מה נוקה ומתי. */
+function eraSave(era, stampKey, stamp) {
+  lsSet(eraLocalKey(), String(era));
+  lsSet(stampKey, JSON.stringify(stamp));
+}
+/*  ⛔ העידן נקרא מטבלת המפתח-ערך של האפליקציה ⛔ ולא מטבלה חדשה — ⚠️ ולכל
+ *  אפליקציה מספר משלה: ⭐ צורת השורה נבדלת ביניהן, ⛔ ומספר אחד לכולן היה
+ *  זורק בארבע על שינוי שנעשה באחת.
+ *  ⚠️ **והקריאה אינה ב-`single`** — ⛔ שורה שאינה קיימת מסומנת שם כשגיאה,
+ *  ⭐ ומסד שאין בו עידן הוא המצב הרגיל. */
+function eraCloudRead() {
+  var c = ERA_CFG.client(), eraTbl = ERA_CFG.table();
+  if (!c || !eraTbl) return Promise.resolve(null);
+  return withTimeout(c.from(eraTbl).select('value').eq('key', ERA_CLOUD_KEY).maybeSingle())
+    .then(function (r) {
+      if (!r || r.error || !r.data) return null;
+      var pr = kvParse(ERA_CLOUD_KEY, r.data.value);
+      var raw = pr.ok ? pr.value : null;
+      return raw == null ? null : Number(raw);
+    }, function () { return null; });
+}
+/*  ⛔ הבדיקה רצה **פעם אחת לעלייה** — ⚠️ ולא בפולינג: ⭐ קידום עידן הוא
+ *  פעולת מנהל נדירה, ⛔ וקריאה בכל שלוש שניות היא רשת שנצרכת לחינם.
+ *  ⛔ **ותוצאת הדחיפה נמסרת כארגומנט** — ⚠️ קריאת גלובלי אחרי המתנה
+ *  מחזירה את מה שהמחזור הבא כתב, ⭐ ולא את מה שנמדד כאן. */
+function eraBoot(push, ep) {
+  return eraCloudRead().then(function (cloud) {
+    if (ctxStale(ep)) return false;
+    var threw = eraThrow({
+      local: eraLocal(), cloud: cloud, prefix: ERA_CFG.prefix,
+      online: navigator.onLine, push: push, pending: pendAll(),
+      wipe: ERA_CFG.wipe, save: eraSave
+    });
+    if (!threw) return false;
+    console.log('[era] עידן ' + cloud + ' — העותק המקומי נזרק ונמשך מלא');
+    return ERA_CFG.refresh();
+  }, function () { return false; });
+}
+/*  ⛔ המסלול שמוסר את תוצאת הדחיפה — ⚠️ אפליקציה שמחזור הדחיפה שלה אינו
+ *  מחזיר תוצאה מוסרת אותה כאן, ⭐ ו-`ERA_CFG.push` קוראת אותה: ⛔ תוצאה
+ *  שאינה אובייקט נקראת «אין ראיה» ⛔ ולא «הצליח». */
+function eraNotePush(r) {
+  _eraPush = (r && typeof r === 'object') ? r : null;
+  return r;
+}
+/*  ⛔ נקודת ההפעלה האחת, ⛔ ופעם אחת לעלייה — ⚠️ ההקשר נלכד לפני הדחיפה,
+ *  ⭐ ונבדק אחריה: ⛔ מחזור שמתעורר בהקשר אחר זורק את העותק של האחר. */
+function eraKick() {
+  if (_eraTried) return Promise.resolve(false);
+  _eraTried = true;
+  var ep = ctxEpoch();
+  return Promise.resolve(ERA_CFG.push()).then(function (r) { return eraBoot(r, ep); },
+                                              function () { return false; });
+}
+/* ═══════════════ סוף מודול עידן הנתונים ═════════════════════════════════ */
 
 /* ── חיבור schar-limud למודול ─────────────────────────────────────────────
    ⚠️ **כאן עדיין אין עבודה אופליין** (פער מתועד; נסגר בשלב 2).
@@ -3386,18 +3530,6 @@ function slMerge(local, remote, isPending, keyOf) {
 }
 
 
-/*  ⛔ מראה שנכתבה לפני שה-`SERIAL` ירד נושאת `id` ⛔ ואינה נושאת `client_id`
- *  — ⚠️ **וזו נקודת ההסבה האחת**: ⭐ המיגרציה השלימה בענן `client_id = id`,
- *  ⛔ ובלי ההסבה כאן אותה שורה בדיוק הייתה מקבלת שני מפתחות — ⚠️ אחד
- *  מהדיסק ואחד מהענן, ⭐ והמיזוג היה מכפיל אותה: ⛔ ובכסף, תנועה כפולה.
- *  ⚠️ ההסבה מוחקת את `id` — ⛔ שדה שאינו קיים בסכימה הוא מקור זהות שני. */
-function slAdoptLegacyId(r) {
-  if (!r || typeof r !== 'object') return r;
-  if ((r.client_id == null || r.client_id === '') && r.id != null) r.client_id = String(r.id);
-  if (r.student_client_id == null && r.student_id != null) r.student_client_id = String(r.student_id);
-  delete r.id; delete r.student_id;
-  return r;
-}
 // ⛔ **שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות** (סבב 24).
 // עד הסבב הזה `slStripSecrets` הופעל **רק בנקודת המשיכה** מהענן. זה היה
 // בטוח בפועל, אבל בטוח **במקרה** ולא **במבנה**: מה שהגן היה היעדר מסלול
@@ -4558,12 +4690,16 @@ async function syncAll(){
      *  נקראת «הענן ריק» ⭐ ומסמנת את עֵד הפינוי, ⛔ ו-`null` הוא «אין ראיה»
      *  והשכבה המשותפת מדלגת עליה. */
     if(ctxStale(_ep)) return;
-    var stillPending=(await pushDirty({
+    var _pushRes=await pushDirty({
       sl_students:     pulledStu?remoteStu:null,
       sl_transactions: pulledTxn?remoteTxn:null,
       sl_settings:     pulledSet?remoteSet:null,
       sl_lists:        pulledLst?remoteLst:null
-    })).still;
+    });
+    /*  ⛔ תוצאת הדחיפה נמסרת למודול העידן — ⚠️ שני מתוך שלושת
+     *  תנאי הזריקה נמדדים כאן, ⭐ והמפות הענניות קיימות במחזור הזה בלבד. */
+    eraNotePush(_pushRes);
+    var stillPending=_pushRes.still;
     // ⚠️ הסריקה מסתמכת על תמונה **מלאה** של הענן: היא מורידה סימון מכל מה
     // שאינו ברשימת ה"עדיין ממתין". קטגוריה שלא נמשכה אינה מיוצגת שם, ולכן
     // די בכשל אחת מהן כדי שהורדת הסימון תהיה הסקה ולא ראיה.
@@ -5243,6 +5379,9 @@ async function slBoot(){
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
   try { tombBoot(); } catch (e) { console.warn('[tomb] tombBoot', e); }
+  /*  ⛔ בדיקת העידן — ⚠️ נקודת ההפעלה היחידה, פעם אחת לעלייה: ⭐ היא
+   *  דוחפת תחילה, ⛔ ואינה זורקת דבר אם אחד משלושת התנאים אינו מתקיים. */
+  try { eraKick(); } catch (e) { console.warn('[era] eraKick', e); }
   // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
   // ⭐ כאן ולא ב-`enterApp` (סבב 30, השלמה): הגיבוי אינו תלוי בכניסה, וכך
   //    הוא רץ גם במכשיר שנפתח ונשאר במסך הכניסה. מנגנון בטיחות צריך להיות
