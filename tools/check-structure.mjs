@@ -57,7 +57,7 @@ export const ROWS = [];
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /* הסט הקנוני המשותף — זהה בכל הריפו. */
-const DIRS = ['.github', 'android', 'design', 'icons', 'migrations', 'signing', 'tools'];
+const DIRS = ['.github', 'android', 'core', 'design', 'icons', 'migrations', 'signing', 'tools'];
 /*  ⛔ `.gitignore` בשורש (סבב 148) — ⚠️ הוא מה שמונע מהמפתח לחזור
  *  למעקב ב-`git add` הבא: ⭐ המפתח חי ב-GitHub Secrets, ⛔ ועותק מקומי
  *  לחתימה ביד הוא בדיוק מה שהקובץ הזה מתיר בלי לדחוף. */
@@ -74,7 +74,7 @@ const GENERATORS = ['gen-icons.mjs'];
  *  ומוצהרת, ⛔ ולא הרחבה של `CHECKERS` שהטבלה מונה בה שישה. */
 /*  ⛔ המשותפים לכולן (סבב 139) — ⚠️ מודול שנקרא משערים בכל הריפו,
  *  ⭐ ומקומו מחוץ לאזור הפר-אפליקציה: ⛔ שם משותף שיושב בו נראה פרטי. */
-const SHARED_MODULES = ['db_schema.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
+const SHARED_MODULES = ['appsrc.mjs', 'db_schema.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
 /* ⚠️ פר-אפליקציה — רתמת מודל ההרשאות קיימת בשלוש שיש בהן כניסה, וביומן אין כניסה */
 const MODULES = SHARED_MODULES.concat(['roles-harness.mjs']);
 /* ⚠️ סוף פר-אפליקציה */

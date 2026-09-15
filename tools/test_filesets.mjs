@@ -40,7 +40,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 18, 21, 22, 122, 187];
+export const ROWS = [17, 19, 22, 23, 123, 188];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -82,6 +82,8 @@ const SHARED = [
   'android/build.gradle',
   'android/gradle.properties',
   'android/settings.gradle',
+  'core/sync.js',
+  'core/util.js',
   'icons/apple-touch-icon.png',
   'icons/favicon-16.png',
   'icons/favicon-32.png',
@@ -100,6 +102,7 @@ const SHARED = [
   'tools/check-js.mjs',
   'tools/check-structure.mjs',
   'tools/gen-icons.mjs',
+  'tools/appsrc.mjs',
   'tools/db_schema.mjs',
   'tools/peers.mjs',
   'tools/scope.mjs',
@@ -151,6 +154,7 @@ const SHARED = [
   'tools/test_session.mjs',
   'tools/test_sharedsync.mjs',
   'tools/test_signedshared.mjs',
+  'tools/test_coremod.mjs',
   'tools/test_sistername.mjs',
   'tools/test_shell.mjs',
   'tools/test_sources.mjs',

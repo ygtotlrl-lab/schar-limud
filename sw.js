@@ -5,12 +5,14 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v135';
+var CACHE_NAME = 'schar-limud-v136';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
   './',
   './index.html',
+  './core/util.js',
+  './core/sync.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

@@ -25,6 +25,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { webcrypto } from 'node:crypto';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -76,7 +77,9 @@ export const ROWS = [];
  *  ⟵ שחזור, ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ הליבה המשותפת יצאה
+ *  למודול, ⭐ ושער שקורא את הקובץ בלבד אינו מוצא את מה שרץ. */
+const SRC = appSrc(ROOT);
 
 let passN = 0, failN = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות

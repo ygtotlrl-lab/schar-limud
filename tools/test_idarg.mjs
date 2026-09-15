@@ -22,6 +22,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { CORE_FILES } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -204,7 +205,12 @@ const badWraps = (text) => wrappedArgs(text).filter((a) => {
 });
 
 console.log(`\n— סבב 64 · העברת מזהה ל-DOM (${APP.app}) —`);
-const src = fs.readFileSync(path.join(root, APP.file), 'utf8');
+/*  ⛔ מקור האפליקציה הוא הקובץ **ומודולי הליבה** — ⚠️ קוד שיצא למודול
+ *  אינו מפסיק להיות קוד האפליקציה: ⭐ שער שסורק את הקובץ בלבד מדווח
+ *  «אפס אתרים» על קוד שרץ. */
+const src = [APP.file].concat(CORE_FILES)
+  .filter((f) => fs.existsSync(path.join(root, f)))
+  .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
 
 /* ── א. אין אף אתר חשוף ────────────────────────────────────────────────── */
 const bare = scan(src);

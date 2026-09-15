@@ -26,10 +26,11 @@
    בדפדפן אמיתי ⛔ ולא כאן.
    ──────────────────────────────────────────────────────────────────────── */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db_schema.mjs';
+import { CORE_FILES } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -65,7 +66,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [44, 110];
+export const ROWS = [45, 111];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -122,7 +123,12 @@ process.on('exit', () => {
 const t = (n, cond, m) => { RAN++; if (cond) { pass++; console.log(`  ok   ${n} · ${m}`); }
                             else { fail++; console.log(`  FAIL ${n} · ${m}`); } };
 
-const SRC = readFileSync(join(ROOT, APP.file), 'utf8');
+/*  ⛔ מקור האפליקציה הוא הקובץ **ומודולי הליבה** — ⚠️ קוד שיצא למודול
+ *  אינו מפסיק להיות קוד האפליקציה: ⭐ שער שסורק את הקובץ בלבד מדווח
+ *  «אפס אתרים» על קוד שרץ. */
+const SRC = [APP.file].concat(CORE_FILES)
+  .filter((f) => existsSync(join(ROOT, f)))
+  .map((f) => readFileSync(join(ROOT, f), 'utf8')).join('\n');
 
 /*  ⛔ ארבעת הפעלים — ⚠️ **מה נכנס**: השם הקנוני ⟵ מה הוא עושה;
  *  ⛔ **ומה מפיל**: מרשם שאינו מונה את ארבעתם, ⛔ ושם שאינו הקנוני.

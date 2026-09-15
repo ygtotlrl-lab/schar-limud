@@ -26,6 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CORE_FILES } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -42,7 +43,7 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 82) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [190];
+export const ROWS = [192];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -163,7 +164,11 @@ const SELF = process.argv[1] &&
 if (SELF) {
 
 console.log(`── שער החיווט (${APP.app}) ────────────────────────────────────────────`);
-const SRC = fs.readFileSync(path.join(ROOT, APP.file), 'utf8');
+/*  ⛔ המקור הוא הקובץ **ומודולי הליבה** — ⚠️ הליבה המשותפת יצאה למודול,
+ *  ⭐ ושער שקורא את הקובץ בלבד מדווח «קריאה בלי הגדרה» על קוד שרץ. */
+const SRC = [APP.file].concat(CORE_FILES)
+  .filter((f) => fs.existsSync(path.join(ROOT, f)))
+  .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 const W = wiring(SRC, APP.map, APP.domGlobals);
 
 /* ── א. שלושת הדפוסים ──────────────────────────────────────────────────── */

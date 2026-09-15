@@ -643,7 +643,13 @@ body.locked{overflow:hidden}
     <button class="x" data-act="sw-dismiss" aria-label="סגור">✕</button>
   </div>
 </div>
-<script>
+<script type="module">
+/*  ⛔ הליבה המשותפת נטענת כמודול ⛔ ואינה מוכפלת כאן — ⚠️ והמסמך עצמו הוא
+ *  מודול: ⭐ סקריפט קלאסי רץ **לפני** כל מודול, ⛔ וקריאה אליו בעלייה
+ *  הייתה מוצאת `undefined`. */
+import { readNum, uniqHas } from './core/util.js';
+import { newClientId, idEq, mergeCore, tombPruneMerged, tombBoot,
+         ctxEpoch, ctxSwitch, ctxStale } from './core/sync.js';
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
 /* ⭐ המשתמש המחובר יושב במודול הסשן המשותף (סבב 53) ולא במשתנה כאן —
@@ -2437,54 +2443,6 @@ function pendBoot() {
 }
 /* ═══════════════ סוף מודול "ממתין לסנכרון" ═════════════════════════════ */
 
-/* ═══ מזהי רשומות — מודול משותף (סבב 37א) ═════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — כל האפליקציות **וכל עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-function newClientId(){
-  try{
-    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();
-  }catch(e){}
-  var b=null;
-  try{
-    if(typeof crypto!=='undefined'&&crypto&&typeof crypto.getRandomValues==='function'){
-      b=new Uint8Array(16);crypto.getRandomValues(b);
-    }
-  }catch(e){b=null;}
-  if(!b){b=new Array(16);for(var i=0;i<16;i++)b[i]=Math.floor(Math.random()*256);}
-  b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;  // גרסה 4, variant RFC 4122
-  var h=[],j;for(j=0;j<16;j++)h.push((b[j]+0x100).toString(16).slice(1));
-  return h.slice(0,4).join('')+'-'+h.slice(4,6).join('')+'-'+h.slice(6,8).join('')+'-'+h.slice(8,10).join('')+'-'+h.slice(10,16).join('');
-}
-// השוואת זהות — תמיד כמחרוזת. עובדת על מזהה ישן (מספר) ועל חדש (uuid)
-// באותה מידה, ⛔ וגם על התאמה חוצת-סוגים שנוצרת כשמזהה עובר דרך מאפיין
-// HTML וחוזר כמחרוזת (סבב 38).
-function idEq(a, b) {
-  if (a == null || b == null) return false;
-  return String(a) === String(b);
-}
-// מזהה כארגומנט למאפיין `onclick`, וכבורר לאיתור האלמנט בחזרה.
-// ⛔ **מצוטט תמיד** (סבב 38) — uuid בלי מרכאות הוא שם משתנה שאינו קיים,
-// וכל כפתורי העריכה והמחיקה היו מתים.
-// ⛔ והסינון הוא **רשימת-היתר של תווים** ולא בריחה (סבב 38): ערך המאפיין
-//    עובר פענוח-ישויות לפני שהוא נקרא כ-JS, ולכן `&#39;` שנוצר ע"י `esc`
-//    היה חוזר להיות גרש וסוגר את המחרוזת. מזהה חוקי כאן הוא ספרות, אותיות
-//    לטיניות, מקף וקו תחתון בלבד — כל השאר נחתך.
-function idArg(v) {
-  return "'" + String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '') + "'";
-}
-// ⛔ **נקודת המעבר האחת בין מזהה למספר** — ⚠️ והיא אינה השוואת זהות: ⭐ היא
-//    מחלצת **חותמת שנשמרה בשדה המזהה בגרסה ישנה**, מהתקופה שבה המזהה היה
-//    `Date.now()`. ⛔ ומחרוזת שאינה ספרות בלבד מחזירה 0 ⛔ ולא `NaN` —
-//    ⚠️ `NaN` בהשוואה נכשל בשקט, ⭐ ואפס הוא «אין חותמת» מוצהר.
-// ⛔ אין להמיר מזהה למספר בשום מקום אחר — הוא `text`, ⛔ ו-`parseInt` עליו
-//    מחזיר `NaN`: ⚠️ ההשוואה נכשלת בלי שאיש רואה.
-function legacyIdStamp(v) {
-  var s = String(v == null ? '' : v);
-  return /^[0-9]+$/.test(s) ? Number(s) : 0;
-}
-/* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
-
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ בשכר לימוד הריקון הוא `syncAll` עצמה — משיכה, מיזוג ודחיפת מה
    שמקומי-וחדש-יותר. ⛔ אין כאן פונקציית דחיפה נפרדת ואין ליצור אחת
@@ -2788,30 +2746,6 @@ var PL_CFG = {
       }, function () { return { ok: false, ts: null }; });
   },
 };
-/* ═══ שומר ההקשר — מודול משותף (סבב 109) ══════════════════════════════════
-   ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב: ⚠️ אחרת
-      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ⛔ מחזור «קרא ← מזג ← דחוף» נפתח בהקשר אחד ⛔ ואינו רשאי לכתוב באחר —
-      ⚠️ בין ה-`await` הראשון לאחרון ההקשר יכול להתחלף, ⭐ ומאותו רגע
-      הגלובלים מצביעים על החדש והזיכרון עדיין מחזיק את הישן: ⛔ כל כתיבה
-      שאחריו כותבת את נתוני ההקשר הקודם תחת החדש, ⚠️ וכל רישום הצלחה נזקף
-      לחשבון הלא נכון — ⭐ ועֵד פינוי כזה מתיר למחוק מהדיסק רשומה שמעולם
-      לא עלתה.
-   ⛔ **המונה ⛔ ולא שם ההקשר** — ⚠️ החלפה הלוך-ושוב מחזירה את אותו שם,
-      ⭐ והזיכרון בינתיים כבר הוחלף: ⛔ שוויון שמות אינו שוויון הקשר.
-   ⛔ **ומה נלכד מוצהר פר-אפליקציה** ⛔ ואינו כאן — ⚠️ באפליקציה רב-מוסדית
-      זה המוסד, ⭐ ובשאר המשתמש המחובר: ⛔ המנגנון אחד ⚠️ והנלכד נבדל.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _ctxEpoch = 0;
-function ctxEpoch() { return _ctxEpoch; }
-/*  ⛔ נקודת הקידום היחידה — ⚠️ כל מסלול שמחליף הקשר קורא לה **לפני**
- *  הטעינה החדשה: ⭐ קידום שאחרי הטעינה משאיר את המחזור שרץ עכשיו סבור
- *  שהוא עדיין בהקשר שלו, ⛔ והכתיבה שלו נזקפת לחשבון החדש. */
-function ctxSwitch() { _ctxEpoch++; return _ctxEpoch; }
-/*  ⛔ «האם ההקשר התחלף מאז שהתחלתי» — ⚠️ הקורא לוכד את הערך בכניסה
- *  ⛔ ומוסר אותו כאן, ⭐ ואינו קורא את הגלובלי פעמיים. */
-function ctxStale(ep) { return ep !== _ctxEpoch; }
-/* ═══════════════ סוף שומר ההקשר ═════════════════════════════════════════ */
 /* ═══ מנגנון המשיכה — מודול משותף (סבב 51) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — כל האפליקציות **וכל עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -3432,149 +3366,6 @@ function _randDeviceId() {
   return id;
 }
 /* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
-/* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — כל האפליקציות **וכל עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-// כלל ההכרעה בין שתי גרסאות של **אותה** רשומה — הנקודה היחידה בארגון שבה
-// הוא נכתב. ⛔ אין לשכפל אותה (סבב 38) — ר' הנימוק שבראש הבלוק.
-// `isPend` הוא הסימון ⏳ של הרשומה המקומית; `mergePair`, כשהוא קיים, מקבל
-// את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
-// ⛔ **⏳ שובר שוויון ⛔ ואינו גובר על חותמת חדשה יותר** — ⚠️ מכשיר א׳ ערך
-//    ב-08:00 ולא הספיק לדחוף, ב׳ ערך ב-10:00 וסנכרן, וא׳ עלה ב-14:00:
-//    ⭐ ⏳ שמנצח תמיד היה מוחק כאן את עריכת ה-10:00. ⛔ והמקרה שבו ⏳ באמת
-//    נחוץ — רשומה שאינה בענן כלל — מטופל במסלול «מפתח שאינו בענן».
-function _mergePick(loc, rem, k, isPend, tsOf, mergePair) {
-  if (mergePair) return mergePair(loc, rem, k, isPend);
-  return tsOf(loc) > tsOf(rem) ? loc
-       : (tsOf(loc) === tsOf(rem) && isPend ? loc : rem);   // שוויון → ⏳, אחרת הענן
-}
-// `opts`: getKey · ts · isPending · mergePair · keepUnversionedLocal · onDrop
-//         ובנוסף ארבע ידיות המדיניות שבראש הבלוק.
-function mergeCore(local, remote, opts) {
-  var o = opts || {};
-  var getKey = o.getKey, tsOf = o.ts, mergePair = o.mergePair || null;
-  var keepUnversionedLocal = !!o.keepUnversionedLocal, onDrop = o.onDrop || null;
-  var dedupe = o.dedupe !== false;
-  var remoteDupe = o.remoteDupe || 'ts';        // 'ts' | 'last'
-  var keyless = o.keyless || 'drop';            // 'drop' | 'keep-remote'
-  var localPick = o.localPick || 'last';        // 'last' | 'first'
-  var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
-  var L = Array.isArray(local) ? local : [];
-  var R = Array.isArray(remote) ? remote : [];
-
-  // ── מסלול א: איחוד כפילויות (map+order) ────────────────────────────────
-  if (dedupe) {
-    var map = {}, order = [];
-    R.forEach(function (r) {
-      if (!r) return;
-      var k = getKey(r); if (k == null) return; k = String(k);
-      if (!(k in map)) { order.push(k); map[k] = r; return; }
-      // ⚠️ הסדר כאן הוא (הקיים, החדש) — שוויון נופל על ה**מאוחר** במערך.
-      //    היפוך הארגומנטים הופך את שובר-השוויון בשקט.
-      map[k] = (remoteDupe === 'last') ? r
-             : _mergePick(map[k], r, k, false, tsOf, mergePair);
-    });
-    L.forEach(function (r) {
-      if (!r) return;
-      var k = getKey(r); if (k == null) return; k = String(k);
-      if (!(k in map)) {
-        // רשומה מקומית-בלבד — היעדרות אצל הצד השני אינה מחיקה.
-        if (tsOf(r) > 0 || keepUnversionedLocal || remote == null) { order.push(k); map[k] = r; }
-        else if (onDrop) { try { onDrop(r, k); } catch (eD) {} }
-      } else { map[k] = _mergePick(r, map[k], k, pend(k), tsOf, mergePair); }
-    });
-    return order.map(function (k) { return map[k]; });
-  }
-
-  // ── מסלול ב: שימור כפילויות (דחיפה זורמת) ──────────────────────────────
-  var out = [], seen = {}, byKey = {};
-  L.forEach(function (l) {
-    var k = getKey(l); if (k == null) return; k = String(k);
-    if (localPick === 'last' || !(k in byKey)) byKey[k] = l;
-  });
-  R.forEach(function (r) {
-    var k = getKey(r);
-    if (k == null) { if (keyless === 'keep-remote') out.push(r); return; }
-    k = String(k); seen[k] = 1;
-    var l = byKey[k];
-    if (!l) { out.push(r); return; }
-    out.push(_mergePick(l, r, k, pend(k), tsOf, mergePair));
-  });
-  L.forEach(function (l) {
-    var k = getKey(l); if (k == null) return; k = String(k);
-    if (!seen[k]) out.push(l);
-  });
-  return out;
-}
-/* ═══════════════ סוף מודול המיזוג ══════════════════════════════════════ */
-
-/* ═══ גריעת tombstones — מודול משותף (סבב 93) ════════════════════════════
-   ⛔ שינוי כאן (סבב 93) — כל האפליקציות **וכל עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-// כל רשומה שנמחקה משאירה tombstone לנצח. הם נשמרים במכשיר **ונדחפים לענן
-// בכל שמירה**, ואיש כבר אינו קורא אותם.
-//
-// שלושה כללים, כולם קריטיים:
-// 1. **רק tombstones.** רשומה חיה אינה נגרעת לעולם, בלי קשר לגיל.
-// 2. **רק עם חותמת מספרית.** tombstone בלי חותמת — אי אפשר לדעת מתי נמחק,
-//    ולכן הוא **נשאר**: חותמת חסרה נקראת 0, וגריעה לפיה הייתה מוחקת דווקא
-//    את הישנים ביותר בלי שום ראיה לגילם.
-// 3. **`TOMBSTONE_TTL_MS`.** ⛔ הסף ארוך בהרבה מכל היעדרות סבירה.
-//
-// ⚠️ המחיר המודע: מכשיר שהיה מנותק מעבר לסף ולא קיבל את ה-tombstone עדיין
-// מחזיק את הרשומה כחיה, וכשיסתנכרן היא תחזור **פעם אחת**. מחיקה חוזרת
-// יוצרת tombstone חדש ומתוארך. ⛔ והסף עצמו הוא מדיניות נתונים ⛔ ולכן
-// החלטת המנהל.
-var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
-
-// דגל חד-פעמי: הטעינה מרימה אותו, והמיזוג הראשון שאחריה צורך אותו.
-// ⛔ גריעה מקומית בלבד חסרת משמעות — מנוע המיזוג מחזיר כל רשומה שקיימת
-// בענן ואין לה מקבילה מקומית, ולכן ה-tombstones היו חוזרים תוך שניות
-// והעותק הענני לעולם לא היה מצטמצם. ⚠️ הגריעה **אינה** רצה בפולינג
-// ואינה נוגעת במנוע המיזוג — היא מופעלת על התוצאה, פעם אחת לעלייה.
-var _tombPrunePending = false;
-
-// ⛔ שתי צורות החותמת נקראות כאן — ⚠️ `updatedAt` ו-`updated_at` חיות שתיהן
-//    בארגון, ⭐ ופונקציה שמכירה אחת מהן אינה מודול משותף: ⛔ היא הייתה
-//    מחזירה «בלי חותמת» לכל רשומה בשתי אפליקציות, ומשאירה כל tombstone.
-function tombStamp(r) {
-  if (!r || typeof r !== 'object') return null;
-  if (typeof r.updatedAt === 'number') return r.updatedAt;
-  if (typeof r.updated_at === 'number') return r.updated_at;
-  return null;
-}
-
-function prunePastTombstones(arr, nowTs) {
-  if (!Array.isArray(arr)) return [];
-  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
-  return arr.filter(function (r) {
-    if (!r || typeof r !== 'object') return false;
-    if (!r.deleted) return true;                 // חי — לא נוגעים
-    var t = tombStamp(r);
-    if (t === null) return true;                 // בלי חותמת — משאירים
-    return t >= cutoff;                          // tombstone טרי — משאירים
-  });
-}
-
-// ⛔ נקודת ההפעלה האחת — ⚠️ המיזוג של אוסף רשומות מעביר כאן את תוצאתו,
-//    ⭐ והגריעה רצה בפעם הראשונה שאחרי הטעינה ותו לא: ⛔ עוטף שני היה
-//    מאפשר לכל מקום בקוד לגרוע, ⚠️ ובכל פולינג.
-function tombPruneMerged(arr) {
-  if (!_tombPrunePending) return arr;
-  _tombPrunePending = false;
-  var before = Array.isArray(arr) ? arr.length : 0;
-  var out = prunePastTombstones(arr);
-  if (before !== out.length) console.log('[tomb] נגרעו ' + (before - out.length) + ' tombstones מעבר לסף');
-  return out;
-}
-// ⛔ נקודת ההפעלה היחידה של המודול — ⚠️ העלייה מרימה את הדגל **פעם אחת**,
-//    ⭐ והמיזוג הראשון שאחריה צורך אותו: ⛔ הרמה בכל פולינג הייתה גורעת
-//    בכל שלוש שניות, ⚠️ וזה בדיוק מה שהדגל בא למנוע.
-function tombBoot() { _tombPrunePending = true; }
-/* ═══════════════ סוף מודול גריעת ה-tombstones ══════════════════════════ */
-
 // חיבור שכר לימוד לליבה המשותפת (סבב 38). ⛔ החתימה לא השתנתה.
 // ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף** (סבב 38):
 //    שתי שורות עם אותו מפתח באותו מערך נשארות שתיהן, בדיוק כפי שהיה.
@@ -3595,18 +3386,6 @@ function slMerge(local, remote, isPending, keyOf) {
 }
 
 
-/*  ⛔ מראה שנכתבה לפני שה-`SERIAL` ירד נושאת `id` ⛔ ואינה נושאת `client_id`
- *  — ⚠️ **וזו נקודת ההסבה האחת**: ⭐ המיגרציה השלימה בענן `client_id = id`,
- *  ⛔ ובלי ההסבה כאן אותה שורה בדיוק הייתה מקבלת שני מפתחות — ⚠️ אחד
- *  מהדיסק ואחד מהענן, ⭐ והמיזוג היה מכפיל אותה: ⛔ ובכסף, תנועה כפולה.
- *  ⚠️ ההסבה מוחקת את `id` — ⛔ שדה שאינו קיים בסכימה הוא מקור זהות שני. */
-function slAdoptLegacyId(r) {
-  if (!r || typeof r !== 'object') return r;
-  if ((r.client_id == null || r.client_id === '') && r.id != null) r.client_id = String(r.id);
-  if (r.student_client_id == null && r.student_id != null) r.student_client_id = String(r.student_id);
-  delete r.id; delete r.student_id;
-  return r;
-}
 /*  ⛔ מראה שנכתבה לפני שה-`SERIAL` ירד נושאת `id` ⛔ ואינה נושאת `client_id`
  *  — ⚠️ **וזו נקודת ההסבה האחת**: ⭐ המיגרציה השלימה בענן `client_id = id`,
  *  ⛔ ובלי ההסבה כאן אותה שורה בדיוק הייתה מקבלת שני מפתחות — ⚠️ אחד
@@ -4445,56 +4224,6 @@ function modalEsc(e) {
   return false;
 }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
-/* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
-   ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב: אחרת
-      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ⛔ **כל קריאת ערך מספרי משדה עוברת כאן** — ⚠️ המרה ישירה מחזירה `NaN`
-      על שדה ריק, ⭐ ו-`NaN` שנכנס להשוואה נכשל בשקט: ⛔ `!val` תופס גם
-      אפס תקין, ⚠️ ו-`val > 30` על `NaN` הוא `false`.
-   ⛔ **והברירה מוצהרת בקריאה** — ⚠️ ולא נגזרת בשקט מהטיפוס: ⭐ מי שקורא
-      רואה מה הוא מקבל על שדה ריק, ⛔ ואינו מגלה זאת מהתנהגות.
-   ⛔ **והקלט הוא האלמנט** ⛔ ולא ערכו — ⚠️ אלמנט חסר הוא מסלול תקף, ⭐ והוא
-      מחזיר את הברירה: ⛔ קורא שמפרק בעצמו `el.value` מקבל `undefined`
-      ונופל לפני שהגיע לכאן.
-   ═══════════════════════════════════════════════════════════════════════ */
-function readNum(inp, dflt) {
-  var d = (dflt === undefined) ? 0 : dflt;
-  if (!inp) return d;
-  var raw = String(inp.value == null ? '' : inp.value).trim();
-  if (raw === '') return d;
-  var n = Number(raw);
-  return isFinite(n) ? n : d;
-}
-/* ═══════════════ סוף מודול קריאת ערך מספרי ══════════════════════════════ */
-
-/* ═══ כיווץ רשימת ערכים — מודול משותף (סבב 101) ═══════════════════════════
-   ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה ובמיזוג
-      כאחד**: ⭐ `uniqHas` מונעת את הכפילות שמכאן ואילך, ⛔ ו-`uniqList`
-      מסלקת את מה שכבר נכתב פעמיים.
-   ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב: ⚠️ אחרת
-      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ⛔ ושתיהן מכריעות לפי **אותה זהות** — ⚠️ שני מימושים לאותה טענה נבדלים
-      בשקט, ⭐ ואז המסך מראה פעמיים את מה שהמיזוג מכווץ לאחד.
-   ⛔ והראשון שורד — ⚠️ הסדר של הצד שניצח הוא סדר המסך, ⭐ ומי שדורש
-      שהחדש ינצח ממיין לפני הקריאה. */
-function uniqKeyOf(v, keyFn) { return String(keyFn ? keyFn(v) : v); }
-function uniqList(list, keyFn) {
-  if (!Array.isArray(list)) return list;
-  var seen = {}, out = [];
-  list.forEach(function (v) {
-    var k = uniqKeyOf(v, keyFn);
-    if (seen[k]) return;
-    seen[k] = 1;
-    out.push(v);
-  });
-  return out;
-}
-function uniqHas(list, val, keyFn) {
-  if (!Array.isArray(list)) return false;
-  var k = uniqKeyOf(val, keyFn);
-  return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
-}
-/* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
 /* ═══ Enter שומר בשדה עריכה — מודול משותף (סבב 125) ═════════════════════
    ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
       ⛔ ולא השדה: ⭐ שדה שנוסף לטופס קיים מקבל את המקש בלי שאיש ייגע בו,

@@ -35,6 +35,7 @@ import { PEERS } from './peers.mjs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { whiten } from './whiten.mjs';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ הפונקציות החלקיות של הריפו הזה — ⚠️ **מה נכנס**: שם שמוגדר כאן
@@ -156,7 +157,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [58, 111];
+export const ROWS = [59, 112];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -382,7 +383,10 @@ const PROD = APP.productFns || {};
 }
 
 /* ── 3. המקור נקרא ─────────────────────────────────────────────────────── */
-const MINE = fnNames(readFileSync(join(ROOT, 'index.html'), 'utf8'));
+/*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ שם שיצא למודול
+ *  אינו מפסיק להיות שם ברמת המודול: ⭐ סריקה של הקובץ בלבד הייתה
+ *  מדווחת «אינו כאן» על מה שרץ. */
+const MINE = fnNames(appSrc(ROOT));
 t(n++, MINE.size > 0,
   `[fn-count] שמות פונקציות במקור — נמדדו ${MINE.size} והצפוי לפחות אחד. ` +
   'מריצים את השער משורש הריפו');
@@ -395,7 +399,7 @@ const away = others.filter((p) => !existsSync(join(dirOf(p), 'index.html')));
  *  לליבה אחרי עריכה, ⛔ בלי לגעת בעץ ובלי תהליך נוסף. */
 let SRCS = null, PARTIAL = null, IN_ALL = [], SPLIT = new Set();
 if (!away.length) {
-  SRCS = PEERS.map((p) => readFileSync(join(dirOf(p), 'index.html'), 'utf8'));
+  SRCS = PEERS.map((p) => appSrc(dirOf(p)));
   const sets = SRCS.map(fnNames);
   PARTIAL = partialNames(sets);
   const all = new Set();
@@ -458,7 +462,7 @@ function defPair(src, name) {
   for (const f of forms) if (src.indexOf(f[0]) >= 0) return f;
   return null;
 }
-const MY_SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
+const MY_SRC = appSrc(ROOT);
 
 if (away.length) {
   t(n++, true, 'מ1 · ⭕ הסרת הגדרה באחות — ⛔ אין אחיות על הדיסק, ואין מה למוטט');

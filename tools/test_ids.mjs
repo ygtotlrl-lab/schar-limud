@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ הוא `true` בכולן
@@ -47,7 +48,9 @@ if (process.env.R33_INNER) {
 }
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const FILE = path.join(ROOT, 'index.html');
+/*  ⛔ הבלוק חי ב-`core/sync.js` ⛔ ולא ב-`index.html` — ⚠️ הליבה
+ *  המשותפת יצאה למודול, ⭐ והשער קורא אותה מהמקום שבו היא חיה. */
+const FILE = path.join(ROOT, 'core', 'sync.js');
 const SRC = fs.readFileSync(FILE, 'utf8');
 
 const START = '/* ═══ מזהי רשומות — מודול משותף (סבב 37א)';
@@ -123,7 +126,7 @@ function blockOf(src) {
     if (a < 0 && lines[i].includes(START)) a = i;
     else if (a >= 0 && lines[i].includes(END)) { b = i; break; }
   }
-  if (a < 0 || b < 0) throw new Error('בלוק מודול המזהים לא נמצא ב-index.html');
+  if (a < 0 || b < 0) throw new Error('בלוק מודול המזהים לא נמצא ב-core/sync.js');
   return { a, b, text: lines.slice(a, b + 1).join('\n') };
 }
 
@@ -152,7 +155,7 @@ console.log('· ' + APP.app + ' — סבב 37א: מודול מזהי הרשומ�
 
 /* ── 1 · הליבה עצמה ────────────────────────────────────────────────────── */
 const B = blockOf(SRC);
-ok('1 · הבלוק המשותף קיים ב-index.html (' + (B.b - B.a + 1) + ' שורות)', B.b > B.a);
+ok('1 · הבלוק המשותף קיים ב-core/sync.js (' + (B.b - B.a + 1) + ' שורות)', B.b > B.a);
 ok('2 · ⛔ הפונקציה נקראת `newClientId` — שם אחד לכולן',
   /function\s+newClientId\s*\(/.test(B.text));
 
@@ -179,7 +182,11 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
 
 /* ── 2 · החיווט, לפי מה שהמטריצה מצהירה ────────────────────────────────── */
 {
-  const callsOutside = SRC.slice(0, SRC.indexOf(START)) + SRC.slice(SRC.indexOf(END));
+  /*  ⛔ הקוראים חיים ב-`index.html` והבלוק במודול — ⚠️ והמדידה על מקור
+   *  האפליקציה כולו, פחות הבלוק עצמו: ⭐ מדידה על המודול בלבד הייתה
+   *  מחזירה «אינו מחווט» על קוד שקורא. */
+  const APPSRC = appSrc(ROOT);
+  const callsOutside = APPSRC.slice(0, APPSRC.indexOf(START)) + APPSRC.slice(APPSRC.indexOf(END));
   const wired = /\bnewClientId\s*\(/.test(callsOutside.replace(/function\s+newClientId\s*\(/g, ''));
   ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (התא בטבלה = ✅)'
                          : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (התא בטבלה = ❌)'),
@@ -203,7 +210,7 @@ const capRun = (await import(
 function checkerFails(mutatedSrc) {
   const lg = console.log, er = console.error;
   console.log = () => {}; console.error = () => {};
-  try { return capRun({ 'index.html': mutatedSrc }) !== 0; }
+  try { return capRun({ 'core/sync.js': mutatedSrc }) !== 0; }
   catch (e) { return true; }
   finally { console.log = lg; console.error = er; }
 }

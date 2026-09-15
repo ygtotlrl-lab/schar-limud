@@ -27,6 +27,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -82,7 +83,10 @@ export const ROWS = [];
 const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ מנוע המיזוג יצא
+ *  למודול והעוטפים נשארו בקובץ: ⭐ שער שקורא צד אחד בלבד אינו מוצא
+ *  את הצד השני. */
+const SRC = appSrc(ROOT);
 
 let failed = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
@@ -149,7 +153,7 @@ const assert = (cond, m) => (cond ? ok(m) : bad(m));
 function cut(name, src) {
   const re = new RegExp('\\n(async )?function ' + name + '\\s*\\(', 'g');
   const m = re.exec(src);
-  if (!m) throw new Error('הפונקציה ' + name + ' לא נמצאה ב-index.html');
+  if (!m) throw new Error('הפונקציה ' + name + ' לא נמצאה במקור האפליקציה');
   const start = m.index + 1;
   let i = src.indexOf('{', m.index + m[0].length - 1), d = 0;
   for (; i < src.length; i++) {
@@ -337,7 +341,7 @@ console.log('· ליבת המיזוג המשותפת (' + APP.app + ')');
 
 /* ── 4 · הבלוק המשותף ──────────────────────────────────────────────────── */
 assert(SRC.indexOf('/* ═══ מיזוג רשומות — מודול משותף (סבב 38)') !== -1,
-  '1 · הבלוק המשותף קיים ב-index.html');
+  '1 · הבלוק המשותף קיים במקור האפליקציה');
 assert(SRC.indexOf('/* ═══════════════ סוף מודול המיזוג') !== -1,
   '2 · וסמן הסגירה שלו קיים');
 assert(/function\s+_mergePick\s*\(/.test(SRC) && /function\s+mergeCore\s*\(/.test(SRC),

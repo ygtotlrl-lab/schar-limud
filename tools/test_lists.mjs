@@ -198,8 +198,9 @@ for (const a of allowed) {
   else fail('החריג המוצהר «' + a + '» אינו במצב שהוצהר — רשימת-היתר שהתיישנה');
 }
 
-/*  5 — שני המודולים שהסבב הזה הוסיף נמצאים בשתי הרשימות. */
-for (const need of ['סוף מודול מזהי הרשומות', 'סוף מודול מזהה המכשיר']) {
+/*  5 — שני מודולים שחיים ב-`index.html` נמצאים בשתי הרשימות. ⛔ מודול
+ *  שיצא לקובץ משלו אינו כאן — ⚠️ `capsEnds` מנכה אותו מהגזירה. */
+for (const need of ['סוף מודול הגיבוי היומי', 'סוף מודול מזהה המכשיר']) {
   const n = norm(need);
   if (capsSet.has(n) && cmtSet.has(n)) pass('«' + need + '» בשתי הרשימות');
   else fail('«' + need + '» חסר ב-' + (capsSet.has(n) ? 'SHARED_BLOCKS' : 'CAPS'));
@@ -236,7 +237,7 @@ if (!equiv(capsSrc, mutCmtDrop('סוף מודול מזהה המכשיר')))
   pass('מוטציה: הסרת מודול מ-SHARED_BLOCKS בלבד — מפילה');
 else fail('מוטציה: הסרת מודול מ-SHARED_BLOCKS בלבד **לא** הפילה');
 
-if (!equiv(mutCapsDrop('סוף מודול מזהי הרשומות'), cmtSrc))
+if (!equiv(mutCapsDrop('סוף מודול הגיבוי היומי'), cmtSrc))
   pass('מוטציה: הסרת מודול מ-CAPS בלבד — מפילה');
 else fail('מוטציה: הסרת מודול מ-CAPS בלבד **לא** הפילה');
 

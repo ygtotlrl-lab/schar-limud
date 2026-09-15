@@ -38,10 +38,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db_schema.mjs';
 import { dirname, join } from 'node:path';
+import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [156, 149, 150, 151, 170, 197, 198, 199, 200, 163, 154, 141, 152];
+export const ROWS = [157, 150, 151, 152, 171, 199, 200, 201, 202, 164, 155, 142, 153];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -141,7 +142,9 @@ const APP = {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(here, '..');
-const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ הליבה המשותפת יצאה
+ *  למודול, ⭐ ושער שקורא את הקובץ בלבד אינו מוצא את מה שרץ. */
+const SRC = appSrc(ROOT);
 
 let fail = 0, notMeasured = '';
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
