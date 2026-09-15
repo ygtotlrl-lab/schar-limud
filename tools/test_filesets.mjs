@@ -178,7 +178,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 4, app: 0, appWhy: '' };
+const FLOOR = { shared: 5, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -240,6 +240,31 @@ export function oneoffGaps(decls) {
   return Object.entries(decls)
     .filter(([, why]) => ONEOFF_RE.test(String(why)) && !ROUND_RE.test(String(why)))
     .map(([k]) => k);
+}
+
+/*  ⛔ תוצר חד-פעמי יורד בסבב שאחרי זה שצרך אותו — ⚠️ **מה נכנס**: הכרזה
+ *  שנוקבת בסבבה; ⛔ **ומה מפיל**: סבב שקדם לסבב הנוכחי. ⭐ **ולמה המבנה
+ *  קיים**: «נושא את סבבו» נמדד על **צורת ההכרזה** ⛔ ולא על גילה, ⚠️ וכלי
+ *  שהוכרז חד-פעמי בסבב 92 עבר את המדידה 56 סבבים ברציפות. */
+export function oneoffStale(decls, cur) {
+  if (!cur) return [];
+  return Object.entries(decls)
+    .filter(([, why]) => ONEOFF_RE.test(String(why)))
+    .filter(([, why]) => {
+      const m = /סבב\s+(\d+)/.exec(String(why));
+      return m && Number(m[1]) < cur;
+    })
+    .map(([k]) => k);
+}
+
+/*  ⛔ הסבב הנוכחי נגזר מכותרת הטבלה ⛔ ואינו מוקלד — ⚠️ מספר שהוקלד
+ *  בשער מתיישן בסבב הבא, ⭐ והכותרת היא המקום שבו הוא כבר נכתב. */
+export function currentRound(root) {
+  try {
+    const h = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+    const m = /עודכן לאחרונה:\s*סבב\s+(\d+)/.exec(h);
+    return m ? Number(m[1]) : 0;
+  } catch { return 0; }
 }
 
 export function audit(root) {
@@ -324,6 +349,18 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
     : bad('4 · [oneoff-round] הכרזת תוצר חד-פעמי בלי סבב — נמדדו ' + g4.length +
           ' מתוך ' + Object.keys(decls).length + ' והצפוי אפס (' + g4.join(' · ') +
           '). נוקבים בסבב שבו נכתב, ⛔ שהוא מה שאומר מתי הוא יורד');
+}
+
+{
+  const decls = { ...APP.only, ...APP.appGates };
+  const cur = currentRound(ROOT);
+  const g5 = oneoffStale(decls, cur);
+  g5.length === 0
+    ? ok('5 · [oneoff-stale] כל הכרזת תוצר חד-פעמי נוקבת בסבב הנוכחי — נמדד ' +
+         'סבב ' + cur + ' ואפס הכרזות שקדמו לו')
+    : bad('5 · [oneoff-stale] תוצר חד-פעמי ששרד את סבבו — נמדדו ' + g5.length +
+          ' מתוך ' + Object.keys(decls).length + ' והצפוי אפס (' + g5.join(' · ') +
+          '). מורידים את התוצר, ⛔ שהוא מה ש«חד-פעמי» הבטיח');
 }
 
 console.log('\n— מוטציות —');
@@ -420,6 +457,32 @@ if (!RUN_MUT) {
   APP.appGates[key] = keep;
   clean ? ok('נ3 · ⭐ מוטציית-נגד: הכרזה חד-פעמית שנוקבת בסבבה ⛔ אינה מפילה')
         : bad('נ3 · הכרזה תקינה נספרה בטעות כחסרת סבב');
+}
+
+/*  ⛔ מ7 — תוצר חד-פעמי ששרד את סבבו (סבב 148). ⚠️ «נושא את סבבו» עבר
+ *  על כלי מסבב 92 ששרד 56 סבבים, ⭐ והמדידה החסרה היא הגיל. */
+{
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  const cur = currentRound(ROOT);
+  APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + (cur - 1);
+  const hit = oneoffStale(APP.appGates, cur).includes(key);
+  APP.appGates[key] = keep;
+  hit ? ok('מ7 · [oneoff-stale] תוצר חד-פעמי מסבב שקדם מפיל את טענה 5')
+      : bad('מ7 · תוצר חד-פעמי ששרד את סבבו לא נתפס');
+}
+
+/*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית מהסבב הנוכחי ⛔ אינה מפילה:
+ *  ⚠️ בלעדיה הטענה הייתה מפילה כל תוצר ביום שנכתב. */
+{
+  const key = Object.keys(APP.appGates)[0];
+  const keep = APP.appGates[key];
+  const cur = currentRound(ROOT);
+  APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + cur;
+  const clean = oneoffStale(APP.appGates, cur).length === 0;
+  APP.appGates[key] = keep;
+  clean ? ok('נ4 · ⭐ מוטציית-נגד: הכרזה חד-פעמית מהסבב הנוכחי ⛔ אינה מפילה')
+        : bad('נ4 · הכרזה מהסבב הנוכחי נספרה בטעות כשארית');
 }
 
 /*  ⛔ מ5 — הצהרה שאין לה שער (סבב 144). ⚠️ הצהרה שהתיישנה היא בעצמה
