@@ -84,6 +84,7 @@ const APP = {
           'test_dbscan.mjs',
           'test_sharedsync.mjs',
           'test_signedshared.mjs',
+          'test_sistername.mjs',
           'test_toolsid.mjs',
           'test_filesets.mjs',
           'test_inputlayer.mjs',

@@ -301,7 +301,10 @@ function scan(src, allow) {
     for (const f of q.matchAll(/\(([^)]*)\)/g)) {
       const txt = f[1].trim();
       if (/^min-width\s*:\s*\d+px$/.test(txt)) continue;
-      if (/^prefers-color-scheme\s*:/.test(txt)) continue;
+      /*  ⛔ שאילתת העדפת משתמש אינה נקודת שבירה — ⚠️ אין בה יחידה ואין
+       *  בה כיוון, ⭐ ו-`BP_SCALE` אינו מודד אותה: ⛔ והדרישה לכתוב אותה
+       *  כ-`min-width` הייתה הופכת העדפת נגישות לרוחב מסך. */
+      if (/^prefers-(?:color-scheme|reduced-motion)\s*:/.test(txt)) continue;
       out.media.push('שורה ' + lineOf(src, m.index) + ': (' + txt + ')');
     }
   }

@@ -378,7 +378,15 @@ const ACTIVE = activeLines.join('\n');
   const rest = src.split(/<style[^>]*>[\s\S]*?<\/style>/).join('\n');
   const names = new Set();
   for (const m of styles.matchAll(/(?<![\w/-])\.(-?[A-Za-z_][\w-]*)/g)) names.add(m[1]);
+  /*  ⛔ מחלקה שמוגדרת בתוך בלוק חתום אינה נמדדת כאן — ⚠️ הבלוק זהה
+   *  בית-לבית בכל הריפו וזהותו נמדדת ב-`sha256`: ⭐ סולם הוא תשתית
+   *  ⛔ ולא מפקד, ⚠️ ודרגה שאין לה קורא באפליקציה אחת נשארת —
+   *  ⛔ וגריעתה כאן הייתה שוברת את החתימה בארבע האחרות. */
+  const sealed = new Set();
+  for (const b of styles.matchAll(/\/\* ═══ [^\n]*— מודול משותף[\s\S]*?\/\* ═══ סוף[^\n]*\*\//g))
+    for (const m of b[0].matchAll(/(?<![\w/-])\.(-?[A-Za-z_][\w-]*)/g)) sealed.add(m[1]);
   const dead = [...names].filter((c) => {
+    if (sealed.has(c)) return false;
     if (APP.dynamicClasses.includes(c)) return false;
     return !new RegExp('(?<![\\w-])' + c.replace(/-/g, '\\-') + '(?![\\w-])').test(rest);
   }).sort();

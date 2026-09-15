@@ -34,6 +34,9 @@ const APP = {
   chrome: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   /* ⚠️ ההיקף שבו נמדד `Enter` — הטופס הראשון שנפתח בדף */
   ksaveSel: '.ksave',
+  /*  ⚠️ הפותח של אותו היקף — ⛔ ריק כשהטופס כבר על המסך הראשון:
+   *  ⭐ שדה חסר נקרא «לא נשאל», וריק נקרא «נמדד ואין». */
+  ksaveOpen: '',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -257,6 +260,19 @@ async function paths(D, port) {
    *  נתפס, הפעולה שבמפה רצה, ⭐ ורק אז ברירת המחדל מבוטלת. ⛔ ואין
    *  למדוד כאן השבתה — ⚠️ המסלול קורא לפעולה **ישירות** ולא דרך הניתוב,
    *  ⭐ ולכן הכפתור אינו נכנס לשומר: ⛔ «לא נדלק» היה נקרא «לא שמר». */
+  /*  ⛔ טופס שאינו על המסך הראשון נפתח לפני המדידה — ⚠️ **הפותח מוצהר
+   *  ב-`APP.ksaveOpen`**, ⭐ וריק הוא «נמדד ואין»: ⛔ אפליקציה שהטופס
+   *  היחיד שלה נפתח בלחיצה אינה אפליקציה בלי טופס, ⚠️ ומדידה על המסך
+   *  הראשון בלבד הייתה מדווחת «אין היקף» על מנגנון חי. */
+  /*  ⛔ ההמתנה היא על **תנאי** ⛔ ולא על שעון — ⚠️ הפותח נקרא בכל
+   *  סיבוב, ⭐ והתנאי הוא שההיקף נמצא ב-DOM: ⛔ מסלול שנפתח בשני
+   *  שלבים — לחיצה, ואז הכרעת דיאלוג — מגיע לשם בסיבוב השני. */
+  if (APP.ksaveOpen) {
+    await waitFor(async () => {
+      await ev(APP.ksaveOpen);
+      return (await ev(`!!document.querySelector('${APP.ksaveSel}')`)) === true;
+    }, 6000);
+  }
   const ent = await ev(`(function () {
     var f = document.querySelector('${APP.ksaveSel}');
     if (!f) return 'אין היקף';
@@ -359,8 +375,12 @@ const MUT = [
     edit: (s) => atEnd(s, '<script>window.__boom.nope();</script>') },
   { m: 'מ2', k: 'busy', lbl: 'ההשבתה אינה נדלקת',
     edit: (s) => s.replace('btn.disabled = true;', 'btn.disabled = false;') },
+  /*  ⛔ גם שער הכניסה של המטפל מומר — ⚠️ אפליקציה שההיקף שלה נושא גם
+   *  `data-kesc` הייתה מפעילה את מסלול הביטול על `Enter`, ⭐ ומבטלת את
+   *  ברירת המחדל בכל זאת: ⛔ והמוטציה הייתה «עוברת» בלי לשבור דבר. */
   { m: 'מ3', k: 'enter', lbl: '`Enter` אינו מנותב',
-    edit: (s) => s.replace(/key === 'Enter'/g, "key === 'EnterZ'")
+    edit: (s) => s.replace(/!== 'Enter'/g, "!== 'EnterZ'")
+                  .replace(/key === 'Enter'/g, "key === 'EnterZ'")
                   .replace(/=== 'Enter'/g, "=== 'EnterZ'") },
   { m: 'מ4', k: 'escape', lbl: '`Escape` מוחק את מיכל המודאל',
     edit: (s) => atEnd(s, "<script>document.addEventListener('keydown',function(e){" +

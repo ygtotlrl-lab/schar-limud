@@ -7,7 +7,7 @@ network:
 https://ygtotlrl-lab.github.io/schar-limud/
 ```
 
-Built in the exact pattern of yoman-avoda's round-13 shell (the network-loading one),
+Built in the exact pattern of the organisation's round-13 shell (the network-loading one),
 
 ## מה בפנים
 
