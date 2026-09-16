@@ -129,7 +129,7 @@ const APP = {
   offlineLoginFn: 'slVerifyOffline',
   /*  ⛔ חתימת ה-keystore — ⚠️ היא מה שהופך «מפתח קבוע» למדיד:
    *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ וחתימה שונה מפילה. */
-  keystoreSha: '9b6680d217decb43',
+  keystoreSha: 'f378a9bbf8b0583d',
   schemaFile: 'migrations/000_initial_schema.sql',
   // ⚠️ שורת אימות הפינוי «לא רלוונטי» — אין כאן פינוי כלל, ולכן אין מה לאמת.
   /*  ⭐ שם משפך ה-`kv` (סבב 56) — `null` כשאין כאן `kv` כלל. */
