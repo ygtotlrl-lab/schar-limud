@@ -56,7 +56,7 @@ export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 136, 216];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', '26a1efd40ba59477'],
+  ['table', '62c5fd1907603f8c'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -447,7 +447,7 @@ for (const spec of MD_SKELETONS) {
 const CANON_MD = [
   ['README.md',          'readme-gate',           'fd4654765f8ed749'],
   ['README.md',          'readme-apk',            '54a69bee96c333bf'],
-  ['CONTEXT.md',         'context-grant',         'f81b753212d412f0'],
+  ['CONTEXT.md',         'context-grant',         '3b1f0cfb051b8685'],
   ['android/README.md',  'android-web-update',    'dbfd1b661d1b6b25'],
   ['android/README.md',  'android-origin-switch', '23ef212512bb2202'],
   ['android/README.md',  'android-icons',         'b1fc8be12a9fffbc'],

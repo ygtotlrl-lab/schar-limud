@@ -21,6 +21,9 @@ grant select, insert, update on public.TABLE_NAME to anon, authenticated;
 grant all on public.TABLE_NAME to service_role;
 alter table public.TABLE_NAME enable row level security;
 ```
+
+⚠️ **ושמות הטבלאות נגזרים מתפקידן** — ⭐ `<תחילית>_settings` · `_users` ·
+`_entries`: ⛔ ולא לפי מה שנשמע טוב.
 <!-- SHARED:end -->
 
 ⚠️ **הסיבה:** `GRANT` הוא **אדיטיבי בלבד ואינו מסיר דבר**, ופרויקט Supabase

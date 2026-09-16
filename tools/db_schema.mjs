@@ -29,7 +29,7 @@ export const DB_SCHEMA = [
     { p: 'shared', t: 'ys_students_rows', c: 'client_id,student_id,updated_at,deleted,data,synced_at,deleted_at,deleted_by' },
     { p: 'shared', t: 'sh_backup',        c: 'id,created_at,key,value' },
     { p: 'shared', t: 'sh_sync_log',         c: 'id,created_at,device_id,user_name,action,key,record_count,details' },
-    { p: 'gius',   t: 'g_config',         c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
+    { p: 'gius',   t: 'g_settings',       c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'gius',   t: 'g_donors',         c: 'client_id,name,phone,agent,is_vip,notes,tags,deleted,deleted_at,created_at,updated_at,deleted_by' },
     { p: 'gius',   t: 'g_pledges',        c: 'client_id,donor_client_id,amount,cause,agent,note,due_date,deleted,deleted_at,created_at,updated_at,deleted_by' },
     { p: 'gius',   t: 'g_txns',           c: 'client_id,donor_client_id,pledge_client_id,amount,txn_date,category,agent,manager,cleared,note,deleted,deleted_at,created_at,updated_at,deleted_by' },

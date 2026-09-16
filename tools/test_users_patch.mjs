@@ -182,6 +182,10 @@ function makeCtx(src) {
     Promise, Object, Array, String, JSON, Date, Uint8Array, isFinite, Boolean, Number,
   };
   ctx.globalThis = ctx;
+  /*  ⛔ שם טבלת ההגדרות נגזר מהמקור ⛔ ואינו מוקלד כאן — ⚠️ הוא קבוע שחי
+   *  מחוץ לפרוסה שהרתמה טוענת, ⭐ והיא מספקת אותו כדי שהמרשמים ייקראו:
+   *  ⛔ בלעדיו המרשם זורק בטעינה, ⚠️ והשער מדווח אפס טענות. */
+  ctx.KV_TABLE = (/(?:^|\n)\s*var\s+KV_TABLE\s*=\s*'([^']+)'/.exec(SRC) || [])[1];
   vm.createContext(ctx);
   vm.runInContext(harnessSrc(src), ctx);
   return { ctx, store };

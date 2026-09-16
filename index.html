@@ -851,6 +851,9 @@ async function _ysRowsPaged(mkQuery, order, win) {
 }
 /* ═══════════════ סוף מודול משיכה מסוננת בשרת ═══════════════════════════ */
 // ═══ עמידות אחסון מקומי (סבב 11) ═══
+/*  ⛔ שם טבלת ההגדרות חי כאן **פעם אחת** — ⚠️ שם פזור אינו ניתן לשינוי
+ *  ממקום אחד, ⭐ ושם הטבלה נגזר מתפקידה ⛔ ולא מהיום שבו נוצרה. */
+var KV_TABLE = 'sl_settings';
 /* ── MIRROR_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────── */
 /*  ⚠️ `tables` היא **פונקציה** ⛔ ולא מערך — ⭐ `PUSH_TABLES` מוצהר אחרי
  *  הבלוק הזה, ⛔ והצהרה שקוראת אותו כאן הייתה מקבלת `undefined`.
@@ -887,7 +890,7 @@ var LS_CFG = {
   // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
   //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
   tier1: [
-    { key: mirrorKey('sl_settings'), syncedThrough: _slPushedFor('sl_settings') },
+    { key: mirrorKey(KV_TABLE), syncedThrough: _slPushedFor(KV_TABLE) },
     { key: mirrorKey('sl_lists'),    syncedThrough: _slPushedFor('sl_lists') }
   ],
   // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס** (סבב 12 שלב 2) — אלה כספים:
@@ -1810,7 +1813,7 @@ var BK_CFG = {
     return [
       { kind: 'table', name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
       { kind: 'table', name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
-      { kind: 'table', name: 'sl_settings',     order: 'key',       ts: 'updated_at' },
+      { kind: 'table', name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
       { kind: 'table', name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
     ];
   }
@@ -2709,11 +2712,11 @@ var PL_CFG = {
   note:   function (ts) { _slSeenTs = ts; },
   ok:     function () { _slLastSeenOk = Date.now(); },
   stamp:  function (ts) {
-    return SB.from('sl_settings').upsert({ key: SL_STAMP_KEY, value: String(ts) }, { onConflict: 'key' });
+    return SB.from(KV_TABLE).upsert({ key: SL_STAMP_KEY, value: String(ts) }, { onConflict: 'key' });
   },
   pull:   function () { return syncAll(); },
   remote: function () {
-    return withTimeout(SB.from('sl_settings').select('value').eq('key', SL_STAMP_KEY).maybeSingle())
+    return withTimeout(SB.from(KV_TABLE).select('value').eq('key', SL_STAMP_KEY).maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
         return { ok: true, ts: r.data ? plNum(kvParse(SL_STAMP_KEY, r.data.value).value) : null };
@@ -2805,13 +2808,13 @@ function plBoot() {
    טביעות ולא סיסמאות, ⭐ ודחיפת-מצב שלה הייתה כותבת סיסמה ריקה לכל
    המשתמשים: ⛔ מסלולה הוא `writeUser`, שדורש רשת.
    ⚠️ סדר הטבלאות הוא מה ששומר על המפתח הזר — ⭐ תלמידים לפני תנועות. */
-var PUSH_TABLES = ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'];
+var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lists'];
 /*  ⛔ תחילית ה-⏳ של כל טבלה — ⚠️ היא נקראת בזמן ריצה ⛔ ולא בהצהרה:
  *  ⭐ הקבועים עצמם מוגדרים אחרי הבלוק החתום. */
 function _slPushOf(t) {
   return { sl_students:     { pk: PK_STU },
            sl_transactions: { pk: PK_TXN },
-           sl_settings:     { pk: PK_SET },
+           [KV_TABLE]:      { pk: PK_SET },
            sl_lists:        { pk: PK_LST } }[t];
 }
 /*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `mark` רץ אחרי `await`, ⭐ וקריאת
@@ -3193,7 +3196,7 @@ var DATA_ERA = 2;
 var ERA_CFG = {
   prefix: 'sl_',
   client: function () { return SB; },
-  table:  function () { return 'sl_settings'; },
+  table:  function () { return KV_TABLE; },
   /*  ⛔ המוחק — ⚠️ מפתחות המראה **ואופק הפינוי שלהם**: ⭐ אופק ששרד מסנן
    *  בכתיבה את מה שהמשיכה מחזירה, ⛔ והמכשיר היה נשאר ריק אחרי הזריקה. */
   wipe:   function () {
@@ -3344,7 +3347,7 @@ function pendTxnKey(row) { return PK_TXN + slKey(row); }
 function pendStuKey(row) { return PK_STU + slKey(row); }
 // הגדרות ורשימות נכנסו לשכבה ב-009, ולכן גם הן מסומנות עד שיש ראיה
 // שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ר' `slKeyOf`.
-function pendSetKey(row) { return PK_SET + slKeyOf('sl_settings', row); }
+function pendSetKey(row) { return PK_SET + slKeyOf(KV_TABLE, row); }
 function pendLstKey(row) { return PK_LST + slKey(row); }
 
 // כשל רשת אינו ראיה לכלום ⇒ הסימון **נשאר**. כשל סמכותי (ולידציה, הרשאה,
@@ -3415,7 +3418,7 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
 var SL_TABLES = [
   { t: 'sl_students',     pk: 'client_id' },
   { t: 'sl_transactions', pk: 'client_id' },
-  { t: 'sl_settings',     pk: 'key'       },
+  { t: KV_TABLE,          pk: 'key'       },
   { t: 'sl_lists',        pk: 'client_id' }
 ];
 // ⛔ העמודות שמותר לשלוח — ⚠️ רשימת היתר ולא רשימת איסור: ⭐ עמודה חדשה
@@ -3423,7 +3426,7 @@ var SL_TABLES = [
 var SL_COLS = {
   sl_transactions: ['client_id','student_client_id','date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
   sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at'],
-  sl_settings:     ['client_id','key','value','updated_at'],
+  [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
 };
 var _slLastPullOk = 0;
@@ -3442,7 +3445,7 @@ function slKey(r) {
 // מיפתוח לפי `client_id` היה יוצר שתי רשומות לאותה הגדרה, כלומר שני
 // ערכים לאותו מפתח — ו-`slApplyMirror` הייתה בוחרת ביניהם לפי סדר מקרי.
 function slKeyOf(t, r) {
-  if (t === 'sl_settings') return (r && r.key != null && r.key !== '') ? ('k:' + r.key) : '';
+  if (t === KV_TABLE) return (r && r.key != null && r.key !== '') ? ('k:' + r.key) : '';
   return slKey(r);
 }
 function slTs(r) {
@@ -3511,7 +3514,7 @@ function slMerge(local, remote, isPending, keyOf) {
 // במשיכה (`syncAll`), בכתיבה המקומית (`slLocalWrite` — מסרבת במפורש),
 // **ובשער הדיסק כאן** — כך שגם נתיב שיתווסף בעתיד לא יוכל להדליף.
 function slSanitizeRows(t, rows) {
-  if (t === 'sl_settings') return slStripMeta(rows);
+  if (t === KV_TABLE) return slStripMeta(rows);
   /*  ⛔ שער הדיסק של מראת המשתמשים — ⚠️ רשימת-היתר ולא רשימת-איסור:
    *  ⭐ היא נשארת נכונה כשתיווסף לטבלה עמודה רגישה חדשה. */
   if (t === SL_USERS_TABLE) return (Array.isArray(rows) ? rows : []).map(slUserPub);
@@ -3958,7 +3961,7 @@ function slApplyMirror() {
   /*  ⛔ הערך שבעמודה הוא JSON — ⚠️ אילוץ במסד מבטיח זאת, ⭐ וקורא
    *  שמתייחס אליו כטקסט הוא הנחה שנייה על אותה עמודה: ⛔ `"5"` היה נקרא
    *  עם הגרשיים, ⛔ ולא כחמש. */
-  (MIRROR.sl_settings || []).forEach(function (r) {
+  (MIRROR[KV_TABLE] || []).forEach(function (r) {
     if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = kvParse(r.key, r.value).value;
   });
   LISTS = {};
@@ -3974,7 +3977,7 @@ function slApplyMirror() {
 function slLocalWrite(tbl, row) {
   if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
   // ⛔ שורת סוד לעולם לא נכתבת מקומית (סבב 13) — ראה הפרק שמעל.
-  if (tbl === 'sl_settings' && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
+  if (tbl === KV_TABLE && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
   row.updated_at = Date.now();            // ⚠️ חותמת המכשיר — ראה ההערה בראש
   var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
   for (var i = 0; i < arr.length; i++) {
@@ -4054,7 +4057,7 @@ function slPayload(tbl, row) {
  *  ⭐ ושני מכשירים מגיעים אליו באופן עצמאי. */
 async function slSendRows(tbl, rows) {
   var err = null, out = [];
-  var conflict = (tbl === 'sl_settings') ? 'key' : 'client_id';
+  var conflict = (tbl === KV_TABLE) ? 'key' : 'client_id';
   rows.forEach(function (row) {
     var body = slPayload(tbl, row);
     if (!body[conflict]) err = err || 'שורה בלי `' + conflict + '` — לא נשלחת';
@@ -4594,7 +4597,7 @@ var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'
  *  עליה מחזיר `42703`, ⭐ והוא נקרא «סכימה מיושנת» ומציג באנר עדכון
  *  שאינו קשור לגרסה. ⛔ **ואין כאן `id`** — ⚠️ המפתח שנוצר במכשיר
  *  הוא `client_id`, ⭐ ו-`sl_settings` ממופתחת ב-`key`. */
-var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],['sl_settings','key'],['sl_lists','client_id']];
+var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],[KV_TABLE,'key'],['sl_lists','client_id']];
 /*  ⛔ הסנכרון מושך **מלא** ⛔ ואין לו חלון — ⚠️ מנוע ההכרעה חייב את כל
  *  הרשומות: ⭐ רשומה שלא נמשכה נקראת «אין אצלי», ⛔ והמיזוג מבין «נמחקה».
  *  ⚠️ מה שכן נוסף כאן הוא **העימוד** — ⛔ עד כאן `select('*')` הביא את
@@ -4654,8 +4657,8 @@ async function syncAll(){
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
-      setRows.forEach(function(r){ remoteSet[slKeyOf('sl_settings',r)]=r; });
-      MIRROR.sl_settings=slMerge(MIRROR.sl_settings,setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf('sl_settings',r);}); mirrorSave('sl_settings');
+      setRows.forEach(function(r){ remoteSet[slKeyOf(KV_TABLE,r)]=r; });
+      MIRROR[KV_TABLE]=slMerge(MIRROR[KV_TABLE],setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf(KV_TABLE,r);}); mirrorSave(KV_TABLE);
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
       pulledLst=true;
@@ -4675,7 +4678,7 @@ async function syncAll(){
     var _pushRes=await pushDirty({
       sl_students:     pulledStu?remoteStu:null,
       sl_transactions: pulledTxn?remoteTxn:null,
-      sl_settings:     pulledSet?remoteSet:null,
+      [KV_TABLE]:      pulledSet?remoteSet:null,
       sl_lists:        pulledLst?remoteLst:null
     });
     /*  ⛔ תוצאת הדחיפה נמסרת למודול העידן — ⚠️ שני מתוך שלושת
@@ -5270,9 +5273,9 @@ function renderSettingsPanel(){
 function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
   if(!v||isNaN(v)){toast(MSG_VALUE_BAD);return;}
-  var cur=(MIRROR.sl_settings||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
+  var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
-  if(!slLocalWrite('sl_settings',row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
+  if(!slLocalWrite(KV_TABLE,row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendSetKey(row));
   return true;
 }

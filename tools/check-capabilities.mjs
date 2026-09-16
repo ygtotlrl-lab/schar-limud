@@ -5677,7 +5677,19 @@ function mirrorKeyOf(tbl) {
 }
 function listIn(text, name) {
   const m = new RegExp('(?<![\\w$])' + name + ':?\\s*=?\\s*\\[([^\\]]*)\\]').exec(text || '');
-  return m ? m[1].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean) : [];
+  if (!m) return [];
+  /*  ⛔ שם שהוא קבוע נפתר לערכו לפני ההצלבה — ⚠️ שם טבלה חי בקבוע אחד
+   *  ⛔ ואינו פזור באתרים: ⭐ רשימה שקוראת ליטרל בלבד מחזירה את המזהה
+   *  עצמו, ⛔ והוא אינו שם טבלה בשום מסד. */
+  return m[1].split(',').map((x) => x.trim()).filter(Boolean)
+    .map((x) => (/^'/.test(x) ? x.replace(/'/g, '') : constValOf(x) || x));
+}
+/*  ⛔ ערכו של קבוע ברמת המודול — ⚠️ **מה נכנס**: שם; ⛔ **ומה מפיל**: אין
+ *  כאן הכרעה, ⭐ **ולמה הוא קיים**: שני סורקים היו פותרים כל אחד אחרת. */
+function constValOf(name) {
+  if (!/^[A-Za-z_$][\w$]*$/.test(name || '')) return null;
+  const m = new RegExp('(?:^|\\n)\\s*(?:var|let|const)\\s+' + name + "\\s*=\\s*'([^']+)'").exec(src);
+  return m ? m[1] : null;
 }
 /*  ⛔ `noPush` — ⚠️ **מה נכנס**: `{t, via, adds}` לכל טבלת מראה שאינה
  *  בלולאת הדחיפה. ⛔ **ומה מפיל**: צורה שאינה השלישייה — ⚠️ רשימת שמות
@@ -5686,8 +5698,10 @@ function noPushIn(text) {
   const m = /noPush:\s*\[([\s\S]*?)\](?=\s*,\s*\n)/.exec(text || '');
   if (!m) return { rows: [], raw: '' };
   const rows = [];
-  for (const e of m[1].matchAll(/\{\s*t:\s*'([^']+)'\s*,\s*via:\s*'([^']+)'\s*,\s*adds:\s*'([^']+)'\s*\}/g))
-    rows.push({ t: e[1], via: e[2], adds: e[3] });
+  /*  ⛔ ושם טבלה שהוא קבוע נפתר לערכו — ⚠️ שם טבלה חי בקבוע אחד ⛔ ואינו
+   *  פזור: ⭐ והצלבה מול המזהה עצמו מדווחת טבלת מראה חסרה על טבלה חיה. */
+  for (const e of m[1].matchAll(/\{\s*t:\s*(?:'([^']+)'|([A-Za-z_$][\w$]*))\s*,\s*via:\s*'([^']+)'\s*,\s*adds:\s*'([^']+)'\s*\}/g))
+    rows.push({ t: e[1] || constValOf(e[2]) || e[2], via: e[3], adds: e[4] });
   return { rows, raw: m[1] };
 }
 /*  ⛔ מה כל סוג מוסיף על לולאת הדחיפה — ⚠️ **מה נכנס**: הסוג המוצהר
@@ -5790,6 +5804,15 @@ function mirrorLayerGaps() {
   const dbTables = new Set();
   for (const m of src.matchAll(/SB\.from\(\s*'([a-z][a-z0-9_]*)'/g)) dbTables.add(m[1]);
   for (const m of src.matchAll(/(?:parent|child|t):\s*'([a-z][a-z0-9_]*)'/g)) dbTables.add(m[1]);
+  /*  ⛔ ואתר שנוקב בקבוע נפתר אף הוא — ⚠️ שם טבלה חי בקבוע אחד, ⭐ והשליפה
+   *  בשמו היא אותה שליפה בדיוק: ⛔ סורק שקורא ליטרל בלבד מדווח «מפתח מראה
+   *  שאינו טבלה במסד» על טבלה שנשלפת בכל טעינה. */
+  for (const m of src.matchAll(/(?:SB|sb)\.from\(\s*([A-Za-z_$][\w$]*)\s*\)/g)) {
+    const v = constValOf(m[1]); if (v) dbTables.add(v);
+  }
+  for (const m of src.matchAll(/(?:parent|child|t):\s*([A-Za-z_$][\w$]*)\s*[,}]/g)) {
+    const v = constValOf(m[1]); if (v) dbTables.add(v);
+  }
   for (const t of tabs)
     if (!dbTables.has(t))
       out.push('מפתח מראה שאינו טבלה במסד: ' + t + ' — הפירוק נעשה בדחיפה בלבד');

@@ -174,7 +174,7 @@ const assert = (cond, m) => (cond ? ok(m) : bad(m));
 /* רשימת-ההיתר: המחרוזות שבתוך `array[...]` של `bk_retention_keys`, בלי
    שורות הערה (`--`) — הערה שמזכירה מפתח אינה מפתח. */
 function sqlKeys(sql) {
-  const m = /bk_retention_keys\(\)[\s\S]*?\$\$([\s\S]*?)\$\$/.exec(sql);
+  const m = /bk_retention_keys\(\)[\s\S]*?\$(?:function)?\$([\s\S]*?)\$(?:function)?\$/.exec(sql);
   if (!m) return null;
   const body = m[1].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
   const arr = /array\s*\[([\s\S]*?)\]\s*::\s*text\[\]/.exec(body);
@@ -250,6 +250,13 @@ function bkKeysFromSrc(src) {
      *  היה נספר כמפתח ומפיל את ההשוואה לרשימת-ההיתר. */
     .replace(/ts:\s*'[^']*'/g, '')
     .replace(/eq:\s*\[[^\]]*\]/g, '');
+  /*  ⛔ שם שהוא קבוע נפתר לערכו לפני הגזירה — ⚠️ מקור שנושא מזהה במקום
+   *  ליטרל נעלם מהרשימה בשקט, ⭐ ומפתח הגיבוי שלו אינו מתפנה לעולם:
+   *  ⛔ והגזירה היא מהשמה ברמת המודול ⛔ ולא מרשימה מוקלדת. */
+  body = body.replace(/(name|key):\s*([A-Za-z_$][\w$]*)/g, (m0, f, nm) => {
+    const v = new RegExp('(?:^|\\n)\\s*(?:var|let|const)\\s+' + nm + "\\s*=\\s*'([^']+)'").exec(src);
+    return v ? f + ": '" + v[1] + "'" : m0;
+  });
   // מקור עם `key` מפורש — הוא מפתח הגיבוי, ולא ה-`name`.
   body = body.replace(/name:\s*'[^']*'\s*,\s*key:\s*'([^']*)'/g, "key: '$1'");
   return (body.match(/'([^']*)'/g) || []).map((s) => s.slice(1, -1));
@@ -540,7 +547,10 @@ if (APP.migration) {
    *  שכבר הוחלפה, כלומר מקור אמת שני. */
   let sql = readFileSync(join(ROOT, APP.migration), 'utf8');
   if (APP.allowlistMigration) {
-    const RE = /create or replace function public\.bk_retention_keys\(\)[\s\S]*?\$\$[\s\S]*?\$\$;/;
+    /*  ⛔ תגית הדולר נקראת ⛔ ואינה מוקלדת — ⚠️ `$$` ו-`$function$` הן
+     *  אותה ציטוט בדיוק, ⭐ ומיגרציה שכבר רצה אינה נערכת כדי להתאים
+     *  לביטוי: ⛔ ביטוי שמכיר צורה אחת מדלג על הגדרה חיה בשקט. */
+    const RE = /create or replace function public\.bk_retention_keys\(\)[\s\S]*?\$(?:function)?\$[\s\S]*?\$(?:function)?\$;/;
     const later = RE.exec(readFileSync(join(ROOT, APP.allowlistMigration), 'utf8'));
     assert(!!later, '0 · ' + APP.allowlistMigration + ' מגדירה מחדש את רשימת-ההיתר');
     /* ⚠️ החלפה בפונקציה ולא במחרוזת — `$$` במחרוזת תחליף נקרא ע"י

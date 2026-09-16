@@ -152,6 +152,16 @@ function gatedRanges(body) {
   return out;
 }
 
+/*  ⛔ שם שהוא קבוע נפתר לערכו לפני ההצלבה — ⚠️ שם טבלה חי בקבוע אחד
+ *  ⛔ ואינו פזור באתרים, ⭐ וסורק שקורא ליטרל בלבד מדווח «מקור בלי שם»
+ *  על מקור חי: ⛔ וזו בדיוק בדיקה שאינה יכולה להיכשל.
+ *  ⚠️ **וההגדרה נלקחת מרמת המודול** — ⭐ שדה באובייקט אינו קבוע. */
+function constVal(src, name) {
+  const re = new RegExp('(?:^|\\n)\\s*(?:var|let|const)\\s+' + name + "\\s*=\\s*'([^']+)'");
+  const m = re.exec(src);
+  return m ? m[1] : null;
+}
+
 function tableSources(src) {
   const m = /sources: function \(\) \{([\s\S]*?)\n  \}\n\};/.exec(src);
   if (!m) return null;
@@ -169,6 +179,9 @@ function tableSources(src) {
     const r = ranges.find((g) => x.index > g.from && x.index < g.to);
     const gate = r ? r.cond : null;
     if (x[1]) { out.push({ name: x[1], gate }); continue; }
+    /* שם כקבוע ברמת המודול — ⛔ נפתר לערכו לפני ההצלבה. */
+    const kv = constVal(src, x[2]);
+    if (kv) { out.push({ name: kv, gate }); continue; }
     /* שם כמשתנה — המקור הוא מערך המחרוזות הקרוב ביותר שלפניו. */
     const before = body.slice(0, x.index);
     const arr = before.match(/\[\s*'[^\]]*'\s*\](?=\s*\.map)/g);

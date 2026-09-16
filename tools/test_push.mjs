@@ -219,7 +219,15 @@ else fail('5. `PUSH_CFG.chunk` אינו ' + CHUNK + ' — המנה היא פרמ
 
 /* ── 6. `PUSH_TABLES` — הרשימה, וההצהרה שווה למה שנמדד ─────────────────── */
 const tm = /var PUSH_TABLES\s*=\s*\[([^\]]*)\]/.exec(src);
-const tables = tm ? tm[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [];
+/*  ⛔ שם שהוא קבוע נפתר לערכו לפני ההצלבה — ⚠️ שם טבלה חי בקבוע אחד
+ *  ⛔ ואינו פזור באתרים: ⭐ הצלבה מול המזהה עצמה מפילה על קוד תקין. */
+const constOf = (nm) => {
+  const m = new RegExp('(?:^|\\n)\\s*(?:var|let|const)\\s+' + nm + "\\s*=\\s*'([^']+)'").exec(src);
+  return m ? m[1] : nm;
+};
+const tables = tm ? tm[1].split(',').map((x) => x.trim())
+  .map((x) => (/^['"]/.test(x) ? x.replace(/^['"]|['"]$/g, '') : constOf(x)))
+  .filter(Boolean) : [];
 if (tables.join('|') === APP.tables.join('|'))
   pass('6. `PUSH_TABLES` = ' + tables.length + ' טבלאות, בסדר המוצהר');
 else fail('6. `PUSH_TABLES` נמדד «' + tables.join(',') + '» והצפוי «' + APP.tables.join(',') +
