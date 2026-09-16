@@ -70,9 +70,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .auth-field{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-6);text-align:right}
 .auth-field label{font-size:var(--fs-3);font-weight:600;color:var(--text-2)}
 .auth-field input{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-4);outline:none;transition:border var(--dur-2);width:100%;background:var(--card)}
-.auth-field input:focus{border-color:var(--text)}
+.auth-field input:focus{border-color:var(--brand)}
 .auth-btn{width:100%;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-7);padding:var(--sp-5);font-family:Heebo;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-2);transition:background var(--dur-2)}
 .auth-btn:hover{background:var(--accent-2)}
+.auth-btn:active{background:var(--accent-2)}
 .auth-btn:disabled{opacity:var(--op-3);cursor:default}
 .auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:var(--r-7);animation:auth-spin var(--dur-6) linear infinite}
 .auth-err{color:var(--bad);font-size:var(--fs-3);margin-top:var(--sp-4);min-height:18px}
@@ -86,6 +87,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 :root{--toast-bottom:80px}
 #tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
 .tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color var(--dur-2)}
+.tab-btn:hover{color:var(--text-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--text);font-weight:700}
 .panel{display:none;padding:var(--sp-6)}
@@ -96,6 +98,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .card-body{padding:var(--sp-6)}
 .btn{display:inline-flex;align-items:center;gap:var(--sp-3);background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2);white-space:nowrap}
 .btn:hover{background:var(--accent-2)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:var(--op-3);cursor:default}
 .btn.out{background:var(--card);border:1.5px solid var(--text);color:var(--text)}
 .btn.out:hover{background:var(--card-2)}
 .btn.danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid var(--bad-soft)}
