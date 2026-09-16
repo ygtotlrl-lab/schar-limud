@@ -55,7 +55,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 46, 206, 111];
+export const ROWS = [5, 8, 46, 210, 113];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -654,7 +654,7 @@ t(!capsFails((doc) => {
   };
   {
     const bad = rd('index.html').replace(
-      '_swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);',
+      '_swWait = setTimeout(function () { swApplyFail(btn, MSG_SW_TIMEOUT); }, SW_APPLY_MS);',
       'setTimeout(function () { _swReloaded = true; location.reload(); }, 1500);');
     t(runGateOn({ 'index.html': bad, [CAPS]: swResign(bad) }, 'test_caps_guard.mjs', () => ({})),
       'מ41 · טיימר קצר שמרענן בעצמו **מפיל** את «הרענון מ-controllerchange בלבד»');

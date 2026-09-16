@@ -157,14 +157,15 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [61, 119];
+export const ROWS = [61, 121, 185, 208];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
-export const PATTERNS = ['fn-undeclared', 'fn-stale', 'fn-reason'];
-export const MUTS = ['fn-undeclared', 'fn-stale', 'fn-reason'];
+export const PATTERNS = ['fn-undeclared', 'fn-stale', 'fn-reason', 'call-arity', 'zero-guard'];
+export const MUTS = ['fn-undeclared', 'fn-stale', 'fn-reason',
+                     'call-arity', 'call-arity', 'zero-guard', 'zero-guard', 'call-arity'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -189,7 +190,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הטענות אינן נגזרות ממספר השמות אלא
  *  ממבנה המדידה, ⭐ והוא זהה בכולן. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 13, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -444,6 +445,135 @@ if (!away.length) {
               `לצד ${APP.name}; מריצים את הסבב עם כל הריפו זה לצד זה`);
 }
 
+/* ── שתי שכבות נוספות — חתימת הקריאה · והשוואה לאפס ────────────────────── */
+/*  ⛔ המדידה על המקור המולבן — ⚠️ קריאה שיושבת בתוך מחרוזת אינה קריאה,
+ *  ⭐ וההלבנה שומרת על מספרי השורות. */
+const CODE = whiten(appSrc(ROOT), { markup: 'blank' });
+/*  ⛔ החתימה נגזרת מההגדרה ⛔ ואינה מוקלדת — ⚠️ **מה נכנס**: שם שמוגדר
+ *  **פעם אחת** ב-`function`, ⭐ עם מספר הפרמטרים המוצהרים; ⛔ **ומה נשמט**:
+ *  שם שמוגדר יותר מפעם אחת, שנושא פרמטר צבירה, או שגופו קורא ל-`arguments`
+ *  — ⚠️ חתימתו אינה מספר. ⭐ **ולמה המבנה קיים**: ארגומנט עודף נבלע
+ *  בשקט, ⛔ והקריאה נראית כאילו היא מוסרת תצורה. */
+function declaredArity(code) {
+  const seen = new Map(), dup = new Set(), shadow = new Set();
+  for (const m of code.matchAll(/(?<![.\w$])function\s*([A-Za-z_$][\w$]*)?\s*\(([^)]*)\)/g))
+    for (const p of m[2].split(',')) { const w = p.trim().replace(/^\.\.\./, ''); if (/^[A-Za-z_$][\w$]*$/.test(w)) shadow.add(w); }
+  for (const m of code.matchAll(/(?<![.\w$])(?:var|let|const)\s+([A-Za-z_$][\w$]*)/g)) shadow.add(m[1]);
+  for (const m of code.matchAll(/(?<![.\w$])function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g)) {
+    const name = m[1];
+    if (seen.has(name)) { dup.add(name); continue; }
+    const ps = m[2].split(',').map((x) => x.trim()).filter(Boolean);
+    const body = braceCut(code, code.indexOf('{', m.index + m[0].length - 1));
+    if (ps.some((p) => p.indexOf('...') === 0) || (body !== null && /\barguments\b/.test(body))) {
+      dup.add(name); continue;
+    }
+    seen.set(name, ps.length);
+  }
+  /*  ⛔ שם שנקשר גם כפרמטר או ב-`var`/`let`/`const` נשמט — ⚠️ הוא מוצל
+   *  בהיקף פנימי, ⭐ והשער אינו מנוע היקפים: ⛔ מדידה שמתעלמת מההצללה
+   *  סופרת קריאה לשם אחר. */
+  for (const d of dup) seen.delete(d);
+  for (const s of shadow) seen.delete(s);
+  return seen;
+}
+/*  ⛔ סוגר תואם ⛔ ולא חלון תווים — ⚠️ גוף ארוך מהחלון נחתך באמצע,
+ *  ⭐ והמדידה עוברת על מה שלא נסרק. */
+function braceCut(src, open) {
+  if (open < 0) return null;
+  let d = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') d++;
+    else if (src[i] === '}') { d--; if (!d) return src.slice(open + 1, i); }
+  }
+  return null;
+}
+/*  ⛔ הארגומנטים נספרים בעומק אפס — ⚠️ פסיק שבתוך סוגריים או סוגר מרובע
+ *  אינו מפריד ארגומנט, ⭐ והמחרוזות כבר מולבנו. */
+function argCount(src, open) {
+  let d = 0, n = 0, seenAny = false;
+  for (let i = open; i < src.length; i++) {
+    const c = src[i];
+    if (c === '(' || c === '[' || c === '{') { d++; if (d === 1) continue; }
+    else if (c === ')' || c === ']' || c === '}') { d--; if (d === 0) return seenAny ? n + 1 : 0; }
+    else if (c === ',' && d === 1) { n++; seenAny = true; continue; }
+    if (d >= 1 && !/\s/.test(c)) seenAny = true;
+  }
+  return null;
+}
+function arityGaps(code) {
+  const arity = declaredArity(code);
+  const bad = [];
+  let calls = 0;
+  for (const [name, want] of arity) {
+    const re = new RegExp('(?<![.\\w$])' + name.replace(/\$/g, '\\$') + '\\s*\\(', 'g');
+    let m;
+    while ((m = re.exec(code))) {
+      const at = m.index + m[0].length - 1;
+      /*  ⛔ ההגדרה אינה קריאה — ⚠️ `function X(` נתפס בדפוס אחד עם
+       *  `X(`, ⭐ והוא אינו אתר קריאה. */
+      if (/function\s+$/.test(code.slice(Math.max(0, m.index - 12), m.index))) continue;
+      const got = argCount(code, at);
+      calls++;
+      if (got !== null && got > want)
+        bad.push(`${name}(${got}) מול חתימה של ${want} · שורה ${code.slice(0, m.index).split('\n').length}`);
+    }
+  }
+  return { arity, calls, bad };
+}
+
+/*  ⛔ הפרש ההשלמה — ⚠️ **מה נכנס**: השמה של `Math.max(0, יעד − בפועל)`,
+ *  ⛔ **ומה מפיל**: הכרעה שמשווה אותו לאפס בלי שומר על היעד.
+ *  ⭐ **ולמה המבנה קיים**: ההפרש אפס גם כשאין יעד כלל, ⛔ והמצב הריק
+ *  נקרא כהצלחה. */
+function exprStart(code, i) {
+  let d = 0;
+  for (let k = i - 1; k >= 0; k--) {
+    const c = code[k];
+    if (c === ')' || c === ']' || c === '}') d++;
+    else if (c === '(' || c === '[' || c === '{') { if (d === 0) return k + 1; d--; }
+    else if (d === 0 && (c === ',' || c === ';')) return k + 1;
+  }
+  return 0;
+}
+function zeroGaps(code) {
+  const sites = [], bad = [];
+  for (const m of code.matchAll(/([A-Za-z_$][\w$.]*)\s*=\s*Math\.max\(\s*0\s*,([^;]*?)\)\s*;/g)) {
+    const name = m[1], inner = m[2];
+    const cut = inner.indexOf('-');
+    sites.push({ name, target: cut < 0 ? '' : inner.slice(0, cut).trim(), at: m.index });
+  }
+  for (const s of sites) {
+    if (!s.target) continue;
+    const re = new RegExp('(?<![.\\w$])' + s.name.replace(/[.$]/g, '\\$&') + '\\s*(?:===?|<=|<)\\s*0(?![\\w.])', 'g');
+    let m;
+    while ((m = re.exec(code))) {
+      const win = code.slice(exprStart(code, m.index), m.index);
+      const guard = new RegExp('(?<![.\\w$])' + s.target.replace(/[.$]/g, '\\$&') + '\\s*(?:>|>=)');
+      if (!guard.test(win))
+        bad.push(`${s.name} מוכרע מול אפס בלי שומר על «${s.target}» · שורה ${code.slice(0, m.index).split('\n').length}`);
+    }
+  }
+  return { sites, bad };
+}
+
+const AR = arityGaps(CODE);
+t(n++, AR.arity.size > 0 && AR.calls > 0,
+  `[call-arity-registry] ⛔ מרשם החתימות נקרא — נמדדו ${AR.arity.size} שמות עם חתימה מוצהרת ` +
+  `ב-${AR.calls} אתרי קריאה, והצפוי לפחות אחד מכל אחד`);
+t(n++, AR.bad.length === 0,
+  `[call-arity] ⛔ קריאה מועברת בחתימה שהפונקציה מקבלת — נמדדו ${AR.bad.length} קריאות ` +
+  `שמעבירות יותר מהמוצהר והצפוי אפס` + (AR.bad.length ? ` (${AR.bad.slice(0, 5).join(' · ')})` : '') +
+  ' — מה עושים: מסירים את הארגומנט העודף, או מרחיבים את החתימה');
+
+const ZG = zeroGaps(CODE);
+t(n++, ZG.sites.length > 0,
+  `[zero-guard-registry] ⛔ מרשם ההפרשים נקרא — נמדדו ${ZG.sites.length} אתרי ` +
+  '`Math.max(0, …)`, והצפוי לפחות אחד');
+t(n++, ZG.bad.length === 0,
+  `[zero-guard] ⛔ השוואה לאפס דורשת שהיעד קיים — נמדדו ${ZG.bad.length} הכרעות בלי שומר ` +
+  `והצפוי אפס` + (ZG.bad.length ? ` (${ZG.bad.slice(0, 5).join(' · ')})` : '') +
+  ' — מה עושים: מוסיפים שומר על היעד, או מכריעים על היעד עצמו');
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות עורכות **מחרוזת מקור** ⛔ ואינן נכתבות לעץ — ⚠️ הליבה מקבלת
@@ -540,6 +670,43 @@ t(n++, reasonGaps({ synFn: 'הפונקציה אינה בכולן' }).length === 
     t(n++, g3.undeclared.indexOf(twin) < 0 && g3.stale.indexOf(twin) < 0,
       `נ2 · ⭐ «${twin}» עם הצהרה ⛔ **אינו** מפיל`);
   }
+}
+/*  ⛔ שתי השכבות החדשות — ⚠️ המוטציות בזיכרון, ⭐ ועל עותק מולבן. */
+/* מ5. קריאה שמעבירה ארגומנט עודף — [call-arity] נופלת */
+{
+  const nm = [...AR.arity].find(([, w]) => w === 0);
+  const m = nm ? CODE + '\n' + nm[0] + '(1, 2);\n' : null;
+  t(n++, m !== null && arityGaps(m).bad.length > AR.bad.length,
+    `מ5 · קריאה עם ארגומנט עודף — [call-arity] הייתה נכשלת`);
+}
+/*  ⭐ מוטציית-נגד ג — ⛔ אותה קריאה בדיוק, במספר שהחתימה מקבלת. */
+{
+  const nm = [...AR.arity].find(([, w]) => w >= 1);
+  const m = nm ? CODE + '\n' + nm[0] + '(' + Array(nm[1]).fill('1').join(', ') + ');\n' : null;
+  t(n++, m !== null && arityGaps(m).bad.length === AR.bad.length,
+    'נ3 · ⭐ קריאה במספר שהחתימה מקבלת ⛔ **אינה** מפילה');
+}
+/* מ6. הכרעה מול אפס בלי שומר על היעד — [zero-guard] נופלת */
+{
+  const m = CODE + '\nvar zzGoal = 1, zzGot = 2;\nvar zzShort = Math.max(0, zzGoal - zzGot);\n' +
+            'var zzDone = { done: zzShort === 0 };\n';
+  t(n++, zeroGaps(m).bad.length > ZG.bad.length,
+    'מ6 · הפרש שמוכרע מול אפס בלי שומר — [zero-guard] הייתה נכשלת');
+}
+/*  ⭐ מוטציית-נגד ד — ⛔ אותה הכרעה בדיוק, עם שומר על היעד. */
+{
+  const m = CODE + '\nvar zzGoal = 1, zzGot = 2;\nvar zzShort = Math.max(0, zzGoal - zzGot);\n' +
+            'var zzDone = { done: zzGoal > 0 && zzShort === 0 };\n';
+  t(n++, zeroGaps(m).bad.length === ZG.bad.length,
+    'נ4 · ⭐ אותה הכרעה עם שומר על היעד ⛔ **אינה** מפילה');
+}
+/* מ7. גוף שנחתך בחלון תווים קבוע — `arguments` לא היה נמצא */
+{
+  const probe = 'function zzLong(a){var x=1;' + 'var y=2;'.repeat(60) + 'return arguments.length;}';
+  const cut = braceCut(probe, probe.indexOf('{'));
+  const flat = probe.slice(probe.indexOf('{') + 1, probe.indexOf('{') + 201);
+  t(n++, cut !== null && /arguments/.test(cut) && !/arguments/.test(flat),
+    'מ7 · חלון תווים קבוע חותך גוף ארוך ממנו — `arguments` לא היה נמצא');
 }
 }
 

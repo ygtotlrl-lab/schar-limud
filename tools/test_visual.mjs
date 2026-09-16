@@ -72,17 +72,20 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [89, 105];
+export const ROWS = [90, 107, 84, 104, 211];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
-export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes'];
+export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
+                         'semantic', 'layer', 'clstok'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
-                     'classes', 'classes', 'classes', 'classes', 'classes'];
+                     'classes', 'classes', 'classes', 'classes', 'classes',
+                     'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
+                     'clstok', 'clstok', 'clstok'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -94,7 +97,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 24, app: 0, appWhy: '' };
+const FLOOR = { shared: 28, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -611,6 +614,292 @@ cg('bare', 'הצהרת מחלקה בלי נימוק תפקידי',
 cg('missing', 'מחלקה בשימוש כאן שכלל שלה חי באחות ואין לה כלל כאן',
    'מביאים את הכלל, או מסירים את השימוש');
 
+/* ── שלוש שכבות נוספות — סמנטי · שכבת הדיאלוג · אסימון שמחלקה מגדירה ───── */
+/*  ⛔ הגוון נגזר מהערך ⛔ ואינו מושווה בין הריפו — ⚠️ הערך הוא מוצר,
+ *  ⭐ ומה שמושווה הוא **התפקיד** שהמיפוי מגיע אליו. */
+const hexRgb = (h) => {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h == null ? '' : h).trim());
+  if (!m) return null;
+  const s = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1];
+  return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16));
+};
+const hueOf = (rgb) => {
+  if (!rgb) return null;
+  const [r, g, b] = rgb.map((v) => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (!d) return null;
+  const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+};
+const hueGap = (a, b) => (a === null || b === null) ? null : Math.abs(((a - b + 540) % 360) - 180);
+/*  ⛔ סוגר תואם ⛔ ולא חלון תווים — ⚠️ גוף שנחתך באורך קבוע מסווג את
+ *  מה שאחריו לקלט שאינו שלו. */
+function braceBody(src, open) {
+  if (open < 0) return null;
+  let d = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') d++;
+    else if (src[i] === '}') { d--; if (!d) return src.slice(open + 1, i); }
+  }
+  return null;
+}
+/*  ⛔ ערכי ה-`:root` בשני המצבים — ⚠️ הכהה הוא `:root` שבתוך
+ *  `prefers-color-scheme`, ⭐ והוא דורס את הבהיר ⛔ ואינו מחליף אותו. */
+function rootVars(rules, dark) {
+  const v = {};
+  for (const r of rules) {
+    if (!/(^|,)\s*:root\s*(,|$)/.test(r.sel)) continue;
+    if (!!dark !== /prefers-color-scheme\s*:\s*dark/.test(r.ctx)) continue;
+    for (const m of r.body.matchAll(/(--[\w-]+)\s*:\s*([^;]+)/g)) v[m[1]] = m[2].trim();
+  }
+  return v;
+}
+/*  ⛔ שרשרת ה-`var()` נפתרת עד לליטרל — ⚠️ אסימון שמצביע על אסימון
+ *  נראה תקין בטקסט, ⭐ ומי שיודע מה יצא בסוף הוא מי שפתר את השרשרת. */
+function resolveTok(vars, name) {
+  let x = vars[name], seen = 0;
+  while (x !== undefined && seen++ < 10 && /var\(\s*--/.test(x)) x = vars[/var\(\s*(--[\w-]+)/.exec(x)[1]];
+  return x === undefined ? null : String(x).trim();
+}
+/*  ⛔ תחומי הגוון של שלושת המצבים — ⚠️ **מה נכנס**: שם האסימון ⟵ תחום
+ *  הגוון של שמו, ⛔ **ומה מפיל**: אסימון שערכו נופל מחוץ לתחום.
+ *  ⭐ **ולמה המבנה קיים**: `--bad` שאינו אדום הוא אסימון שנושא תפקיד
+ *  של אחר, ⚠️ והרכיב המשותף שנשען עליו צובע את הכשל בצבע ההצלחה. */
+const STATE_BANDS = { '--ok': [90, 170], '--warn': [10, 60], '--bad': [340, 10] };
+/*  ⛔ התקרה נגזרת מהפער שנמדד — ⚠️ צבע הזהות והצהרת המניפסט נכתבים
+ *  בנפרד, ⭐ והפער הגדול שנמדד ביניהם בריפו תקין הוא מעלה וחצי:
+ *  ⛔ תקרה צמודה לו הייתה מפילה על עיגול, ⚠️ ותקרה רחבה הייתה מתירה גוון אחר. */
+const HUE_TOL = 12;
+const inBand = (h, [a, b]) => h === null ? false : (a <= b ? (h >= a && h <= b) : (h >= a || h <= b));
+function semanticGaps(rules, theme) {
+  const out = [];
+  const th = hueOf(hexRgb(theme));
+  if (th === null) { out.push(`theme_color אינו ליטרל שאפשר לגזור ממנו גוון — «${theme}»`); return out; }
+  const light = rootVars(rules, false);
+  const dark = Object.assign({}, light, rootVars(rules, true));
+  for (const [mode, vars] of [['בהיר', light], ['כהה', dark]]) {
+    const b = resolveTok(vars, '--brand');
+    const g = hueGap(hueOf(hexRgb(b)), th);
+    if (g === null || g > HUE_TOL)
+      out.push(`--brand (${mode}) ⟵ ${b} · ${g === null ? 'אינו ליטרל' : g.toFixed(0) + '° מול ' + theme}`);
+    for (const k of Object.keys(STATE_BANDS)) {
+      const v = resolveTok(vars, k);
+      if (!inBand(hueOf(hexRgb(v)), STATE_BANDS[k])) out.push(`${k} (${mode}) ⟵ ${v}`);
+    }
+  }
+  return out;
+}
+
+/*  ⛔ הדרגה נגזרת מהסולם ⛔ ואינה הערך — ⚠️ `--z-4` היא «מודאל»,
+ *  ⭐ והמספר שמאחוריה הוא מוצר שיכול להשתנות. */
+const Z_RE = /z-index\s*:\s*var\(\s*--z-(\d)\s*\)/;
+const POS_RE = /position\s*:\s*(fixed|absolute|sticky)/;
+/*  ⛔ הבורר הפשוט בלבד — ⚠️ בורר מורכב אינו ניתן להתאמה לאלמנט בלי מנוע
+ *  התאמה מלא, ⭐ וכל מיכל שנושא שכבה בכל הריפו הוא `#id` או `.class`. */
+function layerRules(rules) {
+  const out = [];
+  for (const r of rules) {
+    const z = Z_RE.exec(r.body);
+    if (!z || !POS_RE.test(r.body)) continue;
+    for (const one of r.sel.split(',')) {
+      const m = /^([#.])([-\w]+)$/.exec(one.trim());
+      if (m) out.push({ kind: m[1], name: m[2], z: Number(z[1]) });
+    }
+  }
+  return out;
+}
+const VOID_TAGS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+                   'link', 'meta', 'param', 'source', 'track', 'wbr'];
+/*  ⛔ העץ נבנה מהסימון בלבד — ⚠️ סקריפט, גיליון והערה מולבנים לפניו:
+ *  ⭐ `'<div id="x">'` בתוך מחרוזת אינו אלמנט. */
+function domNodes(html, layers, dlgIds) {
+  const markup = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => ' '.repeat(m.length))
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (m) => ' '.repeat(m.length))
+    .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length));
+  const zOf = (id, cls) => {
+    let z = null;
+    for (const L of layers)
+      if (L.kind === '#' ? id === L.name : cls.indexOf(L.name) >= 0) z = z === null ? L.z : Math.max(z, L.z);
+    return z;
+  };
+  const out = [], stack = [];
+  const re = /<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g;
+  let m;
+  while ((m = re.exec(markup))) {
+    const tag = m[2].toLowerCase(), attrs = m[3];
+    if (m[1] === '/') {
+      for (let k = stack.length - 1; k >= 0; k--) if (stack[k].tag === tag) { stack.length = k; break; }
+      continue;
+    }
+    const id = (/\bid="([^"]*)"/.exec(attrs) || ['', ''])[1];
+    const cls = ((/\bclass="([^"]*)"/.exec(attrs) || ['', ''])[1]).split(/\s+/).filter(Boolean);
+    const act = (/\bdata-act="([^"]*)"/.exec(attrs) || ['', ''])[1];
+    const own = zOf(id, cls);
+    const up = stack.length ? stack[stack.length - 1] : null;
+    const layer = own === null ? (up ? up.layer : 0) : own;
+    /*  ⛔ פותח שיושב **בתוך** מיכל הדיאלוג אינו נמדד — ⚠️ כפתור «נסה
+     *  שוב» שבתוך המודאל פותח אותו מחדש, ⭐ ואין שכבה שצריך לעבור. */
+    const inDlg = (up ? up.inDlg : false) || (!!id && dlgIds.has(id));
+    if (id || act) out.push({ id, act, layer, tag, inDlg });
+    if (VOID_TAGS.indexOf(tag) < 0 && !/\/\s*$/.test(attrs)) stack.push({ tag, layer, inDlg });
+  }
+  return out;
+}
+/*  ⛔ סימון שנבנה ב-JS נמדד אף הוא — ⚠️ סורק שמוגבל למקור מדווח על מה
+ *  שנסרק בלבד: ⭐ והפותח מיוחס לשכבת המיכל שהוא מרונדר לתוכו, ⛔ ואם אין
+ *  יעד מוצהר — לשכבת התוכן, ⚠️ שהיא הנמוכה שבסולם. */
+function jsOpeners(html, acts, byId) {
+  const out = [];
+  for (const [name, body] of fnBodies(html)) {
+    const found = [];
+    for (const m of body.matchAll(/data-act=\\?["']([-\w]+)/g)) if (acts.indexOf(m[1]) >= 0) found.push(m[1]);
+    for (const m of body.matchAll(/dataset\.act\s*=\s*'([-\w]+)'/g)) if (acts.indexOf(m[1]) >= 0) found.push(m[1]);
+    if (!found.length) continue;
+    let layer = 0, inDlg = false;
+    for (const m of body.matchAll(/getElementById\(\s*'([-\w]+)'/g)) {
+      const n = byId.get(m[1]);
+      if (!n) continue;
+      if (n.layer > layer) layer = n.layer;
+      if (n.inDlg) inDlg = true;
+    }
+    for (const a of found) out.push({ act: a, layer, inDlg, fn: name });
+  }
+  return out;
+}
+/*  ⛔ הפעולה שפותחת דיאלוג נגזרת ממפת הפעולות ⛔ ואינה רשימת שמות —
+ *  ⚠️ ושרשרת הקריאה עומק אחד: ⭐ המטפל קורא לפונקציה, ⛔ והיא פותחת. */
+const DIALOG_OPEN = /\b(openModal|ask)\s*\(/;
+function fnBodies(src) {
+  const map = new Map();
+  for (const m of src.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
+    const b = braceBody(src, src.indexOf('{', m.index + m[0].length - 1));
+    if (b !== null && !map.has(m[1])) map.set(m[1], b);
+  }
+  return map;
+}
+function dialogActs(src, bodies) {
+  const i = src.indexOf('DOM_ACTIONS = {');
+  if (i < 0) return null;
+  const map = braceBody(src, src.indexOf('{', i));
+  if (map === null) return null;
+  const out = [];
+  for (const m of map.matchAll(/'([-\w]+)'\s*:\s*function\s*\([^)]*\)\s*\{/g)) {
+    const b = braceBody(map, map.indexOf('{', m.index + m[0].length - 1)) || '';
+    let opens = DIALOG_OPEN.test(b);
+    if (!opens)
+      for (const c of b.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g))
+        if (bodies.has(c[1]) && DIALOG_OPEN.test(bodies.get(c[1]))) { opens = true; break; }
+    if (opens) out.push(m[1]);
+  }
+  return out;
+}
+/*  ⛔ מיכל הדיאלוג נגזר מגוף הפותח ⛔ ואינו מוקלד — ⚠️ המזהה שהפותח
+ *  קורא לו הוא המיכל, ⭐ ושם שנכתב כאן היה מרשם שני. */
+function dialogIds(bodies) {
+  const ids = new Set();
+  for (const n of ['openModal', 'ask'])
+    for (const m of (bodies.get(n) || '').matchAll(/getElementById\(\s*'([-\w]+)'/g)) ids.add(m[1]);
+  return ids;
+}
+function dialogLayerGaps(html, rules) {
+  const layers = layerRules(rules);
+  const bodies = fnBodies(html);
+  const acts = dialogActs(html, bodies) || [];
+  const ids = dialogIds(bodies);
+  const nodes = domNodes(html, layers, ids);
+  const byId = new Map();
+  for (const n of nodes) if (n.id && !byId.has(n.id)) byId.set(n.id, n);
+  const holders = nodes.filter((n) => n.id && ids.has(n.id) && n.layer > 0);
+  const top = holders.length ? Math.max(...holders.map((n) => n.layer)) : null;
+  const openers = nodes.filter((n) => n.act && acts.indexOf(n.act) >= 0)
+    .concat(jsOpeners(html, acts, byId));
+  const over = top === null ? [] : openers.filter((n) => !n.inDlg && n.layer >= top);
+  return { layers, nodes, acts, holders, top, openers, over };
+}
+
+/*  ⛔ אתר ההחלה הוא מי שבונה אלמנט ⛔ ואינו מפיק־שם — ⚠️ פונקציה
+ *  שמחזירה את שם המחלקה אינה מחילה אותה, ⭐ והאתר הוא מי שקורא לה. */
+const BUILDS_EL = /class\s*=|className|classList\.(add|toggle)|<(div|span|button|td|tr|li)\b/;
+const wordRe = (w) => new RegExp('\\b' + w.replace(/-/g, '\\-') + '\\b');
+function classTokenGaps(html) {
+  const rules = cssRules(styleSheet(html));
+  const defs = new Map(), readers = new Map();
+  for (const r of rules)
+    for (const one of r.sel.split(',')) {
+      const sel = one.trim();
+      const dm = /^\.(-?[A-Za-z_][\w-]*)$/.exec(sel);
+      if (dm)
+        for (const m of r.body.matchAll(/(?:^|;|\s)(--[\w-]+)\s*:/g))
+          defs.set(dm[1], new Set([...(defs.get(dm[1]) || []), m[1]]));
+      /*  ⛔ המרשם ממופתח באסימון ⛔ ולא במחלקה — ⚠️ השאלה היא «מי קורא
+       *  את האסימון הזה», ⭐ ולא «מה המחלקה הזו קוראת». */
+      const toks = [...r.body.matchAll(/var\(\s*(--[\w-]+)/g)].map((x) => x[1]);
+      const cls = [...sel.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)].map((x) => x[1]);
+      if (!toks.length || !cls.length) continue;
+      for (const tok of toks) readers.set(tok, new Set([...(readers.get(tok) || []), ...cls]));
+    }
+  const fns = [...fnBodies(html)].map(([name, body]) => ({ name, body }));
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => ' '.repeat(m.length))
+                     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (m) => ' '.repeat(m.length));
+  const bad = [];
+  let sites = 0;
+  for (const [cls, toks] of defs) {
+    const hosts = [];
+    for (const f of fns) if (BUILDS_EL.test(f.body) && wordRe(cls).test(f.body)) hosts.push({ n: f.name, b: f.body });
+    if (wordRe(cls).test(markup)) hosts.push({ n: '(מקור)', b: markup });
+    /*  ⛔ שם שנבנה בהרכבה — ⚠️ מפיק־שם שמחזיר תחילית ועוד, ⭐ ואתריו
+     *  הם מי שקוראים לו. */
+    for (const f of fns) {
+      if (BUILDS_EL.test(f.body)) continue;
+      const lit = new RegExp('[\'"`][^\'"`]*\\b' + cls.replace(/-/g, '\\-') + '\\b');
+      const pre = [];
+      for (let k = cls.length - 1; k > 0; k--) if (cls[k] === '-') pre.push(cls.slice(0, k + 1));
+      const builds = lit.test(f.body) ||
+        pre.some((p) => new RegExp('[\'"`]' + p.replace(/-/g, '\\-') + '[\'"`]\\s*\\+').test(f.body));
+      if (!builds) continue;
+      for (const c of fns)
+        if (c.name !== f.name && BUILDS_EL.test(c.body) && new RegExp('\\b' + f.name + '\\s*\\(').test(c.body))
+          hosts.push({ n: c.name + '←' + f.name, b: c.body });
+    }
+    const rd2 = [...toks].reduce((a, t) => a.concat([...(readers.get(t) || [])]), []);
+    sites += hosts.length;
+    if (!hosts.length) { bad.push(`.${cls} ⤫ אין אתר החלה`); continue; }
+    const un = hosts.filter((h) => !rd2.some((rc) => wordRe(rc).test(h.b)));
+    if (un.length) bad.push(`.${cls} [${[...toks].join(',')}] ⤫ ${un.map((h) => h.n).join(',')}`);
+  }
+  return { defs, sites, bad };
+}
+
+/* ── הטענות ────────────────────────────────────────────────────────────── */
+const MANIFEST_THEME = (() => {
+  try { return JSON.parse(rd('manifest.json')).theme_color; } catch (e) { return null; }
+})();
+const SEM = semanticGaps(cssRules(styleSheet(IDX)), MANIFEST_THEME);
+t(SEM.length === 0,
+  `[semantic-role] ⛔ אסימון סמנטי ממופה לתפקיד אחד — נמדדו ${SEM.length} מיפויים ` +
+  `שאינם בתפקיד שמם והצפוי אפס` + (SEM.length ? ` (${SEM.join(' · ')})` : '') +
+  ' — מה עושים: ממפים את `--brand` לצבע הזהות שהמניפסט מכריז, ' +
+  'ואת `--ok`/`--warn`/`--bad` לגוון שמם');
+
+const DL = dialogLayerGaps(IDX, cssRules(styleSheet(IDX)));
+t(DL.top !== null && DL.acts.length > 0 && DL.openers.length > 0,
+  `[dialog-registry] ⛔ מרשם השכבות והפעולות נקרא — נמדדו ${DL.layers.length} כללי שכבה · ` +
+  `${DL.holders.length} מיכלי דיאלוג (דרגה ${DL.top === null ? '—' : DL.top}) · ` +
+  `${DL.acts.length} פעולות שפותחות דיאלוג · ${DL.openers.length} אתרי פתיחה, והצפוי לפחות אחד מכל אחד`);
+t(DL.over.length === 0,
+  `[dialog-layer] ⛔ מיכל דיאלוג נפתח מעל השכבה שפתחה אותו — נמדדו ${DL.over.length} אתרי פתיחה ` +
+  `בדרגה שאינה נמוכה מ-${DL.top} והצפוי אפס` +
+  (DL.over.length ? ` (${DL.over.map((n) => `${n.act}@${n.layer}`).join(' · ')})` : '') +
+  ' — מה עושים: מורידים את דרגת האזור שפותח, או מעלים את דרגת המיכל');
+
+const CT = classTokenGaps(IDX);
+t(CT.bad.length === 0,
+  `[class-token] ⛔ מחלקה שמגדירה אסימון נקראת באתר שבו היא מוחלת — נמדדו ` +
+  `${CT.defs.size} מחלקות מגדירות ב-${CT.sites} אתרי החלה, ${CT.bad.length} בלי צרכן והצפוי אפס` +
+  (CT.bad.length ? ` (${CT.bad.slice(0, 6).join(' · ')})` : '') +
+  ' — מה עושים: קוראים את האסימון בכלל שחל על האלמנט, או מסירים את ההגדרה');
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות בזיכרון — ⚠️ הן מריצות את **אותה** `scan` על טקסט מוטט,
@@ -699,6 +988,82 @@ for (const r of MUT) {
     b: base, c: base }, {});
   t(n3.missing.length === 0,
     'נ5 · ⭐ מחלקה בלי כלל שיש לה קורא ב-JS — **וו** ⛔ ואינה מפילה את «missing»');
+}
+
+/*  ⛔ שלוש השכבות החדשות — ⚠️ המוטציות בזיכרון, ⭐ ועל עותק של המקור:
+ *  ⛔ מוטציה שנכתבת לעץ משאירה אותו שגוי כשהמדידה נפלה באמצע. */
+const RULES0 = cssRules(styleSheet(IDX));
+const injCss = (r) => { const i = IDX.indexOf('</style>'); return IDX.slice(0, i) + r + IDX.slice(i); };
+const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0, i) + x + h.slice(i); };
+
+/* מ24. `--brand` ממופה להדגשה ולא לזהות — [semantic-role] נופלת */
+{
+  const m = IDX.replace(/--brand\s*:\s*[^;]+;/, '--brand:#F0A500;');
+  t(semanticGaps(cssRules(styleSheet(m)), MANIFEST_THEME).length > SEM.length,
+    'מ24 · `--brand` בגוון שאינו הזהות — [semantic-role] הייתה נכשלת');
+}
+/* מ25. `--bad` בגוון של מצב אחר — [semantic-role] נופלת */
+{
+  const m = IDX.replace(/--bad\s*:\s*#[0-9a-fA-F]{3,6}\s*;/, '--bad:#1A6A3A;');
+  t(semanticGaps(cssRules(styleSheet(m)), MANIFEST_THEME).length > SEM.length,
+    'מ25 · `--bad` בגוון ירוק — [semantic-role] הייתה נכשלת');
+}
+/*  ⭐ מוטציית-נגד א — ⛔ גוון אחר **באותו תפקיד** אינו מפיל: ⚠️ הערך
+ *  הוא מוצר, ⭐ והנמדד הוא התפקיד. */
+{
+  const m = IDX.replace(/--ok\s*:\s*#[0-9a-fA-F]{3,6}\s*;/, '--ok:#2F8F4F;');
+  t(semanticGaps(cssRules(styleSheet(m)), MANIFEST_THEME).length === SEM.length,
+    'נ6 · ⭐ גוון ירוק אחר ל-`--ok` ⛔ **אינו** מפיל את [semantic-role]');
+}
+/* מ26. אזור שפותח דיאלוג בדרגה שאינה נמוכה מהמיכל — [dialog-layer] נופלת */
+{
+  const act = DL.acts[0];
+  const m = injBody(injCss('#zz-mut-lay{position:fixed;z-index:var(--z-7)}'),
+    '<div id="zz-mut-lay"><button data-act="' + act + '"></button></div>');
+  t(dialogLayerGaps(m, cssRules(styleSheet(m))).over.length > DL.over.length,
+    'מ26 · פותח דיאלוג בדרגת «נעילה» — [dialog-layer] הייתה נכשלת');
+}
+/*  ⭐ מוטציית-נגד ב — ⛔ אותו פותח בדיוק, בדרגה נמוכה מהמיכל: ⚠️ זה
+ *  השימוש התקין, ⭐ ואסור לו להפיל. */
+{
+  const act = DL.acts[0];
+  const m = injBody(injCss('#zz-mut-lay{position:fixed;z-index:var(--z-1)}'),
+    '<div id="zz-mut-lay"><button data-act="' + act + '"></button></div>');
+  t(dialogLayerGaps(m, cssRules(styleSheet(m))).over.length === DL.over.length,
+    'נ7 · ⭐ פותח דיאלוג בדרגת «תוכן» ⛔ **אינו** מפיל את [dialog-layer]');
+}
+/* מ27. מפת הפעולות אינה נקראת — [dialog-registry] נופלת */
+{
+  const m = IDX.replace('DOM_ACTIONS = {', 'DOM_ACTIONS_MUT = {');
+  const g = dialogLayerGaps(m, RULES0);
+  t(g.acts.length === 0 && g.openers.length === 0,
+    'מ27 · מפת הפעולות אינה נקראת — [dialog-registry] הייתה נכשלת');
+}
+/* מ28. מחלקה שמגדירה אסימון ואין לו צרכן באתר — [class-token] נופלת */
+{
+  const m = injBody(injCss('.zz-mut-tok{--zz-mut:var(--text)}'),
+    '<scr' + 'ipt>function zzMutBuild(){var e=document.createElement("b");' +
+    'e.className="zz-mut-tok";return e;}</scr' + 'ipt>');
+  t(classTokenGaps(m).bad.length > CT.bad.length,
+    'מ28 · מחלקה שמגדירה אסימון בלי צרכן באתר — [class-token] הייתה נכשלת');
+}
+/*  ⭐ מוטציית-נגד ג — ⛔ אותה מחלקה בדיוק, עם צרכן על אותו אלמנט:
+ *  ⚠️ זו ההחלה התקינה, ⭐ ואסור לה להפיל. */
+{
+  const m = injBody(injCss('.zz-mut-tok{--zz-mut:var(--text)}.zz-mut-read{color:var(--zz-mut)}'),
+    '<scr' + 'ipt>function zzMutBuild(){var e=document.createElement("b");' +
+    'e.className="zz-mut-tok zz-mut-read";return e;}</scr' + 'ipt>');
+  t(classTokenGaps(m).bad.length === CT.bad.length,
+    'נ8 · ⭐ מחלקה שמגדירה אסימון וקוראת אותו על אותו אלמנט ⛔ **אינה** מפילה');
+}
+/* מ29. מפיק־שם נספר כאתר החלה — הבדיקה הייתה מפספסת את האתר האמיתי */
+{
+  const m = injBody(injCss('.zz-mut-p-1{--zz-p:var(--text)}'),
+    '<scr' + 'ipt>function zzMutName(n){return "zz-mut-p-"+n;}' +
+    'function zzMutHost(){var e=document.createElement("b");e.className=zzMutName(1);return e;}</scr' + 'ipt>');
+  const g = classTokenGaps(m);
+  t(g.bad.some((x) => x.indexOf('zz-mut-p-1') >= 0 && x.indexOf('zzMutHost') >= 0),
+    'מ29 · אתר ההחלה נגזר דרך מפיק־השם — ולא מגוף המפיק עצמו');
 }
 }
 
