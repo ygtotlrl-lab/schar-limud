@@ -60,7 +60,7 @@ const APP = {
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [127, 192];
+export const ROWS = [128, 193];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -80,7 +80,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ ארבעת קובצי התיאור קיימים בכולן,
  *  ⭐ והמרשם מונה את אותן ארבע עובדות: ⚠️ מה שנבדל הוא הערך ⛔ ולא מספר
  *  הטענות. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 6, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -193,6 +193,29 @@ export function retiredGaps(names, retired) {
   return out;
 }
 
+/*  ⛔ פרוזה שנוקבת בנתיב אינה סותרת את מצבו — ⚠️ **מה נכנס**: שם שאינו
+ *  במעקב `git` וחסום ב-`.gitignore`; ⛔ **ומה מפיל**: משפט שנוקב בו בלי
+ *  הצהרת ההיעדר. ⭐ **ולמה**: ⛔ הקורא מאמין לפרוזה — ⚠️ היא מסבירה,
+ *  ⭐ **והשורה רק קובעת**: ⛔ ופסקה שנוקבת בנתיב בריפו בלי לומר שאינו שם
+ *  שולחת אותו לחפש קובץ שלא יימצא, ⚠️ ולהסיק שהריפו שבור.
+ *  ⛔ **וההצהרה נמדדת בשלוש השורות שסביב השם** ⛔ ולא בשורה שלו בלבד —
+ *  ⚠️ פרוזה נגללת, ⭐ והמשפט אינו נגמר בסוף השורה. */
+const ABSENT_RE = /אינו בריפו|אינם בריפו|אינו בעץ|אינם בעץ|אינו במעקב/;
+export function absentGaps(names, tracked, ignored, retired, lines) {
+  const base = new Set([...tracked].map((f) => f.split('/').pop()));
+  const out = [];
+  for (const nm of names) {
+    if (tracked.has(nm.tok) || base.has(nm.tok.split('/').pop())) continue;
+    if (Object.prototype.hasOwnProperty.call(retired || {}, nm.tok)) continue;
+    /*  ⛔ מה שאינו חסום ב-`.gitignore` נמדד בטענה שמעל — ⚠️ שם שאין לו
+     *  קובץ כלל: ⭐ ושתי מדידות על אותו שם הן שתי הכרעות על אותה ראיה. */
+    if (!ignored.some((re) => re.test(nm.tok))) continue;
+    const near = [lines[nm.line - 2] || '', lines[nm.line - 1] || '', lines[nm.line] || ''].join(' ');
+    if (!ABSENT_RE.test(near)) out.push(nm.tok + ' (' + nm.line + ')');
+  }
+  return out;
+}
+
 /*  ⛔ ארבע גזירות מוצהרות ⛔ ואין חמישית — ⚠️ **מה נכנס**: שם הגזירה ⟵
  *  הפונקציה שקוראת את מקור האמת; ⛔ **ומה מפיל**: רשומה שנוקבת בגזירה
  *  שאינה כאן. ⭐ **ולמה המבנה קיים**: «מקור» שהוא טקסט חופשי אינו ניתן
@@ -301,6 +324,16 @@ const TREE = has('design') ? readdirSync(join(ROOT, 'design')).map((f) => 'desig
     `${Object.keys(APP.retired || {}).length} הכרזות והצפוי אפס` +
     `${g.length ? ' (' + g.join(' · ') + ')' : ''}. ` +
     'מסירים הכרזה שאין לה אתר, ומוסיפים את הסבב לשורה שנוקבת בשם');
+}
+{
+  const g = GIT_OK ? absentGaps(NAMES, TRACKED, IGNORED, APP.retired, ALL) : [];
+  t(n++, g.length === 0,
+    GIT_OK
+      ? `[doc-absent] פרוזה שנוקבת בנתיב שאינו בריפו בלי לומר זאת — נמדדו ${g.length} מתוך ` +
+        `${NAMES.length} שמות והצפוי אפס${g.length ? ' (' + g.slice(0, 6).join(' · ') + ')' : ''}. ` +
+        'מוסיפים למשפט את הצהרת ההיעדר — ⛔ הפרוזה אינה סותרת את מצב הקובץ'
+      : `[doc-absent] לא נמדד — אין סט מעקב ב-\`git\`: ⛔ ואף אחד מ-${NAMES.length} ` +
+        'השמות שבתיעוד אינו מוצלב למעקב. מריצים בתוך עותק עבודה של git');
 }
 
 /* ── ב · ערך מדיד מול מקורו ────────────────────────────────────────────── */
@@ -429,6 +462,22 @@ if (RUN_MUT) {
     t(n++, got.length === 0,
       'נ2 · ⭐ מוטציית-נגד: שם של קובץ שבמעקב ⛔ אינו מפיל — ' +
       `נמדדו ${got.length} והצפוי 0 (${live})`);
+  }
+  {
+    const got = absentGaps([{ tok: 'signing/zz.keystore', line: 1, hasRound: false }],
+                           new Set(), [/^signing\/[^/]*\.keystore$/], {},
+                           ['⭐ **וכל חתימה היא ב-`signing/zz.keystore`**.']);
+    t(n++, got.length === 1,
+      'מ8 · ⛔ מוטציה: פרוזה שנוקבת בנתיב שאינו בריפו בלי הצהרת היעדר מפילה את «[doc-absent]» — ' +
+      `נמדדו ${got.length} והצפוי 1`);
+  }
+  {
+    const got = absentGaps([{ tok: 'signing/zz.keystore', line: 1, hasRound: false }],
+                           new Set(), [/^signing\/[^/]*\.keystore$/], {},
+                           ['⭐ **וכל חתימה היא ב-`signing/zz.keystore`** — ⛔ הקובץ אינו בריפו.']);
+    t(n++, got.length === 0,
+      'נ4 · ⭐ מוטציית-נגד: אותה פרוזה עם הצהרת ההיעדר ⛔ אינה מפילה — ' +
+      `נמדדו ${got.length} והצפוי 0`);
   }
   {
     const got = retiredGaps([{ tok: 'zz.sh', line: 3, hasRound: true }],

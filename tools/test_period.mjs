@@ -30,6 +30,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db_schema.mjs';
+import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
@@ -47,6 +48,12 @@ const APP = {
    *  השם ⟵ הערך שהוא נושא ולמה הוא אינו טבלת תקופה; ⛔ **ומה מפיל**: שם
    *  שאין לו טבלה ואין לו מפתח. ⭐ **ולמה ריק**: נמדד ואין. */
   periodAllow: {},
+  /*  ⛔ ההגירה המקומית שנוקבת בתחילית הישנה — ⚠️ **מה נכנס**: התחילית
+   *  שירדה ⟵ שם ההגירה שמעבירה ממנה, והסבב שבו רצה; ⛔ **ומה מפיל**:
+   *  אתר שנוקב בה מחוץ לגוף ההגירה, הכרזה שאין לה פונקציה, והכרזה בלי
+   *  סבב. ⭐ **ולמה ריק**: נמדד ואין — התחילית כאן נגזרת משם הריפו
+   *  מלכתחילה, ⛔ ואין תחילית שירדה. */
+  prefixLegacy: {},
   /*  ⛔ הקבוע שנושא את שם טבלת ההגדרות — ⚠️ **מה נכנס**: כל ערך שהקבוע
    *  מקבל ⟵ התפקיד שמחייב אותו; ⛔ **ומה מפיל**: ערך שבמקור ואינו כאן,
    *  הצהרה שאין לה ערך במקור, ושם שאינו טבלה חיה. ⭐ **ולמה המבנה
@@ -72,7 +79,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [45, 115];
+export const ROWS = [45, 115, 116];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -91,7 +98,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ המרשם מונה את אותם ארבעה פעלים בכולן,
  *  ⭐ ופועל שאין לו מימוש כאן נמדד בהצהרתו ⛔ ולא בהיעדרו. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 19, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -220,7 +227,7 @@ export function verbRegistryGaps(reg, src) {
 /*  ⛔ תחיליות הבעלים — ⚠️ **מה נכנס**: התחילית של כל אפליקציה;
  *  ⛔ **ומה מפיל**: כלום — ⭐ טבלה שאינה נושאת אף אחת מהן אינה נמדדת
  *  כאן: ⚠️ היא משותפת לפרויקט, ⛔ ואין לה בעלים יחיד שהתפקיד נמדד מולו. */
-const OWNER_PFX = ['tb_', 'ys_', 'sl_', 'g_', 'kp_'];
+const OWNER_PFX = ['ya_', 'hr_', 'sl_', 'g_', 'kp_'];
 
 /*  ⛔ תפקיד שנושא יותר משם אחד — ⚠️ **מה נכנס**: הסיומת החורגת ⟵
  *  התפקיד שמצדיק אותה; ⛔ **ומה מפיל**: סיומת חורגת שאינה כאן, והכרזה
@@ -228,8 +235,8 @@ const OWNER_PFX = ['tb_', 'ys_', 'sl_', 'g_', 'kp_'];
  *  מכריחים כל קורא לזכור איזה שם שייך לאיזו אפליקציה, ⛔ ואין מי
  *  שיצליב ביניהם — ⚠️ והמרשם משותף, ⭐ שהסכימה שממנה הוא נגזר משותפת. */
 const ROLE_ALLOW = {
-  kv_rishon:    'הגדרות היומן למוסד «ראשון לציון» — ⭐ ליומן שתי ישיבות ולשאר אחת: ⛔ ההפרדה היא טבלה למוסד ⛔ ולא עמודה',
-  kv_ramataviv: 'הגדרות היומן למוסד «רמת אביב» — ⭐ ליומן שתי ישיבות ולשאר אחת: ⛔ ההפרדה היא טבלה למוסד ⛔ ולא עמודה',
+  settings_rishon:    'הגדרות היומן למוסד «ראשון לציון» — ⭐ ליומן שתי ישיבות ולשאר אחת: ⛔ ההפרדה היא טבלה למוסד ⛔ ולא עמודה',
+  settings_ramataviv: 'הגדרות היומן למוסד «רמת אביב» — ⭐ ליומן שתי ישיבות ולשאר אחת: ⛔ ההפרדה היא טבלה למוסד ⛔ ולא עמודה',
 };
 
 /*  ⛔ התפקיד הוא חתימת העמודות ⛔ ולא השם — ⚠️ שני שמות נרדפים לאותו
@@ -284,6 +291,111 @@ export function kvScope(files) {
   return files.filter((f) => /\.(?:html|js|mjs|sql)$/.test(f))
               .filter((f) => !/^(?:migrations|tools)\//.test(f));
 }
+/*  ⛔ תחילית שאינה ראשי התיבות — ⚠️ **מה נכנס**: שם הריפו ⟵ התחילית שהוא
+ *  נושא בפועל והנימוק לה; ⛔ **ומה מפיל**: תחילית חיה שאינה נגזרת ואינה
+ *  כאן · הכרזה שאין לה ריפו · הכרזה שתחיליתה נגזרת בכל זאת · והכרזה בלי
+ *  נימוק. ⭐ **ולמה המבנה קיים**: תחילית שכבר חיה במסד אינה ניתנת לשינוי
+ *  בלי מיגרציה והגירה מקומית, ⛔ וההכרזה היא מה שמונע «יישור» בתום לב
+ *  שיפיל כל שאילתה · ⚠️ **והמרשם משותף**, ⭐ שהסכימה שממנה הוא נגזר משותפת. */
+const PREFIX_ALLOW = {
+  'ha-kupa': { pfx: 'kp_',
+    why: '«kupa» היא מילה אחת ⛔ ואין לה שתי תיבות — ⚠️ והתחילית שבפועל היא שני עיצוריה: ⭐ והיא כבר חיה בשש טבלאות, בכל מפתח אחסון ובכל מפתח גיבוי, ⛔ ושינויה הוא מיגרציה והגירה מקומית משלהן' },
+};
+
+/*  ⛔ ראשי התיבות נגזרים משם הריפו ⛔ ואינם מוקלדים — ⚠️ המפריד הוא המקף:
+ *  ⭐ מילה אחת נותנת אות אחת, ⛔ ושתיים שתיים. */
+export function initialsOf(slug) {
+  return String(slug).split('-').filter(Boolean).map((w) => w.charAt(0)).join('') + '_';
+}
+/*  ⛔ התחיליות שבפועל נגזרות מהסכימה המוצהרת — ⚠️ כל טבלה שאינה משותפת
+ *  נושאת את תחילית בעליה, ⭐ ו-`sh_` הוא המשותף: ⛔ ואין לו בעלים יחיד
+ *  שראשי התיבות שלו יימדדו מולו. */
+export function livePrefixes(schema) {
+  const out = new Set();
+  for (const r of schema) {
+    const m = /^([a-z]{1,4}_)/.exec(r.t);
+    if (m && m[1] !== 'sh_') out.add(m[1]);
+  }
+  return [...out].sort();
+}
+/*  ⛔ הכיוון הראשון — ⚠️ תחילית חיה שאינה ראשי התיבות של אף ריפו, ⭐ ואינה
+ *  מוכרזת: ⛔ תחילית שאינה נגזרת אינה ניתנת לניחוש. */
+export function prefixGaps(peers, schema, allow) {
+  const want = new Set(peers.map(initialsOf));
+  const decl = new Set(Object.values(allow || {}).map((v) => (v || {}).pfx));
+  return livePrefixes(schema).filter((p) => !want.has(p) && !decl.has(p));
+}
+/*  ⛔ והכיוון השני — ⚠️ הכרזה שאין לה ריפו · שתחיליתה נגזרת בכל זאת ·
+ *  בלי נימוק · ⛔ ושאין לה טבלה חיה: ⭐ היתר שלא נסגר. */
+export function prefixGhosts(peers, schema, allow) {
+  const out = [];
+  const live = new Set(livePrefixes(schema));
+  for (const [slug, v] of Object.entries(allow || {})) {
+    if (peers.indexOf(slug) < 0) { out.push('[בלי ריפו] ' + slug); continue; }
+    if (!v || !v.pfx) { out.push('[בלי תחילית] ' + slug); continue; }
+    if (v.pfx === initialsOf(slug)) { out.push('[נגזרת בכל זאת] ' + slug); continue; }
+    if (!v.why || String(v.why).trim().length < 20) { out.push('[בלי נימוק] ' + slug); continue; }
+    if (!live.has(v.pfx)) out.push('[בלי טבלה חיה] ' + slug);
+  }
+  return out;
+}
+/*  ⛔ תחילית אחת לבעלים — ⚠️ שתיים הן שתי משפחות שאיש אינו מצליב, ⭐ ושינוי
+ *  שם נעשה בהן פעמיים: ⛔ והמדידה על התחיליות החיות בלבד. */
+export function prefixDoubles(peers, schema, allow) {
+  const own = new Map();
+  for (const p of peers) own.set(initialsOf(p), p);
+  for (const [slug, v] of Object.entries(allow || {})) if (v && v.pfx) own.set(v.pfx, slug);
+  const per = new Map();
+  for (const p of livePrefixes(schema)) {
+    const o = own.get(p);
+    if (o) per.set(o, (per.get(o) || 0) + 1);
+  }
+  return [...per.entries()].filter((e) => e[1] > 1).map((e) => e[0] + '×' + e[1]);
+}
+/*  ⛔ התחילית הישנה חיה במקום אחד בלבד בקוד החי — ⚠️ גוף ההגירה המקומית:
+ *  ⭐ והיא מוצהרת עם סבבה, ⛔ ו-`migrations/` מוחרג בהיקף עצמו — ⚠️ מיגרציה
+ *  שכבר רצה מתארת את המסד כפי שהיה בשעה שהיא רצה. */
+export function legacyPfxHits(src, legacy) {
+  const out = [];
+  for (const [pfx, v] of Object.entries(legacy || {})) {
+    const fn = (v || {}).fn || '';
+    const body = fn ? (extractFnBody(src, fn) || '') : '';
+    let i = -1;
+    while ((i = src.indexOf(pfx, i + 1)) >= 0) {
+      if (body && body.indexOf(pfx) >= 0 && inBody(src, fn, i)) continue;
+      out.push(pfx + '@' + i);
+    }
+  }
+  return out;
+}
+/*  ⛔ ההכרזה נמדדת משני צדדיה — ⚠️ הכרזה שאין לה גוף בשמה, ⛔ והכרזה בלי
+ *  הסבב שבו רצה: ⭐ נימוק בלי סבב נקרא כקבוע, ⛔ והוא מדידה שחלפה. */
+export function legacyPfxGhosts(src, legacy) {
+  const out = [];
+  for (const [pfx, v] of Object.entries(legacy || {})) {
+    if (!v || !v.fn) { out.push('[בלי גוף] ' + pfx); continue; }
+    if (!extractFnBody(src, v.fn)) { out.push('[בלי פונקציה] ' + pfx); continue; }
+    if (!v.why || !/\(סבב \d+\)/.test(String(v.why))) out.push('[בלי סבב] ' + pfx);
+  }
+  return out;
+}
+/*  ⛔ גוף פונקציה בהתאמת סוגריים — ⚠️ חלון תווים קבוע חותך גוף ארוך ממנו,
+ *  ⭐ ומסווג את המדידה להיקף שאינו שלה. */
+function fnRange(src, name) {
+  const m = new RegExp('function\\s+' + name + '\\s*\\(').exec(src);
+  if (!m) return null;
+  let i = src.indexOf('{', m.index);
+  if (i < 0) return null;
+  let d = 0;
+  for (let j = i; j < src.length; j++) {
+    if (src[j] === '{') d++;
+    else if (src[j] === '}') { d--; if (!d) return [m.index, j + 1]; }
+  }
+  return null;
+}
+function extractFnBody(src, name) { const r = fnRange(src, name); return r ? src.slice(r[0], r[1]) : ''; }
+function inBody(src, name, i) { const r = fnRange(src, name); return !!r && i >= r[0] && i < r[1]; }
+
 /*  ⛔ ההערות נחתכות לפני המדידה — ⚠️ הערה שנוקבת בשם אינה אתר קריאה,
  *  ⭐ ו-`//` שאחרי נקודתיים הוא כתובת ⛔ ולא הערה. */
 function codeOf(src) {
@@ -303,7 +415,7 @@ export function kvNames(src) {
   return [...new Set(out)];
 }
 /*  ⛔ שם טבלה שמופיע בקוד מחוץ לקבוע — ⚠️ **הגבול משני הצדדים**:
- *  ⭐ `ys_settings_meta` אינו `ys_settings`, ⛔ ושם שהוא תחילית של שם
+ *  ⭐ `hr_settings_meta` אינו `hr_settings`, ⛔ ושם שהוא תחילית של שם
  *  אחר אינו אתר. */
 export function kvLooseHits(src, names) {
   const out = [];
@@ -377,6 +489,47 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
     `[period-calendar] מנוע התאריך העברי מול הלוח המוצהר — נמדדו ${engines} אתרי הגדרה ` +
     `והצפוי ${want} ללוח «${APP.calendar.kind}». ` +
     'מיישרים את `APP.calendar` למנוע שבמקור, ⛔ ואין מנוע שני');
+}
+
+/* ── ד · ותחילית הטבלאות והאחסון נגזרת משם הריפו ───────────────────────── */
+{
+  const gaps = prefixGaps(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  t(n++, gaps.length === 0,
+    `[prefix-derived] תחילית שאינה ראשי התיבות של שם הריפו — נמדדו ${gaps.length} מתוך ` +
+    `${livePrefixes(DB_SCHEMA).length} תחיליות חיות והצפוי אפס` +
+    `${gaps.length ? ' (' + gaps.join(', ') + ')' : ''}. ` +
+    'גוזרים את התחילית משם הריפו, או מכריזים ב-`PREFIX_ALLOW` עם נימוקה');
+}
+{
+  const ghosts = prefixGhosts(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  t(n++, ghosts.length === 0,
+    `[prefix-derived] הכרזת תחילית נמדדת משני צדדיה — נמדדו ${ghosts.length} מתוך ` +
+    `${Object.keys(PREFIX_ALLOW).length} הכרזות והצפוי אפס` +
+    `${ghosts.length ? ' (' + ghosts.join(' · ') + ')' : ''}. ` +
+    'מסירים הכרזה שאין לה ריפו או שתחיליתה נגזרת, ומוסיפים לה נימוק');
+}
+{
+  const dbl = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  t(n++, dbl.length === 0,
+    `[prefix-derived] תחילית אחת לבעלים — נמדדו ${dbl.length} בעלים עם יותר מאחת והצפוי אפס` +
+    `${dbl.length ? ' (' + dbl.join(', ') + ')' : ''}. ` +
+    'מאחדים את שתי המשפחות לתחילית אחת');
+}
+{
+  const hits = legacyPfxHits(SRC, APP.prefixLegacy);
+  t(n++, hits.length === 0,
+    `[prefix-legacy] תחילית ישנה מחוץ להגירה המקומית — נמדדו ${hits.length} אתרים מתוך ` +
+    `${Object.keys(APP.prefixLegacy || {}).length} הכרזות והצפוי אפס` +
+    `${hits.length ? ' (' + hits.slice(0, 6).join(', ') + ')' : ''}. ` +
+    'מעבירים את השם לתחילית החדשה, או מכריזים ב-`APP.prefixLegacy` עם סבבה');
+}
+{
+  const ghosts = legacyPfxGhosts(SRC, APP.prefixLegacy);
+  t(n++, ghosts.length === 0,
+    `[prefix-legacy] הכרזת תחילית ישנה נמדדת משני צדדיה — נמדדו ${ghosts.length} מתוך ` +
+    `${Object.keys(APP.prefixLegacy || {}).length} הכרזות והצפוי אפס` +
+    `${ghosts.length ? ' (' + ghosts.join(' · ') + ')' : ''}. ` +
+    'מצהירים ב-`APP.prefixLegacy` את שם ההגירה ואת הסבב שבו רצה');
 }
 
 /* ── ג · ואוצר מילים אחד ───────────────────────────────────────────────── */
@@ -496,14 +649,14 @@ if (RUN_MUT) {
   }
 
   {
-    const bad = DB_SCHEMA.map((r) => (r.t === 'ys_settings' ? { p: r.p, t: 'ys_config', c: r.c } : r));
+    const bad = DB_SCHEMA.map((r) => (r.t === 'hr_settings' ? { p: r.p, t: 'hr_config', c: r.c } : r));
     const got = roleGaps(rolesOf(bad), ROLE_ALLOW);
     t(n++, got.length === 1,
       'מ6 · ⛔ מוטציה: שם טבלה שהוסב באחת מפיל את «[table-role]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
   }
   {
-    const sig = (DB_SCHEMA.find((r) => r.t === 'ys_settings') || {}).c;
+    const sig = (DB_SCHEMA.find((r) => r.t === 'hr_settings') || {}).c;
     const got = roleGaps(rolesOf(DB_SCHEMA.concat([{ p: 'kupa', t: 'kp_prefs', c: sig }])), ROLE_ALLOW);
     t(n++, got.length === 1,
       'מ7 · ⛔ מוטציה: טבלה שתפקידה כפול ואינה מוצהרת מפילה את «[table-role]» — ' +
@@ -521,6 +674,42 @@ if (RUN_MUT) {
     t(n++, got.length === 0,
       'מ9 · ⛔ מוטציה: הסרת `KV_TABLE` מפילה את «[table-const]» — ' +
       `נמדדו ${got.length} ערכים במקור והצפוי 0, ומולם ${APP.kvTable.names.length} מוצהרים`);
+  }
+
+
+  {
+    const got = prefixGaps(PEERS, DB_SCHEMA.concat([{ p: 'kupa', t: 'zz_prefs', c: 'key,value' }]),
+                           PREFIX_ALLOW);
+    t(n++, got.length === 1 && got[0] === 'zz_',
+      'מ10 · ⛔ מוטציה: תחילית שאינה ראשי תיבות מפילה את «[prefix-derived]» — ' +
+      `נמדדו ${got.length} תחיליות והצפוי 1`);
+  }
+  {
+    const got = prefixGaps(PEERS, DB_SCHEMA, {});
+    t(n++, got.length === 1 && got[0] === 'kp_',
+      'מ11 · ⛔ מוטציה: הסרת ההכרזה מ-`PREFIX_ALLOW` מפילה את «[prefix-derived]» — ' +
+      `נמדדו ${got.length} תחיליות והצפוי 1`);
+  }
+  {
+    const got = prefixGhosts(PEERS, DB_SCHEMA,
+      Object.assign({}, PREFIX_ALLOW, { 'no-such-repo': { pfx: 'zz_', why: PREFIX_ALLOW['ha-kupa'].why } }));
+    t(n++, got.length === 1,
+      'מ12 · ⛔ מוטציה: הכרזה שאין לה ריפו מפילה את «[prefix-derived]» — ' +
+      `נמדדו ${got.length} פערים והצפוי 1`);
+  }
+  {
+    const pfx = Object.keys(APP.prefixLegacy || {})[0];
+    const fake = pfx ? "var x = '" + pfx + "entries';\n" : '';
+    const got = pfx ? legacyPfxHits(fake, APP.prefixLegacy) : ['—'];
+    t(n++, got.length >= 1,
+      'מ13 · ⛔ מוטציה: תחילית ישנה מחוץ להגירה מפילה את «[prefix-legacy]» — ' +
+      `נמדדו ${got.length} אתרים והצפוי לפחות 1`);
+  }
+  {
+    const got = legacyPfxGhosts(SRC, { 'zz_': { fn: 'noSuchFn', why: 'נימוק (סבב 148)' } });
+    t(n++, got.length === 1,
+      'מ14 · ⛔ מוטציה: הכרזת הגירה שאין לה פונקציה מפילה את «[prefix-legacy]» — ' +
+      `נמדדו ${got.length} פערים והצפוי 1`);
   }
 
   /*  ⛔ מוטציית-נגד היא שינוי חי שאסור לו להפיל — ⚠️ שם שעושה עבודה
@@ -559,6 +748,21 @@ if (RUN_MUT) {
     t(n++, got.length === 2 && !got.some((f) => /^migrations\//.test(f)),
       'נ5 · ⭐ מוטציית-נגד: שם טבלה בתוך מיגרציה ⛔ אינו מפיל — ' +
       `נמדדו ${got.length} קבצים בהיקף והצפוי 2, ואפס תחת \`migrations/\``);
+  }
+
+  {
+    const got = prefixGaps(PEERS, DB_SCHEMA.concat([
+      { p: 'shared', t: 'ya_settings_rishon', c: 'key,value' },
+      { p: 'shared', t: 'sh_backup', c: 'id,key' }]), PREFIX_ALLOW);
+    t(n++, got.length === 0,
+      'נ6 · ⭐ מוטציית-נגד: תוספת אחרי התפקיד ו-`sh_` המשותף ⛔ אינם מפילים — ' +
+      `נמדדו ${got.length} תחיליות והצפוי 0`);
+  }
+  {
+    const got = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+    t(n++, got.length === 0,
+      'נ7 · ⭐ מוטציית-נגד: חמש התחיליות החיות ⛔ אינן מפילות — ' +
+      `נמדדו ${got.length} בעלים כפולים והצפוי 0, מתוך ${livePrefixes(DB_SCHEMA).length} תחיליות`);
   }
 }
 

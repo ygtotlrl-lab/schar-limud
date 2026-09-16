@@ -41,7 +41,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [190];
+export const ROWS = [191];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -219,7 +219,7 @@ if (!RUN_MUT) {
    מודדת התהפך: ⭐ מוטציה שמפילה טענה אחרת אינה אכיפה. */
 function t4() {
   const base = stripComments(SRC);
-  const mAlter = base + "\nvar s1 = 'alter table ys_users add column x text';\n";
+  const mAlter = base + "\nvar s1 = 'alter table hr_users add column x text';\n";
   ok(hits(/alter[ \t]+table\b/, base) === 0 && hits(/alter[ \t]+table\b/, mAlter) === 1,
     '4א · ⛔ מוטציה: `alter table` מוטבע מפיל את טענה 1א — נמדד 0 ⟵ 1');
   const mSvc = SRC + "\nvar k = 'service_role';\n";

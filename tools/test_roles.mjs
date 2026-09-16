@@ -455,7 +455,7 @@ async function main() {
     ok('000 מגדיר role על sl_users', /role\s+TEXT NOT NULL,/.test(SQL000));
     // ⭐ **ההשלמה של סבב 26.** הניסוח הראשון היה `DEFAULT 'admin'` — ברירת
     // מחדל ש**מעניקה** הרשאה, כלומר בדיוק משפחת הכשל שהסבב בא לסגור, וגם
-    // החריגה היחידה בארגון (`ys_users` בלי DEFAULT; `g_users` עם DEFAULT
+    // החריגה היחידה בארגון (`hr_users` בלי DEFAULT; `g_users` עם DEFAULT
     // אבל של התפקיד הנמוך). הטענה הפוכה עכשיו: אין DEFAULT כלל.
     const code000NoCmt = SQL000.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
     // ⚠️ שורת `DROP DEFAULT` מנוטרלת מהבדיקה — היא בדיוק ההפך ממה שנאסר.

@@ -61,18 +61,18 @@ const APP = {
   fnDefRpc: 'bk_fn_def',
   fnNames: ['bk_retention_keys', 'bk_retention_sweep', 'bk_prune_layer'],
   migration: null,
-  migrationDoc: 'hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql',
+  migrationDoc: 'hanhala-ruchanit/migrations/037_prefix_from_repo_name.sql',
   /*  ⛔ המסלול שדורש את השדות האלה אינו רץ באפליקציה הזו (סבב 72) —
       ⚠️ והם מוצהרים ריקים ⛔ ואינם נשמטים: ⭐ שדה חסר נקרא «לא נשאל»,
       וריק נקרא «נמדד ואין», ⛔ וטענה שמשווה מול חסר עוברת תמיד. */
   allowlistMigration: null,
-  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `tb_kv_rishon`/`tb_kv_ramataviv`
+  /*  ⛔ משפחת סכימה משותפת שנייה (סבב 104) — ⚠️ `ya_settings_rishon`/`ya_settings_ramataviv`
       הן הבית הענני של הגדרות היומן, ⭐ והבעלות שלו: ⛔ `migration` כאן הוא
       `null` בכל ריפו שאינו הבעלים, ⚠️ ו-`since` הוא המיגרציה שמצהירה מתי
       הבעלות עברה — ⭐ המיגרציות שקדמו לה רצו ⛔ ואינן נערכות ואינן נמחקות,
       ⚠️ ומה שנמדד הוא שאין הגדרה **חדשה** מנקודת ההצהרה ואילך. */
   kvShared: {
-    names: ['tb_kv_rishon', 'tb_kv_ramataviv'],
+    names: ['ya_settings_rishon', 'ya_settings_ramataviv'],
     migration: null,
     migrationDoc: 'yoman-avoda/migrations/000_initial_schema.sql',
     since: null,
@@ -87,7 +87,7 @@ const APP = {
 
 /*  ⛔ השורה שהקובץ הזה אוכף (סבב 92) — ⚠️ בעלות הסכימה המשותפת: ⭐ עותק
  *  אחד, בריפו אחד, ⛔ והנמדד הוא היעדר העותק השני. */
-export const ROWS = [154, 159, 168];
+export const ROWS = [155, 160, 169, 209];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה

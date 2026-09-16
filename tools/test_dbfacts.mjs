@@ -42,7 +42,7 @@ import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [162, 155, 156, 157, 177, 207, 208, 209, 210, 169, 160, 147, 158];
+export const ROWS = [163, 156, 157, 158, 178, 208, 210, 211, 212, 170, 161, 148, 159];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -958,7 +958,7 @@ if (RUN_MUT && !SELFTEST) {
       return [200, JSON.stringify([allowFirst])];
     if (APP.backupTable && url.includes('/' + APP.backupTable + '?'))
       return [200, JSON.stringify(
-        (scen === 'orphan' ? [{ key: 'ys_orphan_key_that_is_not_listed' }] : [])
+        (scen === 'orphan' ? [{ key: 'hr_orphan_key_that_is_not_listed' }] : [])
           .concat([{ key: allowFirst }]))];
     const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph);
     return [200, JSON.stringify(keys.map((k) => ({ key: k, deleted: false })))];
