@@ -16,15 +16,18 @@
    מוצהר אינו מחפש אותו, ⚠️ והסולם יתאר את מה שהיה ⛔ ולא את מה שנוסף:
    ⭐ וזה בדיוק המצב שהסריקה ההפוכה באה לסגור.
 
-   ⛔ **ומחלקה שקיימת ביותר מאפליקציה אחת נושאת אותם כללים** — ⚠️ בבסיס
-   ובכל מצב, ⭐ והשם נחתך מהגיליון **באסימון מלא**: ⛔ וכל סטייה מוצהרת
-   ב-`APP.appClasses` בריפו שסוטה בו.
+   ⛔ **ומחלקה שקיימת ביותר מאפליקציה אחת נושאת את אותם מצבים** — ⚠️ `:hover`
+   · `:focus` · `:active` · `:disabled`, ⭐ והשם נחתך מהגיליון **באסימון
+   מלא**: ⛔ **והנמדד הוא נוכחות המצב** ⛔ ולא ערכיו.
 
    **מה אינו נאכף כאן:** ⚠️ **הערך שבשאילתת `@media`** — ⛔ הוא נמדד מול
    `BP_SCALE` בבודק היכולות, ⭐ וכאן נמדד **אוצר המילים** של השאילתה בלבד:
    ⛔ יחידה, תכונה וכיוון · ⚠️ **והגוון של אסימון** — ⛔ היחס נמדד בשורת
    ערכת הנושא, ⭐ וכאן נמדד רק שהערך **נגזר** מאסימון · ⚠️ **ודף האופליין
-   שב-`sw`** — ⛔ הוא מסמך עצמאי שאין לו גישה לערכת האפליקציה.
+   שב-`sw`** — ⛔ הוא מסמך עצמאי שאין לו גישה לערכת האפליקציה ·
+   ⚠️ **וערכי המצב של מחלקה משותפת** — ⛔ צבע · מיקום · גודל · ריווח:
+   ⭐ הם מוצר, ⛔ ושורה שמפילה על מוצר מייצרת רשימת הצהרות שגדלה בכל
+   שינוי עיצוב.
    ──────────────────────────────────────────────────────────────────────── */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,34 +42,6 @@ import { PEERS } from './peers.mjs';
 const APP = {
   app: 'schar-limud',
   visualAllow: { fns: [] },
-  /*  ⛔ המחלקות שסוטות מהאחיות — ⚠️ **מה נכנס**: שם המחלקה ⟵ מה שהמסך
-   *  כאן דורש ושאין לו מקבילה בשאר; ⛔ **ומה מפיל**: סטייה שאין לה הצהרה,
-   *  הצהרה למחלקה שכלליה זהים לאחיותיה, והצהרה שנימוקה נוכחות בלבד.
-   *  ⭐ **ולמה המבנה קיים**: כלל שנוסף באחת מפני ששם נתקלו בבעיה נשאר
-   *  שם לבדו, ⛔ ואיש אינו בודק את האחרות — ⚠️ אין באג, ⭐ הרכיב רק
-   *  נראה אחרת. */
-  appClasses: {
-    'auth-box':
-      'תיבת הכניסה בשכר רחבה יותר — שדה הסיסמה כאן חופשי ואינו מוגבל לשש ספרות — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'auth-btn':
-      'כפתור הכניסה בשכר נושא את רדיוס הכפתורים של המערכת ואת מצב הריחוף — המסך נפתח גם במחשב שולחני של המזכירות — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'badge':
-      'תג בשכר נושא ריווח צר ורדיוס מלא — הוא יושב בתוך תא בטבלת החודשים, ורוחב התא הוא מה שמגביל אותו — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'btn':
-      'כפתור בשכר הוא גלולה ללא מסגרת בגוון ההדגשה — הוא יושב על גבי טבלה צפופה, ומסגרת בו הייתה מוסיפה קו שלישי לתא — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'card':
-      'כרטיס בשכר הוא מיכל של טבלה ולא של טקסט — ולכן אין בו ריווח פנימי, והוא חותך את פינות הטבלה שבתוכו — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'sheet':
-      'הגיליון בשכר הוא דיאלוג ממורכז וצר — הוא מקבל סכום ותאריך, ואינו מציג רשימה שנגללת — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'sheet-ft':
-      'שורת הכפתורים בגיליון של שכר נדחקת לקצה — הדיאלוג ממורכז, ושורה פרושה בו נראית כטופס נוסף — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'sheet-hd':
-      'כותרת הגיליון בשכר אינה נדבקת לראש — הדיאלוג נמוך מהמסך, ואין בו גלילה שתסתיר אותה — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'tab-btn':
-      'לשונית בשכר היא פריט בסרגל תחתון של אייקון מעל תווית — הניווט כאן בתחתית המסך, במקום שהאגודל מגיע אליו — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-    'veil':
-      'מסך ההעמעמה בשכר ממרכז את הדיאלוג ומשאיר לו ריווח מסביב — הדיאלוג כאן קצר, וגיליון תחתון היה מותיר חצי מסך ריק — ⚠️ מוצהרת **עד יישור שכבת האסימונים**',
-  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -82,7 +57,7 @@ export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'class
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
-                     'classes', 'classes', 'classes', 'classes', 'classes'];
+                     'classes', 'classes'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -94,7 +69,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 24, app: 0, appWhy: '' };
+const FLOOR = { shared: 21, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -440,18 +415,16 @@ t(/<style>|style="/.test(rd('sw.js')),
 }
 
 
-/* ── רכיב משותף מתנהג אותו דבר — המחלקות מוצלבות בין הריפו ─────────────── */
+/* ── רכיב משותף מתנהג אותו דבר — המצבים מוצלבים בין הריפו ──────────────── */
 /*  ⛔ השם נחתך מהגיליון **באסימון מלא** — ⚠️ `tab-btn` אינו `btn`,
  *  ⭐ ו-`mod-ic` אינו `mod`: ⛔ תפיסת תחילית הייתה מאחדת שני רכיבים
  *  שאינם אותו רכיב, ⚠️ והיא מה שכמעט הפיל את המדידה. */
 const CLS_SEL = /^\.(-?[A-Za-z_][\w-]*)(:hover|:focus|:active|:disabled)?$/;
-/*  ⛔ הנימוק המינימלי — ⚠️ פחות מזה אינו אומר מה המסך דורש, ⭐ והוא
- *  נקרא כתווית. */
-const CLS_WHY_MIN = 6;
-/*  ⛔ ניסוחי נוכחות — ⚠️ «אינה זהה» היא **המדידה** ⛔ ואינה הנימוק:
- *  ⭐ הוא נכון על כל שם שהרשימה מחזיקה, ⚠️ ואינו אומר מה המסך דורש. */
-const CLS_PRESENCE = ['אינה זהה', 'אינו זהה', 'אינה בכולן', 'אינו בכולן',
-                      'שונה מהאחרות', 'שונה מהשאר', 'אינה כמו'];
+/*  ⛔ ארבעת המצבים — ⚠️ **מה נכנס**: המצב שבו רכיב מגיב למשתמש;
+ *  ⛔ **ומה מפיל**: מצב שקיים באחת ואינו באחרת. ⭐ **ולמה המבנה קיים**:
+ *  הנמדד הוא **התנהגות** ⛔ ולא מראה — ⚠️ וערכי המצב הם מוצר, ⭐ והם
+ *  משתנים עם המסך שהרכיב יושב בו. */
+const CLS_STATES = [':hover', ':focus', ':active', ':disabled'];
 
 /*  ⛔ פירוק הגיליון לכללים — ⚠️ **מה נכנס**: הקשר (`@media`) · הבורר ·
  *  וגוף הכלל; ⛔ **ומה מפיל**: אין כאן מה שיפיל, ⭐ שזה חילוץ ולא הכרעה.
@@ -480,104 +453,49 @@ function cssRules(css) {
   return out;
 }
 const styleSheet = (src) => { const r = sheetRanges(src)[0]; return r ? src.slice(r[0], r[1]) : ''; };
-const normDecls = (b) => b.split(';').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean).join('; ');
-/*  ⛔ הפרופיל הוא גוף הכלל **וכל כללי המצבים** — ⚠️ `:hover` · `:focus` ·
- *  `:active` · `:disabled`: ⭐ כפתור שמגיב באחת ואינו מגיב באחרת נקרא
- *  כתקלה, ⛔ ואין באג שאפשר להצביע עליו. */
-function classProfiles(css) {
+/*  ⛔ הפרופיל הוא **קבוצת המצבים** ⛔ ולא גוף הכלל — ⚠️ כפתור שמגיב
+ *  באחת ואינו מגיב באחרת נקרא כתקלה, ⭐ **והמשתמש עובר ביניהן**: ⛔ וגוף
+ *  הבסיס אינו נכנס כלל — ⚠️ הוא מיקום, צבע, גודל וריווח, ⭐ והם מוצר.
+ *  ⚠️ **וההקשר נבלע** — ⛔ מצב שחי בתוך `@media` הוא מצב קיים: ⭐ שאילתה
+ *  אינה התנהגות ⛔ אלא הרוחב שבו ההתנהגות חלה. */
+function classStates(css) {
   const P = new Map();
   for (const r of cssRules(css))
     for (const one of r.sel.split(',')) {
       const m = CLS_SEL.exec(one.trim());
       if (!m) continue;
-      const key = (r.ctx ? r.ctx + ' >> ' : '') + (m[2] || 'base');
-      const o = P.get(m[1]) || {};
-      o[key] = (o[key] ? o[key] + '; ' : '') + normDecls(r.body);
-      P.set(m[1], o);
+      const s = P.get(m[1]) || new Set();
+      if (m[2]) s.add(m[2]);
+      P.set(m[1], s);
     }
   return P;
 }
-/*  ⛔ כל שם שבורר כלשהו נוקב בו — ⚠️ הוא **אינו** הפרופיל: ⭐ `.empty .big`
- *  הוא כלל ל-`big`, ⛔ ואינו כלל שאפשר להצליב בו. */
-function classMentions(css) {
-  const S = new Set();
-  for (const r of cssRules(css))
-    for (const m of r.sel.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)) S.add(m[1]);
-  return S;
-}
-/*  ⛔ השימוש נמדד מחוץ לגיליון — ⚠️ `class="…"` במקור ו-`classList` בקוד:
- *  ⭐ ושם שנבנה מביטוי אינו שם, ⛔ והוא מדולג. */
-function classUses(src) {
-  const holes = sheetRanges(src);
-  const outside = (i) => !holes.some(([a, b]) => i >= a && i < b);
-  const out = new Set();
-  for (const m of src.matchAll(/class\s*=\s*(["'])([^"'<>]*)\1/g)) {
-    if (!outside(m.index) || /[$+{}\\]/.test(m[2])) continue;
-    for (const t of m[2].split(/\s+/)) if (t) out.add(t);
-  }
-  for (const m of src.matchAll(/classList\.(?:add|remove|toggle)\(([^)]*)\)/g)) {
-    if (!outside(m.index)) continue;
-    for (const q of m[1].matchAll(/['"]([A-Za-z_][\w-]*)['"]/g)) out.add(q[1]);
-  }
-  return out;
-}
-/*  ⛔ מחלקה שקוד בורר אותה היא וו ל-JS ⛔ ואינה הצהרת עיצוב — ⚠️ והיא
- *  נמדדת בשורת «סלקטור בלי קורא», ⭐ ולא כאן. */
-function classHooks(src) {
-  const out = new Set();
-  for (const m of src.matchAll(/(?:querySelector|querySelectorAll|closest|matches|contains)\s*\(\s*['"]([^'"]*)['"]/g))
-    for (const q of m[1].matchAll(/\.(-?[A-Za-z_][\w-]*)/g)) out.add(q[1]);
-  for (const m of src.matchAll(/classList\.contains\(\s*['"]([A-Za-z_][\w-]*)['"]/g)) out.add(m[1]);
-  return out;
-}
-const profSig = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
-/*  ⛔ הקבוצה הגדולה פטורה, ⛔ ותיקו אינו פוטר אף אחד — ⚠️ הסוטה הוא מי
- *  שאינו בה: ⭐ הנימוק לסטייה נכתב בריפו שסוטה, ⛔ ולא באחיותיו. */
-function classDeviants(profs) {
-  const out = new Map();
+/*  ⛔ החתימה היא הקבוצה בסדר קבוע — ⚠️ סדר הכללים בגיליון אינו מצב,
+ *  ⭐ ושתי מחלקות שנושאות את אותם מצבים בסדר אחר הן אותה התנהגות. */
+const stateSig = (s) => CLS_STATES.filter((x) => s.has(x)).join(' ');
+/*  ⛔ המדידה היא הצלבת **נוכחות** בין כל הריפו שיש בהם את המחלקה —
+ *  ⚠️ **מה נכנס**: המקור של כל אחת מהן; ⛔ **ומה מפיל**: מחלקה שקבוצת
+ *  המצבים שלה כאן נבדלת מזו שבאחות. ⭐ **ולמה אין רוב פוטר**: הפער הוא
+ *  בין שני הריפו, ⛔ ולא בין ריפו לקבוצה — ⚠️ וכל אחד מהם מדווח אותו
+ *  אצלו, ⭐ עד שהמצבים מיושרים. ⛔ **ואין כאן הצלבת ערכים** — ⚠️ ערך
+ *  המצב הוא מוצר, ⭐ ושורה שמפילה על מוצר מייצרת רשימת הצהרות שגדלה
+ *  בכל שינוי עיצוב. */
+function classStateGaps(me, srcByApp) {
+  const P = {};
+  for (const a of Object.keys(srcByApp)) P[a] = classStates(styleSheet(srcByApp[a]));
   const names = new Set();
-  for (const p of Object.values(profs)) for (const c of p.keys()) names.add(c);
+  for (const p of Object.values(P)) for (const c of p.keys()) names.add(c);
+  const out = [];
   for (const c of names) {
-    const carriers = Object.keys(profs).filter((a) => profs[a].has(c));
-    if (carriers.length < 2) continue;
-    const g = new Map();
-    for (const a of carriers) {
-      const s = profSig(profs[a].get(c));
-      if (!g.has(s)) g.set(s, []);
-      g.get(s).push(a);
-    }
-    if (g.size === 1) continue;
-    const arr = [...g.values()].sort((x, y) => y.length - x.length);
-    const big = (arr.length > 1 && arr[0].length > arr[1].length) ? arr[0] : [];
-    out.set(c, carriers.filter((a) => big.indexOf(a) < 0));
+    const carriers = Object.keys(P).filter((a) => P[a].has(c));
+    if (carriers.length < 2 || carriers.indexOf(me) < 0) continue;
+    const mine = stateSig(P[me].get(c));
+    const off = carriers.filter((a) => a !== me && stateSig(P[a].get(c)) !== mine);
+    if (off.length)
+      out.push(`.${c} [${mine || '—'}] ⟵ ` +
+               off.map((a) => `${a} [${stateSig(P[a].get(c)) || '—'}]`).join(' · '));
   }
-  return out;
-}
-/*  ⛔ המדידה משני צדדיה — ⚠️ **מה נכנס**: הפרופילים של כל הריפו
- *  והצהרת `APP.appClasses`; ⛔ **ומה מפיל**: סטייה בלי הצהרה · הצהרה
- *  למחלקה שכלליה זהים לאחיותיה · הצהרה בלי נימוק תפקידי · ⛔ ומחלקה
- *  שיש לה שימוש כאן, כלל באחות, ואין לה כלל כאן. */
-function classGaps(me, srcByApp, decl) {
-  const profs = {};
-  for (const a of Object.keys(srcByApp)) profs[a] = classProfiles(styleSheet(srcByApp[a]));
-  const dev = classDeviants(profs);
-  const out = { drift: [], ghost: [], bare: [], missing: [] };
-  for (const [c, apps] of dev) if (apps.indexOf(me) >= 0 && !decl[c]) out.drift.push(c);
-  for (const c of Object.keys(decl)) {
-    const apps = dev.get(c) || [];
-    if (apps.indexOf(me) < 0) { out.ghost.push(c); continue; }
-    const why = String(decl[c]).trim();
-    if (why.split(/\s+/).length < CLS_WHY_MIN || CLS_PRESENCE.some((p) => why.indexOf(p) >= 0))
-      out.bare.push(c);
-  }
-  const mine = classMentions(styleSheet(srcByApp[me]));
-  const hooks = classHooks(srcByApp[me]);
-  for (const c of classUses(srcByApp[me])) {
-    if (mine.has(c) || hooks.has(c)) continue;
-    if (Object.keys(srcByApp).some((a) => a !== me && classMentions(styleSheet(srcByApp[a])).has(c)))
-      out.missing.push(c);
-  }
-  return out;
+  return out.sort();
 }
 
 /*  ⚠️ שורש הייחוס הוא הריפו הזה, והאחיות לצידו — ⛔ ריפו שאינו על הדיסק
@@ -589,27 +507,20 @@ const CLS_HAVE = CLS_OTHERS.filter((p) => fs.existsSync(path.join(SIBS, p, 'inde
 const CLS_AWAY = CLS_OTHERS.filter((p) => CLS_HAVE.indexOf(p) < 0);
 const CLS_SRC = { [APP.app]: IDX };
 for (const p of CLS_HAVE) CLS_SRC[p] = fs.readFileSync(path.join(SIBS, p, 'index.html'), 'utf8');
-const CG = CLS_AWAY.length ? null : classGaps(APP.app, CLS_SRC, APP.appClasses || {});
-/*  ⛔ ריפו שאינו על הדיסק **מדווח בשמו** — ⚠️ ההשוואה שלא רצה נראית,
- *  ⭐ והתוצאה נספרת ככל תוצאה: ⛔ מונה שמדלג עליה מדווח חוסר שאינו קיים.
- *  ⚠️ **וההצלבה אינה מתקיימת על עץ חלקי** — ⛔ רתמת מוטציה שמעתיקה שני
- *  קבצים בלבד הייתה מדווחת «הצהרה שאין לה סטייה» על כל הצהרה. */
-const cg = (k, msg, how) => t(CG === null
-  ? true : CG[k].length === 0,
-  CG === null
-    ? `${msg} — ⏭ ההצלבה בין הריפו לא רצה: ${CLS_AWAY.join(' · ')} אינם על הדיסק ` +
-      `לצד ${APP.app} (${CLS_HAVE.length} מתוך ${CLS_OTHERS.length}). ` +
-      'מריצים את הסבב עם כל הריפו זה לצד זה'
-    : `${msg} — נמדדו ${CG[k].length} והצפוי אפס` +
-      (CG[k].length ? ' · ' + CG[k].slice(0, 6).join(' · ') + ' — מה עושים: ' + how : ''));
-cg('drift', 'מחלקה משותפת שכלליה נבדלים ואינה מוצהרת',
-   'מיישרים את הכלל לזה של האחיות, או מצהירים ב-APP.appClasses מה המסך כאן דורש');
-cg('ghost', 'הצהרת מחלקה שאין לה סטייה',
-   'מסירים אותה מ-APP.appClasses, שהיא מתארת מצב שחלף');
-cg('bare', 'הצהרת מחלקה בלי נימוק תפקידי',
-   'כותבים מה המסך כאן דורש, ולא שהכלל נבדל');
-cg('missing', 'מחלקה בשימוש כאן שכלל שלה חי באחות ואין לה כלל כאן',
-   'מביאים את הכלל, או מסירים את השימוש');
+/*  ⛔ ריפו שאינו על הדיסק **מדווח בשמו** — ⚠️ ההצלבה שלא רצה נראית,
+ *  ⭐ והתוצאה נספרת ככל תוצאה: ⛔ מונה שמדלג עליה מדווח חוסר שאינו קיים. */
+{
+  const g = CLS_AWAY.length ? null : classStateGaps(APP.app, CLS_SRC);
+  t(g === null ? true : g.length === 0,
+    g === null
+      ? 'מחלקה משותפת שמצביה נבדלים — ⏭ ההצלבה בין הריפו לא רצה: ' +
+        `${CLS_AWAY.join(' · ')} אינם על הדיסק לצד ${APP.app} ` +
+        `(${CLS_HAVE.length} מתוך ${CLS_OTHERS.length}). ` +
+        'מריצים את הסבב עם כל הריפו זה לצד זה'
+      : `מחלקה משותפת שמצביה נבדלים — נמדדו ${g.length} והצפוי אפס` +
+        (g.length ? ' · ' + g.slice(0, 6).join(' · ') +
+         ' — מה עושים: מביאים את המצב החסר, או מסירים אותו משתיהן' : ''));
+}
 
 mutStage();
 if (RUN_MUT) {
@@ -666,39 +577,34 @@ for (const r of MUT) {
  *  מוטציה שאינה רצה. */
 {
   const TWIN = 'zz-twin';
-  const base = '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style><div class="' + TWIN + '"></div>';
-  const mine = '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style><div class="' + TWIN + '"></div>';
-  const S0 = { a: mine, b: base, c: base };
-  const g0 = classGaps('a', S0, {});
-  t(g0.drift.length === 0 && g0.ghost.length === 0 && g0.missing.length === 0,
-    'נ4 · ⭐ בקרה חיובית: מחלקה שכלליה זהים בשלושה ⛔ **אינה** מפילה');
-  const g1 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text-2)'), b: base, c: base }, {});
-  t(g1.drift.length > g0.drift.length, 'מ19 · גוף כלל שנבדל באחת **מפיל** את «drift»');
-  const g2 = classGaps('a', { a: mine.replace('</style>', '.' + TWIN + ':hover{opacity:var(--op-5)}</style>'), b: base, c: base }, {});
-  t(g2.drift.length > g0.drift.length, 'מ20 · כלל מצב שנוסף באחת **מפיל** את «drift»');
-  const g3 = classGaps('a', S0, { [TWIN]: 'מחלקה שכלליה זהים לאחיותיה, וההצהרה כאן מיותרת לגמרי' });
-  t(g3.ghost.length > g0.ghost.length, 'מ21 · הצהרה למחלקה שכלליה זהים **מפילה** את «ghost»');
-  const g4 = classGaps('a', { a: '<style>.' + TWIN + '-x{color:var(--text)}</style><div class="' + TWIN + '"></div>', b: base, c: base }, {});
-  t(g4.missing.length > g0.missing.length,
-    'מ22 · שימוש במחלקה שאין לה כלל כאן **ואין לה קורא ב-JS**, וכלל שלה חי באחות — **מפיל** את «missing»');
-  const g5 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text-2)'), b: base, c: base },
-    { [TWIN]: 'קצר מדי' });
-  t(g5.bare.length > g0.bare.length, 'מ23 · הצהרה בלי נימוק תפקידי **מפילה** את «bare»');
-  /*  ⭐ מוטציות-נגד: ⛔ מחלקה שחיה באחת בלבד אינה מפילה, ⛔ ותחילית אינה
-   *  אסימון — ⚠️ `tab-btn` אינו `btn`. */
-  const n1 = classGaps('a', { a: '<style>.' + TWIN + '-solo{color:var(--text)}</style>', b: base, c: base }, {});
-  t(n1.drift.length === 0, 'נ2 · ⭐ מחלקה שחיה באחת בלבד ⛔ **אינה** מפילה');
-  const n2 = classGaps('a', { a: '<style>.tab-' + TWIN + '{color:var(--text)}.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style>',
-                              b: base, c: base }, {});
-  t(n2.drift.length === 0, 'נ3 · ⭐ תחילית אינה אסימון — `tab-' + TWIN + '` אינו `' + TWIN + '` ⛔ ואינו מפיל');
-  /*  ⭐ מוטציית-נגד: ⛔ מחלקה בלי כלל **שיש לה קורא ב-JS** אינה מפילה —
-   *  ⚠️ היא **וו** ⛔ ואינה הצהרת עיצוב: ⭐ נמדד `.ksave` בחמישה — אפס
-   *  כללים, ⛔ ומודול המקשים בוחר אותה כהיקף הטופס. */
-  const n3 = classGaps('a', {
-    a: '<div class="' + TWIN + '"></div><script>document.querySelectorAll(".' + TWIN + '")</scr' + 'ipt>',
-    b: base, c: base }, {});
-  t(n3.missing.length === 0,
-    'נ5 · ⭐ מחלקה בלי כלל שיש לה קורא ב-JS — **וו** ⛔ ואינה מפילה את «missing»');
+  const sheet = (extra) => '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}' +
+    '.' + TWIN + ':hover{opacity:var(--op-5)}' + (extra || '') + '</style>';
+  const S0 = { a: sheet(), b: sheet(), c: sheet() };
+  const g0 = classStateGaps('a', S0);
+  t(g0.length === 0, 'נ4 · ⭐ בקרה חיובית: אותה קבוצת מצבים בשלושה ⛔ **אינה** מפילה');
+  const g1 = classStateGaps('a', { a: '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style>',
+                                   b: sheet(), c: sheet() });
+  t(g1.length > g0.length, 'מ19 · הסרת `:hover` ממחלקה משותפת באחת **מפילה** את «classes»');
+  const g2 = classStateGaps('a', { a: sheet('.' + TWIN + ':disabled{opacity:var(--op-3)}'),
+                                   b: sheet(), c: sheet() });
+  t(g2.length > g0.length, 'מ20 · הוספת `:disabled` למחלקה משותפת באחת **מפילה** את «classes»');
+  /*  ⭐ מוטציות-נגד: ⛔ ערך הוא מוצר — ⚠️ בגוף הבסיס ובתוך המצב כאחד:
+   *  ⭐ הכפתור הצף בקצה המתחיל כאן ובקצה המסיים באחות **אינו** מפיל,
+   *  ⛔ וגוון שנבדל אינו מפיל. */
+  const n1 = classStateGaps('a', { a: sheet().replace('{color:var(--text);padding:var(--sp-4)}',
+                                                      '{color:var(--text-2);inset-inline-start:var(--sp-6)}'),
+                                   b: sheet(), c: sheet() });
+  t(n1.length === 0, 'נ2 · ⭐ מיקום וצבע שנבדלים בגוף הבסיס ⛔ **אינם** מפילים');
+  const n2 = classStateGaps('a', { a: sheet().replace(':hover{opacity:var(--op-5)}',
+                                                      ':hover{opacity:var(--op-3);background:var(--bad-soft)}'),
+                                   b: sheet(), c: sheet() });
+  t(n2.length === 0, 'נ3 · ⭐ ערך **בתוך** המצב שנבדל ⛔ **אינו** מפיל');
+  const n3 = classStateGaps('a', { a: sheet('.' + TWIN + '-solo:hover{opacity:var(--op-5)}'),
+                                   b: sheet(), c: sheet() });
+  t(n3.length === 0, 'נ5 · ⭐ מחלקה שחיה באחת בלבד ⛔ **אינה** מפילה');
+  const n4 = classStateGaps('a', { a: sheet('.tab-' + TWIN + ':focus{outline:none}'),
+                                   b: sheet(), c: sheet() });
+  t(n4.length === 0, 'נ6 · ⭐ תחילית אינה אסימון — `tab-' + TWIN + '` אינו `' + TWIN + '` ⛔ ואינו מפיל');
 }
 }
 
