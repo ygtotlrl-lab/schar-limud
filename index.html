@@ -60,9 +60,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .auth-btn{width:100%;background:var(--accent);color:var(--on-brand);border:none;border-radius:var(--r-7);padding:var(--sp-5);font-family:Heebo;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-2);transition:background var(--dur-2)}
 .auth-btn:hover{background:var(--accent2)}
 .auth-btn:disabled{opacity:var(--op-3);cursor:default}
-.auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:var(--r-7);animation:spin var(--dur-6) linear infinite}
+.auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:var(--r-7);animation:auth-spin var(--dur-6) linear infinite}
 .auth-err{color:var(--bad);font-size:var(--fs-3);margin-top:var(--sp-4);min-height:18px}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes auth-spin{to{transform:rotate(360deg)}}
 #topnav{position:sticky;top:0;z-index:var(--z-2);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-6);height:54px;border-bottom:1px solid var(--border)}
 .nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
 .nav-user{font-size:var(--fs-2);color:var(--text3);display:flex;align-items:center;gap:var(--sp-4)}
@@ -198,7 +198,7 @@ body.locked{overflow:hidden}
 .credit-sub{font-size:var(--fs-2);color:var(--text3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:var(--lh-3)}
 .paid-cell{color:var(--ok);font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text2)}
-.empty{text-align:center;color:var(--text3);padding:var(--sp-7) 0;font-size:var(--fs-3)}
+.empty{color:var(--text3);text-align:center;padding:var(--sp-7) var(--sp-5);font-size:var(--fs-3)}
 .pill{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);background:var(--bg);color:var(--text2);border:1px solid var(--border)}
 .txn-row{grid-template-columns:65px 1fr auto auto}
 .tbl td,.tbl th{padding:var(--sp-3) var(--sp-3);font-size:var(--fs-2)}
