@@ -90,6 +90,7 @@ const APP = {
           'test_coremod.mjs',
           'test_sistername.mjs',
           'test_mignames.mjs',
+          'test_names.mjs',
           'test_toolsid.mjs',
           'test_filesets.mjs',
           'test_inputlayer.mjs',

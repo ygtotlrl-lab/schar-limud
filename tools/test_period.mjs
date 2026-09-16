@@ -29,7 +29,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DB_SCHEMA } from './db_schema.mjs';
+import { DB_SCHEMA } from './db-schema.mjs';
 import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
 
@@ -79,7 +79,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [45, 115, 116];
+export const ROWS = [45, 115, 117];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -818,7 +818,7 @@ if (RUN_MUT) {
   }
   {
     const got = kvScope(['index.html', 'core/sync.js',
-                         'migrations/000_initial_schema.sql', 'tools/db_schema.mjs']);
+                         'migrations/000_initial_schema.sql', 'tools/db-schema.mjs']);
     t(n++, got.length === 2 && !got.some((f) => /^migrations\//.test(f)),
       'נ5 · ⭐ מוטציית-נגד: שם טבלה בתוך מיגרציה ⛔ אינו מפיל — ' +
       `נמדדו ${got.length} קבצים בהיקף והצפוי 2, ואפס תחת \`migrations/\``);

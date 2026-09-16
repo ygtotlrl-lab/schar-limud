@@ -36,13 +36,13 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { DB_SCHEMA } from './db_schema.mjs';
+import { DB_SCHEMA } from './db-schema.mjs';
 import { dirname, join } from 'node:path';
 import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [163, 156, 157, 158, 178, 208, 210, 211, 212, 170, 161, 148, 159];
+export const ROWS = [164, 157, 158, 159, 179, 209, 211, 212, 213, 171, 162, 149, 160];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -808,7 +808,7 @@ async function claimSchemaMirror() {
   }
   if (gaps.length)
     bad('טו. מראת הסכימה — ' + gaps.join(' · ') + '. נמדדו ' + gaps.length +
-        ' מול הצפוי 0. מיישרים את `db_schema.mjs` לסכימה החיה באותו קומיט של המיגרציה');
+        ' מול הצפוי 0. מיישרים את `db-schema.mjs` לסכימה החיה באותו קומיט של המיגרציה');
   else
     ok('טו. מראת הסכימה — ' + full + ' טבלאות נמדדו במלואן מול המסד' +
        (partial.length ? ', ו-' + partial.length + ' ריקות נמדדו בעמודות המוצהרות בלבד' : '') +

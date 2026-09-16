@@ -44,7 +44,7 @@ const APP = {
     '_capability-notes.md', 'test_budget.mjs', 'test_caps_build.mjs',
     'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
     'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
-    'test_readonly.mjs', 'scope.mjs', 'whiten.mjs', 'db_schema.mjs',
+    'test_readonly.mjs', 'scope.mjs', 'whiten.mjs', 'db-schema.mjs',
     'peers.mjs', 'appsrc.mjs',
   ],
   /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
@@ -62,7 +62,7 @@ const APP = {
      *  שנוקב בו כליטרל, ⭐ שזו הצורה של שער ש**מריץ** אותו. */
     ['check-js' + '.mjs']:
       'המריץ עצמו — ⛔ הוא מפעיל את רשימת השערים ואינו יושב בתוכה',
-    'db_schema.mjs':
+    'db-schema.mjs':
       'מראת סכימת המסד — מודול שהשערים קוראים ממנו, ⛔ ואין בו טענה משלו',
     'gen-icons.mjs':
       'מחולל האייקונים — ⛔ הוא כותב נכסים ואינו מודד, ⚠️ ושער נפרד מודד שהרצתו אינה משנה נכס',
