@@ -49,8 +49,6 @@ const APP = {
   roleUnused: 'junior',
   /* ⚠️ המאמת האופליין — ריק כשאין כאן כניסה */
   verifyFn: 'slVerifyOffline',
-  /* ⚠️ מרשם מימדי הסריקה — קיים ביומן בלבד, ששם יש מסך טבלה */
-  dimsName: '',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -73,7 +71,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל מוטציה שאין לה מה למוטט בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 19, app: 0, appWhy: '' };
+const FLOOR = { shared: 21, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -164,6 +162,17 @@ function inject(text, snippet) {
   return text.slice(0, k) + ' ' + snippet + ' ' + text.slice(k);
 }
 const IDX = rd('index.html');
+/*  ⛔ מרשם טקסט דו-ממדי ברמת המודול, ואתר ציור — ⚠️ שניהם יחד הם מה
+ *  שהשער מודד, ⭐ והשם מגיע מהקורא כדי ששתי המוטציות לא יהיו אותו שינוי. */
+function prose(text, name) {
+  const j = text.lastIndexOf('</body>');
+  if (j < 0) return null;
+  const blk = '<script>\nvar ' + name + ' = [\n' +
+              "  ['\u05d0', '\u05d1'],\n  ['\u05d2', '\u05d3'],\n];\n" +
+              'function _zzDraw() { var h = 0; ' + name +
+              '.forEach(function (x) { h += x.length; }); return h; }\n<\/script>\n';
+  return text.slice(0, j) + blk + text.slice(j);
+}
 /*  ⛔ מרשם המוטציות — ⚠️ **מה נכנס**: שם הטענה · השער שמכסה אותה ·
  *  והעריכה שמזיזה את המחרוזת; ⛔ **ומה מפיל**: שער שלא נפל עליה.
  *  ⭐ **ולמה המבנה קיים**: עיגון שאין לו מוטציה נשחק בחזרה לבדיקת
@@ -214,8 +223,13 @@ const MUT = [
     edit: () => relocate(IDX, 'setInterval(checkForUpdate,') },
   { m: 'מ17', part: 'test_caps_guard',    lbl: 'מיכל הבאנר נבנה ב-JS',
     edit: () => inject(IDX, "var _u = document.createElement('div'); _u.id = 'updater';") },
-  { m: 'מ18', part: 'check-capabilities', lbl: 'מרשם המימדים נקרא פעמיים',
-    edit: () => APP.dimsName ? inject(IDX, APP.dimsName + '.forEach(function () {});') : null },
+  /*  ⛔ מ18 · מ19 — מסך שמתאר תהליך שמחוץ לקוד (סבב 148): ⚠️ **מה נכנס**:
+   *  מרשם טקסט דו-ממדי ברמת המודול שמצויר לטבלה; ⛔ **ומה מפיל**: שניהם
+   *  יחד — ⭐ המרשם שירד, ⚠️ ומרשם חדש בשם אחר. */
+  { m: 'מ18', part: 'check-capabilities', lbl: 'המרשם שירד חוזר — «staticProseRegistries»',
+    edit: () => prose(IDX, 'YS_INF_DIMS') },
+  { m: 'מ19', part: 'check-capabilities', lbl: 'מרשם תצוגה קבוע חדש — «staticProseRegistries»',
+    edit: () => prose(IDX, '_zzSteps') },
 ];
 for (const r of MUT) {
   const body = r.edit();
@@ -236,6 +250,18 @@ for (const r of MUT) {
   else t(!runGateOn({ 'index.html': IDX.replace(fb[0], fb[0].replace(/\bb\b/g, 'btn')) },
                     'test_caps_ui.mjs'),
          'נ1 · ⭐ שינוי שם עקבי בתוך ההיקף ⛔ **אינו** מפיל');
+}
+/*  ⭐ מוטציית-נגד: מרשם דו-ממדי שנגזר ממצב חי ⛔ אינו מפיל — ⚠️ הנמדד הוא
+ *  **טקסט קבוע**, ⛔ ולא הצורה הדו-ממדית: ⭐ מה שנגזר נמדד מול מקורו. */
+{
+  const j = IDX.lastIndexOf('</body>');
+  const live = '<script>\nvar _zzLive = (window._rows || []).map(function (r) ' +
+               '{ return [r.k, r.v]; });\nfunction _zzL() { var h = 0; ' +
+               '_zzLive.forEach(function (x) { h += x.length; }); return h; }\n<\/script>\n';
+  if (j < 0) t(true, 'נ2 · ⭕ אין כאן סוגר גוף — ⛔ ואין לאן להוסיף');
+  else t(!runGateOn({ 'index.html': IDX.slice(0, j) + live + IDX.slice(j) },
+                    'check-capabilities.mjs'),
+         'נ2 · ⭐ מרשם שנגזר ממצב חי ⛔ **אינו** מפיל');
 }
 }
 
