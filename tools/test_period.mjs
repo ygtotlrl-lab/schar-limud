@@ -227,7 +227,7 @@ export function verbRegistryGaps(reg, src) {
 /*  ⛔ תחיליות הבעלים — ⚠️ **מה נכנס**: התחילית של כל אפליקציה;
  *  ⛔ **ומה מפיל**: כלום — ⭐ טבלה שאינה נושאת אף אחת מהן אינה נמדדת
  *  כאן: ⚠️ היא משותפת לפרויקט, ⛔ ואין לה בעלים יחיד שהתפקיד נמדד מולו. */
-const OWNER_PFX = ['ya_', 'hr_', 'sl_', 'g_', 'kp_'];
+const OWNER_PFX = ['ya_', 'hr_', 'sl_', 'g_', 'k_'];
 
 /*  ⛔ תפקיד שנושא יותר משם אחד — ⚠️ **מה נכנס**: הסיומת החורגת ⟵
  *  התפקיד שמצדיק אותה; ⛔ **ומה מפיל**: סיומת חורגת שאינה כאן, והכרזה
@@ -297,10 +297,9 @@ export function kvScope(files) {
  *  נימוק. ⭐ **ולמה המבנה קיים**: תחילית שכבר חיה במסד אינה ניתנת לשינוי
  *  בלי מיגרציה והגירה מקומית, ⛔ וההכרזה היא מה שמונע «יישור» בתום לב
  *  שיפיל כל שאילתה · ⚠️ **והמרשם משותף**, ⭐ שהסכימה שממנה הוא נגזר משותפת. */
-const PREFIX_MOVING = {
-  'ha-kupa': { pfx: 'kp_',
-    why: '«הקופה» הוא שם חד-מילי ⛔ וראשי התיבות שלו `k_` — ⚠️ והתחילית שבפועל היא `kp_`: ⭐ **וההסבה שלה כתובה ומתוכננת (סבב 148)** — שש טבלאות · מפתחות האחסון · 33 מפתחות הגיבוי · `bk_retention_keys` והעידן' },
-};
+/*  ⚠️ **ולמה ריק**: נמדד ואין — ⭐ כל תחילית חיה עקבית עם שם הריפו שלה,
+ *  ⛔ והאחרונה שלא הייתה הוסבה בסבב שבו ההכרזה ירדה. */
+const PREFIX_MOVING = {};
 /*  ⛔ הסבב הנוכחי נגזר מכותרת הטבלה ⛔ ואינו מוקלד — ⚠️ הכרזת מעבר שסבבה
  *  חלף **מפילה**: ⭐ וזה מה שהופך אותה למעבר ⛔ ולא לחריגה שנשארת. */
 export function movingRound(root) {
@@ -714,7 +713,7 @@ if (RUN_MUT) {
   }
   {
     const sig = (DB_SCHEMA.find((r) => r.t === 'hr_settings') || {}).c;
-    const got = roleGaps(rolesOf(DB_SCHEMA.concat([{ p: 'kupa', t: 'kp_prefs', c: sig }])), ROLE_ALLOW);
+    const got = roleGaps(rolesOf(DB_SCHEMA.concat([{ p: 'kupa', t: 'k_prefs', c: sig }])), ROLE_ALLOW);
     t(n++, got.length === 1,
       'מ7 · ⛔ מוטציה: טבלה שתפקידה כפול ואינה מוצהרת מפילה את «[table-role]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
@@ -742,17 +741,35 @@ if (RUN_MUT) {
       `נמדדו ${got.length} תחיליות והצפוי 1`);
   }
   {
-    const got = prefixGaps(PEERS, DB_SCHEMA, {});
-    t(n++, got.length === 1 && got[0] === 'kp_',
+    /*  ⛔ והכיוון ההפוך על אותו קלט — ⚠️ ההכרזה היא מה שמשתיק את הפער:
+     *  ⭐ בלעדיה `zz_` נופל, ⛔ ואיתה הוא אינו — ⚠️ וזו הראיה שהמרשם נקרא. */
+    const rogue = DB_SCHEMA.concat([{ p: 'kupa', t: 'zz_prefs', c: 'key,value' }]);
+    const decl = { 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } };
+    const off = prefixGaps(PEERS, rogue, {});
+    const on = prefixGaps(PEERS, rogue, decl);
+    t(n++, off.length === 1 && off[0] === 'zz_' && on.length === 0,
       'מ11 · ⛔ מוטציה: הסרת ההכרזה מ-`PREFIX_MOVING` מפילה את «[prefix-derived]» — ' +
-      `נמדדו ${got.length} תחיליות והצפוי 1`);
+      `נמדדו ${off.length} תחיליות בלי ההכרזה ו-${on.length} איתה, והצפוי 1 ו-0`);
   }
   {
     const got = prefixGhosts(PEERS, DB_SCHEMA,
-      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: PREFIX_MOVING['ha-kupa'].why } }));
+      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } }));
     t(n++, got.length === 1,
       'מ12 · ⛔ מוטציה: הכרזה שאין לה ריפו מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
+  }
+  {
+    /*  ⛔ והמנגנון שמפיל הכרזה שסבבה חלף — ⚠️ בלי המוטציה הזו הטענה
+     *  רצה על מרשם ריק ⛔ ואינה יכולה להיכשל: ⭐ והכרזה שנשארה בשקט
+     *  הייתה חיה לנצח — ⚠️ וזה בדיוק «probe שאינו יכול להיכשל». */
+    const now = movingRound(ROOT);
+    const stale = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + (now - 1) + ')' } }, now);
+    const none = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + now + ')' } }, now);
+    const noRound = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה בלי סבב נקוב' } }, now);
+    t(n++, stale.length === 1 && noRound.length === 1 && none.length === 0,
+      'מ12ב · ⛔ מוטציה: הכרזת מעבר שסבבה חלף מפילה את «[prefix-derived]» — ' +
+      `נמדדו ${stale.length} לסבב שחלף · ${noRound.length} בלי סבב · ${none.length} לסבב הנוכחי, ` +
+      'והצפוי 1 · 1 · 0');
   }
   {
     const pfx = Object.keys(APP.prefixLegacy || {})[0];

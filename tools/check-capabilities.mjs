@@ -5831,6 +5831,16 @@ function mirrorLayerGaps() {
    *  בכולן ⭐ והשם עצמו פר-אפליקציה: ⛔ ולכן אין ליטרל באתר הכתיבה,
    *  ⚠️ והסריקה קוראת את הערך מהתצורה: ⛔ **ושדה שמשורשר אינו מפתח** —
    *  ⚠️ הוא תחילית שמפתח נבנה ממנה, ⭐ ונמדד בשער המפתחות. */
+  /*  ⛔ ותחילית שנמסרה כקבוע נפתרת לערכה — ⚠️ שם פזור אינו ניתן לשינוי
+   *  ממקום אחד, ⭐ ולכן התחילית חיה בקבוע: ⛔ וסורק שקורא ליטרל בלבד
+   *  מדווח «הכרזה שאין לה אתר» על תחילית שנכתבת בכל טעינה. */
+  for (const m of src.matchAll(/ls(?:Get|Set|SetArray|Remove)\(\s*([A-Za-z_$][\w$]*)\s*\+/g)) {
+    const k = constValOf(m[1]);
+    if (!k || !app || k.indexOf(app) !== 0) continue;
+    seen.add(k);
+    if (!Object.prototype.hasOwnProperty.call(flat, k))
+      out.push('מפתח מקומי שאינו טבלה ואינו מוכרז ב-flatKeys: ' + k);
+  }
   const lsCfg = (/var\s+LS_CFG\s*=\s*\{([\s\S]*?)\n\};/.exec(src) || [])[1] || '';
   for (const m of src.matchAll(/ls(?:Get|Set|SetArray|Remove)\(\s*LS_CFG\.([A-Za-z_$][\w$]*)\s*[,)]/g)) {
     const v = new RegExp("(?<![\\w$.])" + m[1] + ":\\s*'([^']+)'").exec(lsCfg);
