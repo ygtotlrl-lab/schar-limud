@@ -1070,7 +1070,7 @@ const CAPS = {
   hebdate: {
     name: 'מנוע התאריך העברי',
     docRows: ['מנוע תאריך עברי'],
-    block: { file: 'core/hebrew.js', sha: '8657e838aad2c408', lines: 86,
+    block: { file: 'core/hebrew.js', sha: '4c9e7dc2fdbaa4ca', lines: 100,
              start: '/* ═══ מנוע התאריך העברי — מודול משותף (סבב 107)',
              end:   '/* ═══════════════ סוף מודול מנוע התאריך העברי' },
   },
@@ -1506,7 +1506,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 86, app: 10, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליהם שני בלוקי גרף העמודות' };
+const FLOOR = { shared: 87, app: 10, appWhy: 'כניסה — סשן · נעילה · הרשאות · כתיבת משתמש · שכבת המראה; ומעליהם שני בלוקי גרף העמודות' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
@@ -2483,6 +2483,44 @@ function monthFormGaps() {
   }
   if (!arrays) return ['index.html: אין מערך חודשים עבריים'];
   if (!adar) return ['index.html: אין «אדר א׳»/«אדר ב׳» באף מערך חודשים'];
+  return out;
+}
+
+/*  ⛔ תווית אחת לכל ערך (סבב 148) — ⚠️ **מה נכנס**: כל פונקציית
+ *  תווית שהמנוע מתקין על `window`, וכל שדה ש-`ysHebDate` מחזירה;
+ *  ⛔ **ומה מפיל**: תווית שאין לה אתר קריאה, ⛔ ושדה שאין לו קורא.
+ *  ⭐ **ולמה המבנה קיים**: שתי צורות לאותו ערך הן שני מקורות
+ *  אמת לתצוגה — ⚠️ ומי שיקרא שתי אפליקציות יראה שני תאריכים
+ *  לאותו יום.
+ *  ⛔ **והקוראים נספרים גם ב-`tools/`** — ⚠️ סריקה שמוגבלת למקור
+ *  היא ראיה למקור בלבד, ⭐ ושער שמודד את המנוע הוא קורא חי.
+ *  ⛔ **והגדרה אינה קריאה** — ⚠️ האתר שבו השם מוצב על `window`
+ *  מוחרג, ⭐ אחרת כל תווית היתה נמצאת קוראת לעצמה. */
+const HEB_LABEL_DEF = /window\.(ysHeb[A-Za-z]*Label[A-Za-z]*)\s*=\s*function/g;
+const HEB_OUT_OBJ = /\n\s*var out=\{([\s\S]*?)\n\s*\};/;
+const HEB_OUT_KEY = /(?:^|[,{])\s*([A-Za-z_$][\w$]*)\s*:/g;
+function hebFormGaps(appCode, toolsCode) {
+  const out = [];
+  const eng = appCode;
+  let m;
+  HEB_LABEL_DEF.lastIndex = 0;
+  const labels = [];
+  while ((m = HEB_LABEL_DEF.exec(eng))) labels.push(m[1]);
+  if (!labels.length) return ['\u05d0\u05d9\u05df \u05e4\u05d5\u05e0\u05e7\u05e6\u05d9\u05d9\u05ea \u05ea\u05d5\u05d5\u05d9\u05ea \u05d1\u05de\u05e7\u05d5\u05e8'];
+  const hay = eng.replace(HEB_LABEL_DEF, ' ') + '\n' + toolsCode;
+  for (const nm of labels) {
+    const uses = (hay.match(new RegExp('(?<![\\w$])' + nm + '(?![\\w$])', 'g')) || []).length;
+    if (!uses) out.push(nm + ': \u05ea\u05d5\u05d5\u05d9\u05ea \u05d1\u05dc\u05d9 \u05e6\u05e8\u05db\u05df');
+  }
+  const ob = HEB_OUT_OBJ.exec(eng);
+  if (!ob) return out.concat(['\u05d4\u05de\u05e0\u05d5\u05e2 \u05d0\u05d9\u05e0\u05d5 \u05de\u05d7\u05d6\u05d9\u05e8 \u05de\u05d1\u05e0\u05d4 \u05e9\u05d0\u05e4\u05e9\u05e8 \u05dc\u05de\u05d3\u05d5\u05d3']);
+  HEB_OUT_KEY.lastIndex = 0;
+  const fields = [];
+  while ((m = HEB_OUT_KEY.exec(ob[1]))) fields.push(m[1]);
+  for (const f of fields) {
+    const uses = (hay.match(new RegExp('\\.' + f + '(?![\\w$])', 'g')) || []).length;
+    if (!uses) out.push(f + ': \u05e9\u05d3\u05d4 \u05d1\u05dc\u05d9 \u05e7\u05d5\u05e8\u05d0');
+  }
   return out;
 }
 
@@ -7019,7 +7057,7 @@ const GATES = {
   /*  ⛔ מנוע התאריך העברי (סבב 107) — ⚠️ הנימוק הישן הצביע על `test_date`
    *  «ביומן ובהנהלה», ⛔ והוא קיים בהנהלה בלבד: ⭐ מאז שהמנוע בבלוק חתום
    *  החתימה היא מה שמודד אותו, ⛔ ובשכר ובגיוס ההיעדר מוצהר ב-`skipCaps`. */
-  68: { claims: { 'check-capabilities': ['hebdate', 'monthFormGaps'] } },
+  68: { claims: { 'check-capabilities': ['hebdate', 'monthFormGaps', 'hebFormGaps'] } },
   185: { claim: 'pass_salt' },
   /*  ⭐ סבב 148 — ⛔ סריקה הפוכה: ⚠️ כל אתר חשוד מפיל אלא אם הוא
    *  מוכרז עם נימוקו, ⭐ ורשימת דפוסים הייתה מוצאת את מה שכבר תוקן. */
@@ -7163,6 +7201,25 @@ if (CORE) {
            `כותבים את שם החודש בגרש עברי «׳», ולא באפוסטרוף ולא במרכאה`);
     else
       pass(`monthFormGaps — כל שם חודש במערכים נכתב בגרש עברי`);
+  }
+
+  /*  ⛔ ותווית אחת לכל ערך (סבב 148) — ⚠️ ובאפליקציה שאין בה מנוע
+   *  תאריך עברי אין תווית למדוד: ⛔ ההיעדר מוצהר ב-`APP.skipCaps`
+   *  ומנומק שם, ⚠️ והדילוג נאמר ⛔ ואינו שקט. */
+  if ((APP.skipCaps || []).indexOf('hebdate') >= 0) {
+    pass(`hebFormGaps — אין כאן מנוע תאריך עברי, וההיעדר מוצהר ב-APP.skipCaps`);
+  } else {
+    let _toolsCode = '';
+    try {
+      for (const f of fs.readdirSync('tools').filter((x) => x.endsWith('.mjs')).sort())
+        _toolsCode += readOnce('tools/' + f) + '\n';
+    } catch (e) { _toolsCode = ''; }
+    const hfg = hebFormGaps(srcRefs, _toolsCode);
+    if (hfg.length)
+      fail(`hebFormGaps: ${hfg.join(' · ')} — נמדדו ${hfg.length} והצפוי אפס. ` +
+           `מסירים מהמנוע תווית שאין לה צרכן ושדה שאין לו קורא`);
+    else
+      pass(`hebFormGaps — לכל תווית יש צרכן ולכל שדה במנוע יש קורא`);
   }
 
   /*  ⛔ וסוג השער מוצהר (סבב 108) — ⚠️ שער שמודד טקסט רץ בזיכרון,
