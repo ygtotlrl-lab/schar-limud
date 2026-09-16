@@ -42,7 +42,7 @@ import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [164, 157, 158, 159, 179, 209, 212, 213, 214, 171, 162, 149, 160];
+export const ROWS = [165, 158, 159, 160, 180, 210, 213, 214, 215, 172, 163, 150, 161];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -340,7 +340,7 @@ function kvReaderGaps() {
   const body = SRC.slice(i, i + 900);
   if (!/JSON\.parse/.test(body)) out.push('kvParse אינו מפרש JSON');
   if (!/catch/.test(body)) out.push('kvParse אינו תופס ערך פגום');
-  if (body.indexOf('KV_BAD') < 0) out.push('kvParse אינו נושא את סימון הערך הפגום');
+  if (body.indexOf('MSG_KV_BAD') < 0) out.push('kvParse אינו נושא את סימון הערך הפגום');
   if (!/catch\s*\([\s\S]{0,500}?toast\(/.test(body)) out.push('הכשל אינו מגיע לטוסט');
   if (SRC.indexOf('function kvBadLabel(') < 0) out.push('אין ניסוח אחיד לערך פגום: kvBadLabel');
   const fn = APP.kvReadFn;

@@ -170,7 +170,7 @@ const NAMES_VAR = [
   'MSG_OFFLINE', 'USER_CFG',
   /*  ⛔ המודול המשותף לערך מפתח-ערך (סבב 126) — ⚠️ הקריאה להגדרות עוברת
    *  בו, ⭐ ורתמה שאינה מחלצת אותו נופלת על `kvParse is not defined`. */
-  'KV_BAD',
+  'MSG_KV_BAD',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp', 'slPassFields',

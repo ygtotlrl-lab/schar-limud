@@ -679,9 +679,8 @@ var TOAST_DEFAULT_MS = 2400;
    ══════════════════════════════════════════════════════════════════════════ */
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ ושתי ההודעות שלמטה נבדלות
-// פר-אפליקציה בהחלטת מנהל — ⚠️ ולכן אינן בבלוק החתום.
-var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
+// פר-אפליקציה בהחלטת מנהל — ⚠️ ולכן אינה בבלוק החתום.
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 /* ═══ מחרוזות ההודעה המשותפות — מודול משותף (סבב 141) ════════════════════
    ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
@@ -691,23 +690,35 @@ var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
    ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
    אותה בכל זאת: ⭐ המושג חי בכולן, ⛔ ורשימה שנגזרת ממי שמציג אותה
    היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
-   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN`
-   נבדלים פר-אפליקציה בהחלטת מנהל, ⭐ ונשארים עם נימוקם במקומם.
+   ⛔⛔ **ונוסח הכשל נגזר מההתנהגות** — ⚠️ שלושת אתריו החיים של
+   `MSG_OFFLINE` הם **קריאה** שנכשלה, ⭐ ולא נכתב שם דבר שאפשר לסנכרן:
+   ⛔ «תסתנכרן כשהחיבור יחזור» הוא הבטחה על נתון שאינו קיים, ⚠️ והיא
+   נמדדה בשתיים. ⭐ **וההבטחה נכונה רק על כתיבה שכבר בתור** —
+   `MSG_SAVED_LOCAL` ו-`MSG_CLOUD_SYNC_FAIL`, ⛔ ושם היא נאמרת מפורשות.
+   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_BAD_LOGIN` נבדל פר-אפליקציה
+   בהחלטת מנהל, ⭐ ונשאר עם נימוקו במקומו.
    ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
    «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
    נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
    ═══════════════════════════════════════════════════════════════════════ */
 var MSG_SAVED = '✅ נשמר בהצלחה';
 var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
+var MSG_SAVE_FAIL = '❌ השמירה נכשלה';
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+var MSG_CLOUD_SYNC_FAIL = '⚠️ הסנכרון לענן נכשל — הנתונים שמורים במכשיר ויישלחו כשהרשת תחזור';
+var MSG_OFFLINE = '📴 אין חיבור לאינטרנט — הפעולה לא בוצעה';
 var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 var MSG_DELETE = 'מחק';
 var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
+var MSG_FILL_LOGIN = '⚠️ נא למלא שם משתמש וסיסמה';
 var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_KV_BAD = 'ערך פגום בענן';
+var MSG_LOGIN_ERR = '❌ הכניסה נכשלה — ';
 var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
 var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
 var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
 var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
+var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
 var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
 var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
 var MSG_SERVER_ERR = 'שגיאת שרת';
@@ -1662,7 +1673,7 @@ window.actRun = actRun;
    ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב. */
 function errToast(e) {
   console.error('[save]', e);
-  toast((e && (e.message || e.error_description)) || 'שגיאה בשמירה', null, 'bad');
+  toast((e && (e.message || e.error_description)) || MSG_SAVE_FAIL, null, 'bad');
 }
 function afterSave(msg) {
   closeModal();
@@ -3933,7 +3944,6 @@ var MSG_NO_FP_ONLINE  = '❌ למשתמש הזה אין טביעת סיסמה ב
 // ⭐ תבנית שש הספרות — ⛔ נאכפת במסלולי יצירה ושינוי בלבד: ⚠️ אכיפה
 // במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן.
 var PASS_SIX_RE = /^[0-9]{6}$/;
-var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
 
 // מחזירה 'ok' · 'bad' (סיסמה שגויה) · 'no-fp' · 'no-crypto'.
 // ⛔ **אין כאן אכיפת פורמט שש ספרות** (סבב 19) — מסלול כניסה אינו יודע
@@ -4374,19 +4384,18 @@ function ksKey(e) {
       לאותה תקלה.
    ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב: ⚠️ אחרת
       החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
-var KV_BAD = 'ערך פגום בענן';
 function kvParse(key, raw) {
   if (raw === null || raw === undefined || raw === '') return { ok: true, value: null, bad: false };
   try { return { ok: true, value: JSON.parse(raw), bad: false }; }
   catch (e) {
     /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
      *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
-    console.error('[sync] ' + KV_BAD + ' [' + key + ']:', e);
+    console.error('[sync] ' + MSG_KV_BAD + ' [' + key + ']:', e);
     toast('⚠️ ' + kvBadLabel(key), null, 'bad');
     return { ok: false, value: null, bad: true };
   }
 }
-function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
+function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 /* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
 /* ═══ גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════════
    ⛔ סדרה מוצגת ברוחב יחסי ⛔ ולא בספריית גרפים — ⚠️ הרוחב הוא התכונה
@@ -4460,7 +4469,7 @@ function startAuthLoad(){document.getElementById('auth-err').textContent='';docu
 // ⛔ **אין כאן אכיפת פורמט שש ספרות** — ר' ההערה מעל `slVerifyOffline`.
 async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
-  if(!u||!p){showAuthErr('נא למלא שם משתמש וסיסמה');return;}
+  if(!u||!p){showAuthErr(MSG_FILL_LOGIN);return;}
   if(!navigator.onLine){ return doLoginOffline(u,p); }
   startAuthLoad();
   try{
@@ -4513,7 +4522,10 @@ async function doLogin(){
     // רשת שנפלה באמצע (navigator.onLine משקר לא פעם ב-WebView) — לא
     // מציגים "שגיאה" למי שיש לו טביעה תקפה על המכשיר; מנסים אופליין.
     if(isNetErr(e)) return doLoginOffline(u,p);
-    showAuthErr('שגיאה: '+(e.message||e));
+    /*  ⛔ כשל מערכת אינו יושב על משטח המשתמש — ⚠️ `.auth-err` שמור למה
+     *  שהמשתמש יכול לתקן בהקלדה: ⭐ והמשטח מתאפס כדי שהטופס יהיה שמיש. */
+    showAuthErr('');
+    toast(MSG_LOGIN_ERR+((e&&e.message)||MSG_SERVER_ERR),null,'bad');
   }
 }
 
@@ -4711,7 +4723,7 @@ async function syncAll(){
   }catch(e){
     _lastSyncOk=false;
     console.error('[sync]',e);
-    if(!_syncWarned){_syncWarned=true;toast(errMsg(e),4000);}
+    if(!_syncWarned){_syncWarned=true;toast(errMsg(e),4000,'bad');}
   }finally{_syncBusy=false;}
 }
 

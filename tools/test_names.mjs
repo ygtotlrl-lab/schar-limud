@@ -63,10 +63,21 @@ const APP = {
         pattern: 'kebab-case',
         why: 'המחלקה נחתכת מהגיליון באסימון מלא — ⛔ ואות גדולה או קו תחתון שוברים את החיתוך',
       },
+      msg: {
+        pattern: 'MSG_<מצב>, UPPER_SNAKE',
+        why: 'מה שהאפליקציה אומרת למשתמש נמצא בחיפוש אחד — ⛔ ושם שאינו נגזר מכריח ליטרל שני באתר התצוגה',
+      },
     },
     /*  ⛔ שם שנשאר בכוונה בתחילית של אחות — ⚠️ **מה נכנס**: השם ⟵ מה
      *  שהוא עושה שאין לו מקבילה בתחילית אחרת; ⛔ **ומה מפיל**: הכרזה
      *  שאין לה שם חי, ⛔ ושם חורג שאינו כאן. ⭐ **ולמה ריק**: נמדד ואין. */
+    /*  ⛔ מחרוזת עברית ברמת המודול שאינה הודעה — ⚠️ **מה נכנס**: השם ⟵
+     *  מה הוא בפועל; ⛔ **ומה מפיל**: שם עברי שאינו `MSG_*` ואינו כאן,
+     *  והכרזה שאין לה שם חי. ⭐ **ולמה המבנה קיים**: נתון בטבלה אינו
+     *  הודעה, ⛔ ושם `MSG_` עליו היה שולח את מי שמחפש הודעה אליו. */
+    msgAllow: {
+      CREDIT_METHOD: 'שם פריט ברשימת אמצעי התשלום — ⛔ נתון בטבלה ולא הודעה, ⚠️ והוא נשמר על התנועה',
+    },
     fnAllow: {},
     /*  ⛔ אסימון שחי כאן בלבד — ⚠️ **מה נכנס**: השם ⟵ תפקידו כאן;
      *  ⛔ **ומה מפיל**: אסימון שחי כאן בלבד ואינו כאן, ⛔ והכרזה
@@ -90,7 +101,7 @@ const APP = {
 
 /*  ⛔ השורה שהקובץ הזה אוכף — ⚠️ נגזרת משם השורה בטבלה ⛔ ואינה מוקלדת
  *  בגוף השער: ⭐ והמרשם הוא המקום היחיד שנוקב במספר. */
-export const ROWS = [116, 90];
+export const ROWS = [117, 90];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -104,7 +115,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 /*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. */
-const FLOOR = { shared: 12, app: 0, appWhy: '' };
+const FLOOR = { shared: 13, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -175,7 +186,10 @@ const multiWord = (base) => /[-_]/.test(base);
 /*  ⛔ המקור נקרא דרך העוזר המשותף ⛔ ואינו משורשר כאן — ⚠️ הוא עוטף כל
  *  מודול ב-`<script>`, ⭐ שההלבנה המשותפת מלבינה **מה שאינו בתוכו**:
  *  ⛔ מודול חשוף היה נמחק כולו, ⚠️ והשער היה מדווח אפס שמות על קוד שרץ. */
-const srcText = whiten(appSrc(ROOT));
+/*  ⛔ המקור הגולמי — ⚠️ תחום ההודעה נמדד על הטקסט העברי שבמחרוזת,
+ *  ⭐ וההלבנה מוחקת בדיוק את מה שהוא סורק. */
+const srcRaw = appSrc(ROOT);
+const srcText = whiten(srcRaw);
 
 const toolFiles = fs.readdirSync(join(ROOT, 'tools'))
   .filter((f) => /\.mjs$/.test(f))
@@ -199,15 +213,17 @@ for (const p of PEERS) {
 console.log(`· ${APP.app} — סבב 148: שם נגזר מדפוס מוצהר`);
 
 /* 1. המרשם עצמו — ⛔ ארבעת התחומים, ובשני הכיוונים */
-const MEASURED = ['fn', 'gate', 'module', 'cls', 'token'];
+const MEASURED = ['fn', 'gate', 'module', 'cls', 'token', 'msg'];
 const declared = Object.keys(APP.namePolicy.domains || {}).sort();
 is(declared.join(',') === MEASURED.slice().sort().join(','),
-  `[name-policy] ⛔ ארבעת התחומים מוצהרים ונמדדים — נמדדו ${declared.length} מתוך ${MEASURED.length}` +
+  `[name-policy] ⛔ כל תחום מוצהר ונמדד — נמדדו ${declared.length} מתוך ${MEASURED.length}` +
   (declared.join(',') === MEASURED.slice().sort().join(',') ? '' : ` (${declared.join(' ')})`));
 
 const noWhy = [];
 for (const [k, v] of Object.entries(APP.namePolicy.domains || {}))
   if (!v || !v.pattern || !v.why || v.why.length < 12) noWhy.push('domains.' + k);
+for (const [k, v] of Object.entries(APP.namePolicy.msgAllow || {}))
+  if (!v || v.length < 12) noWhy.push('msgAllow.' + k);
 for (const [k, v] of Object.entries(APP.namePolicy.fnAllow || {}))
   if (!v || v.length < 12) noWhy.push('fnAllow.' + k);
 for (const [k, v] of Object.entries(APP.namePolicy.appTokens || {}))
@@ -217,6 +233,24 @@ for (const [k, v] of Object.entries(APP.namePolicy.slotTokens || {}))
 is(noWhy.length === 0,
   `[name-policy-why] ⛔ כל הצהרה נושאת נימוק תפקידי — נמדדו ${noWhy.length} בלי נימוק והצפוי אפס` +
   (noWhy.length ? ` (${noWhy.join(' ')})` : ''));
+
+/* 2ב. תחום ההודעה — ⛔ מחרוזת עברית ברמת המודול היא `MSG_*` או מוצהרת */
+{
+  /*  ⛔ המדידה על המקור הגולמי — ⚠️ הטקסט העברי חי במחרוזת, ⭐ וההלבנה
+   *  הייתה מוחקת בדיוק את מה שהיא סורקת. */
+  const HEBS = /[\u0590-\u05FF]/;
+  const found = [];
+  for (const m of srcRaw.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=\s*'([^']*)'/gm))
+    if (HEBS.test(m[2])) found.push(m[1]);
+  const allow = APP.namePolicy.msgAllow || {};
+  const off = found.filter((k) => !/^MSG_/.test(k) && !(k in allow));
+  const ghostM = Object.keys(allow).filter((k) => !found.includes(k));
+  is(off.length + ghostM.length === 0,
+    `[msg-name] ⛔ מחרוזת עברית ברמת המודול היא \`MSG_*\` או מוצהרת — נמדדו ` +
+    `${found.length} מחרוזות, ${off.length} בשם שאינו נגזר ו-${ghostM.length} הצהרות בלי שם חי, והצפוי אפס` +
+    ([...off, ...ghostM].length ? ` (${[...off, ...ghostM].join(' ')})` : ''));
+}
+
 
 /* 2. פונקציות — ⛔ תחילית שהיא תחיליתה של אחות */
 const names = [...defNames(srcText)].sort();
