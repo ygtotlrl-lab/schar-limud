@@ -55,6 +55,10 @@ const APP = {
         pattern: 'שם יחיד, ורב-מילי ב-kebab-case',
         why: 'מודול אינו מריץ את עצמו — ⛔ ושם שנקרא כמזהה JS הוא שתי צורות לאותו מושג',
       },
+      token: {
+        pattern: '--<קבוצה>-<מדרגה> · ומספר נושא מקף לפניו',
+        why: 'שני דפוסי מספר באותו גיליון מכריחים כל קורא לזכור איזה שייך למה — ⛔ ומי שיוסיף מדרגה לא יידע באיזה לבחור',
+      },
       cls: {
         pattern: 'kebab-case',
         why: 'המחלקה נחתכת מהגיליון באסימון מלא — ⛔ ואות גדולה או קו תחתון שוברים את החיתוך',
@@ -64,13 +68,29 @@ const APP = {
      *  שהוא עושה שאין לו מקבילה בתחילית אחרת; ⛔ **ומה מפיל**: הכרזה
      *  שאין לה שם חי, ⛔ ושם חורג שאינו כאן. ⭐ **ולמה ריק**: נמדד ואין. */
     fnAllow: {},
+    /*  ⛔ אסימון שחי כאן בלבד — ⚠️ **מה נכנס**: השם ⟵ תפקידו כאן;
+     *  ⛔ **ומה מפיל**: אסימון שחי כאן בלבד ואינו כאן, ⛔ והכרזה
+     *  לאסימון שחי גם באחות. ⭐ **ולמה המבנה קיים**: «אינו בכולן»
+     *  הוא המדידה ⛔ ואינו הנימוק. */
+    appTokens: {
+      '--accent-2': 'גוון מוצר של מסך שקיים כאן בלבד — ⛔ ואין לו תפקיד באחיות',
+      '--bad-soft-2': 'גוון מוצר של מסך שקיים כאן בלבד — ⛔ ואין לו תפקיד באחיות',
+      '--credit': 'גוון מוצר של מסך שקיים כאן בלבד — ⛔ ואין לו תפקיד באחיות',
+      '--creditl': 'גוון מוצר של מסך שקיים כאן בלבד — ⛔ ואין לו תפקיד באחיות',
+    },
+    /*  ⛔ חריץ — ⚠️ **מה נכנס**: אסימון שמוגדר יותר מפעם אחת וכל
+     *  הגדרותיו `var(--…)`, ⭐ או שנכתב ב-`setProperty`; ⛔ **ומה
+     *  מפיל**: הכרזה שאינה עומדת במבחן. ⚠️ **ולמה סוג שלישי**:
+     *  הוא אינו מוצר ואינו תשתית — ⭐ הוא המנגנון שהכלל דורש. */
+    slotTokens: {
+    },
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורה שהקובץ הזה אוכף — ⚠️ נגזרת משם השורה בטבלה ⛔ ואינה מוקלדת
  *  בגוף השער: ⭐ והמרשם הוא המקום היחיד שנוקב במספר. */
-export const ROWS = [116];
+export const ROWS = [117, 91];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -84,7 +104,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 /*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 12, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -179,7 +199,7 @@ for (const p of PEERS) {
 console.log(`· ${APP.app} — סבב 148: שם נגזר מדפוס מוצהר`);
 
 /* 1. המרשם עצמו — ⛔ ארבעת התחומים, ובשני הכיוונים */
-const MEASURED = ['fn', 'gate', 'module', 'cls'];
+const MEASURED = ['fn', 'gate', 'module', 'cls', 'token'];
 const declared = Object.keys(APP.namePolicy.domains || {}).sort();
 is(declared.join(',') === MEASURED.slice().sort().join(','),
   `[name-policy] ⛔ ארבעת התחומים מוצהרים ונמדדים — נמדדו ${declared.length} מתוך ${MEASURED.length}` +
@@ -190,6 +210,10 @@ for (const [k, v] of Object.entries(APP.namePolicy.domains || {}))
   if (!v || !v.pattern || !v.why || v.why.length < 12) noWhy.push('domains.' + k);
 for (const [k, v] of Object.entries(APP.namePolicy.fnAllow || {}))
   if (!v || v.length < 12) noWhy.push('fnAllow.' + k);
+for (const [k, v] of Object.entries(APP.namePolicy.appTokens || {}))
+  if (!v || v.length < 12) noWhy.push('appTokens.' + k);
+for (const [k, v] of Object.entries(APP.namePolicy.slotTokens || {}))
+  if (!v || v.length < 12) noWhy.push('slotTokens.' + k);
 is(noWhy.length === 0,
   `[name-policy-why] ⛔ כל הצהרה נושאת נימוק תפקידי — נמדדו ${noWhy.length} בלי נימוק והצפוי אפס` +
   (noWhy.length ? ` (${noWhy.join(' ')})` : ''));
@@ -250,6 +274,60 @@ is(badCls.length === 0,
   `[class-case] ⛔ אפס מחלקה עם אות גדולה או קו תחתון — ${classes.size} מחלקות, ` +
   `נמדדו ${badCls.length} חורגות והצפוי אפס` + (badCls.length ? ` (${badCls.slice(0, 6).join(' ')})` : ''));
 
+/* 5. אסימוני עיצוב — ⛔ דפוס אחד למספר, ⚠️ ואסימון שחי כאן בלבד מוצהר */
+/*  ⛔ ההגדרות נקראות מהמקור הגולמי — ⚠️ הן חיות ב-`<style>`, ⭐ שההלבנה
+ *  המשותפת מלבינה **מה שאינו בתוך `<script>`**: ⛔ ומקור מולבן היה
+ *  מחזיר אפס אסימונים תמיד. */
+const tokDefs = (text) => {
+  const m = new Map();
+  for (const x of text.matchAll(/(--[a-zA-Z][\w-]*)\s*:\s*([^;}]*)/g))
+    (m.get(x[1]) || m.set(x[1], []).get(x[1])).push(x[2].trim());
+  return m;
+};
+const RAW_SRC = fs.readFileSync(join(ROOT, 'index.html'), 'utf8');
+const myTok = tokDefs(RAW_SRC);
+/*  ⛔ `--ls-n1`/`--ls-n2` אינם חריגה — ⚠️ התקן נוקב בהם במפורש ככיוון
+ *  שלילי, ⭐ והמספר שם הוא סימן ⛔ ולא מדרגה. */
+const NEG = /^--ls-n\d+$/;
+const catNum = [...myTok.keys()].filter((k) => /[a-zA-Z]\d+$/.test(k) && !NEG.test(k));
+is(catNum.length === 0,
+  `[token-pattern] ⛔ מספר באסימון נושא מקף לפניו — ${myTok.size} אסימונים, ` +
+  `נמדדו ${catNum.length} משורשרים והצפוי אפס` + (catNum.length ? ` (${catNum.join(' ')})` : ''));
+
+/*  ⛔ אסימון שחי כאן בלבד נמדד מול האחיות שעל הדיסק — ⚠️ ואחות שאינה
+ *  שם מדווחת בשמה: ⭐ שער שמדלג בשתיקה היה מכריז «חי כאן בלבד» על
+ *  אסימון שחי בכולן. */
+const sisTok = new Set();
+const tokMissing = [];
+for (const p of PEERS) {
+  if (p === APP.app) continue;
+  const f = join(SIBS, p, 'index.html');
+  if (!fs.existsSync(f)) { tokMissing.push(p); continue; }
+  for (const k of tokDefs(fs.readFileSync(f, 'utf8')).keys()) sisTok.add(k);
+}
+const declTok = { ...(APP.namePolicy.appTokens || {}), ...(APP.namePolicy.slotTokens || {}) };
+const onlyHere = tokMissing.length ? [] : [...myTok.keys()].filter((k) => !sisTok.has(k));
+const undeclared = onlyHere.filter((k) => !(k in declTok));
+const overDeclared = tokMissing.length ? [] : Object.keys(declTok).filter((k) => sisTok.has(k) || !myTok.has(k));
+is(undeclared.length === 0 && overDeclared.length === 0,
+  `[token-app] ⛔ אסימון שחי כאן בלבד מוצהר — ${onlyHere.length} נמדדו, ` +
+  `${undeclared.length} בלי הצהרה · ${overDeclared.length} הצהרה בלי אתר, והצפוי אפס` +
+  (undeclared.length ? ` (${undeclared.slice(0, 6).join(' ')})` : '') +
+  (overDeclared.length ? ` (${overDeclared.slice(0, 6).join(' ')})` : '') +
+  (tokMissing.length ? ` · ⚠️ אחיות שאינן על הדיסק: ${tokMissing.join(' ')}` : ''));
+
+/*  ⛔ המבחן של החריץ מכני — ⚠️ מוגדר יותר מפעם אחת וכל הגדרותיו
+ *  `var(--…)`, ⭐ או שהוא נכתב ב-`setProperty`: ⛔ והכרזה שאינה עומדת
+ *  בו היא אסימון מוצר שהוסתר. */
+const slotBad = Object.keys(APP.namePolicy.slotTokens || {}).filter((k) => {
+  const v = myTok.get(k) || [];
+  const setProp = new RegExp("setProperty\\(\\s*['\"]" + k + "['\"]").test(RAW_SRC);
+  return !(setProp || (v.length > 1 && v.every((x) => /^var\(--/.test(x))));
+});
+is(slotBad.length === 0,
+  `[token-slot] ⛔ כל חריץ מוצהר עומד במבחן — ${Object.keys(APP.namePolicy.slotTokens || {}).length} מוצהרים, ` +
+  `נמדדו ${slotBad.length} חורגים והצפוי אפס` + (slotBad.length ? ` (${slotBad.join(' ')})` : ''));
+
 if (RUN_MUT) {
   mutStage();
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
@@ -287,6 +365,20 @@ is(mWhy.length === 1,
 is(multiWord('foo_bar') && 'foo_bar'.includes('_'),
   'מ5 · ⛔ מוטציה: מודול בשם `foo_bar.mjs` — `[module-sep]` הייתה נכשלת');
 
+/* מ6. אסימון במספר משורשר — `[token-pattern]` נופלת */
+const m6 = [...tokDefs('a{--navy4' + ':#000;}').keys()].filter((k) => /[a-zA-Z]\d+$/.test(k) && !NEG.test(k));
+is(m6.length === 1,
+  'מ6 · ⛔ מוטציה: `--navy4` נמדד כמספר משורשר — `[token-pattern]` הייתה נכשלת');
+
+/* מ7. אסימון שחי כאן בלבד ואינו מוצהר — `[token-app]` נופלת */
+is(!('--zz-only' in declTok) && !sisTok.has('--zz-only'),
+  'מ7 · ⛔ מוטציה: `--zz-only` שאינו מוצהר — `[token-app]` הייתה נכשלת');
+
+/* מ8. חריץ שהוצהר ואינו עומד במבחן — `[token-slot]` נופלת */
+const m8 = [['#fff']].filter((v) => !(v.length > 1 && v.every((x) => /^var\(--/.test(x))));
+is(m8.length === 1,
+  'מ8 · ⛔ מוטציה: הכרזת חריץ על אסימון שהגדרתו ליטרל — `[token-slot]` הייתה נכשלת');
+
 /*  ⭐ מוטציות-נגד — ⛔ שינוי חי שאסור לו להפיל. */
 const nLs = [...defNames('function lsSweep(){}')].filter((x) => {
   const p = prefixOf(x); return p && live.has(p);
@@ -302,6 +394,10 @@ is(!runsItself('export const PEERS = [];') && !gateNamed('peers.mjs') && !multiW
 
 is(runsItself('export const ROWS = [1];\nprocess.exit(0);') && gateNamed('test_x.mjs'),
   'נ4 · ⭐ מוטציית-נגד: שער שמייצא `ROWS` ⛔ אינו מפיל — וזה מה שכל השערים עושים');
+
+is([...tokDefs('a{--sp-5' + ':8px;--ls-n1' + ':-.01em;}').keys()]
+     .filter((k) => /[a-zA-Z]\d+$/.test(k) && !NEG.test(k)).length === 0,
+  'נ5 · ⭐ מוטציית-נגד: `--sp-5` ו-`--ls-n1` ⛔ אינם מפילים — המקף והכיוון השלילי תקינים');
 
 }
 

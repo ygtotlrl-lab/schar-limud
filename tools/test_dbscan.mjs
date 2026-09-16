@@ -44,6 +44,17 @@ const APP = {
    *  ⛔ **והגוף זהה בית-לבית בכל הריפו** — ⚠️ כל העותקים של סכימה
    *  אחת, ⭐ וסחיפה באחד מהם הופכת «עבר כאן» לעדות שאינה מעידה. */
   dbSchema: DB_SCHEMA,
+  /*  ⛔ טבלה שאינה מסונכרנת — ⚠️ **מה נכנס**: השם ⟵ למה חמש עמודות
+   *  הסנכרון אינן שייכות לה; ⛔ **ומה מפיל**: טבלה שחסרה עמודה ואינה
+   *  כאן, ⛔ והכרזה לטבלה שנושאת את חמשתן. ⭐ **ולמה המבנה קיים**:
+   *  טבלה שחסרה עמודה אינה ניתנת למיזוג ואינה ניתנת לשחזור. */
+  syncColsExempt: {
+    sl_users: 'טבלת משתמשים — ⛔ ההשבתה היא `active` ואין בה מחיקה רכה',
+    hr_users: 'טבלת משתמשים — ⛔ ההשבתה היא `active` ואין בה מחיקה רכה',
+    g_users: 'טבלת משתמשים — ⛔ ההשבתה היא `active` ואין בה מחיקה רכה',
+    sh_backup: 'תוספת-בלבד — ⛔ הגיבוי נכתב פעם אחת ואינו נערך ואינו נמחק',
+    sh_sync_log: 'תוספת-בלבד — ⛔ היומן נכתב פעם אחת ואינו נערך ואינו נמחק',
+  },
   /*  ⛔ הטבלאות שהקוד שואל — ⚠️ **מה נכנס**: כל שם שמגיע ל-`from`, גם
    *  משותפת; ⛔ **ומה מפיל**: שם שנשאל ואינו כאן, ⛔ ושם שכאן ואין לו
    *  אתר שאילתה. ⭐ **ולמה המבנה קיים**: הצלבה מול הסכימה דורשת רשימה
@@ -93,7 +104,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [160, 149];
+export const ROWS = [161, 150, 211];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -119,7 +130,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 5, app: 0, appWhy: '' };
+const FLOOR = { shared: 7, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -594,8 +605,44 @@ function readGuardGaps(src) {
        '` בודקת שגיאה, ⛔ ומחזירה «אין ראיה» ⛔ ולא אוסף ריק');
 }
 
+/*  ⛔ חמש עמודות הסנכרון — ⚠️ **מה נכנס**: כל טבלה ב-`DB_SCHEMA`;
+ *  ⛔ **ומה מפיל**: טבלה שחסרה אחת מהן ואינה מוצהרת, ⛔ והצהרה לטבלה
+ *  שנושאת את חמשתן. ⭐ **ולמה**: המיזוג ממופתח ב-`client_id`, ⚠️ ומכריע
+ *  בחותמת — ⛔ והשחזור נשען על שלוש ה-`deleted`. */
+const SYNC_COLS = ['client_id', 'updated_at', 'deleted', 'deleted_at', 'deleted_by'];
+{
+  const ex = APP.syncColsExempt || {};
+  const short = [], overDecl = new Set(Object.keys(ex));
+  for (const e of APP.dbSchema) {
+    const cols = String(e.c).split(',');
+    const miss = SYNC_COLS.filter((c) => !cols.includes(c));
+    if (miss.length) { if (!(e.t in ex)) short.push(`${e.t}[${e.p}] חסר ${miss.join('+')}`); overDecl.delete(e.t); }
+  }
+  const declNoCase = [...overDecl];
+  (short.length === 0 && declNoCase.length === 0 ? ok : bad)(
+    `[sync-cols] ⛔ כל טבלה מסונכרנת נושאת את חמש העמודות — ${APP.dbSchema.length} טבלאות, ` +
+    `${short.length} חסרות בלי הצהרה · ${declNoCase.length} הצהרה בלי מקרה, והצפוי אפס` +
+    (short.length ? ` (${short.slice(0, 4).join(' · ')})` : '') +
+    (declNoCase.length ? ` (${declNoCase.join(' ')})` : ''));
+  const noWhy = Object.entries(ex).filter(([, v]) => !v || v.length < 12).map(([k]) => k);
+  (noWhy.length === 0 ? ok : bad)(
+    `[sync-cols-why] ⛔ כל הצהרה נושאת נימוק תפקידי — ${Object.keys(ex).length} הצהרות, ` +
+    `נמדדו ${noWhy.length} בלי נימוק והצפוי אפס` + (noWhy.length ? ` (${noWhy.join(' ')})` : ''));
+}
+
 if (RUN_MUT) {
   mutStage();
+
+/* מס1. טבלה שחסרה עמודה ואינה מוצהרת — `[sync-cols]` נופלת */
+{
+  const cols = 'key,value,updated_at,client_id,deleted,deleted_at'.split(',');
+  (SYNC_COLS.filter((c) => !cols.includes(c)).length === 1 ? ok : bad)(
+    'מס1 · ⛔ מוטציה: טבלה בלי `deleted_by` — `[sync-cols]` הייתה נכשלת');
+}
+/*  ⭐ מוטציית-נגד: `sh_backup` בלי `client_id` ⛔ אינה מפילה — ⚠️ היא
+ *  מוצהרת כתוספת-בלבד, ⭐ ואינה טבלת סנכרון. */
+('sh_backup' in (APP.syncColsExempt || {}) ? ok : bad)(
+  'נס1 · ⭐ מוטציית-נגד: `sh_backup` המוצהרת ⛔ אינה מפילה');
   /*  ⛔ המוטציות בזיכרון — ⚠️ הסורק מקבל את התוכן כארגומנט, ⭐ ואין עותק
    *  בעץ, אין תהליך ואין רשת: ⛔ וכל מוטציה נוקבת בשם הטענה שתיפול
    *  ⛔ ומאמתת שהיא זו שנפלה. */

@@ -72,7 +72,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [90, 105];
+export const ROWS = [90, 106];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -672,7 +672,7 @@ for (const r of MUT) {
   const g0 = classGaps('a', S0, {});
   t(g0.drift.length === 0 && g0.ghost.length === 0 && g0.missing.length === 0,
     'נ4 · ⭐ בקרה חיובית: מחלקה שכלליה זהים בשלושה ⛔ **אינה** מפילה');
-  const g1 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text2)'), b: base, c: base }, {});
+  const g1 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text-2)'), b: base, c: base }, {});
   t(g1.drift.length > g0.drift.length, 'מ19 · גוף כלל שנבדל באחת **מפיל** את «drift»');
   const g2 = classGaps('a', { a: mine.replace('</style>', '.' + TWIN + ':hover{opacity:var(--op-5)}</style>'), b: base, c: base }, {});
   t(g2.drift.length > g0.drift.length, 'מ20 · כלל מצב שנוסף באחת **מפיל** את «drift»');
@@ -681,7 +681,7 @@ for (const r of MUT) {
   const g4 = classGaps('a', { a: '<style>.' + TWIN + '-x{color:var(--text)}</style><div class="' + TWIN + '"></div>', b: base, c: base }, {});
   t(g4.missing.length > g0.missing.length,
     'מ22 · שימוש במחלקה שאין לה כלל כאן **ואין לה קורא ב-JS**, וכלל שלה חי באחות — **מפיל** את «missing»');
-  const g5 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text2)'), b: base, c: base },
+  const g5 = classGaps('a', { a: mine.replace('{color:var(--text)', '{color:var(--text-2)'), b: base, c: base },
     { [TWIN]: 'קצר מדי' });
   t(g5.bare.length > g0.bare.length, 'מ23 · הצהרה בלי נימוק תפקידי **מפילה** את «bare»');
   /*  ⭐ מוטציות-נגד: ⛔ מחלקה שחיה באחת בלבד אינה מפילה, ⛔ ותחילית אינה
