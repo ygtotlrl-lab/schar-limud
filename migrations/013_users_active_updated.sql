@@ -44,7 +44,7 @@ ALTER TABLE public.sl_users ALTER COLUMN updated_at SET NOT NULL;
 -- ⚠️ **`public.users_touch_updated_at()` היא פונקציה אחת לשתי טבלאות
 --    המשתמשים שבפרויקט המשותף** (`sl_users` ו-`ys_users`) — היא נוצרה
 --    ע"י המנהל ב-`users_drop_deleted_add_touch_trigger`, ולכן היא מוגדרת
---    כאן וב-`hanhala-ruchanit/migrations/007` באותו נוסח בדיוק.
+--    כאן וב-`hanhala-ruchanit/migrations/007_users_updated_at_touch.sql` באותו נוסח בדיוק.
 --    ⛔ אין לגזור ממנה שם פר-אפליקציה (`sl_touch_…`) — שתי הגדרות לאותה
 -- פונקציה בפרויקט אחד הן גרסה שנייה שאיש אינו יודע עליה.
 -- ⚠️ בלי הטריגר `updated_at` נקבעת ב-INSERT ואינה מתעדכנת ב-UPDATE —

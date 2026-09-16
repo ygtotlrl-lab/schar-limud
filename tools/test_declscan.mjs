@@ -42,6 +42,9 @@ const APP = {
     ['test_dbscan.mjs', 'dbDyn'],
     ['test_dbscan.mjs', 'dbOrderDyn'],
     ['check-capabilities.mjs', 'kvMeta'],
+    ['test_mignames.mjs', 'migrations'],
+    ['test_mignames.mjs', 'migNoRecord'],
+    ['test_mignames.mjs', 'migRanNoFile'],
   ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */

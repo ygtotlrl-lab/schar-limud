@@ -98,7 +98,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ המרשם מונה את אותם ארבעה פעלים בכולן,
  *  ⭐ ופועל שאין לו מימוש כאן נמדד בהצהרתו ⛔ ולא בהיעדרו. */
-const FLOOR = { shared: 19, app: 0, appWhy: '' };
+const FLOOR = { shared: 21, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -297,15 +297,52 @@ export function kvScope(files) {
  *  נימוק. ⭐ **ולמה המבנה קיים**: תחילית שכבר חיה במסד אינה ניתנת לשינוי
  *  בלי מיגרציה והגירה מקומית, ⛔ וההכרזה היא מה שמונע «יישור» בתום לב
  *  שיפיל כל שאילתה · ⚠️ **והמרשם משותף**, ⭐ שהסכימה שממנה הוא נגזר משותפת. */
-const PREFIX_ALLOW = {
+const PREFIX_MOVING = {
   'ha-kupa': { pfx: 'kp_',
-    why: '«kupa» היא מילה אחת ⛔ ואין לה שתי תיבות — ⚠️ והתחילית שבפועל היא שני עיצוריה: ⭐ והיא כבר חיה בשש טבלאות, בכל מפתח אחסון ובכל מפתח גיבוי, ⛔ ושינויה הוא מיגרציה והגירה מקומית משלהן' },
+    why: '«הקופה» הוא שם חד-מילי ⛔ וראשי התיבות שלו `k_` — ⚠️ והתחילית שבפועל היא `kp_`: ⭐ **וההסבה שלה כתובה ומתוכננת (סבב 148)** — שש טבלאות · מפתחות האחסון · 33 מפתחות הגיבוי · `bk_retention_keys` והעידן' },
 };
+/*  ⛔ הסבב הנוכחי נגזר מכותרת הטבלה ⛔ ואינו מוקלד — ⚠️ הכרזת מעבר שסבבה
+ *  חלף **מפילה**: ⭐ וזה מה שהופך אותה למעבר ⛔ ולא לחריגה שנשארת. */
+export function movingRound(root) {
+  try {
+    const m = /עודכן לאחרונה: סבב (\d+)/.exec(readFileSync(join(root, 'CLAUDE.md'), 'utf8'));
+    return m ? Number(m[1]) : 0;
+  } catch { return 0; }
+}
+/*  ⛔ הכרזת מעבר בלי סבב, או שסבבה חלף — ⚠️ **מה מפיל**: נימוק בלי
+ *  `(סבב N)`, ⛔ ו-`N` שאינו הסבב הנוכחי: ⭐ הכרזה שנשארת אחרי שהסעיף
+ *  רץ היא היתר שלא נסגר. */
+export function movingStale(allow, now) {
+  const out = [];
+  for (const [slug, v] of Object.entries(allow || {})) {
+    const m = /\(סבב (\d+)\)/.exec(String((v || {}).why || ''));
+    if (!m) { out.push('[בלי סבב] ' + slug); continue; }
+    if (Number(m[1]) !== now) out.push('[סבב שחלף] ' + slug + ' (' + m[1] + '≠' + now + ')');
+  }
+  return out;
+}
 
-/*  ⛔ ראשי התיבות נגזרים משם הריפו ⛔ ואינם מוקלדים — ⚠️ המפריד הוא המקף:
- *  ⭐ מילה אחת נותנת אות אחת, ⛔ ושתיים שתיים. */
-export function initialsOf(slug) {
-  return String(slug).split('-').filter(Boolean).map((w) => w.charAt(0)).join('') + '_';
+/*  ⛔ העקביות נמדדת ⛔ ואינה גזירה — ⚠️ ה״א הידיעה אינה ניתנת לזיהוי
+ *  מכני: ⭐ «הנהלה» נותנת `h` ו«הקופה» נותנת `k`, ⛔ אותה אות ושתי
+ *  משמעויות — ⚠️ וזו מורפולוגיה ⛔ ולא ביטוי.
+ *  ⛔ **ולכן הנמדד הוא תת-סדרה**: ⚠️ כל אות בתחילית היא אות פותחת של
+ *  מילה בשם הריפו, **בסדר** ⛔ ולא ברצף.
+ *  ⚠️ **והוא מתיר יותר מאחת** — ⭐ `hk_` · `h_` · `k_` לקופה כולם עוברים:
+ *  ⛔ הוא מודד **עקביות** ⛔ ולא **ייחודיות**, ⚠️ והייחודיות נאכפת
+ *  בשורת «כל טבלה נושאת את תחילית בעליה». */
+export function prefixConsistent(slug, pfx) {
+  const heads = String(slug).split('-').filter(Boolean).map((w) => w.charAt(0));
+  const want = String(pfx).replace(/_$/, '').split('');
+  if (!want.length) return false;
+  let i = 0;
+  for (const c of want) { i = heads.indexOf(c, i); if (i < 0) return false; i++; }
+  return true;
+}
+/*  ⛔ הבעלים של תחילית חיה — ⚠️ הריפו הראשון שהיא עקבית איתו, ⭐ והכרזת
+ *  מעבר גוברת: ⛔ תחילית שאין לה בעלים היא פער. */
+export function prefixOwner(peers, pfx, moving) {
+  for (const [slug, v] of Object.entries(moving || {})) if (v && v.pfx === pfx) return slug;
+  return peers.find((s) => prefixConsistent(s, pfx)) || '';
 }
 /*  ⛔ התחיליות שבפועל נגזרות מהסכימה המוצהרת — ⚠️ כל טבלה שאינה משותפת
  *  נושאת את תחילית בעליה, ⭐ ו-`sh_` הוא המשותף: ⛔ ואין לו בעלים יחיד
@@ -321,9 +358,9 @@ export function livePrefixes(schema) {
 /*  ⛔ הכיוון הראשון — ⚠️ תחילית חיה שאינה ראשי התיבות של אף ריפו, ⭐ ואינה
  *  מוכרזת: ⛔ תחילית שאינה נגזרת אינה ניתנת לניחוש. */
 export function prefixGaps(peers, schema, allow) {
-  const want = new Set(peers.map(initialsOf));
   const decl = new Set(Object.values(allow || {}).map((v) => (v || {}).pfx));
-  return livePrefixes(schema).filter((p) => !want.has(p) && !decl.has(p));
+  return livePrefixes(schema).filter((p) =>
+    !decl.has(p) && !peers.some((s) => prefixConsistent(s, p)));
 }
 /*  ⛔ והכיוון השני — ⚠️ הכרזה שאין לה ריפו · שתחיליתה נגזרת בכל זאת ·
  *  בלי נימוק · ⛔ ושאין לה טבלה חיה: ⭐ היתר שלא נסגר. */
@@ -333,7 +370,7 @@ export function prefixGhosts(peers, schema, allow) {
   for (const [slug, v] of Object.entries(allow || {})) {
     if (peers.indexOf(slug) < 0) { out.push('[בלי ריפו] ' + slug); continue; }
     if (!v || !v.pfx) { out.push('[בלי תחילית] ' + slug); continue; }
-    if (v.pfx === initialsOf(slug)) { out.push('[נגזרת בכל זאת] ' + slug); continue; }
+    if (prefixConsistent(slug, v.pfx)) { out.push('[עקבית בכל זאת] ' + slug); continue; }
     if (!v.why || String(v.why).trim().length < 20) { out.push('[בלי נימוק] ' + slug); continue; }
     if (!live.has(v.pfx)) out.push('[בלי טבלה חיה] ' + slug);
   }
@@ -342,12 +379,9 @@ export function prefixGhosts(peers, schema, allow) {
 /*  ⛔ תחילית אחת לבעלים — ⚠️ שתיים הן שתי משפחות שאיש אינו מצליב, ⭐ ושינוי
  *  שם נעשה בהן פעמיים: ⛔ והמדידה על התחיליות החיות בלבד. */
 export function prefixDoubles(peers, schema, allow) {
-  const own = new Map();
-  for (const p of peers) own.set(initialsOf(p), p);
-  for (const [slug, v] of Object.entries(allow || {})) if (v && v.pfx) own.set(v.pfx, slug);
   const per = new Map();
   for (const p of livePrefixes(schema)) {
-    const o = own.get(p);
+    const o = prefixOwner(peers, p, allow);
     if (o) per.set(o, (per.get(o) || 0) + 1);
   }
   return [...per.entries()].filter((e) => e[1] > 1).map((e) => e[0] + '×' + e[1]);
@@ -491,25 +525,48 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
     'מיישרים את `APP.calendar` למנוע שבמקור, ⛔ ואין מנוע שני');
 }
 
-/* ── ד · ותחילית הטבלאות והאחסון נגזרת משם הריפו ───────────────────────── */
+/* ── ד · ותחילית הטבלאות היא ראשי התיבות של השם העברי ──────────────────── */
 {
-  const gaps = prefixGaps(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  /*  ⛔ הכרזת מעבר נופלת מעצמה — ⚠️ היא נושאת את סבבה, ⭐ והיא מפילה
+   *  ביום שבו הסבב מתקדם והסעיף שמסב לא רץ. */
+  const stale = movingStale(PREFIX_MOVING, movingRound(ROOT));
+  t(n++, stale.length === 0,
+    `[prefix-derived] הכרזת מעבר נושאת את סבבה — נמדדו ${stale.length} מתוך ` +
+    `${Object.keys(PREFIX_MOVING).length} הכרזות והצפוי אפס` +
+    `${stale.length ? ' (' + stale.join(' · ') + ')' : ''}. ` +
+    'מריצים את הסעיף שמסב את התחילית, או מעדכנים את הסבב בהכרזה');
+}
+{
+  /*  ⛔ והכיוון השני על התחילית המוצהרת — ⚠️ `APP.tablePrefix` הוא **מקור
+   *  האמת**, ⭐ והוא נמדד מול שם הריפו ומול הסכימה החיה: ⛔ הצהרה שאין לה
+   *  טבלה היא תחילית שאיש אינו נושא. */
+  const mine = APP.tablePrefix;
+  const consistent = prefixConsistent(APP.name, mine) ||
+    Object.values(PREFIX_MOVING).some((v) => (v || {}).pfx === mine);
+  const live = livePrefixes(DB_SCHEMA).indexOf(mine) >= 0;
+  t(n++, consistent && live,
+    `[prefix-derived] \`APP.tablePrefix\` = \`${mine}\` — עקבית עם \`${APP.name}\`: ` +
+    `${consistent ? 'כן' : 'לא'} · חיה בסכימה: ${live ? 'כן' : 'לא'}, והצפוי שניהם. ` +
+    'מיישרים את ההצהרה לתחילית שבמסד, או מכריזים אותה כמעבר');
+}
+{
+  const gaps = prefixGaps(PEERS, DB_SCHEMA, PREFIX_MOVING);
   t(n++, gaps.length === 0,
-    `[prefix-derived] תחילית שאינה ראשי התיבות של שם הריפו — נמדדו ${gaps.length} מתוך ` +
+    `[prefix-derived] תחילית שאינה עקבית עם שם הריפו — נמדדו ${gaps.length} מתוך ` +
     `${livePrefixes(DB_SCHEMA).length} תחיליות חיות והצפוי אפס` +
     `${gaps.length ? ' (' + gaps.join(', ') + ')' : ''}. ` +
-    'גוזרים את התחילית משם הריפו, או מכריזים ב-`PREFIX_ALLOW` עם נימוקה');
+    'מיישרים את התחילית לאותיות הפותחות של שם הריפו, או מכריזים אותה כמעבר עם סבבה');
 }
 {
-  const ghosts = prefixGhosts(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  const ghosts = prefixGhosts(PEERS, DB_SCHEMA, PREFIX_MOVING);
   t(n++, ghosts.length === 0,
     `[prefix-derived] הכרזת תחילית נמדדת משני צדדיה — נמדדו ${ghosts.length} מתוך ` +
-    `${Object.keys(PREFIX_ALLOW).length} הכרזות והצפוי אפס` +
+    `${Object.keys(PREFIX_MOVING).length} הכרזות והצפוי אפס` +
     `${ghosts.length ? ' (' + ghosts.join(' · ') + ')' : ''}. ` +
-    'מסירים הכרזה שאין לה ריפו או שתחיליתה נגזרת, ומוסיפים לה נימוק');
+    'מסירים הכרזה שאין לה ריפו או שתחיליתה עקבית בכל זאת, ומוסיפים לה נימוק');
 }
 {
-  const dbl = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+  const dbl = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_MOVING);
   t(n++, dbl.length === 0,
     `[prefix-derived] תחילית אחת לבעלים — נמדדו ${dbl.length} בעלים עם יותר מאחת והצפוי אפס` +
     `${dbl.length ? ' (' + dbl.join(', ') + ')' : ''}. ` +
@@ -679,20 +736,20 @@ if (RUN_MUT) {
 
   {
     const got = prefixGaps(PEERS, DB_SCHEMA.concat([{ p: 'kupa', t: 'zz_prefs', c: 'key,value' }]),
-                           PREFIX_ALLOW);
+                           PREFIX_MOVING);
     t(n++, got.length === 1 && got[0] === 'zz_',
-      'מ10 · ⛔ מוטציה: תחילית שאינה ראשי תיבות מפילה את «[prefix-derived]» — ' +
+      'מ10 · ⛔ מוטציה: תחילית שאינה עקבית מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} תחיליות והצפוי 1`);
   }
   {
     const got = prefixGaps(PEERS, DB_SCHEMA, {});
     t(n++, got.length === 1 && got[0] === 'kp_',
-      'מ11 · ⛔ מוטציה: הסרת ההכרזה מ-`PREFIX_ALLOW` מפילה את «[prefix-derived]» — ' +
+      'מ11 · ⛔ מוטציה: הסרת ההכרזה מ-`PREFIX_MOVING` מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} תחיליות והצפוי 1`);
   }
   {
     const got = prefixGhosts(PEERS, DB_SCHEMA,
-      Object.assign({}, PREFIX_ALLOW, { 'no-such-repo': { pfx: 'zz_', why: PREFIX_ALLOW['ha-kupa'].why } }));
+      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: PREFIX_MOVING['ha-kupa'].why } }));
     t(n++, got.length === 1,
       'מ12 · ⛔ מוטציה: הכרזה שאין לה ריפו מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
@@ -753,13 +810,13 @@ if (RUN_MUT) {
   {
     const got = prefixGaps(PEERS, DB_SCHEMA.concat([
       { p: 'shared', t: 'ya_settings_rishon', c: 'key,value' },
-      { p: 'shared', t: 'sh_backup', c: 'id,key' }]), PREFIX_ALLOW);
+      { p: 'shared', t: 'sh_backup', c: 'id,key' }]), PREFIX_MOVING);
     t(n++, got.length === 0,
       'נ6 · ⭐ מוטציית-נגד: תוספת אחרי התפקיד ו-`sh_` המשותף ⛔ אינם מפילים — ' +
       `נמדדו ${got.length} תחיליות והצפוי 0`);
   }
   {
-    const got = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_ALLOW);
+    const got = prefixDoubles(PEERS, DB_SCHEMA, PREFIX_MOVING);
     t(n++, got.length === 0,
       'נ7 · ⭐ מוטציית-נגד: חמש התחיליות החיות ⛔ אינן מפילות — ' +
       `נמדדו ${got.length} בעלים כפולים והצפוי 0, מתוך ${livePrefixes(DB_SCHEMA).length} תחיליות`);

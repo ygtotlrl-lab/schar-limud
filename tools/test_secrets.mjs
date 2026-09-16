@@ -50,6 +50,8 @@ const APP = {
     { file: "tools/test_offline_login.mjs", anchor: "oraclePbkdf2(" },
     /*  ⭐ שם מפתח גיבוי בקבוע בדיקה — ⛔ ולא אישור: ⚠️ הוא נבחר כדי ליפול תחת תבנית `PRE_*` שהפינוי אינו נוגע בה */
     { file: "tools/test_stage_a.mjs", anchor: "PRE_SYNC_UNIFY_k1" },
+    /*  ⭐ שם הרשומה בטבלת המעקב של המסד — ⛔ ואינו אישור: ⚠️ הוא שם מיגרציה שרצה, ⭐ והוא מודפס בכל `select` מטבלת המעקב */
+    { file: "tools/test_mignames.mjs", anchor: "sl_019_client_id_is_the_key" },
   ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */

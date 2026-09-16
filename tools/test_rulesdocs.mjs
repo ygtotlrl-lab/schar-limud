@@ -23,6 +23,7 @@
  *  ⛔ לכל טענה מוטציה שמפילה אותה ומוטציית-נגד שאינה מפילה, ⛔ והמוטציות
  *  רצות על עותק בתיקייה זמנית ולא על העץ.
  */
+import { appSrc } from './appsrc.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -373,8 +374,12 @@ const ACTIVE = activeLines.join('\n');
 
 /* ── סלקטור בלי קורא (ממצא 15) ─────────────────────────────────────────── */
 {
-  const src = rd('index.html');
-  const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+  /*  ⛔ ההיקף הוא **גיליון הסגנון וכל מחרוזת CSS שנכתבת מ-JS** — ⚠️ מול
+   *  המחלקות שבשימוש ומול הקוראים שב-JS: ⭐ הליבה יצאה למודול, ⛔ ושער
+   *  שסורק את `index.html` לבדו מדווח «אפס» על כלל שחי ב-`core/`. */
+  const src = appSrc(ROOT);
+  const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n') +
+    '\n' + [...src.matchAll(/`([^`]*\{[^`]*\})`/g)].map((m) => m[1]).join('\n');
   const rest = src.split(/<style[^>]*>[\s\S]*?<\/style>/).join('\n');
   const names = new Set();
   for (const m of styles.matchAll(/(?<![\w/-])\.(-?[A-Za-z_][\w-]*)/g)) names.add(m[1]);
@@ -413,7 +418,9 @@ const ACTIVE = activeLines.join('\n');
   const noRule = [...applied].filter((c) => !styled.has(c) && !reads(c) &&
                                             !(c in APP.classNoRule)).sort();
   t(noRule.length === 0,
-    `15ה · אין מחלקה שנוספת ל-DOM בלי כלל CSS ובלי קורא${noRule.length ? ' — ' + noRule.join(' ') : ''}`);
+    `15ה · אין מחלקה שנוספת ל-DOM בלי כלל CSS ובלי קורא — ההיקף: גיליון הסגנון ` +
+    `וכל מחרוזת CSS שנכתבת מ-JS, מול ${applied.size} מחלקות בשימוש ומול הקוראים שב-JS; ` +
+    `נמדדו ${noRule.length} והצפוי אפס${noRule.length ? ' — ' + noRule.join(' ') : ''}`);
   for (const c of Object.keys(APP.classNoRule))
     t(applied.has(c) && !styled.has(c) && !reads(c),
       `15ו · חריגה מוצהרת \`${c}\` — באמת מוחלת, ובאמת בלי כלל ובלי קורא`);

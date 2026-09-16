@@ -158,6 +158,7 @@ const SHARED = [
   'tools/test_signedshared.mjs',
   'tools/test_coremod.mjs',
   'tools/test_sistername.mjs',
+  'tools/test_mignames.mjs',
   'tools/test_shell.mjs',
   'tools/test_sources.mjs',
   'tools/test_stage_a.mjs',
