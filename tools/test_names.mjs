@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /*  test_names.mjs — שם נגזר מדפוס מוצהר.
  *
- *  **מה נאכף:** שלושת תחומי השמות — ⚠️ פונקציות · קובצי `tools/` · מחלקות
- *  CSS — ⛔ נמדדים מול הדפוס שמוצהר ב-`APP.namePolicy`: ⭐ תחילית פונקציה
- *  שהיא **תחיליתה החיה של אחות** מפילה, ⛔ קובץ שמריץ את עצמו ואינו נושא
- *  שם של שער מפיל, ⚠️ ושם מודול רב-מילי שנושא `_` מפיל.
+ *  **מה נאכף:** שלושת תחומי השמות — ⚠️ שמות · קובצי `tools/` · מחלקות
+ *  CSS — ⛔ נמדדים מול הדפוס שמוצהר ב-`APP.namePolicy`: ⭐ תחילית **בשם
+ *  פונקציה ובשם קבוע כאחד** שהיא **תחיליתה החיה של אחות** מפילה, ⛔ תחילית
+ *  שהוסבה ושם שנושא אותה חי כאן בלבד מפיל, ⛔ קובץ שמריץ את עצמו ואינו
+ *  נושא שם של שער מפיל, ⚠️ ושם מודול רב-מילי שנושא `_` מפיל.
  *
  *  **הנימוק המדוד:** 49 פונקציות בהנהלה נשאו את התחילית `sl` — ⛔ שהיא
  *  תחיליתה של שכר לימוד: ⚠️ `slSetLateMin` נראה בדיוק כמו `lsSweep`,
- *  ⭐ ורק מי שיודע ש-`sl` הוא ריפו אחר רואה את השארית. ⛔ ונמדד שחיתוך
+ *  ⭐ ורק מי שיודע ש-`sl` הוא ריפו אחר רואה את השארית. ⛔ **והשארית שקשה
+ *  ביותר לראות היא קבוע** — ⚠️ `YS_PASS_CTX` החזיק `hanhala-ruchanit/hr_users/v1/`:
+ *  ⭐ הערך הוסב והשם לא, ⛔ והוא עבד. ⚠️ **והשער לא ראה אותו משני צדדים** —
+ *  ⛔ הוא מדד צורות של **פונקציה** בלבד, ⚠️ ו-`ys` אינה תחיליתה של אף אחות:
+ *  ⭐ ונמדד שחיתוך
  *  השמות בין שתי האפליקציות הוא **אפס** — ⚠️ ולכן אין זוג גופים להשוות,
  *  ⭐ והשאלה אינה «איזה מימוש נכון» אלא «למי השם שייך».
  *
@@ -19,7 +24,10 @@
  *  **מה אינו נאכף כאן:** ⛔ **שם שנגזר מהדפוס ומתאר את הדבר הלא נכון** —
  *  ⚠️ אין לכך מדידה מכנית, ⭐ ושורת «אוצר מילים אחד לפעולה אחת» היא
  *  בת-הזוג · ⛔ **ותחילית שאינה של אף אחות אינה נמדדת** — ⚠️ היא מוצר,
- *  ⭐ ומפקד שלה נגזר מהמסכים וישתנה איתם · ⛔ **ושם מחלקה אינו נמדד
+ *  ⭐ ומפקד שלה נגזר מהמסכים וישתנה איתם · ⛔ **ושם שחי גם באחות אינו
+ *  נמדד כאן** — ⚠️ הוא שכבה משותפת, ⭐ וזהותו בין הריפו נמדדת בחתימת
+ *  `sha256`: ⛔ ותחילית של אפליקציה אחת על מודול משותף גרועה מתחילית
+ *  שהוסבה · ⛔ **ושם מחלקה אינו נמדד
  *  בתוכנו** — ⚠️ רק בצורתו · ⛔ **ומחלקה שנבנית בתוך מחרוזת JS אינה
  *  נמדדת כאן** — ⚠️ ההלבנה מוחקת אותה יחד עם המחרוזת, ⭐ והיא נמדדת
  *  בשורת «סלקטור בלי קורא» מול גיליון הסגנון.
@@ -75,6 +83,19 @@ const APP = {
      *  מה הוא בפועל; ⛔ **ומה מפיל**: שם עברי שאינו `MSG_*` ואינו כאן,
      *  והכרזה שאין לה שם חי. ⭐ **ולמה המבנה קיים**: נתון בטבלה אינו
      *  הודעה, ⛔ ושם `MSG_` עליו היה שולח את מי שמחפש הודעה אליו. */
+    /*  ⛔ תחילית האפליקציה — ⚠️ **מה נכנס**: התחילית שכל שם שנושא תחילית
+     *  של אפליקציה חייב לשאת כאן; ⛔ **ומה מפיל**: תחילית שאינה עקבית עם
+     *  `APP.tablePrefix`. ⭐ **ולמה היא מוצהרת ואינה נגזרת**: היא נקראת
+     *  בגוף המדידה, ⛔ ושם שנגזר מקובץ אחר הוא מקור אמת שני. */
+    prefix: 'sl',
+    /*  ⛔ תחיליות שהוסבו במשפחה — ⚠️ **מה נכנס**: התחילית ⟵ למה היא ירדה;
+     *  ⛔ **ומה מפיל**: שם שנושא אותה וחי בריפו הזה בלבד. ⭐ **ולמה היא
+     *  אינה נמדדת לאתר חי**: היא היסטוריה — ⚠️ והכיוון שנמדד הוא אפס
+     *  שאריות, ⛔ ולא שהשארית עדיין שם. */
+    retiredPrefix: {
+      ys: 'תחילית המשפחה שקדמה לתחילית הריפו — ⛔ ושם שנושא אותה וחי בריפו אחד בלבד הוא שארית ההסבה (סבב 153)',
+      tb: 'תחילית הטבלאות הישנה של היומן — ⛔ ושם שנושא אותה וחי בריפו אחד בלבד הוא שארית ההסבה (סבב 153)',
+    },
     msgAllow: {
       CREDIT_METHOD: 'שם פריט ברשימת אמצעי התשלום — ⛔ נתון בטבלה ולא הודעה, ⚠️ והוא נשמר על התנועה',
     },
@@ -116,7 +137,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 /*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. */
-const FLOOR = { shared: 13, app: 0, appWhy: '' };
+const FLOOR = { shared: 14, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -169,10 +190,29 @@ function defNames(text) {
 }
 /*  ⛔ התחילית נמדדת אחרי הסרת הקו התחתון הפותח — ⚠️ `_slPullCfg` נקרא
  *  אצל הקורא כ-`sl` בדיוק כמו `slLoadData`: ⭐ והקו אינו מסתיר תחילית. */
+/*  ⛔ **ושם קבוע נמדד באותה מדידה** — ⚠️ `HR_PASS_CTX` הוא `hr` בדיוק
+ *  כמו `hrPassFp`: ⭐ הצורה נבדלת ⛔ והתחילית אחת. */
 const prefixOf = (name) => {
-  const m = /^_*([a-z]+)(?=[A-Z])/.exec(name);
-  return m ? m[1] : null;
+  const lower = /^_*([a-z]+)(?=[A-Z])/.exec(name);
+  if (lower) return lower[1];
+  const upper = /^_*([A-Z]+)_/.exec(name);
+  return upper ? upper[1].toLowerCase() : null;
 };
+
+/*  ⛔ כל שם ברמת המודול — ⚠️ **מה נכנס**: מקור מולבן ⟵ קבוצת השמות,
+ *  פונקציה וקבוע כאחד; ⛔ **ומה מפיל**: כאן כלום — זה חילוץ ⛔ ולא
+ *  הכרעה. ⚠️ **ולמה לא `defNames` לבדו**: הוא מכיר חמש צורות של
+ *  **פונקציה** בלבד, ⭐ ו-`var HR_PASS_CTX = '…'` אינו אחת מהן:
+ *  ⛔ וקבוע שערכו עודכן ושמו לא הוא השארית שקשה ביותר לראות — ⚠️ הוא עובד. */
+const ALL_FORMS = DEF_FORMS.concat([
+  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/g,
+  /\bwindow\.([A-Za-z_$][\w$]*)\s*=/g,
+]);
+function allNames(text) {
+  const out = new Set();
+  for (const re of ALL_FORMS) { re.lastIndex = 0; let m; while ((m = re.exec(text))) out.add(m[1]); }
+  return out;
+}
 /*  ⛔ הקובץ מריץ את עצמו — ⚠️ **מה נכנס**: גוף קובץ ⟵ אמת/שקר; ⛔ **ומה
  *  מפיל**: כלום כאן. ⭐ **ולמה זו ההבחנה** — ⛔ **וייצוא אינו**: כל שער
  *  מייצא `ROWS`, ⚠️ ושורת «שלוש דרכי אכיפה» דורשת זאת במפורש. */
@@ -227,6 +267,9 @@ for (const [k, v] of Object.entries(APP.namePolicy.msgAllow || {}))
   if (!v || v.length < 12) noWhy.push('msgAllow.' + k);
 for (const [k, v] of Object.entries(APP.namePolicy.fnAllow || {}))
   if (!v || v.length < 12) noWhy.push('fnAllow.' + k);
+for (const [k, v] of Object.entries(APP.namePolicy.retiredPrefix || {}))
+  if (!v || v.length < 12) noWhy.push('retiredPrefix.' + k);
+if (!/^[a-z]+$/.test(APP.namePolicy.prefix || '')) noWhy.push('prefix');
 for (const [k, v] of Object.entries(APP.namePolicy.appTokens || {}))
   if (!v || v.length < 12) noWhy.push('appTokens.' + k);
 for (const [k, v] of Object.entries(APP.namePolicy.slotTokens || {}))
@@ -253,8 +296,15 @@ is(noWhy.length === 0,
 }
 
 
-/* 2. פונקציות — ⛔ תחילית שהיא תחיליתה של אחות */
-const names = [...defNames(srcText)].sort();
+/*  ⛔ שמות האחיות — ⚠️ שם שחי גם באחות הוא שכבה משותפת ⛔ ואינו שם של
+ *  אפליקציה: ⭐ **מדידה** ⛔ ולא רשימת-היתר מוקלדת, ⚠️ וזהותו בין הריפו
+ *  נמדדת בחתימת `sha256` ⛔ ולא כאן. */
+const sisterNames = new Set();
+for (const s of sisterPrefix)
+  for (const nm of allNames(whiten(appSrc(join(SIBS, s.app))))) sisterNames.add(nm);
+
+/* 2. שמות — ⛔ תחילית שהיא תחיליתה של אחות, ⚠️ בפונקציה ובקבוע כאחד */
+const names = [...allNames(srcText)].sort();
 const live = new Map(sisterPrefix.map((s) => [s.pfx, s.app]));
 const hits = [];
 for (const nm of names) {
@@ -264,6 +314,28 @@ for (const nm of names) {
 is(hits.length === 0,
   `[fn-sister-prefix] ⛔ אפס תחילית של אחות ב-${names.length} שמות — נמדדו ${hits.length} והצפוי אפס` +
   (hits.length ? ` (${hits.slice(0, 6).join(' ')})` : ''));
+
+/*  ⛔ תחילית שהוסבה — ⚠️ היא אינה תחיליתה של אחות, ⭐ ולכן הטענה שמעל
+ *  אינה רואה אותה: ⛔ והיא בדיוק מה ש-1163 שמות בהנהלה ו-380 ביומן נשאו
+ *  אחרי שהטבלאות ומפתחות האחסון כבר הוסבו. */
+const retired = APP.namePolicy.retiredPrefix || {};
+const leftovers = [];
+for (const nm of names) {
+  const p = prefixOf(nm);
+  if (!p || !(p in retired)) continue;
+  if (nm in (APP.namePolicy.fnAllow || {})) continue;
+  if (sisterNames.has(nm)) continue;
+  leftovers.push(`${nm}⟵${p}`);
+}
+/*  ⛔ ההבחנה בין שכבה משותפת לשם של אפליקציה **נשענת על האחיות שבדיסק** —
+ *  ⚠️ ובלעדיהן `sisterNames` ריקה, ⭐ וכל שם משותף נקרא שארית: ⛔ ולכן
+ *  אחות שאינה על הדיסק מדווחת בשמה ⛔ והטענה אינה נמדדת — ⚠️ ולא מפילה
+ *  על מה שאין לה מול מה למדוד. */
+is(sisterPrefix.length === 0 || leftovers.length === 0,
+  `[name-retired-prefix] ⛔ אפס תחילית שהוסבה ב-${names.length} שמות — ` +
+  `${Object.keys(retired).length} מוצהרות, נמדדו ${leftovers.length} שאריות והצפוי אפס` +
+  (sisterPrefix.length === 0 ? ' · ⚠️ לא נמדד — אין אחות על הדיסק' : '') +
+  (sisterPrefix.length && leftovers.length ? ` (${leftovers.slice(0, 6).join(' ')})` : ''));
 
 const allowDead = Object.keys(APP.namePolicy.fnAllow || {}).filter((k) => !names.includes(k));
 is(allowDead.length === 0,
@@ -433,6 +505,48 @@ is(runsItself('export const ROWS = [1];\nprocess.exit(0);') && gateNamed('test_x
 is([...tokDefs('a{--sp-5' + ':8px;--ls-n1' + ':-.01em;}').keys()]
      .filter((k) => /[a-zA-Z]\d+$/.test(k) && !NEG.test(k)).length === 0,
   'נ5 · ⭐ מוטציית-נגד: `--sp-5` ו-`--ls-n1` ⛔ אינם מפילים — המקף והכיוון השלילי תקינים');
+
+/*  ⛔ ארבע המוטציות של סבב 153 — ⚠️ התחילית שהוסבה והקבוע: ⭐ שתיהן
+ *  המנגנון שהשער לא ראה, ⛔ וכל אחת נוקבת בשם הטענה שתיפול. */
+const mRet = Object.keys(APP.namePolicy.retiredPrefix || {})[0] || '';
+const mRetC = mRet.toUpperCase() + '_FOO';
+const isLeft = (nm) => { const p = prefixOf(nm);
+  return !!p && (p in (APP.namePolicy.retiredPrefix || {})) && !sisterNames.has(nm); };
+
+/* מ9. קבוע בתחילית שהוסבה — `[name-retired-prefix]` נופלת */
+is(!!mRet && [...allNames('var ' + mRetC + ' = 1;')].filter(isLeft).length === 1,
+  `מ9 · ⛔ מוטציה: \`var ${mRetC}\` — \`[name-retired-prefix]\` הייתה נכשלת`);
+
+/* מ10. פונקציה בתחילית שהוסבה — `[name-retired-prefix]` נופלת */
+is(!!mRet && [...allNames('function ' + mRet + 'Foo(){}')].filter(isLeft).length === 1,
+  `מ10 · ⛔ מוטציה: \`function ${mRet}Foo(\` — \`[name-retired-prefix]\` הייתה נכשלת`);
+
+/*  ⛔ מ11 — הקבוע בתחילית של אחות: ⚠️ זו בדיוק הצורה ש-`defNames` לא
+ *  ראה, ⭐ ו-`allNames` רואה. */
+const mSisC = mPfx ? [...allNames('var ' + mPfx.toUpperCase() + '_FOO = 1;')]
+  .filter((x) => { const p = prefixOf(x); return p && live.has(p); }) : [];
+is(mSisC.length === 1,
+  `מ11 · ⛔ מוטציה: \`var ${mPfx.toUpperCase()}_FOO\` נמדד כתחילית של אחות — \`[fn-sister-prefix]\` הייתה נכשלת`);
+
+/* מ12. המרשם `retiredPrefix` מתרוקן — הטענה מפסיקה למדוד */
+const m12 = [mRet + 'Foo'].filter((nm) => { const p = prefixOf(nm); return !!p && (p in {}); });
+is(m12.length === 0 && !!mRet && isLeft(mRet + 'Foo'),
+  'מ12 · ⛔ מוטציה: מרשם `retiredPrefix` ריק — `[name-retired-prefix]` הייתה מאשרת כל שארית');
+
+/*  ⭐ ושלוש מוטציות-הנגד — ⛔ שינוי חי שאסור לו להפיל. */
+const nOwn = (APP.namePolicy.prefix || '').toUpperCase() + '_FOO';
+is(prefixOf(nOwn) === APP.namePolicy.prefix && !live.has(APP.namePolicy.prefix)
+   && !(APP.namePolicy.prefix in (APP.namePolicy.retiredPrefix || {})),
+  `נ6 · ⭐ מוטציית-נגד: \`${nOwn}\` — תחילית האפליקציה ⛔ אינה מפילה`);
+
+const nShared = names.filter((nm) => { const p = prefixOf(nm);
+  return !!p && (p in (APP.namePolicy.retiredPrefix || {})) && sisterNames.has(nm); });
+is(nShared.length > 0,
+  `נ7 · ⭐ מוטציית-נגד: ${nShared.length} שמות בתחילית שהוסבה חיים גם באחות — ⛔ שכבה משותפת אינה מפילה`);
+
+is(prefixOf('MSG_OFFLINE') === 'msg' && !live.has('msg')
+   && !('msg' in (APP.namePolicy.retiredPrefix || {})),
+  'נ8 · ⭐ מוטציית-נגד: `MSG_OFFLINE` — תחילית שאינה של אפליקציה ⛔ אינה נמדדת');
 
 }
 

@@ -4629,7 +4629,7 @@ function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
 
 // שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
 // **חובה לשחרר ב-finally** ולא בסוף ה-try — כשל אחד שמשאיר את הדגל דלוק
-// מקפיא את הסנכרון לתמיד (בדיוק הבאג של _ysSyncing שתוקן ב-hanhala).
+// מקפיא את הסנכרון לתמיד (בדיוק הבאג של _slSyncing שתוקן ב-hanhala).
 var _syncBusy=false,_syncWarned=false,_lastSyncOk=false;
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 /*  ⛔ ארבע הקטגוריות ועמודת הסדר של כל אחת — ⚠️ שליפה בעמודים חייבת סדר

@@ -326,6 +326,13 @@ const APP = {
   /*  ⛔ אין כאן קריאת מפתח הגדרה יחיד — ⚠️ ההגדרות נקראות כטבלה שלמה,
    *  ⛔ **והרשימה אינה נשמטת**: שדה חסר נקרא «לא נשאל», ⚠️ וריק
    *  נקרא «נמדד ואין». */
+  /*  ⛔ שם עוטף ההגדרה — ⚠️ **מה נכנס**: השם שהקוד קורא בו מפתח הגדרה
+   *  יחיד; ⛔ **ומה מפיל**: שם שאין לו אתר במקור, ⛔ ומפתח ב-`cfgKeys`
+   *  כשהשדה `null`. ⭐ **ולמה הוא מוצהר ואינו מוקלד בגוף**: תחילית
+   *  האפליקציה חיה בשם, ⚠️ ותחילית שהוסבה השאירה את הגוף מודד שם מת.
+   *  ⛔ **וההיעדר מוצהר `null`** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא
+   *  «לא נשאל», ⭐ ו-`null` נקרא «נמדד ואין». */
+  cfgReadFn: null,
   cfgKeys: [],
   /*  ⛔ פונקציה בלי קורא שנשארת בכוונה — ⚠️ כל שם נושא את הסיבה, ⛔ ושם
    *  שיש לו קורא ⛔ או שאינו קיים **מפיל**: ⭐ רשימת-היתר שהתיישנה היא
@@ -1080,7 +1087,7 @@ const CAPS = {
   hebdate: {
     name: 'מנוע התאריך העברי',
     docRows: ['מנוע תאריך עברי'],
-    block: { file: 'core/hebrew.js', sha: '4c9e7dc2fdbaa4ca', lines: 100,
+    block: { file: 'core/hebrew.js', sha: '63c8b66c12488adb', lines: 100,
              start: '/* ═══ מנוע התאריך העברי — מודול משותף (סבב 107)',
              end:   '/* ═══════════════ סוף מודול מנוע התאריך העברי' },
   },
@@ -1950,7 +1957,12 @@ function installGaps() {
  *  נכשל» על מסד תקין, וחי כך. ⛔ ומה שנמדד כאן הוא ההצהרה ושתי הסטיות
  *  ממנה — ⚠️ קיום המפתח במסד עצמו אינו נראה מהריפו. */
 function cfgKeyGaps() {
-  const asked = [...srcRefs.matchAll(/\b(?:ys|sl)CfgGet\(\s*'([^']+)'/g)].map((m) => m[1]);
+  /*  ⛔ הדפוס נגזר מ-`APP.cfgReadFn` ⛔ ואינו מוקלד כאן — ⚠️ שתי תחיליות
+   *  שהוקלדו בגוף שרדו הסבת תחילית, ⭐ והגוף המשיך למדוד שם מת. */
+  const fn = APP.cfgReadFn;
+  const asked = fn
+    ? [...srcRefs.matchAll(new RegExp('\\b' + fn + "\\(\\s*'([^']+)'", 'g'))].map((m) => m[1])
+    : [];
   const declared = APP.cfgKeys || [];
   const out = [];
   for (const k of new Set(asked)) if (declared.indexOf(k) < 0) out.push('נדרש ואינו מוצהר: ' + k);
@@ -2150,7 +2162,7 @@ function checkerMissions() {
  *  מסלולים שבהם היעדר ערך הוא תשובה תקפה ואין מה לרשום; ⛔ מה שנמדד הוא
  *  `catch` ריק ש**גוף ה-try שלו כותב** — מקומית או לענן. ⛔ ו-`reg.update()`
  *  אינו כתיבה — ⚠️ הוא רענון ה-service worker, ⛔ ואין לו נתון שיאבד. */
-const WRITE_CALL = /lsSet\s*\(|localStorage\s*\.\s*setItem|sessionStorage\s*\.\s*setItem|\.upsert\s*\(|\.insert\s*\(|sbSet\s*\(|ysCfgSet\s*\(|\bSB\b[\s\S]{0,80}?\.update\s*\(/;
+const WRITE_CALL = /lsSet\s*\(|localStorage\s*\.\s*setItem|sessionStorage\s*\.\s*setItem|\.upsert\s*\(|\.insert\s*\(|sbSet\s*\(|hrCfgSet\s*\(|\bSB\b[\s\S]{0,80}?\.update\s*\(/;
 /*  ⛔ גוף ה-`try` נמצא בהתאמת סוגריים ⛔ ולא בחלון של 700 תווים (סבב 80) —
  *  ⚠️ חלון קבוע מפספס `try` ארוך ממנו, ⭐ וכשל שקט בגוף ארוך הוא בדיוק
  *  הכשל שקשה יותר למצוא בעין. ⛔ והמדידה עוצרת כשלפני הסוגר אין `try`:
@@ -6957,7 +6969,7 @@ const GATES = {
    *  החיות של האחיות, ⭐ ההבחנה בין שער למודול לפי «מריץ את עצמו»,
    *  ⛔ ומפריד השם במודול רב-מילי. */
   119: { claims: { test_names: ['[name-policy]', '[name-policy-why]', '[fn-sister-prefix]',
-                                '[fn-allow]', '[gate-name]', '[module-name]',
+                                '[name-retired-prefix]', '[fn-allow]', '[gate-name]', '[module-name]',
                                 '[module-sep]', '[class-case]'] } },
   /*  ⭐ סבב 148 — ⛔ שם מיגרציה נגזר, ומותאם לרשומה שרצה: ⚠️ הדפוס והרצף
    *  מ-`000`, ⭐ המרשם שמגשר לטבלת המעקב, ⛔ וההצלבה של כל הפניה חוצת-ריפו
@@ -7504,7 +7516,7 @@ if (CORE) {
  *  אתר בפועל מפילה אף היא, ⛔ והצהרה ריקה שיש לה אתר — כך גם. */
 {
   const want = APP.viewOnlyConsts || [];
-  const ALL = ['RAW_BASE', 'YS_INF_MD'];
+  const ALL = ['RAW_BASE', 'YA_INF_MD'];
   const has = (n) => new RegExp('(?<![\\w$])' + n + '(?![\\w$])').test(code);
   const missing = want.filter((n) => !has(n));
   const stray = ALL.filter((n) => want.indexOf(n) < 0 && has(n));
