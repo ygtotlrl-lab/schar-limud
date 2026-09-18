@@ -862,9 +862,9 @@ function errMsg(e) {
    ⛔ ותקרת בטיחות ללולאה שתלויה בגודל התשובה — ⚠️ מסד שמחזיר עמוד מלא
       לנצח תולה את הדף.
    ═══════════════════════════════════════════════════════════════════════ */
-var YS_ROWS_PAGE = 1000;
-var YS_ROWS_CAP = 500000;
-async function _ysRowsPaged(mkQuery, order, win) {
+var ROWS_PAGE = 1000;
+var ROWS_CAP = 500000;
+async function _rowsPaged(mkQuery, order, win) {
   var out = [], from = 0;
   for (;;) {
     var q = mkQuery();
@@ -873,12 +873,12 @@ async function _ysRowsPaged(mkQuery, order, win) {
       if (win.to) q = q.lte(win.col, win.to);
     }
     if (order) q = q.order(order, { ascending: true });
-    var res = await withTimeout(q.range(from, from + YS_ROWS_PAGE - 1));
+    var res = await withTimeout(q.range(from, from + ROWS_PAGE - 1));
     if (!res || res.error || !Array.isArray(res.data)) return null;
     out = out.concat(res.data);
-    if (res.data.length < YS_ROWS_PAGE) return out;
-    from += YS_ROWS_PAGE;
-    if (from > YS_ROWS_CAP) return out;
+    if (res.data.length < ROWS_PAGE) return out;
+    from += ROWS_PAGE;
+    if (from > ROWS_CAP) return out;
   }
 }
 /* ═══════════════ סוף מודול משיכה מסוננת בשרת ═══════════════════════════ */
@@ -2012,7 +2012,7 @@ function _bkLayer(bkey, s) {
  *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
 async function _bkReadRows(c, s, win) {
   var sel = s.cols || '*';
-  var rows = await _ysRowsPaged(function () {
+  var rows = await _rowsPaged(function () {
     var q = c.from(s.name).select(sel);
     if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
     return q;
@@ -4649,7 +4649,7 @@ var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],[KV
  *  **בשקט** ונקראת כתמונה שלמה. */
 function slPullAll(){
   return Promise.all(SYNC_TABLES.map(function(e){
-    return _ysRowsPaged(function(){ return SB.from(e[0]).select('*'); }, e[1], null)
+    return _rowsPaged(function(){ return SB.from(e[0]).select('*'); }, e[1], null)
       .then(function(rows){ return rows ? {data:rows,error:null} : {data:null,error:{message:'rows:'+e[0]}}; });
   }));
 }

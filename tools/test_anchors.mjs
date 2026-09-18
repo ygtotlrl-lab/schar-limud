@@ -227,7 +227,7 @@ const MUT = [
    *  מרשם טקסט דו-ממדי ברמת המודול שמצויר לטבלה; ⛔ **ומה מפיל**: שניהם
    *  יחד — ⭐ המרשם שירד, ⚠️ ומרשם חדש בשם אחר. */
   { m: 'מ18', part: 'check-capabilities', lbl: 'המרשם שירד חוזר — «staticProseRegistries»',
-    edit: () => prose(IDX, 'YS_INF_DIMS') },
+    edit: () => prose(IDX, 'ZZ_INF_DIMS') },
   { m: 'מ19', part: 'check-capabilities', lbl: 'מרשם תצוגה קבוע חדש — «staticProseRegistries»',
     edit: () => prose(IDX, '_zzSteps') },
 ];

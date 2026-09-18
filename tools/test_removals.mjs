@@ -233,7 +233,7 @@ if (!RUN_MUT) {
 /*  ⛔ המוטציה על **מודל** ולא על הריפו (סבב 72) — ⚠️ מחיקת פונקציה אמיתית
     כדי לבדוק שער היא בדיוק מה שהשער בא למנוע. */
 {
-  const before = new Map([['ysDoThing', 'index.html'], ['ysGoneClean', 'index.html']]);
+  const before = new Map([['zzDoThing', 'index.html'], ['zzGoneClean', 'index.html']]);
   const after = new Map();
   const tmp = join(ROOT, 'tools');
   const files = [];

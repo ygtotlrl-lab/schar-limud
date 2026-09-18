@@ -361,13 +361,13 @@ const APP = {
   },
   tableProbe: {
     /*  ⛔ מסלול תצוגה שקורא לשכבת השורות בלי טווח (סבב 87) — ⚠️ הטענה
-     *  אינה «`_ysRowsPaged` קיימת» אלא **שכל קריאה מצהירה חלון**: ⭐ קריאה
+     *  אינה «`_rowsPaged` קיימת» אלא **שכל קריאה מצהירה חלון**: ⭐ קריאה
      *  בת שני ארגומנטים משמיטה את `win`, ⛔ והשמטה נקראת «לא נשאלתי».
      *  ⚠️ ומסלול שמושך מלא בכוונה מוסר `null` **במפורש** — ⭐ זו הצהרה
      *  שנמדדת, ⛔ ולא היעדר שנקרא כתקין. */
     80: (c) => {
     /*  ⛔⛔ **וכל קריאה לשכבת השורות נמדדת בהיקפה** (סבב 89) — ⚠️ הנימוק
-     *  המדוד: הטענה שמעל מדדה את **צורת** הקריאה — שכל קריאה ל-`_ysRowsPaged`
+     *  המדוד: הטענה שמעל מדדה את **צורת** הקריאה — שכל קריאה ל-`_rowsPaged`
      *  נושאת שלושה ארגומנטים — ⛔ ולא את היקפה: ⭐ פתיחת סדר עברה דרך שתי
      *  עוטפות שקיבלו חלון `undefined`, ⚠️ ומשכה 18,688 שורות פעמיים ⛔ בעוד
      *  שהיא צריכה 248. ⛔ **ולכן נמדד גם מי קורא בלי חלון** — ⭐ וכל קורא
@@ -399,7 +399,7 @@ const APP = {
       for (const k of Object.keys(allow)) if (!seen.has(k)) return false;  // החרגה שהתיישנה
       return seen.size > 0;
     })();
-      return _r66 && (callArity(c.code, '_ysRowsPaged').every((a) => a === 3)
+      return _r66 && (callArity(c.code, '_rowsPaged').every((a) => a === 3)
           && /var SYNC_TABLES=\[/.test(c.code)
           && callArity(c.code, 'slPullAll').length >= 2);
     },
@@ -832,7 +832,7 @@ const CAPS = {
   rowswin: {
     name: 'מודול המשיכה המסוננת',
     docRows: ['משיכה מסוננת בשרת'],
-    block: { sha: '20d09e44161006e5', lines: 41,
+    block: { sha: '025a094e9023a133', lines: 41,
              start: '/* ═══ משיכה מסוננת בשרת — מודול משותף (סבב 87)',
              end:   '/* ═══════════════ סוף מודול משיכה מסוננת בשרת' },
   },
@@ -886,7 +886,7 @@ const CAPS = {
   backup: {
     name: 'גיבוי יומי אוטומטי',
     docRows: ['`bk` — גיבוי יומי ויומן', 'הגיבוי שלם ומעומד', '`sh_backup` — טבלת הגיבוי'],
-    block: { sha: '0fc933bcc0b4c3ac', lines: 303,
+    block: { sha: 'daa0889af6ae2ab3', lines: 303,
              start: '/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30)',
              end:   'סוף מודול הגיבוי היומי' },
     hooks: [{ fn: 'bkBoot', at: 'boot' }],
@@ -1087,7 +1087,7 @@ const CAPS = {
   hebdate: {
     name: 'מנוע התאריך העברי',
     docRows: ['מנוע תאריך עברי'],
-    block: { file: 'core/hebrew.js', sha: '63c8b66c12488adb', lines: 100,
+    block: { file: 'core/hebrew.js', sha: '04e18fccfea15a1b', lines: 100,
              start: '/* ═══ מנוע התאריך העברי — מודול משותף (סבב 107)',
              end:   '/* ═══════════════ סוף מודול מנוע התאריך העברי' },
   },
@@ -2498,8 +2498,12 @@ function regexBoundGaps() {
  *  כלל: ⭐ בלי הצד השני «אדר א» היה עובר, ⚠️ והוא הדלי הנפרד. */
 const MONTH_ARR = /(?:MONTHS_HEB(?:_LEAP)?|HMO)\s*=\s*\[([^\]]*)\]/g;
 const MONTH_STR = /(["'])((?:[^\\]|\\.)*?)\1/g;
+/*  ⛔ המערכים נקראים ממקור האפליקציה כולו ⛔ ולא מ-`index.html` בלבד —
+ *  ⚠️ הלוח יצא למודול המשותף: ⭐ קריאה מהקובץ בלבד הייתה מדווחת «אין
+ *  מערך חודשים» על עץ תקין. */
 function monthFormGaps() {
-  const src = readOnce(APP.file);
+  const src = [APP.file].concat(CORE_FILES).filter((f) => fs.existsSync(f))
+    .map((f) => readOnce(f)).join('\n');
   const out = [];
   let arrays = 0, adar = 0, m;
   MONTH_ARR.lastIndex = 0;
@@ -2516,13 +2520,13 @@ function monthFormGaps() {
       }
     }
   }
-  if (!arrays) return ['index.html: אין מערך חודשים עבריים'];
-  if (!adar) return ['index.html: אין «אדר א׳»/«אדר ב׳» באף מערך חודשים'];
+  if (!arrays) return ['מקור האפליקציה: אין מערך חודשים עבריים'];
+  if (!adar) return ['מקור האפליקציה: אין «אדר א׳»/«אדר ב׳» באף מערך חודשים'];
   return out;
 }
 
 /*  ⛔ תווית אחת לכל ערך (סבב 148) — ⚠️ **מה נכנס**: כל פונקציית
- *  תווית שהמנוע מתקין על `window`, וכל שדה ש-`ysHebDate` מחזירה;
+ *  תווית שהמנוע מתקין על `window`, וכל שדה ש-`hebDate` מחזירה;
  *  ⛔ **ומה מפיל**: תווית שאין לה אתר קריאה, ⛔ ושדה שאין לו קורא.
  *  ⭐ **ולמה המבנה קיים**: שתי צורות לאותו ערך הן שני מקורות
  *  אמת לתצוגה — ⚠️ ומי שיקרא שתי אפליקציות יראה שני תאריכים
@@ -2531,7 +2535,7 @@ function monthFormGaps() {
  *  היא ראיה למקור בלבד, ⭐ ושער שמודד את המנוע הוא קורא חי.
  *  ⛔ **והגדרה אינה קריאה** — ⚠️ האתר שבו השם מוצב על `window`
  *  מוחרג, ⭐ אחרת כל תווית היתה נמצאת קוראת לעצמה. */
-const HEB_LABEL_DEF = /window\.(ysHeb[A-Za-z]*Label[A-Za-z]*)\s*=\s*function/g;
+const HEB_LABEL_DEF = /window\.(heb[A-Za-z]*Label[A-Za-z]*)\s*=\s*function/g;
 const HEB_OUT_OBJ = /\n\s*var out=\{([\s\S]*?)\n\s*\};/;
 const HEB_OUT_KEY = /(?:^|[,{])\s*([A-Za-z_$][\w$]*)\s*:/g;
 function hebFormGaps(appCode, toolsCode) {
@@ -6340,14 +6344,14 @@ const MATRIX = [
   { row: 122, name: 'פונקציה משותפת אינה יוצאת בשקט',
     probe: () => silentDomSites().length === 0 },
   /*  ⛔ הגיבוי שלם ומעומד (סבב 87ג) — ⚠️ הטענה אינה «יש עימוד» אלא
-   *  **שאין קריאת גיבוי בלי עימוד**: ⭐ הקריאה עוברת ב-`_ysRowsPaged`,
+   *  **שאין קריאת גיבוי בלי עימוד**: ⭐ הקריאה עוברת ב-`_rowsPaged`,
    *  ⛔ ומאומתת מול מונה השרת לפני שנשמר משהו. ⚠️ ושלוש השכבות מוצהרות —
    *  ⭐ עוגן, דיפ, והפינוי שגורע את שניהם. */
   { row: 171, name: 'הגיבוי שלם ומעומד',
     probe: () => {
       const b = fnBody('_bkReadRows');
       if (!b) return false;
-      if (!/_ysRowsPaged\(/.test(b)) return false;
+      if (!/_rowsPaged\(/.test(b)) return false;
       /*  ⛔ מחרוזות מולבנות ב-`code` — ⚠️ ולכן אפשרות הספירה נמדדת ב-`src`,
        *  ⭐ וההשוואה עצמה ב-`code`: ⛔ שתיהן חייבות להימצא.
        *  ⛔ **וההיקף הוא גוף הקריאה** (סבב 139) — ⚠️ בקשת עימוד בכל מקום
@@ -6475,7 +6479,7 @@ const MATRIX = [
       return !wr.test(code) && sel.length === 0 && new RegExp(`\\b${f}\\b`).test(src);
     } },
   /*  ⛔ אובייקט יקר נבנה פעם אחת (סבב 85) — ⚠️ הנימוק המדוד: הגזירה
-   *  ב-`ysHebDate` חזרה בכל קריאה, ⭐ ומטמון אחד הפך 352 מ״ש ל-37.
+   *  ב-`hebDate` חזרה בכל קריאה, ⭐ ומטמון אחד הפך 352 מ״ש ל-37.
    *  ⛔ ומה שנמדד הוא **מקום הבנייה**, ⛔ ולא מספר האתרים. */
   { row: 77, name: 'אובייקט יקר נבנה פעם אחת',
     probe: () => intlBuildGaps().length === 0 },

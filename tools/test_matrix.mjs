@@ -23,6 +23,7 @@
  */
 
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -592,9 +593,12 @@ const FILTER_SAMPLE = 2;
    *  אחד בהנהלה הוא כחמש שניות, ⛔ ושש מוטציות דיסק היו שלושים.
    *  ⛔ **ומה שאינו עובר ב-`readOnce` נשאר בדיסק** — ⚠️ `APP` הוא אובייקט
    *  של המודול, ⭐ ורק ייבוא טרי מחליף אותו. */
+  /*  ⚠️ `file` הוא שם קובץ, ⛔ או מפה של קבצים — ⭐ מוטציה בגוף בלוק חתום
+   *  דורשת גם את החתימה: ⛔ בלעדיה החתימה היא שנופלת ⛔ ולא הטענה הנמדדת. */
   const runOver = (label, file, clean, text, mustFall, claim) => {
-    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', text !== clean);
-    const over = {}; over[file] = text;
+    const over = (typeof file === 'string') ? { [file]: text } : file;
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה',
+       (typeof file === 'string') ? text !== clean : true);
     const { held, out } = callRun(capRun, over);
     if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
     ok('⛔ מוטציה: ' + label + ' מפילה את «' + claim + '»',
@@ -617,17 +621,31 @@ const FILTER_SAMPLE = 2;
 
   /*  ⛔ שם החודש בצורה אחת (סבב 108) — ⚠️ ושני הצדדים ממוטטים: ⭐ סימן
    *  שגוי, ⛔ וסימן שהוסר כליל. */
-  const CLEAN_IDX3 = fs.readFileSync(path.join(WORK, 'index.html'), 'utf8');
+  /*  ⛔ המערכים חיים במודול ⛔ ולא ב-`index.html` (סבב 154) — ⚠️ מוטציה
+   *  שנכתבת לקובץ הייתה מוטטת טקסט שאינו שם: ⭐ והקובץ הוא מה שהשער קורא. */
+  const HEB_REL = 'core/hebrew.js';
+  const HEB_ABS = path.join(WORK, 'core', 'hebrew.js');
+  const CLEAN_IDX3 = fs.existsSync(HEB_ABS)
+    ? fs.readFileSync(path.join(WORK, 'core', 'hebrew.js'), 'utf8') : '';
   if (/MONTHS_HEB_LEAP\s*=\s*\[/.test(CLEAN_IDX3)) {
-    runOver('אפוסטרוף במקום גרש עברי בשם החודש', 'index.html', CLEAN_IDX3,
+    runOver('אפוסטרוף במקום גרש עברי בשם החודש', HEB_REL, CLEAN_IDX3,
       CLEAN_IDX3.replace(/אדר א׳/g, "אדר א'"), true, 'monthFormGaps');
-    runOver('שם אדר בלי סימן כלל', 'index.html', CLEAN_IDX3,
+    runOver('שם אדר בלי סימן כלל', HEB_REL, CLEAN_IDX3,
       CLEAN_IDX3.replace(/אדר א׳/g, 'אדר א').replace(/אדר ב׳/g, 'אדר ב'),
       true, 'monthFormGaps');
     /*  ⭐ מוטציית-נגד חיה: ⛔ שם חודש שהוחלף באיות אחר — ⚠️ ערך חי בשני
-     *  המערכים, ⭐ ואין בו סימן: ⛔ הנמדד הוא הסימן ⛔ ולא השם. */
-    runOver('איות אחר לשם חודש בלי סימן', 'index.html', CLEAN_IDX3,
-      CLEAN_IDX3.replace(/"סיון"/g, '"סיוון"'), false);
+     *  המערכים, ⭐ ואין בו סימן: ⛔ הנמדד הוא הסימן ⛔ ולא השם.
+     *  ⚠️ **והמערכים יושבים בבלוק חתום** — ⛔ ולכן כל שינוי בהם מפיל את
+     *  החתימה: ⭐ והטענה כאן היא ש**`monthFormGaps` עצמה אינה נופלת**,
+     *  ⛔ ולא שהריצה כולה עוברת. */
+    {
+      const HEB_SPELL = CLEAN_IDX3.replace(/"סיון"/g, '"סיוון"');
+      ok('המוטציה «איות אחר לשם חודש בלי סימן» שינתה את הקוד שנמסר לריצה',
+         HEB_SPELL !== CLEAN_IDX3);
+      const { out } = callRun(capRun, { [HEB_REL]: HEB_SPELL });
+      ok('⭐ מוטציית-נגד: איות אחר לשם חודש בלי סימן ⛔ אינו מפיל את «monthFormGaps»',
+         !out.some((l) => l.indexOf('❌') === 0 && l.indexOf('monthFormGaps') >= 0));
+    }
   } else {
     /*  ⛔ אין כאן מערך חודשים ⛔ ואין מה למוטט — ⚠️ והדילוג נמדד: ⭐ ההיעדר
      *  מוצהר ב-`skipCaps` של הבודק, ⛔ ואינו הנחה. */

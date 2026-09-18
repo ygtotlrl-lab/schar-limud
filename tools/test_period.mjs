@@ -516,7 +516,7 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
 {
   /*  ⛔ ההצהרה מוצלבת למנוע שבמקור — ⚠️ ומנוע שני הוא שני מקורות אמת
    *  לאותה שאלה: ⭐ והספירה היא על אתר ההגדרה ⛔ ולא על הקריאה. */
-  const engines = (SRC.match(/window\.ysHebDate\s*=\s*function/g) || []).length;
+  const engines = (SRC.match(/window\.hebDate\s*=\s*function/g) || []).length;
   const want = APP.calendar.kind === 'hebrew' ? 1 : 0;
   t(n++, engines === want,
     `[period-calendar] מנוע התאריך העברי מול הלוח המוצהר — נמדדו ${engines} אתרי הגדרה ` +
@@ -689,8 +689,8 @@ if (RUN_MUT) {
       `נמדד «${c.kind}» והצפוי שייפול`);
   }
   {
-    const two = SRC + '\nwindow.ysHebDate = function (d) { return d; };\n';
-    const got = (two.match(/window\.ysHebDate\s*=\s*function/g) || []).length;
+    const two = SRC + '\nwindow.hebDate = function (d) { return d; };\n';
+    const got = (two.match(/window\.hebDate\s*=\s*function/g) || []).length;
     const want = APP.calendar.kind === 'hebrew' ? 1 : 0;
     t(n++, got !== want,
       'מ4 · ⛔ מוטציה: מנוע עברי שני מפיל את «[period-calendar]» — ' +

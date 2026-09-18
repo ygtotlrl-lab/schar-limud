@@ -67,8 +67,8 @@ const APP = {
   /*  ⛔ שכבת העימוד המשותפת — ⚠️ **מה נכנס**: שם הפונקציה שבה תשובת
    *  השרת הופכת לשורות; ⛔ **ומה מפיל**: שם שאין לו גוף במקור. ⭐ **ולמה
    *  היא כאן**: היא נקודת הקריאה האחת, ⛔ וענף הכשל שבה חל על כל הקוראים. */
-  pagerFn: '_ysRowsPaged',
-  dbPager: '_ysRowsPaged',
+  pagerFn: '_rowsPaged',
+  dbPager: '_rowsPaged',
   /*  ⛔ טבלה שנגרעה מהמסד ושמה נשאר בקוד — ⚠️ **מה נכנס**: השם, הדגל
    *  שמכבה את המסלול, והנימוק; ⛔ **ומה מפיל**: דגל שאינו כבוי, והכרזה
    *  בלי אתר. ⭐ **ולמה ריק**: נמדד ואין. */
@@ -764,9 +764,9 @@ if (RUN_MUT) {
   /*  ⭐ נ4 · מוטציית-נגד: ⛔ שם שהוחלף בעקביות בשכבת העימוד ⛔ אינו מפיל —
    *  ⚠️ הנמדד הוא ענף הכשל, ⭐ ולא שם הפונקציה. */
   {
-    const src = SRC.split(APP.pagerFn).join('_ysRowsPagedRenamed');
+    const src = SRC.split(APP.pagerFn).join('_rowsPagedRenamed');
     const saved = APP.pagerFn;
-    APP.pagerFn = '_ysRowsPagedRenamed';
+    APP.pagerFn = '_rowsPagedRenamed';
     const g = readGuardGaps(src);
     APP.pagerFn = saved;
     if (!g.length) ok('נ4 · ⭐ מוטציית-נגד: שם שכבת העימוד שהוחלף בעקביות ⛔ אינו מפיל');
