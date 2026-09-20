@@ -50,12 +50,18 @@ const APP = {
    *  ⭐ **ולמה המבנה קיים**: מה שחי באפליקציה אחת אין ממה לסטות,
    *  ⛔ ולכן אין לו שער — ⚠️ והוא נמדד כאן בהתנהגות. */
   accept: { expose: [], setup: '', cases: [], why: '⛔ אין כאן חשבון שחי באפליקציה אחת — ⚠️ הפריסה והיתרה נגזרות מהסולם המשותף' },
+  /*  ⛔ ידיות הגרירה — ⚠️ **מה נכנס**: כל בורר שנושא `touch-action:none`
+   *  ⟵ למה הוא ידית; ⛔ **ומה מפיל**: בורר שאינו כאן, ⭐ והכרזה שאין
+   *  לה כלל. */
+  dragHandles: [],
+  drag: null,
+  dragWhy: 'אין כאן רשימה שסדרה נקבע ביד — ⚠️ התלמידים והתנועות ממוינים במיון האחד, ⭐ והסעיפים נערכים ברשימה: ⛔ ואין מסלול גרירה למדוד',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [25, 36, 229];
+export const ROWS = [25, 36, 91, 230];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -72,7 +78,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 7, app: 0, appWhy: '' };
+const FLOOR = { shared: 10, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -299,6 +305,132 @@ async function acceptGaps(D, port, A) {
   return bad;
 }
 
+/* ── הגרירה — ביטוי על המקור, והרצה בדפדפן ─────────────────────────────── */
+/*  ⛔ אירועי גרירת HTML5 אינם קיימים במגע — ⚠️ **מה נכנס**: כל רישום
+ *  מאזין לאחד מחמשת האירועים, וכל מאפיין `draggable`; ⛔ **ומה מפיל**: כל
+ *  אתר כזה. ⭐ **ולמה המבנה קיים**: מערכת שבנויה לעכבר עובדת בעכבר,
+ *  ⛔ והכותב יושב מול מחשב — ⚠️ ואיש אינו רואה שבאצבע היא אינה נורים כלל.
+ *  ⛔ **והמדידה על המקור הגולמי** — ⚠️ הרישום חי כליטרל מחרוזת,
+ *  ⭐ והמאפיין בתגית שנבנית ב-JS: ⛔ והלבנה היתה מוחקת בדיוק את מה שהיא סורקת. */
+const DRAG_EVENTS = ['dragstart', 'dragover', 'dragleave', 'dragend', 'drop'];
+export function dragApiGaps(src) {
+  const out = [];
+  const at = (i) => src.slice(0, i).split('\n').length;
+  const re = new RegExp("addEventListener\\s*\\(\\s*['\"](" + DRAG_EVENTS.join('|') + ")['\"]", 'g');
+  for (const m of src.matchAll(re))
+    out.push('מאזין `' + m[1] + '` בשורה ' + at(m.index));
+  for (const m of src.matchAll(/(?<![\w-])draggable\s*=/g))
+    out.push('`draggable` בשורה ' + at(m.index));
+  return out;
+}
+/*  ⛔ `touch-action:none` יושב על הידית בלבד — ⚠️ **מה נכנס**: כל כלל
+ *  בגיליון שנושא אותו; ⛔ **ומה מפיל**: בורר שאינו מוכרז כידית, ⭐ וידית
+ *  שהוכרזה ואין לה כלל. ⚠️ **ולמה המבנה קיים**: ביטול פעולת המגע על
+ *  שורה שלמה נועל את גלילת המסך, ⭐ והדף מפסיק להיגלל בכל הרשימה. */
+export function gripGaps(css, decl) {
+  const out = [], hit = new Set();
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length));
+  for (const m of clean.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    if (!/touch-action\s*:\s*none/.test(m[2])) continue;
+    const sel = m[1].trim().split(/\s*,\s*/);
+    for (const one of sel) {
+      const d = decl.find((x) => x.sel === one);
+      if (!d) out.push('`touch-action:none` על בורר שאינו ידית מוכרזת: ' + one);
+      else hit.add(d.sel);
+    }
+  }
+  for (const d of decl) {
+    if (!d.why || !String(d.why).trim()) out.push('ידית מוכרזת בלי נימוק: ' + d.sel);
+    if (!hit.has(d.sel)) out.push('ידית מוכרזת שאין לה כלל `touch-action:none`: ' + d.sel);
+  }
+  return out;
+}
+
+/*  ⛔ הגרירה נמדדת באירועים שהדפדפן משדר — ⚠️ **ולא באירוע שהמבחן
+ *  בונה**: ⭐ מבחן שיוצר את האירוע בעצמו מוכיח שהמטפלים תקינים אם
+ *  האירועים מגיעים, ⛔ ולא שהם מגיעים — ⚠️ וזה בדיוק מה שהסתיר את הפער.
+ *  ⛔ **ושתי הדרכים נמדדות** — ⭐ עכבר ומגע: ⚠️ גרירה שעובדת בעכבר
+ *  ולא במגע היא כישלון. */
+async function dragMove(D, kind, from, to) {
+  const steps = [];
+  for (let i = 1; i <= 6; i++)
+    steps.push({ x: from.x + (to.x - from.x) * i / 6, y: from.y + (to.y - from.y) * i / 6 });
+  steps.push({ x: to.x, y: to.y + 6 });
+  if (kind === 'mouse') {
+    await D.send('Input.dispatchMouseEvent',
+      { type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1 }, D.S);
+    for (const p of steps)
+      await D.send('Input.dispatchMouseEvent',
+        { type: 'mouseMoved', x: p.x, y: p.y, button: 'left', buttons: 1 }, D.S);
+    const last = steps[steps.length - 1];
+    await D.send('Input.dispatchMouseEvent',
+      { type: 'mouseReleased', x: last.x, y: last.y, button: 'left', buttons: 0, clickCount: 1 }, D.S);
+    return;
+  }
+  await D.send('Input.dispatchTouchEvent',
+    { type: 'touchStart', touchPoints: [{ x: from.x, y: from.y }] }, D.S);
+  for (const p of steps)
+    await D.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y }] }, D.S);
+  await D.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, D.S);
+}
+
+async function dragGaps(D, port, A, body) {
+  const bad = [];
+  const ev = async (x) => {
+    const r = await D.send('Runtime.evaluate',
+      { expression: x, returnByValue: true, awaitPromise: true }, D.S);
+    if (r.result && r.result.exceptionDetails) {
+      const d = r.result.exceptionDetails;
+      return { __err: String((d.exception && (d.exception.description || d.exception.value)) || d.text) };
+    }
+    return r.result && r.result.result ? r.result.result.value : undefined;
+  };
+  const box = (sel) => ev('(function () { var e = document.querySelector(' + JSON.stringify(sel) + ');' +
+    ' if (!e) return null; var r = e.getBoundingClientRect();' +
+    ' return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()');
+  SERVED = body;
+  for (const kind of ['mouse', 'touch']) {
+    await D.send('Page.navigate', { url: 'about:blank' }, D.S);
+    await D.send('Storage.clearDataForOrigin',
+      { origin: `http://127.0.0.1:${port}`,
+        storageTypes: 'local_storage,cookies,indexeddb,service_workers,cache_storage' }, D.S).catch(() => {});
+    await D.send('Network.enable', {}, D.S).catch(() => {});
+    await D.send('Network.setBypassServiceWorker', { bypass: true }, D.S).catch(() => {});
+    /*  ⛔ הדפדפן עובר למצב מגע לפני הריצה במגע — ⚠️ בלעדיו אירוע
+     *  מגע אינו מייצר אירוע מצביע כלל, ⭐ והמדידה היתה מדווחת כישלון
+     *  על מנגנון תקין. */
+    await D.send('Emulation.setTouchEmulationEnabled',
+      { enabled: kind === 'touch', maxTouchPoints: 1 }, D.S).catch(() => {});
+    await D.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html` }, D.S);
+    /*  ⛔ הגשר נדרש רק למי שמבקש שמות — ⚠️ הזרעה שעוברת
+     *  באחסון המקומי אינה צריכה אותו, ⭐ והמתנה לו היתה נכשלת לנצח. */
+    const upOk = A.expose.length
+      ? await waitFor(async () => (await ev('!!window.__acc')) === true, 9000)
+      : await waitFor(async () => (await ev('document.readyState === "complete"')) === true, 9000);
+    if (!upOk) { bad.push(kind + ': הדף לא עלה'); continue; }
+    let ready;
+    if (!await waitFor(async () => (ready = await ev(A.setup)) === true, 9000, 120)) {
+      bad.push(kind + ': ההכנה לא הסתיימה — ' + JSON.stringify(ready)); continue;
+    }
+    const before = await ev(A.order);
+    /*  ⛔ הפריט נגלל לתוך המסך לפני המדידה — ⚠️ `elementFromPoint` מחזיר
+     *  `null` מחוץ לחלון הנראה, ⭐ והגרירה היתה נעצרת על גלילה ולא
+     *  על מנגנון: ⛔ וכשל שמקורו במבחן נקרא ככשל במוצר. */
+    await ev('(function () { var e = document.querySelector(' + JSON.stringify(A.grip) + ');' +
+      ' if (e && e.scrollIntoView) e.scrollIntoView({ block: "center" }); return true; })()');
+    const g = await box(A.grip), tgt = await box(A.target);
+    if (!g || !tgt) { bad.push(kind + ': אין ידית או אין יעד'); continue; }
+    await dragMove(D, kind, g, tgt);
+    await waitFor(async () => (await ev(A.order)) !== before, 4000, 100);
+    const after = await ev(A.order);
+    if (after === before) bad.push(kind + ': הסדר לא השתנה — ' + JSON.stringify(before));
+  }
+  await D.send('Emulation.setTouchEmulationEnabled', { enabled: false, maxTouchPoints: 1 }, D.S).catch(() => {});
+  await D.send('Network.setBypassServiceWorker', { bypass: false }, D.S).catch(() => {});
+  SERVED = SRC;
+  return bad;
+}
+
 async function paths(D, port) {
   const out = [];
   const ev = async (x) => {
@@ -446,6 +578,9 @@ async function paths(D, port) {
 /*  ⛔ הדפדפן עולה פעם אחת, ⛔ וכל מוטציה היא **טעינה מחדש** — ⚠️ הפעלה
  *  לכל מוטציה הייתה חוצה את תקציב הזמן, ⭐ וטעינה היא מאות מילישניות. */
 const SRC = rd('index.html');
+/*  ⛔ גיליון הסגנון — ⚠️ הוא המקור היחיד שבו `touch-action` נקבע,
+ *  ⭐ והוא קובץ נפרד מהמסמך. */
+const SHEET = rd('app.css');
 
 /*  ⛔ מרשם המוטציות — ⚠️ **מה נכנס**: שם המסלול שייפול · והעריכה;
  *  ⛔ **ומה מפיל**: מוטציה שהפילה מסלול אחר, או שלא הפילה כלל.
@@ -491,6 +626,19 @@ const ANTI = { m: 'נ1', lbl: 'שם מקומי שהוחלף בעקביות',
                edit: (s) => s.split('_busyTxt').join('_busyKeep') };
 
 async function main() {
+  /* ── הגרירה — הצד הטקסטואלי ──────────────────────────────────────────── */
+  {
+    const g = dragApiGaps(SRC);
+    t(g.length === 0, `[drag-api] אפס אירוע גרירת HTML5 ואפס מאפיין ` +
+      `\`draggable\` — נמדדו ${g.length} אתרים והצפוי אפס` +
+      (g.length ? ` (${g.slice(0, 3).join(' · ')})` : '') +
+      '. ממירים אותם ל-`pointerdown`/`pointermove`/`pointerup`');
+    const h = gripGaps(SHEET, APP.dragHandles);
+    t(h.length === 0, `[drag-grip] \`touch-action:none\` על הידית בלבד — ` +
+      `${APP.dragHandles.length} ידיות מוכרזות, נמדדו ${h.length} פערים והצפוי אפס` +
+      (h.length ? ` (${h.join(' · ')})` : '') +
+      '. מציבים את הביטול על הידית, או מכריזים אותה עם נימוקה');
+  }
   if (!fs.existsSync(CHROME)) {
     t(false, `מסלולי ההתנהגות: אין דפדפן בנתיב המוצהר — נמדד «${CHROME}» ולא ` +
              'קיים והצפוי בינארי. מתקינים את הדפדפן, או מצהירים נתיב ' +
@@ -552,8 +700,55 @@ async function main() {
       }
     }
 
+
+    /*  ⛔ הגרירה בדפדפן — ⚠️ בעכבר ובמגע, ⭐ והאירועים מגיעים
+     *  מהדפדפן ⛔ ולא נבנים במבחן. */
+    {
+      const A = APP.drag;
+      if (!A) {
+        t(!!APP.dragWhy, `[drag] אפס מסלולי גרירה — ${APP.dragWhy || '⛔ בלי נימוק'}`);
+      } else {
+        const gaps = await dragGaps(D, port, A, withBridge(SRC, A.expose));
+        t(gaps.length === 0, `[drag] הגרירה נמדדה בדפדפן בעכבר ובמגע — ` +
+          `${gaps.length} נבדלים והצפוי אפס` +
+          (gaps.length ? ' — ' + gaps.join(' · ') +
+            '. מתקנים את מסלול הגרירה, ⛔ ולא את המבחן' : ''));
+      }
+    }
+
     mutStage();
     if (RUN_MUT) {
+      /* ── הגרירה — ארבע מוטציות ומוטציית-נגד ──────────────────────────── */
+      {
+        const m1 = dragApiGaps(SRC.replace('<body', '<div draggable="true"></div><body'));
+        t(m1.length > 0, `מ6 · ⛔ מוטציה: \`draggable="true"\` מפיל את «[drag-api]» — ` +
+          `נמדדו ${m1.length} אתרים והצפוי לפחות אחד`);
+        const m2 = dragApiGaps(SRC.replace('<body',
+          "<script>document.addEventListener('dragstart', function () {});</script><body"));
+        t(m2.length > 0, `מ7 · ⛔ מוטציה: מאזין \`dragstart\` מפיל את «[drag-api]» — ` +
+          `נמדדו ${m2.length} אתרים והצפוי לפחות אחד`);
+        const m3 = gripGaps(SHEET + '\n.zz-row{touch-action:none}\n', APP.dragHandles);
+        t(m3.length > 0, `מ8 · ⛔ מוטציה: \`touch-action:none\` על שורה שלמה מפיל ` +
+          `את «[drag-grip]» — נמדדו ${m3.length} פערים והצפוי לפחות אחד`);
+        /*  ⛔ הרביעית שוברת את גזירת הסדר מה-DOM — ⚠️ והיא רצה בדפדפן:
+         *  ⭐ זה הצד שאין לו ביטוי על המקור. */
+        if (APP.drag) {
+          const bent = withBridge(SRC.replace(APP.drag.mut[0], APP.drag.mut[1]), APP.drag.expose);
+          const g4 = bent === withBridge(SRC, APP.drag.expose) ? ['העריכה לא מצאה אתר']
+            : await dragGaps(D, port, APP.drag, bent);
+          t(g4.length > 0, `מ9 · ⛔ מוטציה: סדר שנגזר מצמד ולא מה-DOM מפיל ` +
+            `את «[drag]» — נמדדו ${g4.length} נבדלים והצפוי לפחות אחד`);
+        } else {
+          t(!!APP.dragWhy, `מ9 · ⛔ אין מסלול גרירה למוטט — ${APP.dragWhy || '⛔ בלי נימוק'}`);
+        }
+        /*  ⭐ מוטציית-נגד: `pointerdown` על ידית ⛔ אינו מפיל —
+         *  הוא המנגנון עצמו, ⚠️ ושער שהיה נופל עליו אוסר את מה שהוא דורש. */
+        const n2 = dragApiGaps(SRC.replace('<body',
+          "<script>document.addEventListener('pointerdown', function () {});</script><body"));
+        t(n2.length === 0, `נ2 · ⭐ מוטציית-נגד: מאזין \`pointerdown\` ⛔ אינו מפיל ` +
+          `את «[drag-api]» — נמדדו ${n2.length} אתרים והצפוי אפס`);
+      }
+
       /* ── כל מוטציה מפילה את המסלול שלה, ⛔ ואותו בלבד ─────────────────── */
       for (const r of MUT) {
         const body = r.edit(SRC);
