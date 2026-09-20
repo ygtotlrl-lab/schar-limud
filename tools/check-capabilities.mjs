@@ -1087,7 +1087,7 @@ const CAPS = {
   hebdate: {
     name: 'מנוע התאריך העברי',
     docRows: ['מנוע תאריך עברי'],
-    block: { file: 'core/hebrew.js', sha: '04e18fccfea15a1b', lines: 100,
+    block: { file: 'core/hebrew.js', sha: 'd537021331048a91', lines: 100,
              start: '/* ═══ מנוע התאריך העברי — מודול משותף (סבב 107)',
              end:   '/* ═══════════════ סוף מודול מנוע התאריך העברי' },
   },
