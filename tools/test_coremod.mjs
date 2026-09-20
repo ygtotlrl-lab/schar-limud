@@ -34,6 +34,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
+import { whiten } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -54,12 +55,23 @@ const APP = {
   /*  ⚠️ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⭐ אין כאן הגדרה תשתיתית
    *  שיושבת מחוץ לבלוק חתום. */
   coreAllow: {},
+  /*  ⛔ אתר שבונה CSS בזמן ריצה — ⚠️ **מה נכנס**: שם הפונקציה ⟵ מה
+   *  המחרוזת היא, ⛔ ולמה היא אינה גיליון האפליקציה; ⛔ **ומה מפיל**:
+   *  אתר שאינו כאן, ⛔ והכרזה שאין לה אתר. ⭐ **ולמה המבנה קיים**:
+   *  מחרוזת CSS בתוך JS נראית כ-CSS של האפליקציה ⛔ ואינה — ⚠️ והיא
+   *  אינה נטענת עם הדף ⛔ ואינה יורשת את הגיליון. */
+  cssStrings: {
+    pendEnsureStyle:
+      'בונה את כללי סימון ה-⏳ בזמן ריצה — ⛔ הוא במודול המשותף, ⚠️ וזהותו נמדדת ב-`sha256`',
+    _lkStyle:
+      'בונה את כללי מסך הנעילה בזמן ריצה — ⛔ הוא במודול המשותף, ⚠️ וזהותו נמדדת ב-`sha256`',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [18, 202];
+export const ROWS = [18, 19, 60, 138, 207];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -79,7 +91,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר הטענות נגזר ממרשם המודולים,
  *  ⭐ שזהה בכולן: ⛔ ומה שנבדל הוא **תוכן** ההכרזות ⛔ ולא מספרן. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 18, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -88,8 +100,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת: ⭐ ריצפה שאינה מתעדכנת מפסיקה למדוד
  *  את מה שנוסף. */
@@ -195,7 +211,30 @@ export function impureGaps(name, src) {
 }
 
 const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8');
-const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור כולל את גיליון הסגנון — ⚠️ הוא יצא ל-`app.css`, ⭐ וסורק
+ *  שקורא `index.html` לבדו מדווח «אין כלל CSS» על גיליון שלם. */
+/*  ⛔ המקור הגולמי ⛔ ובלי הגיליון — ⚠️ הוא ההיקף של מדידת הסוגים:
+ *  ⭐ `<style>` בו הוא תגית שחזרה לקובץ, ⛔ ולא הגיליון שיצא ממנו. */
+/*  ⛔ המקור נקרא גולמי — ⚠️ סמן הבלוק החתום הוא הערה,
+ *  ⭐ והלבנה מוחקת בדיוק את מה שהוא מודד: ⛔ וכל סריקת דפוס
+ *  בקוד — ⚠️ והיא בלבד — מלבינה אותו תחילה. */
+const IDX_RAW = readFileSync(join(ROOT, 'index.html'), 'utf8');
+const SHEET = readFileSync(join(ROOT, 'app.css'), 'utf8');
+const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8') +
+  (existsSync(join(ROOT, 'app.css'))
+    ? '\n<style data-sheet="app">\n' + readFileSync(join(ROOT, 'app.css'), 'utf8') + '\n</style>' : '');
+/*  ⛔ גופי הבלוקים החתומים נחתכים מ-`index.html` לפי הסמנים שמוצהרים
+ *  בבודק היכולות — ⚠️ ולא לפי רשימה שנייה כאן: ⭐ סמן שישתנה שם משנה גם
+ *  את מה שנמדד כאן. */
+const SIGNED_BODIES = (() => {
+  const out = [];
+  for (const m of CAPS.matchAll(/start: '([^']+)',\s*\n\s*end:\s*'([^']+)'/g)) {
+    const a = IDX.indexOf(m[1]); if (a < 0) continue;
+    const b = IDX.indexOf(m[2], a); if (b < 0) continue;
+    out.push(IDX.slice(a, b));
+  }
+  return out;
+})();
 const SW = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 const HERE = CORE_FILES.filter((f) => existsSync(join(ROOT, f)));
 const MODS = HERE.map((f) => readFileSync(join(ROOT, f), 'utf8'));
@@ -279,6 +318,37 @@ let n = 1;
   }
 }
 
+/*  ⛔ מודול משותף נושא דגל לכל התנהגות שנבדלת ⛔ ואינו מוסתר ב-CSS
+ *  פר-אפליקציה — ⚠️ **מה נמדד**: מחלקה שנוצרת בתוך בלוק חתום ומוסתרת
+ *  ב-`display:none` בגיליון; ⛔ **ומה מפיל**: כלל כזה. ⭐ **ולמה**:
+ *  הסתרה משאירה את הקוד רץ ואת האלמנט ב-DOM, ⚠️ ומי שקורא את המודול
+ *  אינו יודע שהוא מכובה. */
+export function hiddenModuleClasses(idx, blocks) {
+  /*  ⛔ השם נאסף בשתי צורות — ⚠️ האסימון שאחרי `class="`, ⭐ שגם מחרוזת
+   *  שנבנית בשרשור פותחת בו; ⛔ וליטרל קצר בגוף הבלוק, ⚠️ שהוא הצורה
+   *  שבה שם מחלקה מועבר כארגומנט. */
+  const made = new Set();
+  for (const b of blocks) {
+    for (const m of b.matchAll(/class="([a-z][a-z0-9-]*)/g)) made.add(m[1]);
+    for (const m of b.matchAll(/'([a-z][a-z0-9-]{1,})'/g)) made.add(m[1]);
+  }
+  const css = [...idx.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /*  ⛔ מחלקת **מצב** אינה הסתרה — ⚠️ שם שהקוד מוסיף ומסיר בזמן ריצה הוא
+   *  מתג, ⭐ ולא כיבוי של פלט המודול: ⛔ והמדידה היא על מה שמוסתר תמיד. */
+  const toggled = new Set([...idx.matchAll(/classList\s*\.\s*(?:add|remove|toggle)\(\s*'([a-z][a-z0-9-]*)'/g)]
+    .map((m) => m[1]));
+  const out = [];
+  for (const r of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/(^|[;\s])display\s*:\s*none/.test(r[2])) continue;
+    for (const c of made) {
+      if (toggled.has(c)) continue;
+      if (new RegExp('\\.' + c + '(?![\\w-])').test(r[1])) out.push(r[1].trim() + ' ⟵ .' + c);
+    }
+  }
+  return [...new Set(out)];
+}
+
 /* ── 7. וקוד תשתיתי נכתב במודול ────────────────────────────────────────── */
 {
   const gaps = prefixGaps(IDX, CAPS, APP.coreAllow);
@@ -300,6 +370,15 @@ let n = 1;
     '. מסירים מ-`APP.coreAllow` שם שאינו כאן, וכותבים בכל אחת מה היא עושה');
 }
 
+/* ── 9. ומודול משותף נושא דגל, ⛔ ואינו מוסתר ב-CSS ─────────────────────── */
+{
+  const hid = hiddenModuleClasses(IDX, SIGNED_BODIES);
+  t(n++, !hid.length,
+    `[core-flag] כלל CSS שמסתיר אלמנט שמודול משותף יוצר — נמדדו ${hid.length} ` +
+    `והצפוי 0` + (hid.length ? ` (${hid.join(', ')})` : '') +
+    '. מוסיפים דגל לחתימת הפונקציה ואינו יוצר את האלמנט, ⛔ ולא מסתירים אותו');
+}
+
 /* ── 9. והמודול מיוצא בשם ──────────────────────────────────────────────── */
 {
   /*  ⛔ מודול בלי ייצוא בשם ובלי התקנה על `window` אינו נגיש לאיש —
@@ -310,6 +389,191 @@ let n = 1;
     `[core-export] כל מודול נגיש לצרכניו — נמדדו ${mute.length} בלי ייצוא ובלי התקנה ` +
     `מתוך ${HERE.length} והצפוי 0` + (mute.length ? ` (${mute.join(', ')})` : '') +
     '. מייצאים את השמות, או מתקינים את המנוע על `window`');
+}
+
+/* ── 10. ובלוק נושא את סוגו ואת גבולותיו ───────────────────────────────── */
+/*  ⛔ ארבעת הסוגים — ⚠️ **מה נכנס**: הסוג ⟵ המילה שנושאת אותו בשם הבלוק;
+ *  ⛔ **ומה מפיל**: גיליון סגנון שאינו נושא את שתי המילים בסמניו.
+ *  ⭐ **ולמה המבנה קיים**: בלוק שאינו נושא את סוגו נקרא כסוג אחר —
+ *  ⚠️ נמדד גיליון `<style>` ומחרוזת JS עם `@page` באותו קובץ, ⭐ ואיש
+ *  לא ידע שאחד מהשניים אינו CSS של האפליקציה. */
+const BLOCK_KINDS = { signed: 'מודול משותף', sheet: 'גיליון סגנון',
+                      script: 'סקריפט', runtime: 'מחרוזת בזמן ריצה' };
+
+/*  ⛔ ההלבנה קודמת למדידה — ⚠️ `'<style>'` בתוך מחרוזת JS אינו תגית,
+ *  ⭐ והוא בדיוק מה שהסוג הרביעי מתאר: ⛔ סריקה גולמית הייתה מפילה על
+ *  המחרוזת שכבר מוצהרת. */
+export function sheetInDoc(html) {
+  const blank = (m) => ' '.repeat(m.length);
+  const w = html.replace(/'(?:[^'\\\n]|\\.)*'/g, blank)
+                .replace(/"(?:[^"\\\n]|\\.)*"/g, blank)
+                .replace(/`(?:[^`\\]|\\.)*`/g, blank);
+  return (w.match(/<style\b/g) || []).length;
+}
+
+/*  ⛔ האתרים נגזרים מהמקור הגולמי — ⚠️ המחרוזת היא הממצא עצמו, ⭐ והלבנה
+ *  הייתה מוחקת בדיוק את מה שהיא סורקת · ⛔ **והבעלים הוא הפונקציה
+ *  העוטפת** — ⚠️ שם קובץ אינו מקום. */
+export function cssStringSites(html) {
+  const out = new Set();
+  const re = /createElement\(\s*['"]style['"]\s*\)|<style[ >]/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const pre = html.slice(0, m.index);
+    let owner = null, fm;
+    const fre = /\nfunction ([A-Za-z_$][\w$]*)\s*\(/g;
+    while ((fm = fre.exec(pre)) !== null) owner = fm[1];
+    if (owner) out.add(owner);
+  }
+  return [...out].sort();
+}
+
+{
+  /*  ⛔ א — גיליון האפליקציה יושב בקובץ ⛔ ולא ב-`index.html`. */
+  const inDoc = sheetInDoc(IDX_RAW);
+  t(n++, inDoc === 0,
+    `[block-kind] אפס \`<style>\` ב-index.html — נמדדו ${inDoc} והצפוי 0. ` +
+    'מעבירים את הגיליון ל-`app.css`, ומקשרים אותו ב-`<link rel="stylesheet">`');
+
+  /*  ⛔ ב — ולגיליון סמן פתיחה וסמן סגירה, ⚠️ ובשניהם סוגו. */
+  const head = SHEET.split('\n').slice(0, 2).join('\n');
+  const tail = SHEET.split('\n').slice(-3).join('\n');
+  const kind = BLOCK_KINDS.sheet;
+  const okHead = /^\/\* ═══ /.test(head) && head.indexOf(kind) >= 0;
+  const okTail = tail.indexOf('סוף') >= 0 && tail.indexOf(kind) >= 0;
+  t(n++, okHead && okTail,
+    `[block-kind] גיליון הסגנון נושא סמן פתיחה וסגירה ובהם סוגו — נמדדו ` +
+    `${(okHead ? 1 : 0) + (okTail ? 1 : 0)} מתוך 2 והצפוי 2. ` +
+    `מוסיפים סמן שנושא «${kind}» בראש הקובץ ובסופו`);
+
+  /*  ⛔ ג — וכל אתר שבונה CSS בזמן ריצה מוצהר, ⚠️ ונמדד משני צדדיו. */
+  const sites = cssStringSites(IDX_RAW);
+  const decl = APP.cssStrings || {};
+  const undecl = sites.filter((s) => !(s in decl));
+  const ghost = Object.keys(decl).filter((k) => sites.indexOf(k) < 0);
+  const noWhy = Object.keys(decl).filter((k) => String(decl[k]).length < 20);
+  t(n++, !undecl.length && !ghost.length && !noWhy.length,
+    `[block-kind] כל אתר שבונה CSS בזמן ריצה מוצהר — נמדדו ${sites.length} אתרים ` +
+    `מול ${Object.keys(decl).length} הכרזות: ${undecl.length} בלי הכרזה · ` +
+    `${ghost.length} הכרזה בלי אתר · ${noWhy.length} בלי נימוק, והצפוי אפס` +
+    (undecl.length ? ` (${undecl.join(', ')})` : '') +
+    (ghost.length ? ` (${ghost.join(', ')})` : '') +
+    `. מצהירים ב-\`APP.cssStrings\` מה המחרוזת ולמה אינה גיליון האפליקציה`);
+
+  /*  ⛔ ד — והגיליון מוטמן מראש, ⚠️ שקובץ שאינו במטמון שובר את האופליין. */
+  const inCore = /(^|\n)\s*'\.\/app\.css',/.test(SW);
+  t(n++, inCore,
+    `[block-core] גיליון הסגנון ב-\`CORE\` של sw.js — נמדד ${inCore ? 1 : 0} והצפוי 1. ` +
+    'מוסיפים `./app.css` ל-`CORE`, שקובץ שאינו מוטמן שובר את האופליין');
+}
+
+/* ── 11. ונכס בינארי יושב בקובץ, לפי תפקידו ────────────────────────────── */
+/*  ⛔ תיקיית נכסים ⟵ תפקידה — ⚠️ `icons/` נכסי האפליקציה עצמה,
+ *  ⭐ ו-`logos/` גופים שהיא מציגה: ⛔ תיקייה נגזרת מתפקיד הנכס
+ *  ⛔ ולא מהיום שבו נוצרה. */
+const ASSET_DIRS = { icons: 'נכסי האפליקציה עצמה', logos: 'גופים שהאפליקציה מציגה' };
+/*  ⛔ הסף הוא 500 תווים — ⚠️ אייקון `svg` מוטבע קצר הוא סימון, ⭐ ותמונה
+ *  היא נכס: ⛔ והמחיר הוא שכל סורק קורא אותה בכל שער, ⚠️ ואין בה שורת קוד. */
+const DATA_URI_MAX = 500;
+
+export function dataUriGaps(html, max) {
+  const out = [];
+  for (const m of html.matchAll(/data:image\/[a-z+]+;base64,[A-Za-z0-9+/=]*/g))
+    if (m[0].length > max) out.push(m[0].slice(0, 28) + '… (' + m[0].length + ' תווים)');
+  return out;
+}
+
+/*  ⛔ שני מנגנוני טעינה לאותו סוג נכס — ⚠️ אחד מנתיב מוצהר ואחד מה-DOM:
+ *  ⭐ והשנייה שקופה לכל סריקה, ⛔ ומי שמחפש את הנכס אינו מוצא אותו.
+ *  ⛔ **והנמדד הוא ההשמה** — ⚠️ קבוע נכס שערכו נקרא מה-DOM, ⭐ ולא כל
+ *  קריאה של `src`: ⛔ מי שמציב `src` הוא הצרכן ⛔ ואינו המקור. */
+export function assetReadGaps(html) {
+  const out = [];
+  for (const m of html.matchAll(/([A-Z][A-Z0-9_]*_LOGO)\s*=\s*([^;\n]{0,160})/g))
+    if (/document\.|getAttribute\(|\.src\b|querySelector/.test(m[2]))
+      out.push(m[1] + ' ⟵ ' + m[2].trim().slice(0, 48));
+  return out;
+}
+
+{
+  /*  ⛔ א — אפס נכס מוטבע ארוך. */
+  const embedded = dataUriGaps(IDX_RAW, DATA_URI_MAX);
+  t(n++, embedded.length === 0,
+    `[asset-file] אפס נכס בינארי מוטבע — נמדדו ${embedded.length} מעל ${DATA_URI_MAX} תווים והצפוי אפס` +
+    (embedded.length ? ` (${embedded.join(' · ')})` : '') +
+    '. מוציאים את הנכס לקובץ בתיקייה שנגזרת מתפקידו');
+
+  /*  ⛔ ב — וכל תיקיית נכסים שקיימת מוטמנת מראש. */
+  const live = Object.keys(ASSET_DIRS).filter((d) => existsSync(join(ROOT, d)));
+  const cold = live.filter((d) => !new RegExp("'\\./" + d + "/").test(SW));
+  t(n++, cold.length === 0,
+    `[asset-file] כל תיקיית נכסים מוטמנת מראש — נמדדו ${live.length} תיקיות ו-${cold.length} ` +
+    `שאינן ב-\`CORE\` והצפוי אפס` + (cold.length ? ` (${cold.join(', ')})` : '') +
+    '. מוסיפים את נכסיה ל-`CORE` שב-sw.js, שנכס שאינו במטמון אינו נטען אופליין');
+
+  /*  ⛔ ג — וכל נכס באותו סוג נטען באותה דרך. */
+  const two = assetReadGaps(IDX_RAW);
+  t(n++, two.length === 0,
+    `[asset-file] דרך טעינה אחת לכל סוג נכס — נמדדו ${two.length} אתרים שנלכדים מה-DOM והצפוי אפס` +
+    (two.length ? ` (${two.join(' · ')})` : '') +
+    '. טוענים את כולם מנתיב מוצהר, שלכידה מה-DOM שקופה לכל סורק');
+}
+
+/* ── 12. וכל שם שנקרא — מיובא ──────────────────────────────────────────── */
+/*  ⛔ במסמך-מודול קריאה לשם שלא יובא היא `ReferenceError` — ⚠️ והיא
+ *  נבלעת במטפל: ⭐ המסלול נעצר, המסך נשאר פתוח, ⛔ ואיש אינו רואה.
+ *  ⛔ **והמדידה בשני הכיוונים** — ⚠️ שם שנקרא ואינו ברשימת הייבוא,
+ *  ⭐ ושם שיובא ואינו נקרא: ⛔ כיוון אחד לבדו מאשר את ההיפוך. */
+export function moduleExports(texts) {
+  const out = new Set();
+  for (const t of texts) {
+    for (const m of t.matchAll(/\nexport\s*\{([^}]*)\}/g))
+      for (const part of m[1].split(','))
+        { const n = part.trim().split(' as ').pop().trim(); if (n) out.add(n); }
+    for (const m of t.matchAll(/\nexport\s+(?:const|function|let|var)\s+([A-Za-z_$][\w$]*)/g))
+      out.add(m[1]);
+  }
+  return out;
+}
+export function importedNames(html) {
+  const out = new Set();
+  for (const m of html.matchAll(/import\s*\{([^}]*)\}\s*from\s*'\.\/core\//g))
+    for (const part of m[1].split(','))
+      { const n = part.trim().split(' as ').pop().trim(); if (n) out.add(n); }
+  return out;
+}
+/*  ⛔ הסריקה על המקור המולבן — ⚠️ שם בתוך מחרוזת או בהערה אינו קריאה,
+ *  ⭐ והוא בדיוק מה שהופך «נקרא» ל-probe שאינו יכול להיכשל. */
+export function importGaps(html, exported) {
+  /*  ⛔ ההלבנה במודול המשותף — ⚠️ ולא בשרשרת `replace`:
+   *  ⭐ דפוס מחרוזת שרץ על הקובץ כולו שובר את הזיווג —
+   *  ⛔ גרש בתוך תבנית בלע את הגרש האחורי שסוגר אותה,
+   *  ⚠️ והתבנית הבאה בלעה מאות שורות קוד חי: ⭐ ושם שנקרא שם
+   *  נספר כמי שאינו נקרא. */
+  const blank = (m) => ' '.repeat(m.length);
+  /*  ⛔ ורשימת הייבוא מולבנת אחריה — ⚠️ היא קוד ואינה מחרוזת,
+   *  ⭐ ובלעדיה כל שם ברשימה מתאים לעצמו: ⛔ ו«מיובא ואינו
+   *  נקרא» אינו קיים לעולם. */
+  const w = whiten(html, { markup: 'blank' })
+    .replace(/import\s*\{[^}]*\}/g, blank);
+  const imported = importedNames(html);
+  const used = [...exported].filter((n) =>
+    new RegExp('(?<![\\w$.])' + n.replace(/\$/g, '\\$') + '(?![\\w$])').test(w));
+  return { used,
+           missing: used.filter((n) => !imported.has(n)),
+           unused: [...imported].filter((n) => used.indexOf(n) < 0) };
+}
+
+{
+  const EXP = moduleExports(MODS);
+  const G = importGaps(IDX_RAW, EXP);
+  t(n++, G.missing.length === 0 && G.unused.length === 0,
+    `[import-use] כל שם שנקרא מיובא, וכל מיובא נקרא — ${EXP.size} מיוצאים · ` +
+    `${G.used.length} בשימוש: ${G.missing.length} נקראו ולא יובאו · ` +
+    `${G.unused.length} יובאו ואינם נקראים, והצפוי אפס` +
+    (G.missing.length ? ` (${G.missing.join(', ')})` : '') +
+    (G.unused.length ? ` (${G.unused.join(', ')})` : '') +
+    '. מוסיפים את החסר לרשימת הייבוא, ומסירים ממנה את מי שאינו נקרא');
 }
 
 if (RUN_MUT) {
@@ -360,6 +624,125 @@ if (RUN_MUT) {
     t(n++, grown !== IDX && got.length === base,
       `נ1 · ⭐ מוטציית-נגד: פונקציית מוצר חדשה ⛔ אינה מפילה — ` +
       `נמדדו ${got.length} אתרים והצפוי ${base}`);
+  }
+
+  /*  ⛔ מוטציה רביעית — ⚠️ `<style>` שחוזר ל-`index.html`: ⭐ זה בדיוק
+   *  המצב שהשורה באה למנוע, ⛔ והמחרוזת המוצהרת אינה משנה אותו. */
+  {
+    const grown = IDX_RAW.replace('</head>', '<style>.zz{color:red}</style></head>');
+    const got = sheetInDoc(grown);
+    t(n++, got > 0,
+      `מ4 · ⛔ מוטציה: \`<style>\` ב-index.html מפיל את «[block-kind]» — ` +
+      `נמדדו ${got} והצפוי מעל אפס`);
+  }
+  /*  ⛔ מוטציה חמישית — ⚠️ סמן הסגירה של הגיליון יורד. */
+  {
+    const cut = SHEET.split('\n').slice(0, -3).join('\n');
+    const tail = cut.split('\n').slice(-3).join('\n');
+    t(n++, tail.indexOf(BLOCK_KINDS.sheet) < 0,
+      `מ5 · ⛔ מוטציה: גיליון בלי סמן סגירה מפיל את «[block-kind]» — ` +
+      `נמדד סמן ${tail.indexOf('סוף') >= 0 ? 'קיים' : 'חסר'} והצפוי חסר`);
+  }
+  /*  ⛔ מוטציה שישית — ⚠️ הגיליון יוצא מ-`CORE`. */
+  {
+    const bent = SW.replace(/\n\s*'\.\/app\.css',/, '');
+    t(n++, !/(^|\n)\s*'\.\/app\.css',/.test(bent) && bent !== SW,
+      `מ6 · ⛔ מוטציה: גיליון שאינו ב-\`CORE\` מפיל את «[block-core]» — ` +
+      `נמדד ${bent === SW ? 'ללא שינוי' : 'הוסר'} והצפוי שיוסר`);
+  }
+  /*  ⭐ מוטציית-נגד: אתר חדש שבונה CSS בזמן ריצה **ומוצהר** ⛔ אינו
+   *  מפיל — ⚠️ זו בדיוק ההצהרה שהשורה באה לדרוש. */
+  {
+    const grown = IDX_RAW + '\nfunction zzMakeSheet() {\n' +
+      "  var s = document.createElement('style');\n  return s;\n}\n";
+    const sites = cssStringSites(grown);
+    const decl = { ...(APP.cssStrings || {}), zzMakeSheet: 'x'.repeat(30) };
+    const undecl = sites.filter((s) => !(s in decl));
+    t(n++, sites.indexOf('zzMakeSheet') >= 0 && undecl.length === 0,
+      `נ2 · ⭐ מוטציית-נגד: אתר חדש שמוצהר ⛔ אינו מפיל — ` +
+      `נמדדו ${sites.length} אתרים ו-${undecl.length} בלי הכרזה, והצפוי אפס`);
+  }
+
+  /*  ⛔ מוטציה שביעית — ⚠️ נכס שחוזר ל-base64. */
+  {
+    const grown = IDX_RAW.replace('</head>',
+      '<img src="data:image/png;base64,' + 'A'.repeat(DATA_URI_MAX + 40) + '"></head>');
+    const got = dataUriGaps(grown, DATA_URI_MAX);
+    t(n++, got.length > 0,
+      `מ7 · ⛔ מוטציה: נכס מוטבע ב-base64 מפיל את «[asset-file]» — ` +
+      `נמדדו ${got.length} והצפוי מעל אפס`);
+  }
+  /*  ⛔ מוטציה שמינית — ⚠️ תיקיית נכסים שיוצאת מ-`CORE`. */
+  {
+    const bent = SW.replace(/\n\s*'\.\/icons\/[^']*',?/g, '');
+    const cold = Object.keys(ASSET_DIRS).filter((d) => existsSync(join(ROOT, d)))
+                       .filter((d) => !new RegExp("'\\./" + d + "/").test(bent));
+    t(n++, cold.indexOf('icons') >= 0,
+      `מ8 · ⛔ מוטציה: תיקיית נכסים מחוץ ל-\`CORE\` מפילה את «[asset-file]» — ` +
+      `נמדדו ${cold.length} תיקיות קרות והצפוי שיכללו את icons`);
+  }
+  /*  ⛔ מוטציה תשיעית — ⚠️ נכס שנלכד מה-DOM במקום ממשתנה. */
+  {
+    const grown = IDX_RAW +
+      "\nvar ZZ_LOGO = document.getElementById('appLogo').getAttribute('src');\n";
+    const got = assetReadGaps(grown);
+    t(n++, got.length > 0,
+      `מ9 · ⛔ מוטציה: נכס שנלכד מה-DOM מפיל את «[asset-file]» — ` +
+      `נמדדו ${got.length} אתרים והצפוי מעל אפס`);
+  }
+  /*  ⭐ מוטציית-נגד: `data:image/svg` קצר ⛔ אינו מפיל — ⚠️ סימון מוטבע
+   *  הוא רכיב ⛔ ואינו נכס בינארי. */
+  {
+    const grown = IDX_RAW.replace('</head>',
+      '<img src="data:image/svg+xml;base64,' + 'A'.repeat(40) + '"></head>');
+    const got = dataUriGaps(grown, DATA_URI_MAX);
+    t(n++, grown !== IDX_RAW && got.length === 0,
+      `נ3 · ⭐ מוטציית-נגד: סימון \`svg\` קצר מוטבע ⛔ אינו מפיל — ` +
+      `נמדדו ${got.length} והצפוי אפס`);
+  }
+
+  /*  ⛔ מוטציה עשירית — ⚠️ שם שיורד מרשימת הייבוא ונשאר נקרא: ⭐ זה
+   *  בדיוק ה-`ReferenceError` שנבלע במטפל. */
+  {
+    const EXP = moduleExports(MODS);
+    const imp0 = importedNames(IDX_RAW);
+    /*  ⛔ השם נבחר מהחיתוך — ⚠️ נקרא **וגם** ברשימת הייבוא:
+     *  ⭐ שם שהמודול מתקין על `window` נקרא ואינו ברשימה,
+     *  ⛔ ואין מה להסיר ממנה. */
+    const one = importGaps(IDX_RAW, EXP).used.find((x) => imp0.has(x));
+    /*  ⛔ הפסיק אופציונלי — ⚠️ יש רשימת ייבוא שכל שמה אחד
+     *  ברשימה שלפניו פסיק: ⛔ דפוס שדורש פסיק נוקב אינו מסוגל
+     *  להסיר את האחרון, ⚠️ והמוטציה עוברת בלי לשנות דבר. */
+    const cut = new RegExp('(import\\s*\\{[^}]*?)\\b' + one + '\\b\\s*,?\\s*');
+    const bent = IDX_RAW.replace(cut, '$1');
+    const got = importGaps(bent, EXP);
+    t(n++, bent !== IDX_RAW && got.missing.indexOf(one) >= 0,
+      `מ10 · ⛔ מוטציה: \`${one}\` שירד מהייבוא מפיל את «[import-use]» — ` +
+      `נמדדו ${got.missing.length} שנקראו ולא יובאו והצפוי שיכללו אותו`);
+  }
+  /*  ⛔ מוטציה אחת-עשרה — ⚠️ שם שיובא ואינו נקרא. */
+  {
+    const EXP = moduleExports(MODS);
+    const dead = [...EXP].find((x) => importGaps(IDX_RAW, EXP).used.indexOf(x) < 0);
+    const bent = dead
+      ? IDX_RAW.replace(/import\s*\{/, 'import { ' + dead + ', ')
+      : IDX_RAW;
+    const got = importGaps(bent, EXP);
+    t(n++, !!dead && got.unused.indexOf(dead) >= 0,
+      `מ11 · ⛔ מוטציה: \`${dead}\` שיובא ואינו נקרא מפיל את «[import-use]» — ` +
+      `נמדדו ${got.unused.length} מיובאים בלי קריאה והצפוי שיכללו אותו`);
+  }
+  /*  ⭐ מוטציית-נגד: שם שמיוצא ואינו נקרא בקובץ ⛔ אינו מפיל — ⚠️ המודול
+   *  מייצא למי שצריך, ⭐ ולא כל אפליקציה צורכת את כולו. */
+  {
+    const EXP = moduleExports(MODS);
+    const base = importGaps(IDX_RAW, EXP);
+    const grown = new Set([...EXP, 'zzNeverCalled']);
+    const got = importGaps(IDX_RAW, grown);
+    t(n++, got.missing.length === base.missing.length &&
+           got.unused.length === base.unused.length,
+      `נ4 · ⭐ מוטציית-נגד: שם שמיוצא ואינו נקרא ⛔ אינו מפיל — ` +
+      `נמדדו ${got.missing.length} חסרים ו-${got.unused.length} עודפים, והצפוי כמו הבסיס`);
   }
 }
 

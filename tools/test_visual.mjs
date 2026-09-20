@@ -47,7 +47,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [90, 107, 84, 104, 211];
+export const ROWS = [92, 110, 85, 107, 213];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -77,7 +77,7 @@ const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-const SUBRUN = !!process.env.GATE_SUBRUN;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -231,7 +231,26 @@ function declsIn(src, a, b, inSheet) {
   }
   return out;
 }
-const lineOf = (src, i) => src.slice(0, i).split('\n').length;
+/*  ⛔ מפת תחילות השורות נבנית פעם אחת לכל מקור — ⚠️ חיתוך ופיצול לכל
+ *  ממצא הוא עבודה ריבועית: ⭐ נמדד שגיליון הסגנון הכפיל את המקור,
+ *  ⛔ והשער חצה את תקציב הזמן על חישוב שכולו חוזר על עצמו.
+ *  ⛔ **והערך זהה** — ⚠️ מספר השורה הוא מספר תווי `\n` שלפני ההיסט, ועוד אחד. */
+const LINE_MAP = new Map();
+function lineStarts(src) {
+  let a = LINE_MAP.get(src);
+  if (a) return a;
+  a = [0];
+  for (let k = 0; k < src.length; k++) if (src[k] === '\n') a.push(k + 1);
+  if (LINE_MAP.size > 8) LINE_MAP.clear();
+  LINE_MAP.set(src, a);
+  return a;
+}
+const lineOf = (src, i) => {
+  const a = lineStarts(src);
+  let lo = 0, hi = a.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (a[m] <= i) lo = m; else hi = m - 1; }
+  return lo + 1;
+};
 
 /* ── הסריקה ────────────────────────────────────────────────────────────── */
 /*  ⛔ בזיכרון ⛔ ובלי תהליך — ⚠️ המקור מגיע כארגומנט, ⭐ והמוטציה מריצה
@@ -333,7 +352,10 @@ function groupSites(src, names) {
   return n;
 }
 
-const IDX = rd('index.html');
+/*  ⛔ ההיקף כולל את גיליון הסגנון — ⚠️ הוא יצא ל-`app.css`, ⭐ והוא נעטף
+ *  ב-`<style>` שחילוץ ההיקף מוצא אותו: ⛔ סורק שקורא `index.html` לבדו
+ *  מדווח «אפס ליטרלים» על גיליון שלם שלא נסרק. */
+const IDX = rd('index.html') + '\n<style data-sheet="app">\n' + rd('app.css') + '\n</style>';
 const F = scan(IDX, APP.visualAllow);
 
 t(F.color.length === 0,
@@ -455,7 +477,16 @@ function cssRules(css) {
   walk(css.replace(/\/\*[\s\S]*?\*\//g, ' '), '');
   return out;
 }
-const styleSheet = (src) => { const r = sheetRanges(src)[0]; return r ? src.slice(r[0], r[1]) : ''; };
+/*  ⛔ גיליון הסגנון מזוהה בסמן שלו ⛔ ולא במקומו ברצף — ⚠️ מחרוזת CSS
+ *  בתוך JS נושאת `<style>` אף היא: ⭐ והיא CSS של דוח מודפס ⛔ ואינה CSS
+ *  של האפליקציה — ⚠️ וסורק שלקח את הראשון מדד אותה במקומו. */
+const SHEET_TAG = '<style data-sheet="app">';
+const styleSheet = (src) => {
+  const i = src.indexOf(SHEET_TAG);
+  if (i < 0) return '';
+  const a = i + SHEET_TAG.length, b = src.indexOf('</style>', a);
+  return src.slice(a, b < 0 ? src.length : b);
+};
 /*  ⛔ הפרופיל הוא **קבוצת המצבים** ⛔ ולא גוף הכלל — ⚠️ כפתור שמגיב
  *  באחת ואינו מגיב באחרת נקרא כתקלה, ⭐ **והמשתמש עובר ביניהן**: ⛔ וגוף
  *  הבסיס אינו נכנס כלל — ⚠️ הוא מיקום, צבע, גודל וריווח, ⭐ והם מוצר.
@@ -886,12 +917,12 @@ for (const r of MUT) {
  *  מוטציה שאינה רצה. */
 {
   const TWIN = 'zz-twin';
-  const sheet = (extra) => '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}' +
+  const sheet = (extra) => SHEET_TAG + '.' + TWIN + '{color:var(--text);padding:var(--sp-4)}' +
     '.' + TWIN + ':hover{opacity:var(--op-5)}' + (extra || '') + '</style>';
   const S0 = { a: sheet(), b: sheet(), c: sheet() };
   const g0 = classStateGaps('a', S0);
   t(g0.length === 0, 'נ4 · ⭐ בקרה חיובית: אותה קבוצת מצבים בשלושה ⛔ **אינה** מפילה');
-  const g1 = classStateGaps('a', { a: '<style>.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style>',
+  const g1 = classStateGaps('a', { a: SHEET_TAG + '.' + TWIN + '{color:var(--text);padding:var(--sp-4)}</style>',
                                    b: sheet(), c: sheet() });
   t(g1.length > g0.length, 'מ19 · הסרת `:hover` ממחלקה משותפת באחת **מפילה** את «classes»');
   const g2 = classStateGaps('a', { a: sheet('.' + TWIN + ':disabled{opacity:var(--op-3)}'),
@@ -919,7 +950,14 @@ for (const r of MUT) {
 /*  ⛔ שלוש השכבות החדשות — ⚠️ המוטציות בזיכרון, ⭐ ועל עותק של המקור:
  *  ⛔ מוטציה שנכתבת לעץ משאירה אותו שגוי כשהמדידה נפלה באמצע. */
 const RULES0 = cssRules(styleSheet(IDX));
-const injCss = (r) => { const i = IDX.indexOf('</style>'); return IDX.slice(0, i) + r + IDX.slice(i); };
+/*  ⛔ ההזרקה אל גיליון הסגנון ⛔ ולא אל ה-`</style>` הראשון — ⚠️ מחרוזת
+ *  CSS בתוך JS נושאת סוגר משלה, ⭐ והזרקה אליה הייתה מודדת את הדוח
+ *  המודפס במקום את גיליון האפליקציה. */
+const injCss = (r) => {
+  const a = IDX.indexOf(SHEET_TAG);
+  const i = IDX.indexOf('</style>', a);
+  return IDX.slice(0, i) + r + IDX.slice(i);
+};
 const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0, i) + x + h.slice(i); };
 
 /* מ24. `--brand` ממופה להדגשה ולא לזהות — [semantic-role] נופלת */

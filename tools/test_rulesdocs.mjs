@@ -55,7 +55,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 46, 210, 113];
+export const ROWS = [5, 8, 48, 210, 116];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -79,7 +79,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 24, app: 4, appWhy: 'מספר השערים והבודקים שהריפו נושא — כל שער פרטי מוסיף טענת תוכן' };
+const FLOOR = { shared: 27, app: 4, appWhy: 'מספר השערים והבודקים שהריפו נושא — כל שער פרטי מוסיף טענת תוכן' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -89,8 +89,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -133,6 +137,25 @@ const t = (c, m) => { RAN++; if (c) { pass++; console.log('  ok   ' + m); }
 
 const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const DOC = rd('CLAUDE.md');
+/*  ⛔ שתי העמודות נמדדות בנפרד — ⚠️ **מה נכנס**: כל שורת טבלה ⟵ עמודת
+ *  התקן שלה ⟵ עמודת ההערות שלה; ⛔ **ומה מפיל**: תקן שאינו הוראה,
+ *  ⚠️ ומספר סבב באחת מהן. ⭐ **ולמה המבנה קיים**: התקן הוא מה שסשן
+ *  קורא, ⛔ וניסוח שמתאר את מה שהיה מלמד אותו על עולם שהשתנה. */
+export function tableCols(doc) {
+  const out = { rows: 0, notInstr: [], stdRound: [], noteRound: [] };
+  const RE = /^\| (\d+) \| ([^|]*) \| (.*?) \| (?:✅|⭕|❌|🔲) \| (?:✅|⭕|❌|🔲) \| (?:✅|⭕|❌|🔲) \| (?:✅|⭕|❌|🔲) \| (?:✅|⭕|❌|🔲) \|(.*)\|\s*$/;
+  for (const l of doc.split('\n')) {
+    const m = RE.exec(l);
+    if (!m) continue;
+    const [, n, , std, note] = m;
+    out.rows++;
+    if (!std.includes('⛔') && !/\*\*[^*]+\*\*/.test(std) && !std.includes('`')) out.notInstr.push(n);
+    if (/סבב\s+\d+/.test(std)) out.stdRound.push(n);
+    if (/סבב\s+\d+/.test(note)) out.noteRound.push(n);
+  }
+  return out;
+}
+
 
 /*  ⛔ הכותרות המותרות בחלק הפרטי — ⚠️ זו ההגדרה עצמה ולא רשימת דוגמאות:
  *  מסכים ולוגיקה של האפליקציה · הפער הפתוח · ופרקי הסבבים שבחלון. */
@@ -284,8 +307,8 @@ const ACTIVE = activeLines.join('\n');
   const body = b ? b[1] : '';
   /*  ⛔ שם השורה עירום (סבב 96) — ⚠️ סימון הלולאה ירד עם הכללים,
    *  ⭐ ואין יותר זיווג שממנו הוא נגזר. */
-  const row = /^\|\s*\d+\s*\|\s*עמודת התקן כהוראה\s*\|([^|]*)\|/m.exec(body);
-  t(!!row, '31א · שורת «עמודת התקן כהוראה» יושבת בתוך `table`');
+  const row = /^\|\s*\d+\s*\|\s*עמודת התקן — תקן ותוכן\s*\|([^|]*)\|/m.exec(body);
+  t(!!row, '31א · שורת «עמודת התקן — תקן ותוכן» יושבת בתוך `table`');
   const std = row ? row[1] : '';
   t(/הטבלה היא מקור ההוראה, ⛔ ולא תיאור/.test(std) &&
     /ואין לכתוב דבר שסותר שורה קיימת/.test(std),
@@ -462,8 +485,48 @@ const ACTIVE = activeLines.join('\n');
   t(hits.length === 0, `21ד · אין הצהרת «זהה בכולן» בתיעוד הפעיל (${hits.length})`);
 }
 
+/* ── שתי העמודות — תקן ותוכן ───────────────────────────────────────────── */
+{
+  const c = tableCols(DOC);
+  t(c.notInstr.length === 0,
+    `31ג · עמודת התקן היא הוראה — נמדדו ${c.rows} שורות ו-${c.notInstr.length} ` +
+    `בלי ערך, מספר או איסור${c.notInstr.length ? ' (' + c.notInstr.join(' · ') + ')' : ''}. ` +
+    'מדגישים את הערך שהופך את השורה להוראה בת-אכיפה');
+  t(c.stdRound.length === 0,
+    `31ד · אפס מספר סבב בעמודת התקן — נמדדו ${c.stdRound.length}` +
+    (c.stdRound.length ? ' (' + c.stdRound.join(' · ') + ')' : '') +
+    '. כותבים את השינוי כתקן מלכתחילה, ⛔ ולא כהיסטוריה');
+  t(c.noteRound.length === 0,
+    `31ה · אפס מספר סבב בעמודת ההערות — נמדדו ${c.noteRound.length}` +
+    (c.noteRound.length ? ' (' + c.noteRound.join(' · ') + ')' : '') +
+    '. מסירים את האזכור ומשאירים את העובדה');
+}
+
 if (RUN_MUT) {
   mutStage();
+/* ── מוטציות שתי העמודות ───────────────────────────────────────────────── */
+{
+  /*  ⛔ המוטציה שוברת את המנגנון ⛔ ולא את הצורה — ⚠️ שורה שכל תוכנה
+   *  תיאור, ⭐ ואזכור סבב בכל אחת משתי העמודות. */
+  const one = DOC.split('\n').find((l) => /^\| \d+ \| /.test(l));
+  const cells = one.split('|');
+  const plain = cells.map((c, i) => (i === 3 ? ' תיאור חופשי בלי ערך ובלי איסור ' : c)).join('|');
+  t(tableCols(DOC.replace(one, plain)).notInstr.length > 0,
+    'מ31ג · שורה שעמודת התקן שלה תיאור בלבד מפילה את טענה 31ג');
+  const withRound = one.replace(/\| (✅|⭕|❌|🔲) \|/, ' (סבב 12) | $1 |');
+  t(tableCols(DOC.replace(one, withRound)).stdRound.length > 0,
+    'מ31ד · מספר סבב בעמודת התקן מפיל את טענה 31ד');
+  const noteRound = one.replace(/\|\s*$/, ' ⚠️ **נמדד**: נקבע בסבב 12 |');
+  t(tableCols(DOC.replace(one, noteRound)).noteRound.length > 0,
+    'מ31ה · מספר סבב בעמודת ההערות מפיל את טענה 31ה');
+  /*  ⭐ מוטציית-נגד — ⛔ מספר קבוע בעמודת התקן אינו מפיל: ⚠️ הוא הערך
+   *  שהופך את השורה להוראה, ⭐ ואינו היסטוריה. */
+  const num = one.replace(/\| (✅|⭕|❌|🔲) \|/, ' · **7** דרגות | $1 |');
+  const n = tableCols(DOC.replace(one, num));
+  t(n.stdRound.length === 0 && n.notInstr.length === 0,
+    'נ31 · ⭐ מוטציית-נגד: מספר קבוע בעמודת התקן ⛔ אינו מפיל');
+}
+
 /* ── המוטציות — ⛔ עותק אחד לשער, ולא עותק לכל מוטציה (סבב 75) ──────────── */
 /*  ⛔ עד סבב 75 כל אחת מ-40 המוטציות עשתה `cp -r` של העץ כולו ⛔ ותהליך
  *  `node` חדש — ⚠️ והזמן גדל עם **מספר המוטציות** ולא עם גודל הקוד.
@@ -673,9 +736,9 @@ t(!capsFails((doc) => {
    *  ⛔ **והמוטציה נכתבת כתבנית ולא כשם אסימון** — ⚠️ שם האסימון נבדל
    *  ביניהן, ⭐ והמנגנון אחד. */
   {
-    const bad = rd('index.html').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
-                                         '$1#1a1a1a');
-    t(runGateOn({ 'index.html': bad, [CAPS]: caps }, 'test_visual.mjs', () => ({})),
+    const bad = rd('app.css').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
+                                      '$1#1a1a1a');
+    t(runGateOn({ 'app.css': bad, [CAPS]: caps }, 'test_visual.mjs', () => ({})),
       'מ42 · ליטרל צבע בכללי הבאנר **מפיל** את «כל ערך חזותי נגזר — סריקה הפוכה»');
   }
   /*  ⭐ מוטציית-נגד: ערך שאינו צבע באותו כלל ⛔ אינו מפיל — ⚠️ המנגנון
@@ -1030,14 +1093,14 @@ t(!capsFails((doc) => {
    *  חי ביומן לצד `--text-3` שבשלוש, ⛔ ורשימה של חמישה שמות לא תפסה
    *  אותו — ⚠️ היא תפסה את מה שהיה ⛔ ולא את מה שנוסף. */
   {
-    const idx = rd('index.html');
+    const idx = rd('app.css');
     const li = idx.indexOf(':root');
     const at = idx.indexOf('\n', li) + 1;
     /*  ⛔ ולאסימון החדש קורא — ⚠️ בלעדיו נופלת הטענה «הוגדר ואין לו
      *  קורא», ⭐ והמוטציה הייתה מודדת טענה אחרת. */
     const one = (idx.slice(0, at) + '  --xtra:#123456;\n' + idx.slice(at))
                   .replace('var(--text-3)', 'var(--xtra)');
-    t(runGateOn({ 'index.html': one }, 'test_caps_ui.mjs', () => ({})),
+    t(runGateOn({ 'app.css': one }, 'test_caps_ui.mjs', () => ({})),
       'מ75 · אסימון שנוסף באחת ואינו מוצהר **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
   /*  ⭐ מוטציית-נגד: שינוי שם עקבי בערכה, בגוף ה-CSS ובהצהרה ⛔ אינו
@@ -1295,10 +1358,10 @@ t(!capsFails((doc) => {
    *  נושא — בהיר וכהה», ⭐ והנימוק המדוד הוא שאוצר מילים שנבדל מכריח כלל
    *  CSS פרטי — ⛔ וכלל משותף אינו יכול לנקוב בשם שקיים באחת בלבד. */
   {
-    const idx = rd('index.html');
+    const idx = rd('app.css');
     if (idx.indexOf('--border') < 0) t(true, 'מ53 · ⭕ אין כאן `--border` — ⛔ ואין מה למוטט');
     else
-      t(runGateOn({ 'index.html': idx.split('--border').join('--line') },
+      t(runGateOn({ 'app.css': idx.split('--border').join('--line') },
                   'test_caps_ui.mjs', () => ({})),
         'מ53 · `--line` במקום `--border` **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
@@ -1334,12 +1397,13 @@ t(!capsFails((doc) => {
     /*  ⛔ הצמד מוחלף **יחד** ⛔ ולא חצי ממנו (סבב 135) — ⚠️ המוסכמה
      *  `--on-X` היא מה שקושר בין השניים, ⭐ ושינוי חצי הוא ניתוק
      *  הצמד ⛔ ולא שינוי שם. */
-    const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    const idx = rd('index.html'), css = rd('app.css'), caps = rd('tools/check-capabilities.mjs');
     const ren = (s) => s.split('--on-brand').join('--on-ident')
                         .replace(/--brand(?![-A-Za-z0-9])/g, '--ident');
-    if (idx.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
+    if (css.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
     else
-      t(!runGateOn({ 'index.html': ren(idx), 'tools/check-capabilities.mjs': ren(caps) },
+      t(!runGateOn({ 'index.html': ren(idx), 'app.css': ren(css),
+                     'tools/check-capabilities.mjs': ren(caps) },
                    'test_caps_ui.mjs', () => ({})),
         'נ30 · ⭐ שינוי שם עקבי של הצמד כולו ⛔ **אינו** מפיל');
   }
@@ -1357,9 +1421,9 @@ t(!capsFails((doc) => {
    *  ריווח בכלל CSS; ⛔ **ומה מפיל**: הטענה «סולם אחד לגודל, לריווח
    *  ולרדיוס» — ⭐ ערך שנבחר לאתר בודד הוא סולם שלא הוגדר. */
   {
-    const idx = rd('index.html');
-    t(runGateOn({ 'index.html': idx.replace('.u-ai-c{align-items:center}',
-                                            '.u-ai-c{align-items:center;padding:7px}') },
+    const idx = rd('app.css');
+    t(runGateOn({ 'app.css': idx.replace('.u-ai-c{align-items:center}',
+                                         '.u-ai-c{align-items:center;padding:7px}') },
                 'test_caps_ui.mjs', () => ({})),
       'מ72 · ערך ריווח שאינו מהסולם **מפיל** את «סולם אחד לגודל, לריווח ולרדיוס»');
   }
@@ -1799,7 +1863,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
                          .filter((i) => i >= 0).pop();
     const l = DOC_LINES.slice(); l.splice(idx + 1, 0, add); return l.join('\n');
   };
-  const CSS = (add) => rd('index.html').replace('</style>', add + '\n</style>');
+  const CSS = (add) => rd('app.css') + '\n' + add + '\n';
 
   t(fails({ 'CLAUDE.md': atTop('`CACHE_NAME` הנוכחי: `' + APP.cachePrefix + "v99`.") }),
     'מ1 · הצהרת גרסה בפרק פעיל מפילה את 21א');
@@ -1817,7 +1881,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
     'מ8 · כותרת נוספת ב-CONTEXT.md מפילה את 23ב');
   t(fails({ 'tools/check-comments.mjs': rd('tools/check-comments.mjs').replace("add('sw.js')", "add('x.js')") }),
     'מ9 · צמצום תחולת תקן ההערות מפיל את 24ב');
-  t(fails({ 'index.html': CSS('.r65-dead-class{color:red}') }),
+  t(fails({ 'app.css': CSS('.r65-dead-class{color:red}') }),
     'מ10 · מחלקת CSS שאינה מוחלת מפילה את טענה 15');
 
   t(fails({ 'index.html': rd('index.html').replace(
@@ -1827,8 +1891,11 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
   t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
     'נ1 · ⭐ אותה הצהרה **בתוך פרק סבב** אינה מפילה — הפרק הוא היסטוריה');
-  t(!fails({ 'index.html': CSS('.r65-live-class{color:red}')
-                             .replace('</body>', '<i class="r65-live-class"></i></body>') }),
+  /*  ⛔ המוטציה נוגעת בשני קבצים — ⚠️ הכלל חי ב-`app.css` וההחלה
+   *  ב-`index.html`: ⭐ כלל בלי אתר החלה הוא בדיוק מה שטענה 15 מפילה. */
+  t(!fails({ 'app.css': CSS('.r65-live-class{color:red}'),
+             'index.html': rd('index.html')
+               .replace('</body>', '<i class="r65-live-class"></i></body>') }),
     'נ2 · ⭐ מחלקה שכן מוחלת אינה מפילה — המדידה היא שימוש ולא ספירה');
 }
 

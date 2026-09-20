@@ -52,11 +52,11 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 141, 228];
+export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 146, 229];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', 'a55449342b268d9c'],
+  ['table', '63ad78c6bbc4df0a'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -95,8 +95,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -337,7 +341,15 @@ for (const [id, sha] of CANON) {
   /*  ⛔ השם נקרא מהקובץ ⛔ ואינו מוצהר כאן — ⚠️ הקידומת נבדלת בין הריפו,
    *  ⭐ ומה שנמדד הוא **השינוי** ולא הערך. */
   const nameOf = (t) => (/CACHE_NAME\s*=\s*'([^']+)'/.exec(t) || [])[1] || null;
-  const WATCH = ['index.html', 'sw.js'];
+  /*  ⛔ הרשימה נגזרת מ-`CORE` שב-`sw.js` ⛔ ואינה מוקלדת — ⚠️ **כל קובץ
+   *  שמוטמן מראש מוגש מהמטמון**, ⭐ ומודול ליבה שהשתנה בלי קידום נשאר ישן
+   *  במכשיר המותקן בדיוק כמו `index.html`: ⛔ ושני שמות מוקלדים השאירו את
+   *  `core/`, את המניפסט ואת האייקונים מחוץ למדידה. ⚠️ ו-`'./'` אינו קובץ,
+   *  ⭐ והדפוס דורש תו אחד לפחות אחרי הנקודה-לוכסן. */
+  const coreList = (t) => {
+    const m = /var CORE\s*=\s*\[([\s\S]*?)\]/.exec(t);
+    return m ? [...m[1].matchAll(/'\.\/([^']+)'/g)].map((x) => x[1]) : [];
+  };
   const ver = git('--version');
   if (ver.error || ver.status !== 0) skip('git אינו זמין בסביבה');
   else if (git('rev-parse', '--is-inside-work-tree').stdout.trim() !== 'true')
@@ -346,11 +358,13 @@ for (const [id, sha] of CANON) {
     skip('אין origin/main להשוות אליו (clone רדוד או ריפו בלי remote)');
   else if (!fs.existsSync('sw.js')) skip('אין `sw.js` בריפו');
   else {
+    const swSrc = fs.readFileSync('sw.js', 'utf8');
+    const WATCH = ['sw.js', ...coreList(swSrc)];
     const touched = WATCH.filter((f) => fs.existsSync(f) &&
       git('diff', '--quiet', 'origin/main', '--', f).status !== 0);
     const base = git('show', 'origin/main:./sw.js');
     const there = base.status === 0 ? nameOf(base.stdout) : null;
-    const here = nameOf(fs.readFileSync('sw.js', 'utf8'));
+    const here = nameOf(swSrc);
     if (!touched.length) pass('`CACHE_NAME` — קובצי המקור זהים ל-origin/main, ואין מה לקדם');
     else if (there === null) pass('`CACHE_NAME` אינו קיים ב-origin/main — הוא נוסף בשינוי הזה');
     else if (here === there)
