@@ -259,9 +259,12 @@ for (const r of MUT) {
  *  **טקסט קבוע**, ⛔ ולא הצורה הדו-ממדית: ⭐ מה שנגזר נמדד מול מקורו. */
 {
   const j = IDX.lastIndexOf('</body>');
+  /*  ⛔ השם שנוסף נקרא באותו קטע — ⚠️ מוטציית-נגד היא **שינוי חי**:
+   *  ⭐ שם שאין לו קורא הוא יתום, ⛔ והוא מפיל בדין. */
   const live = '<script>\nvar _zzLive = (window._rows || []).map(function (r) ' +
                '{ return [r.k, r.v]; });\nfunction _zzL() { var h = 0; ' +
-               '_zzLive.forEach(function (x) { h += x.length; }); return h; }\n<\/script>\n';
+               '_zzLive.forEach(function (x) { h += x.length; }); return h; }\n' +
+               '_zzL();\n<\/script>\n';
   if (j < 0) t(true, 'נ2 · ⭕ אין כאן סוגר גוף — ⛔ ואין לאן להוסיף');
   else t(!runGateOn({ 'index.html': IDX.slice(0, j) + live + IDX.slice(j) },
                     'check-capabilities.mjs'),
