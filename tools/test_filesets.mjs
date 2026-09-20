@@ -202,8 +202,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -346,14 +350,18 @@ export function productGates(root, peers, self) {
     const m = /export const ROWS\s*=\s*\[([\s\S]*?)\]/.exec(fs.readFileSync(p, 'utf8'));
     const rows = m ? (m[1].replace(/\/\*[\s\S]*?\*\//g, '').match(/\d+/g) || []) : [];
     if (rows.length) continue;
-    let seen = 0;
+    let seen = 0, looked = 0;
     for (const q of peers) {
       if (q === self) continue;
       const d = path.join(root, '..', q);
       if (!fs.existsSync(d)) { if (!away.includes(q)) away.push(q); continue; }
+      looked++;
       if (fs.existsSync(path.join(d, rel))) seen++;
     }
-    if (!seen) out.push(k);
+    /*  ⛔ «לא נמצא» אינו «אינו קיים» — ⚠️ אחות שאינה על הדיסק אינה תשובה,
+     *  ⭐ והיא מדווחת בשמה ב-`away`: ⛔ וכשאף אחות לא נקראה אין מה להכריע,
+     *  ⚠️ **ושער היה מוכרז «מוצר» מפני שלא היה מול מה להשוות**. */
+    if (looked && !seen) out.push(k);
   }
   return { out, away };
 }
@@ -655,6 +663,10 @@ else {
 {
   const d = clone('m8');
   fs.writeFileSync(path.join(d, 'tools', 'test_probe_prod.mjs'), 'export const ROWS = [];\n');
+  /*  ⛔ האחיות נבנות לצד העותק — ⚠️ «שער מוצר» הוא שער שהאחיות **נקראו**
+   *  ואין בהן מקבילה לו: ⭐ בלי האחיות המדידה אינה מכריעה, ⛔ והמוטציה
+   *  הייתה עוברת על סביבה ולא על הפרה. */
+  for (const q of PEERS) if (q !== APP.app) fs.mkdirSync(path.join(d, '..', q), { recursive: true });
   APP.appGates.probe_prod = 'מודד את חשבון המוצר שחי כאן בלבד — ⛔ ולשאר אין חשבון כזה';
   const hit = productGates(d, PEERS, APP.app).out.includes('probe_prod');
   delete APP.appGates.probe_prod;
