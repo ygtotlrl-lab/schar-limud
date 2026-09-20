@@ -59,7 +59,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [114, 221];
+export const ROWS = [115, 222];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -125,7 +125,7 @@ const t = (n, cond, m) => { RAN++; if (cond) { pass++; console.log(`  ok   ${n} 
 
 /*  ⛔ סט הקבצים הנסרק — ⚠️ קובצי המוצר והמעטפת שהם **פר-אפליקציה**:
  *  ⭐ מה שמשותף נמדד ב-`sha256`, ⛔ ומה שמשווה בין הריפו הוא `tools/`. */
-const FIXED = ['index.html', 'sw.js', 'manifest.json', 'CONTEXT.md', 'README.md',
+const FIXED = ['index.html', 'app.css', 'sw.js', 'manifest.json', 'CONTEXT.md', 'README.md',
                'android/README.md', 'android/app/build.gradle',
                'android/app/src/main/AndroidManifest.xml'];
 

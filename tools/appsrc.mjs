@@ -20,10 +20,15 @@ import { join } from 'node:path';
  *  שמדווח מספר שורה על המקור המחובר סופר לפי הסדר הזה. */
 export const CORE_FILES = ['core/util.js', 'core/sync.js', 'core/hebrew.js'];
 
+/*  ⛔ גיליון הסגנון הוא קובץ ⛔ ואינו `<style>` ב-`index.html` — ⚠️ ובלוק
+ *  שאינו נושא את סוגו נקרא כסוג אחר: ⭐ מחרוזת CSS בתוך JS נראית כ-CSS של
+ *  האפליקציה, ⛔ ואינה. */
+export const SHEET_FILE = 'app.css';
+
 /*  ⛔ מודול שאינו קיים בריפו מדולג ⛔ ואינו מפיל — ⚠️ מנוע התאריך העברי
  *  חי במי שיש בה צרכן בלבד, ⭐ וההיעדר שם מוצהר בשער סט-הקבצים. */
 export function appSrcFiles(root) {
-  return ['index.html'].concat(CORE_FILES).filter((f) => existsSync(join(root, f)));
+  return ['index.html', SHEET_FILE].concat(CORE_FILES).filter((f) => existsSync(join(root, f)));
 }
 
 /*  ⛔ המודול נעטף ב-`<script>` ⛔ ואינו משורשר כטקסט חשוף — ⚠️ ההלבנה
@@ -34,6 +39,10 @@ export function appSrcFiles(root) {
 export function appSrc(root) {
   return appSrcFiles(root).map(function (f) {
     const text = readFileSync(join(root, f), 'utf8');
-    return /\.html$/.test(f) ? text : '<script type="module">\n' + text + '\n</script>';
+    if (/\.html$/.test(f)) return text;
+    /*  ⛔ והגיליון נעטף ב-`<style>` — ⚠️ כל סורק CSS מחלץ את ההיקף בסמן
+     *  הזה, ⭐ ומקור שאינו עטוף היה נסרק כ-JS. */
+    if (/\.css$/.test(f)) return '<style data-sheet="app">\n' + text + '\n</style>';
+    return '<script type="module">\n' + text + '\n</script>';
   }).join('\n');
 }

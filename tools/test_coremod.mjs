@@ -54,12 +54,23 @@ const APP = {
   /*  ⚠️ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⭐ אין כאן הגדרה תשתיתית
    *  שיושבת מחוץ לבלוק חתום. */
   coreAllow: {},
+  /*  ⛔ אתר שבונה CSS בזמן ריצה — ⚠️ **מה נכנס**: שם הפונקציה ⟵ מה
+   *  המחרוזת היא, ⛔ ולמה היא אינה גיליון האפליקציה; ⛔ **ומה מפיל**:
+   *  אתר שאינו כאן, ⛔ והכרזה שאין לה אתר. ⭐ **ולמה המבנה קיים**:
+   *  מחרוזת CSS בתוך JS נראית כ-CSS של האפליקציה ⛔ ואינה — ⚠️ והיא
+   *  אינה נטענת עם הדף ⛔ ואינה יורשת את הגיליון. */
+  cssStrings: {
+    pendEnsureStyle:
+      'בונה את כללי סימון ה-⏳ בזמן ריצה — ⛔ הוא במודול המשותף, ⚠️ וזהותו נמדדת ב-`sha256`',
+    _lkStyle:
+      'בונה את כללי מסך הנעילה בזמן ריצה — ⛔ הוא במודול המשותף, ⚠️ וזהותו נמדדת ב-`sha256`',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [18, 203];
+export const ROWS = [18, 59, 204];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -79,7 +90,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר הטענות נגזר ממרשם המודולים,
  *  ⭐ שזהה בכולן: ⛔ ומה שנבדל הוא **תוכן** ההכרזות ⛔ ולא מספרן. */
-const FLOOR = { shared: 10, app: 0, appWhy: '' };
+const FLOOR = { shared: 14, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -199,7 +210,15 @@ export function impureGaps(name, src) {
 }
 
 const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8');
-const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור כולל את גיליון הסגנון — ⚠️ הוא יצא ל-`app.css`, ⭐ וסורק
+ *  שקורא `index.html` לבדו מדווח «אין כלל CSS» על גיליון שלם. */
+/*  ⛔ המקור הגולמי ⛔ ובלי הגיליון — ⚠️ הוא ההיקף של מדידת הסוגים:
+ *  ⭐ `<style>` בו הוא תגית שחזרה לקובץ, ⛔ ולא הגיליון שיצא ממנו. */
+const IDX_RAW = readFileSync(join(ROOT, 'index.html'), 'utf8');
+const SHEET = readFileSync(join(ROOT, 'app.css'), 'utf8');
+const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8') +
+  (existsSync(join(ROOT, 'app.css'))
+    ? '\n<style data-sheet="app">\n' + readFileSync(join(ROOT, 'app.css'), 'utf8') + '\n</style>' : '');
 /*  ⛔ גופי הבלוקים החתומים נחתכים מ-`index.html` לפי הסמנים שמוצהרים
  *  בבודק היכולות — ⚠️ ולא לפי רשימה שנייה כאן: ⭐ סמן שישתנה שם משנה גם
  *  את מה שנמדד כאן. */
@@ -368,6 +387,82 @@ export function hiddenModuleClasses(idx, blocks) {
     '. מייצאים את השמות, או מתקינים את המנוע על `window`');
 }
 
+/* ── 10. ובלוק נושא את סוגו ואת גבולותיו ───────────────────────────────── */
+/*  ⛔ ארבעת הסוגים — ⚠️ **מה נכנס**: הסוג ⟵ המילה שנושאת אותו בשם הבלוק;
+ *  ⛔ **ומה מפיל**: גיליון סגנון שאינו נושא את שתי המילים בסמניו.
+ *  ⭐ **ולמה המבנה קיים**: בלוק שאינו נושא את סוגו נקרא כסוג אחר —
+ *  ⚠️ נמדד גיליון `<style>` ומחרוזת JS עם `@page` באותו קובץ, ⭐ ואיש
+ *  לא ידע שאחד מהשניים אינו CSS של האפליקציה. */
+const BLOCK_KINDS = { signed: 'מודול משותף', sheet: 'גיליון סגנון',
+                      script: 'סקריפט', runtime: 'מחרוזת בזמן ריצה' };
+
+/*  ⛔ ההלבנה קודמת למדידה — ⚠️ `'<style>'` בתוך מחרוזת JS אינו תגית,
+ *  ⭐ והוא בדיוק מה שהסוג הרביעי מתאר: ⛔ סריקה גולמית הייתה מפילה על
+ *  המחרוזת שכבר מוצהרת. */
+export function sheetInDoc(html) {
+  const blank = (m) => ' '.repeat(m.length);
+  const w = html.replace(/'(?:[^'\\\n]|\\.)*'/g, blank)
+                .replace(/"(?:[^"\\\n]|\\.)*"/g, blank)
+                .replace(/`(?:[^`\\]|\\.)*`/g, blank);
+  return (w.match(/<style\b/g) || []).length;
+}
+
+/*  ⛔ האתרים נגזרים מהמקור הגולמי — ⚠️ המחרוזת היא הממצא עצמו, ⭐ והלבנה
+ *  הייתה מוחקת בדיוק את מה שהיא סורקת · ⛔ **והבעלים הוא הפונקציה
+ *  העוטפת** — ⚠️ שם קובץ אינו מקום. */
+export function cssStringSites(html) {
+  const out = new Set();
+  const re = /createElement\(\s*['"]style['"]\s*\)|<style[ >]/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const pre = html.slice(0, m.index);
+    let owner = null, fm;
+    const fre = /\nfunction ([A-Za-z_$][\w$]*)\s*\(/g;
+    while ((fm = fre.exec(pre)) !== null) owner = fm[1];
+    if (owner) out.add(owner);
+  }
+  return [...out].sort();
+}
+
+{
+  /*  ⛔ א — גיליון האפליקציה יושב בקובץ ⛔ ולא ב-`index.html`. */
+  const inDoc = sheetInDoc(IDX_RAW);
+  t(n++, inDoc === 0,
+    `[block-kind] אפס \`<style>\` ב-index.html — נמדדו ${inDoc} והצפוי 0. ` +
+    'מעבירים את הגיליון ל-`app.css`, ומקשרים אותו ב-`<link rel="stylesheet">`');
+
+  /*  ⛔ ב — ולגיליון סמן פתיחה וסמן סגירה, ⚠️ ובשניהם סוגו. */
+  const head = SHEET.split('\n').slice(0, 2).join('\n');
+  const tail = SHEET.split('\n').slice(-3).join('\n');
+  const kind = BLOCK_KINDS.sheet;
+  const okHead = /^\/\* ═══ /.test(head) && head.indexOf(kind) >= 0;
+  const okTail = tail.indexOf('סוף') >= 0 && tail.indexOf(kind) >= 0;
+  t(n++, okHead && okTail,
+    `[block-kind] גיליון הסגנון נושא סמן פתיחה וסגירה ובהם סוגו — נמדדו ` +
+    `${(okHead ? 1 : 0) + (okTail ? 1 : 0)} מתוך 2 והצפוי 2. ` +
+    `מוסיפים סמן שנושא «${kind}» בראש הקובץ ובסופו`);
+
+  /*  ⛔ ג — וכל אתר שבונה CSS בזמן ריצה מוצהר, ⚠️ ונמדד משני צדדיו. */
+  const sites = cssStringSites(IDX_RAW);
+  const decl = APP.cssStrings || {};
+  const undecl = sites.filter((s) => !(s in decl));
+  const ghost = Object.keys(decl).filter((k) => sites.indexOf(k) < 0);
+  const noWhy = Object.keys(decl).filter((k) => String(decl[k]).length < 20);
+  t(n++, !undecl.length && !ghost.length && !noWhy.length,
+    `[block-kind] כל אתר שבונה CSS בזמן ריצה מוצהר — נמדדו ${sites.length} אתרים ` +
+    `מול ${Object.keys(decl).length} הכרזות: ${undecl.length} בלי הכרזה · ` +
+    `${ghost.length} הכרזה בלי אתר · ${noWhy.length} בלי נימוק, והצפוי אפס` +
+    (undecl.length ? ` (${undecl.join(', ')})` : '') +
+    (ghost.length ? ` (${ghost.join(', ')})` : '') +
+    `. מצהירים ב-\`APP.cssStrings\` מה המחרוזת ולמה אינה גיליון האפליקציה`);
+
+  /*  ⛔ ד — והגיליון מוטמן מראש, ⚠️ שקובץ שאינו במטמון שובר את האופליין. */
+  const inCore = /(^|\n)\s*'\.\/app\.css',/.test(SW);
+  t(n++, inCore,
+    `[block-core] גיליון הסגנון ב-\`CORE\` של sw.js — נמדד ${inCore ? 1 : 0} והצפוי 1. ` +
+    'מוסיפים `./app.css` ל-`CORE`, שקובץ שאינו מוטמן שובר את האופליין');
+}
+
 if (RUN_MUT) {
   mutStage();
   /* ── מוטציות ─────────────────────────────────────────────────────────── */
@@ -416,6 +511,43 @@ if (RUN_MUT) {
     t(n++, grown !== IDX && got.length === base,
       `נ1 · ⭐ מוטציית-נגד: פונקציית מוצר חדשה ⛔ אינה מפילה — ` +
       `נמדדו ${got.length} אתרים והצפוי ${base}`);
+  }
+
+  /*  ⛔ מוטציה רביעית — ⚠️ `<style>` שחוזר ל-`index.html`: ⭐ זה בדיוק
+   *  המצב שהשורה באה למנוע, ⛔ והמחרוזת המוצהרת אינה משנה אותו. */
+  {
+    const grown = IDX_RAW.replace('</head>', '<style>.zz{color:red}</style></head>');
+    const got = sheetInDoc(grown);
+    t(n++, got > 0,
+      `מ4 · ⛔ מוטציה: \`<style>\` ב-index.html מפיל את «[block-kind]» — ` +
+      `נמדדו ${got} והצפוי מעל אפס`);
+  }
+  /*  ⛔ מוטציה חמישית — ⚠️ סמן הסגירה של הגיליון יורד. */
+  {
+    const cut = SHEET.split('\n').slice(0, -3).join('\n');
+    const tail = cut.split('\n').slice(-3).join('\n');
+    t(n++, tail.indexOf(BLOCK_KINDS.sheet) < 0,
+      `מ5 · ⛔ מוטציה: גיליון בלי סמן סגירה מפיל את «[block-kind]» — ` +
+      `נמדד סמן ${tail.indexOf('סוף') >= 0 ? 'קיים' : 'חסר'} והצפוי חסר`);
+  }
+  /*  ⛔ מוטציה שישית — ⚠️ הגיליון יוצא מ-`CORE`. */
+  {
+    const bent = SW.replace(/\n\s*'\.\/app\.css',/, '');
+    t(n++, !/(^|\n)\s*'\.\/app\.css',/.test(bent) && bent !== SW,
+      `מ6 · ⛔ מוטציה: גיליון שאינו ב-\`CORE\` מפיל את «[block-core]» — ` +
+      `נמדד ${bent === SW ? 'ללא שינוי' : 'הוסר'} והצפוי שיוסר`);
+  }
+  /*  ⭐ מוטציית-נגד: אתר חדש שבונה CSS בזמן ריצה **ומוצהר** ⛔ אינו
+   *  מפיל — ⚠️ זו בדיוק ההצהרה שהשורה באה לדרוש. */
+  {
+    const grown = IDX_RAW + '\nfunction zzMakeSheet() {\n' +
+      "  var s = document.createElement('style');\n  return s;\n}\n";
+    const sites = cssStringSites(grown);
+    const decl = { ...(APP.cssStrings || {}), zzMakeSheet: 'x'.repeat(30) };
+    const undecl = sites.filter((s) => !(s in decl));
+    t(n++, sites.indexOf('zzMakeSheet') >= 0 && undecl.length === 0,
+      `נ2 · ⭐ מוטציית-נגד: אתר חדש שמוצהר ⛔ אינו מפיל — ` +
+      `נמדדו ${sites.length} אתרים ו-${undecl.length} בלי הכרזה, והצפוי אפס`);
   }
 }
 

@@ -55,7 +55,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [24, 35, 226];
+export const ROWS = [24, 35, 227];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -131,6 +131,7 @@ async function waitFor(fn, ms, step) {
  *  קיים**: מוטציה היא **טעינה מחדש** ⛔ ולא הפעלת דפדפן נוספת —
  *  ⚠️ הפעלה לכל מוטציה הייתה חוצה את תקציב הזמן פי כמה. */
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript',
+               '.css': 'text/css; charset=utf-8',
                '.json': 'application/json', '.png': 'image/png',
                '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 let SERVED = null;                    /* גוף ה-HTML שמוגש כרגע */

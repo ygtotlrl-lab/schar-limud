@@ -61,8 +61,11 @@ const DIRS = ['.github', 'android', 'core', 'design', 'icons', 'migrations', 'si
 /*  ⛔ `.gitignore` בשורש (סבב 148) — ⚠️ הוא מה שמונע מהמפתח לחזור
  *  למעקב ב-`git add` הבא: ⭐ המפתח חי ב-GitHub Secrets, ⛔ ועותק מקומי
  *  לחתימה ביד הוא בדיוק מה שהקובץ הזה מתיר בלי לדחוף. */
+/*  ⛔ `app.css` — ⚠️ גיליון הסגנון של האפליקציה: ⭐ CSS יושב בקובץ
+ *  ⛔ ולא ב-`<style>` שבתוך `index.html`, ⚠️ שבלוק שאינו נושא את סוגו
+ *  נקרא כסוג אחר. */
 const ROOT_FILES = ['.gitignore', '.nojekyll', 'CLAUDE.md', 'CONTEXT.md',
-                    'README.md', 'index.html', 'manifest.json', 'sw.js'];
+                    'README.md', 'app.css', 'index.html', 'manifest.json', 'sw.js'];
 const CHECKERS = ['check-js.mjs', 'check-structure.mjs',
                   'check-docs.mjs', 'check-comments.mjs', 'check-capabilities.mjs'];
 /*  ⛔ מחולל אינו בודק ואינו שער (סבב 71) — ⚠️ הוא **כותב** נכסים, בעוד

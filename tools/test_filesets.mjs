@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 22, 23, 24, 134, 202];
+export const ROWS = [17, 19, 22, 23, 24, 135, 203];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -84,6 +84,7 @@ const SHARED = [
   'android/build.gradle',
   'android/gradle.properties',
   'android/settings.gradle',
+  'app.css',
   'core/sync.js',
   'core/util.js',
   'icons/apple-touch-icon.png',

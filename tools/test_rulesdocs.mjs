@@ -55,7 +55,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 47, 206, 113];
+export const ROWS = [5, 8, 47, 207, 114];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -736,9 +736,9 @@ t(!capsFails((doc) => {
    *  ⛔ **והמוטציה נכתבת כתבנית ולא כשם אסימון** — ⚠️ שם האסימון נבדל
    *  ביניהן, ⭐ והמנגנון אחד. */
   {
-    const bad = rd('index.html').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
-                                         '$1#1a1a1a');
-    t(runGateOn({ 'index.html': bad, [CAPS]: caps }, 'test_visual.mjs', () => ({})),
+    const bad = rd('app.css').replace(/(#updater \.in\{\s*background:)var\(--[a-z0-9-]+\)/,
+                                      '$1#1a1a1a');
+    t(runGateOn({ 'app.css': bad, [CAPS]: caps }, 'test_visual.mjs', () => ({})),
       'מ42 · ליטרל צבע בכללי הבאנר **מפיל** את «כל ערך חזותי נגזר — סריקה הפוכה»');
   }
   /*  ⭐ מוטציית-נגד: ערך שאינו צבע באותו כלל ⛔ אינו מפיל — ⚠️ המנגנון
@@ -1093,14 +1093,14 @@ t(!capsFails((doc) => {
    *  חי ביומן לצד `--text-3` שבשלוש, ⛔ ורשימה של חמישה שמות לא תפסה
    *  אותו — ⚠️ היא תפסה את מה שהיה ⛔ ולא את מה שנוסף. */
   {
-    const idx = rd('index.html');
+    const idx = rd('app.css');
     const li = idx.indexOf(':root');
     const at = idx.indexOf('\n', li) + 1;
     /*  ⛔ ולאסימון החדש קורא — ⚠️ בלעדיו נופלת הטענה «הוגדר ואין לו
      *  קורא», ⭐ והמוטציה הייתה מודדת טענה אחרת. */
     const one = (idx.slice(0, at) + '  --xtra:#123456;\n' + idx.slice(at))
                   .replace('var(--text-3)', 'var(--xtra)');
-    t(runGateOn({ 'index.html': one }, 'test_caps_ui.mjs', () => ({})),
+    t(runGateOn({ 'app.css': one }, 'test_caps_ui.mjs', () => ({})),
       'מ75 · אסימון שנוסף באחת ואינו מוצהר **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
   /*  ⭐ מוטציית-נגד: שינוי שם עקבי בערכה, בגוף ה-CSS ובהצהרה ⛔ אינו
@@ -1358,10 +1358,10 @@ t(!capsFails((doc) => {
    *  נושא — בהיר וכהה», ⭐ והנימוק המדוד הוא שאוצר מילים שנבדל מכריח כלל
    *  CSS פרטי — ⛔ וכלל משותף אינו יכול לנקוב בשם שקיים באחת בלבד. */
   {
-    const idx = rd('index.html');
+    const idx = rd('app.css');
     if (idx.indexOf('--border') < 0) t(true, 'מ53 · ⭕ אין כאן `--border` — ⛔ ואין מה למוטט');
     else
-      t(runGateOn({ 'index.html': idx.split('--border').join('--line') },
+      t(runGateOn({ 'app.css': idx.split('--border').join('--line') },
                   'test_caps_ui.mjs', () => ({})),
         'מ53 · `--line` במקום `--border` **מפיל** את «ערכת נושא — בהיר וכהה»');
   }
@@ -1397,12 +1397,13 @@ t(!capsFails((doc) => {
     /*  ⛔ הצמד מוחלף **יחד** ⛔ ולא חצי ממנו (סבב 135) — ⚠️ המוסכמה
      *  `--on-X` היא מה שקושר בין השניים, ⭐ ושינוי חצי הוא ניתוק
      *  הצמד ⛔ ולא שינוי שם. */
-    const idx = rd('index.html'), caps = rd('tools/check-capabilities.mjs');
+    const idx = rd('index.html'), css = rd('app.css'), caps = rd('tools/check-capabilities.mjs');
     const ren = (s) => s.split('--on-brand').join('--on-ident')
                         .replace(/--brand(?![-A-Za-z0-9])/g, '--ident');
-    if (idx.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
+    if (css.indexOf('--on-brand') < 0) t(true, 'נ30 · ⭕ אין כאן `--on-brand` — ⛔ ואין מה להחליף');
     else
-      t(!runGateOn({ 'index.html': ren(idx), 'tools/check-capabilities.mjs': ren(caps) },
+      t(!runGateOn({ 'index.html': ren(idx), 'app.css': ren(css),
+                     'tools/check-capabilities.mjs': ren(caps) },
                    'test_caps_ui.mjs', () => ({})),
         'נ30 · ⭐ שינוי שם עקבי של הצמד כולו ⛔ **אינו** מפיל');
   }
@@ -1420,9 +1421,9 @@ t(!capsFails((doc) => {
    *  ריווח בכלל CSS; ⛔ **ומה מפיל**: הטענה «סולם אחד לגודל, לריווח
    *  ולרדיוס» — ⭐ ערך שנבחר לאתר בודד הוא סולם שלא הוגדר. */
   {
-    const idx = rd('index.html');
-    t(runGateOn({ 'index.html': idx.replace('.u-ai-c{align-items:center}',
-                                            '.u-ai-c{align-items:center;padding:7px}') },
+    const idx = rd('app.css');
+    t(runGateOn({ 'app.css': idx.replace('.u-ai-c{align-items:center}',
+                                         '.u-ai-c{align-items:center;padding:7px}') },
                 'test_caps_ui.mjs', () => ({})),
       'מ72 · ערך ריווח שאינו מהסולם **מפיל** את «סולם אחד לגודל, לריווח ולרדיוס»');
   }
@@ -1862,7 +1863,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
                          .filter((i) => i >= 0).pop();
     const l = DOC_LINES.slice(); l.splice(idx + 1, 0, add); return l.join('\n');
   };
-  const CSS = (add) => rd('index.html').replace('</style>', add + '\n</style>');
+  const CSS = (add) => rd('app.css') + '\n' + add + '\n';
 
   t(fails({ 'CLAUDE.md': atTop('`CACHE_NAME` הנוכחי: `' + APP.cachePrefix + "v99`.") }),
     'מ1 · הצהרת גרסה בפרק פעיל מפילה את 21א');
@@ -1880,7 +1881,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
     'מ8 · כותרת נוספת ב-CONTEXT.md מפילה את 23ב');
   t(fails({ 'tools/check-comments.mjs': rd('tools/check-comments.mjs').replace("add('sw.js')", "add('x.js')") }),
     'מ9 · צמצום תחולת תקן ההערות מפיל את 24ב');
-  t(fails({ 'index.html': CSS('.r65-dead-class{color:red}') }),
+  t(fails({ 'app.css': CSS('.r65-dead-class{color:red}') }),
     'מ10 · מחלקת CSS שאינה מוחלת מפילה את טענה 15');
 
   t(fails({ 'index.html': rd('index.html').replace(
@@ -1890,8 +1891,11 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
   t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
     'נ1 · ⭐ אותה הצהרה **בתוך פרק סבב** אינה מפילה — הפרק הוא היסטוריה');
-  t(!fails({ 'index.html': CSS('.r65-live-class{color:red}')
-                             .replace('</body>', '<i class="r65-live-class"></i></body>') }),
+  /*  ⛔ המוטציה נוגעת בשני קבצים — ⚠️ הכלל חי ב-`app.css` וההחלה
+   *  ב-`index.html`: ⭐ כלל בלי אתר החלה הוא בדיוק מה שטענה 15 מפילה. */
+  t(!fails({ 'app.css': CSS('.r65-live-class{color:red}'),
+             'index.html': rd('index.html')
+               .replace('</body>', '<i class="r65-live-class"></i></body>') }),
     'נ2 · ⭐ מחלקה שכן מוחלת אינה מפילה — המדידה היא שימוש ולא ספירה');
 }
 

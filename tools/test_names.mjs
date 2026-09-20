@@ -124,7 +124,7 @@ const APP = {
 
 /*  ⛔ השורה שהקובץ הזה אוכף — ⚠️ נגזרת משם השורה בטבלה ⛔ ואינה מוקלדת
  *  בגוף השער: ⭐ והמרשם הוא המקום היחיד שנוקב במספר. */
-export const ROWS = [120, 91];
+export const ROWS = [121, 92];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -407,16 +407,19 @@ is(badCls.length === 0,
   `נמדדו ${badCls.length} חורגות והצפוי אפס` + (badCls.length ? ` (${badCls.slice(0, 6).join(' ')})` : ''));
 
 /* 5. אסימוני עיצוב — ⛔ דפוס אחד למספר, ⚠️ ואסימון שחי כאן בלבד מוצהר */
-/*  ⛔ ההגדרות נקראות מהמקור הגולמי — ⚠️ הן חיות ב-`<style>`, ⭐ שההלבנה
+/*  ⛔ ההגדרות נקראות מהמקור הגולמי — ⚠️ הן חיות בגיליון הסגנון, ⭐ שההלבנה
  *  המשותפת מלבינה **מה שאינו בתוך `<script>`**: ⛔ ומקור מולבן היה
- *  מחזיר אפס אסימונים תמיד. */
+ *  מחזיר אפס אסימונים תמיד.
+ *  ⛔ **והגיליון הוא `app.css`** — ⚠️ הוא יצא מ-`index.html`, ⭐ וקריאה
+ *  מהקובץ לבדו הייתה מחזירה אפס הגדרות ⛔ ומאשרת כל הצהרה. */
 const tokDefs = (text) => {
   const m = new Map();
   for (const x of text.matchAll(/(--[a-zA-Z][\w-]*)\s*:\s*([^;}]*)/g))
     (m.get(x[1]) || m.set(x[1], []).get(x[1])).push(x[2].trim());
   return m;
 };
-const RAW_SRC = fs.readFileSync(join(ROOT, 'index.html'), 'utf8');
+const RAW_SRC = fs.readFileSync(join(ROOT, 'index.html'), 'utf8') + '\n' +
+  fs.readFileSync(join(ROOT, 'app.css'), 'utf8');
 const myTok = tokDefs(RAW_SRC);
 /*  ⛔ `--ls-n1`/`--ls-n2` אינם חריגה — ⚠️ התקן נוקב בהם במפורש ככיוון
  *  שלילי, ⭐ והמספר שם הוא סימן ⛔ ולא מדרגה. */
@@ -434,8 +437,13 @@ const tokMissing = [];
 for (const p of PEERS) {
   if (p === APP.app) continue;
   const f = join(SIBS, p, 'index.html');
+  const c = join(SIBS, p, 'app.css');
   if (!fs.existsSync(f)) { tokMissing.push(p); continue; }
-  for (const k of tokDefs(fs.readFileSync(f, 'utf8')).keys()) sisTok.add(k);
+  /*  ⛔ ואצל האחות הגיליון הוא קובץ אף הוא — ⚠️ קריאת `index.html` לבדו
+   *  הייתה מחזירה אפס אסימונים שלה, ⭐ וכל אסימון כאן היה נראה יחיד. */
+  const txt = fs.readFileSync(f, 'utf8') +
+    (fs.existsSync(c) ? '\n' + fs.readFileSync(c, 'utf8') : '');
+  for (const k of tokDefs(txt).keys()) sisTok.add(k);
 }
 const declTok = { ...(APP.namePolicy.appTokens || {}), ...(APP.namePolicy.slotTokens || {}) };
 const onlyHere = tokMissing.length ? [] : [...myTok.keys()].filter((k) => !sisTok.has(k));
