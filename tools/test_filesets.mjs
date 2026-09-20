@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 22, 23, 24, 135, 204];
+export const ROWS = [17, 20, 23, 24, 25, 136, 205];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -678,7 +678,7 @@ else {
   /*  ⭐ מוטציית-נגד — ⛔ שער שנוקב בשורה תשתיתית אינו מפיל, ⚠️ גם כשהקובץ
    *  עצמו חי כאן בלבד: ⭐ השורה היא מה שמצדיק אותו. */
   const d = clone('n6');
-  fs.writeFileSync(path.join(d, 'tools', 'test_probe_infra.mjs'), 'export const ROWS = [23];\n');
+  fs.writeFileSync(path.join(d, 'tools', 'test_probe_infra.mjs'), 'export const ROWS = [24];\n');
   APP.appGates.probe_infra = 'מודד יכולת שקיימת כאן בלבד — ⛔ ולשאר אין מסך כזה';
   const clean = !productGates(d, PEERS, APP.app).out.includes('probe_infra');
   delete APP.appGates.probe_infra;

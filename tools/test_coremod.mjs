@@ -34,6 +34,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
+import { whiten } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -70,7 +71,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [18, 59, 136, 205];
+export const ROWS = [18, 19, 60, 137, 206];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -90,7 +91,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר הטענות נגזר ממרשם המודולים,
  *  ⭐ שזהה בכולן: ⛔ ומה שנבדל הוא **תוכן** ההכרזות ⛔ ולא מספרן. */
-const FLOOR = { shared: 17, app: 0, appWhy: '' };
+const FLOOR = { shared: 18, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -214,6 +215,9 @@ const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8')
  *  שקורא `index.html` לבדו מדווח «אין כלל CSS» על גיליון שלם. */
 /*  ⛔ המקור הגולמי ⛔ ובלי הגיליון — ⚠️ הוא ההיקף של מדידת הסוגים:
  *  ⭐ `<style>` בו הוא תגית שחזרה לקובץ, ⛔ ולא הגיליון שיצא ממנו. */
+/*  ⛔ המקור נקרא גולמי — ⚠️ סמן הבלוק החתום הוא הערה,
+ *  ⭐ והלבנה מוחקת בדיוק את מה שהוא מודד: ⛔ וכל סריקת דפוס
+ *  בקוד — ⚠️ והיא בלבד — מלבינה אותו תחילה. */
 const IDX_RAW = readFileSync(join(ROOT, 'index.html'), 'utf8');
 const SHEET = readFileSync(join(ROOT, 'app.css'), 'utf8');
 const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8') +
@@ -515,6 +519,63 @@ export function assetReadGaps(html) {
     '. טוענים את כולם מנתיב מוצהר, שלכידה מה-DOM שקופה לכל סורק');
 }
 
+/* ── 12. וכל שם שנקרא — מיובא ──────────────────────────────────────────── */
+/*  ⛔ במסמך-מודול קריאה לשם שלא יובא היא `ReferenceError` — ⚠️ והיא
+ *  נבלעת במטפל: ⭐ המסלול נעצר, המסך נשאר פתוח, ⛔ ואיש אינו רואה.
+ *  ⛔ **והמדידה בשני הכיוונים** — ⚠️ שם שנקרא ואינו ברשימת הייבוא,
+ *  ⭐ ושם שיובא ואינו נקרא: ⛔ כיוון אחד לבדו מאשר את ההיפוך. */
+export function moduleExports(texts) {
+  const out = new Set();
+  for (const t of texts) {
+    for (const m of t.matchAll(/\nexport\s*\{([^}]*)\}/g))
+      for (const part of m[1].split(','))
+        { const n = part.trim().split(' as ').pop().trim(); if (n) out.add(n); }
+    for (const m of t.matchAll(/\nexport\s+(?:const|function|let|var)\s+([A-Za-z_$][\w$]*)/g))
+      out.add(m[1]);
+  }
+  return out;
+}
+export function importedNames(html) {
+  const out = new Set();
+  for (const m of html.matchAll(/import\s*\{([^}]*)\}\s*from\s*'\.\/core\//g))
+    for (const part of m[1].split(','))
+      { const n = part.trim().split(' as ').pop().trim(); if (n) out.add(n); }
+  return out;
+}
+/*  ⛔ הסריקה על המקור המולבן — ⚠️ שם בתוך מחרוזת או בהערה אינו קריאה,
+ *  ⭐ והוא בדיוק מה שהופך «נקרא» ל-probe שאינו יכול להיכשל. */
+export function importGaps(html, exported) {
+  /*  ⛔ ההלבנה במודול המשותף — ⚠️ ולא בשרשרת `replace`:
+   *  ⭐ דפוס מחרוזת שרץ על הקובץ כולו שובר את הזיווג —
+   *  ⛔ גרש בתוך תבנית בלע את הגרש האחורי שסוגר אותה,
+   *  ⚠️ והתבנית הבאה בלעה מאות שורות קוד חי: ⭐ ושם שנקרא שם
+   *  נספר כמי שאינו נקרא. */
+  const blank = (m) => ' '.repeat(m.length);
+  /*  ⛔ ורשימת הייבוא מולבנת אחריה — ⚠️ היא קוד ואינה מחרוזת,
+   *  ⭐ ובלעדיה כל שם ברשימה מתאים לעצמו: ⛔ ו«מיובא ואינו
+   *  נקרא» אינו קיים לעולם. */
+  const w = whiten(html, { markup: 'blank' })
+    .replace(/import\s*\{[^}]*\}/g, blank);
+  const imported = importedNames(html);
+  const used = [...exported].filter((n) =>
+    new RegExp('(?<![\\w$.])' + n.replace(/\$/g, '\\$') + '(?![\\w$])').test(w));
+  return { used,
+           missing: used.filter((n) => !imported.has(n)),
+           unused: [...imported].filter((n) => used.indexOf(n) < 0) };
+}
+
+{
+  const EXP = moduleExports(MODS);
+  const G = importGaps(IDX_RAW, EXP);
+  t(n++, G.missing.length === 0 && G.unused.length === 0,
+    `[import-use] כל שם שנקרא מיובא, וכל מיובא נקרא — ${EXP.size} מיוצאים · ` +
+    `${G.used.length} בשימוש: ${G.missing.length} נקראו ולא יובאו · ` +
+    `${G.unused.length} יובאו ואינם נקראים, והצפוי אפס` +
+    (G.missing.length ? ` (${G.missing.join(', ')})` : '') +
+    (G.unused.length ? ` (${G.unused.join(', ')})` : '') +
+    '. מוסיפים את החסר לרשימת הייבוא, ומסירים ממנה את מי שאינו נקרא');
+}
+
 if (RUN_MUT) {
   mutStage();
   /* ── מוטציות ─────────────────────────────────────────────────────────── */
@@ -638,6 +699,50 @@ if (RUN_MUT) {
     t(n++, grown !== IDX_RAW && got.length === 0,
       `נ3 · ⭐ מוטציית-נגד: סימון \`svg\` קצר מוטבע ⛔ אינו מפיל — ` +
       `נמדדו ${got.length} והצפוי אפס`);
+  }
+
+  /*  ⛔ מוטציה עשירית — ⚠️ שם שיורד מרשימת הייבוא ונשאר נקרא: ⭐ זה
+   *  בדיוק ה-`ReferenceError` שנבלע במטפל. */
+  {
+    const EXP = moduleExports(MODS);
+    const imp0 = importedNames(IDX_RAW);
+    /*  ⛔ השם נבחר מהחיתוך — ⚠️ נקרא **וגם** ברשימת הייבוא:
+     *  ⭐ שם שהמודול מתקין על `window` נקרא ואינו ברשימה,
+     *  ⛔ ואין מה להסיר ממנה. */
+    const one = importGaps(IDX_RAW, EXP).used.find((x) => imp0.has(x));
+    /*  ⛔ הפסיק אופציונלי — ⚠️ יש רשימת ייבוא שכל שמה אחד
+     *  ברשימה שלפניו פסיק: ⛔ דפוס שדורש פסיק נוקב אינו מסוגל
+     *  להסיר את האחרון, ⚠️ והמוטציה עוברת בלי לשנות דבר. */
+    const cut = new RegExp('(import\\s*\\{[^}]*?)\\b' + one + '\\b\\s*,?\\s*');
+    const bent = IDX_RAW.replace(cut, '$1');
+    const got = importGaps(bent, EXP);
+    t(n++, bent !== IDX_RAW && got.missing.indexOf(one) >= 0,
+      `מ10 · ⛔ מוטציה: \`${one}\` שירד מהייבוא מפיל את «[import-use]» — ` +
+      `נמדדו ${got.missing.length} שנקראו ולא יובאו והצפוי שיכללו אותו`);
+  }
+  /*  ⛔ מוטציה אחת-עשרה — ⚠️ שם שיובא ואינו נקרא. */
+  {
+    const EXP = moduleExports(MODS);
+    const dead = [...EXP].find((x) => importGaps(IDX_RAW, EXP).used.indexOf(x) < 0);
+    const bent = dead
+      ? IDX_RAW.replace(/import\s*\{/, 'import { ' + dead + ', ')
+      : IDX_RAW;
+    const got = importGaps(bent, EXP);
+    t(n++, !!dead && got.unused.indexOf(dead) >= 0,
+      `מ11 · ⛔ מוטציה: \`${dead}\` שיובא ואינו נקרא מפיל את «[import-use]» — ` +
+      `נמדדו ${got.unused.length} מיובאים בלי קריאה והצפוי שיכללו אותו`);
+  }
+  /*  ⭐ מוטציית-נגד: שם שמיוצא ואינו נקרא בקובץ ⛔ אינו מפיל — ⚠️ המודול
+   *  מייצא למי שצריך, ⭐ ולא כל אפליקציה צורכת את כולו. */
+  {
+    const EXP = moduleExports(MODS);
+    const base = importGaps(IDX_RAW, EXP);
+    const grown = new Set([...EXP, 'zzNeverCalled']);
+    const got = importGaps(IDX_RAW, grown);
+    t(n++, got.missing.length === base.missing.length &&
+           got.unused.length === base.unused.length,
+      `נ4 · ⭐ מוטציית-נגד: שם שמיוצא ואינו נקרא ⛔ אינו מפיל — ` +
+      `נמדדו ${got.missing.length} חסרים ו-${got.unused.length} עודפים, והצפוי כמו הבסיס`);
   }
 }
 
