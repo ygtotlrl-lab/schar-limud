@@ -45,12 +45,17 @@ const APP = {
    */
   fresh: { sel: '#auth-btn',
     why: 'כפתור הכניסה שבמסך הראשון — ⛔ ובהתקנה טרייה אין משתמש במסד: ⚠️ ומה שנמדד הוא שהמסך נפתח ושמיש, ⭐ ולא שהכניסה מצליחה' },
+  /*  ⛔ **מה נכנס**: שם ⟵ ביטוי שנמדד בדף ⟵ הערך שנמסר בכתב;
+   *  ⛔ **ומה מפיל**: ערך שנמדד ואינו זה שנמסר, ⚠️ והיעדר נימוק לריק.
+   *  ⭐ **ולמה המבנה קיים**: מה שחי באפליקציה אחת אין ממה לסטות,
+   *  ⛔ ולכן אין לו שער — ⚠️ והוא נמדד כאן בהתנהגות. */
+  accept: { expose: [], setup: '', cases: [], why: '⛔ אין כאן חשבון שחי באפליקציה אחת — ⚠️ הפריסה והיתרה נגזרות מהסולם המשותף' },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [34, 229];
+export const ROWS = [24, 35, 229];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -67,7 +72,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+const FLOOR = { shared: 7, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -231,6 +236,64 @@ const rgbOf = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ''); return m ? m[
  *  ⛔ **ומה מפיל**: מסלול שלא התקיים. ⭐ **ולמה המבנה קיים**: אלה
  *  בדיוק חמשת המסלולים שנשברו — ⚠️ כולם עברו כל שער טקסטואלי,
  *  ⛔ והמשתמש הוא שגילה אותם. */
+/*  ⛔ הגשר נכתב לעותק שמוגש ⛔ ולא לעץ — ⚠️ השמות חיים בהיקף המודול,
+ *  ⭐ ומבחן הקבלה מריץ את **בייטי האפליקציה עצמם**: ⛔ עותק שני שנכתב
+ *  לצידם היה נסחף, ⚠️ והבדיקה הייתה מודדת אותו ⛔ ולא את מה שרץ. */
+function withBridge(src, names) {
+  if (!names.length) return src;
+  const i = src.lastIndexOf('</script>');
+  if (i < 0) return src;
+  /*  ⛔ הגשר נכנס **בתוך** גוף המודול — ⚠️ יש מקור שכל גופו עטוף
+   *  ב-`(function () { … })();`, ⭐ והשמות חיים בסגור שלו: ⛔ שורה
+   *  שנכתבת אחריו אינה רואה אותם, ⚠️ והגשר נשאר `undefined`. */
+  const j = src.lastIndexOf('})();', i);
+  const at = (j > 0 && i - j < 24) ? j : i;
+  return src.slice(0, at) + '\nwindow.__acc = { ' + names.join(', ') + ' };\n' + src.slice(at);
+}
+
+/*  ⛔ **מה נכנס**: ההצהרה הפר-אפליקציתית ⟵ הביטוי שנמדד בדף ⟵ הערך
+ *  שנמסר; ⛔ **ומה מפיל**: ערך שנמדד ואינו הערך שנמסר, ⚠️ והפרש של
+ *  אגורה מותר — ⭐ השוואת שוויון בין צפים מפילה על ייצוג ⛔ ולא על חשבון.
+ *  ⭐ **ולמה המבנה קיים**: זה מה שתופס לוגיקה שחיה באפליקציה אחת,
+ *  ⛔ ואין לה ממה לסטות — ⚠️ ולכן אין לה שער. */
+async function acceptGaps(D, port, A) {
+  const ev = async (x) => {
+    const r = await D.send('Runtime.evaluate',
+      { expression: x, returnByValue: true, awaitPromise: true }, D.S);
+    if (r.result && r.result.exceptionDetails) {
+      const d = r.result.exceptionDetails;
+      return { __err: String((d.exception && (d.exception.description || d.exception.value)) || d.text) };
+    }
+    return r.result && r.result.result ? r.result.result.value : undefined;
+  };
+  await D.send('Page.navigate', { url: 'about:blank' }, D.S);
+  await D.send('Storage.clearDataForOrigin',
+    { origin: `http://127.0.0.1:${port}`,
+      storageTypes: 'local_storage,cookies,indexeddb,service_workers,cache_storage' }, D.S).catch(() => {});
+  /*  ⛔ עובד השירות מנוטרל לטעינה הזו — ⚠️ הוא מגיש את הקליפה מהמטמון,
+   *  ⭐ והמטמון נושא את העותק שנטען לפני שהגשר נכתב: ⛔ בלי הנטרול
+   *  הבדיקה הייתה מודדת דף ישן ⛔ ולא את מה שמוגש עכשיו. */
+  await D.send('Network.enable', {}, D.S).catch(() => {});
+  await D.send('Network.setBypassServiceWorker', { bypass: true }, D.S).catch(() => {});
+  await D.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html` }, D.S);
+  if (!await waitFor(async () => (await ev('!!window.__acc')) === true, 9000))
+    return ['⛔ הגשר לא נבנה — ' + JSON.stringify(await ev('typeof window.__acc'))];
+  /*  ⛔ ההכנה רצה עד שהיא מצליחה — ⚠️ ההשתלטות הראשונה של עובד השירות
+   *  מרעננת את הדף, ⭐ והגשר נבנה מחדש: ⛔ הרצה אחת הייתה נופלת על
+   *  רענון שאינו כשל. */
+  let ready;
+  const set = await waitFor(async () => (ready = await ev(A.setup)) === true, 9000, 120);
+  if (!set) return ['⛔ ההכנה לא הסתיימה — ' + JSON.stringify(ready)];
+  const bad = [];
+  for (const [name, expr, want] of A.cases) {
+    const got = await ev(expr);
+    if (typeof got !== 'number' || Math.abs(got - want) >= 0.005)
+      bad.push(`${name}: נמדד ${JSON.stringify(got)} והצפוי ${want}`);
+  }
+  await D.send('Network.setBypassServiceWorker', { bypass: false }, D.S).catch(() => {});
+  return bad;
+}
+
 async function paths(D, port) {
   const out = [];
   const ev = async (x) => {
@@ -466,6 +529,23 @@ async function main() {
     const base = await paths(D, port);
     for (const r of base)
       t(r.ok, `מסלול «${r.k}» — ${r.info}`);
+
+/*  ⛔ מבחן הקבלה הפר-אפליקציתי — ⚠️ הוא שתופס את מה שחי באפליקציה אחת:
+     *  ⭐ שער תופס סחף **בין** אפליקציות, ⛔ ולוגיקה שחיה באחת אין ממה לסטות. */
+    {
+      const A = APP.accept;
+      if (!A.cases.length) {
+        t(!!A.why, `[accept] אפס מקרי קבלה — ${A.why || '⛔ בלי נימוק'}`);
+      } else {
+        SERVED = withBridge(SRC, A.expose);
+        const gaps = await acceptGaps(D, port, A);
+        t(gaps.length === 0, `[accept] ${A.cases.length} מקרי קבלה נמדדו בדפדפן, ` +
+          `${gaps.length} נבדלים` + (gaps.length
+            ? ' — ' + gaps.join(' · ') +
+              '. מיישרים את הנוסחה בקוד האפליקציה, ⛔ ולא את המספר שנמסר' : ''));
+        SERVED = SRC;
+      }
+    }
 
     mutStage();
     if (RUN_MUT) {

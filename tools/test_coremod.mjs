@@ -79,7 +79,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר הטענות נגזר ממרשם המודולים,
  *  ⭐ שזהה בכולן: ⛔ ומה שנבדל הוא **תוכן** ההכרזות ⛔ ולא מספרן. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 10, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -196,6 +196,18 @@ export function impureGaps(name, src) {
 
 const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8');
 const IDX = readFileSync(join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ גופי הבלוקים החתומים נחתכים מ-`index.html` לפי הסמנים שמוצהרים
+ *  בבודק היכולות — ⚠️ ולא לפי רשימה שנייה כאן: ⭐ סמן שישתנה שם משנה גם
+ *  את מה שנמדד כאן. */
+const SIGNED_BODIES = (() => {
+  const out = [];
+  for (const m of CAPS.matchAll(/start: '([^']+)',\s*\n\s*end:\s*'([^']+)'/g)) {
+    const a = IDX.indexOf(m[1]); if (a < 0) continue;
+    const b = IDX.indexOf(m[2], a); if (b < 0) continue;
+    out.push(IDX.slice(a, b));
+  }
+  return out;
+})();
 const SW = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 const HERE = CORE_FILES.filter((f) => existsSync(join(ROOT, f)));
 const MODS = HERE.map((f) => readFileSync(join(ROOT, f), 'utf8'));
@@ -279,6 +291,37 @@ let n = 1;
   }
 }
 
+/*  ⛔ מודול משותף נושא דגל לכל התנהגות שנבדלת ⛔ ואינו מוסתר ב-CSS
+ *  פר-אפליקציה — ⚠️ **מה נמדד**: מחלקה שנוצרת בתוך בלוק חתום ומוסתרת
+ *  ב-`display:none` בגיליון; ⛔ **ומה מפיל**: כלל כזה. ⭐ **ולמה**:
+ *  הסתרה משאירה את הקוד רץ ואת האלמנט ב-DOM, ⚠️ ומי שקורא את המודול
+ *  אינו יודע שהוא מכובה. */
+export function hiddenModuleClasses(idx, blocks) {
+  /*  ⛔ השם נאסף בשתי צורות — ⚠️ האסימון שאחרי `class="`, ⭐ שגם מחרוזת
+   *  שנבנית בשרשור פותחת בו; ⛔ וליטרל קצר בגוף הבלוק, ⚠️ שהוא הצורה
+   *  שבה שם מחלקה מועבר כארגומנט. */
+  const made = new Set();
+  for (const b of blocks) {
+    for (const m of b.matchAll(/class="([a-z][a-z0-9-]*)/g)) made.add(m[1]);
+    for (const m of b.matchAll(/'([a-z][a-z0-9-]{1,})'/g)) made.add(m[1]);
+  }
+  const css = [...idx.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /*  ⛔ מחלקת **מצב** אינה הסתרה — ⚠️ שם שהקוד מוסיף ומסיר בזמן ריצה הוא
+   *  מתג, ⭐ ולא כיבוי של פלט המודול: ⛔ והמדידה היא על מה שמוסתר תמיד. */
+  const toggled = new Set([...idx.matchAll(/classList\s*\.\s*(?:add|remove|toggle)\(\s*'([a-z][a-z0-9-]*)'/g)]
+    .map((m) => m[1]));
+  const out = [];
+  for (const r of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/(^|[;\s])display\s*:\s*none/.test(r[2])) continue;
+    for (const c of made) {
+      if (toggled.has(c)) continue;
+      if (new RegExp('\\.' + c + '(?![\\w-])').test(r[1])) out.push(r[1].trim() + ' ⟵ .' + c);
+    }
+  }
+  return [...new Set(out)];
+}
+
 /* ── 7. וקוד תשתיתי נכתב במודול ────────────────────────────────────────── */
 {
   const gaps = prefixGaps(IDX, CAPS, APP.coreAllow);
@@ -298,6 +341,15 @@ let n = 1;
     `מתוך ${Object.keys(APP.coreAllow).length} והצפוי 0 ו-0` +
     (stale.length ? ` (${stale.join(', ')})` : '') +
     '. מסירים מ-`APP.coreAllow` שם שאינו כאן, וכותבים בכל אחת מה היא עושה');
+}
+
+/* ── 9. ומודול משותף נושא דגל, ⛔ ואינו מוסתר ב-CSS ─────────────────────── */
+{
+  const hid = hiddenModuleClasses(IDX, SIGNED_BODIES);
+  t(n++, !hid.length,
+    `[core-flag] כלל CSS שמסתיר אלמנט שמודול משותף יוצר — נמדדו ${hid.length} ` +
+    `והצפוי 0` + (hid.length ? ` (${hid.join(', ')})` : '') +
+    '. מוסיפים דגל לחתימת הפונקציה ואינו יוצר את האלמנט, ⛔ ולא מסתירים אותו');
 }
 
 /* ── 9. והמודול מיוצא בשם ──────────────────────────────────────────────── */

@@ -16,6 +16,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+/*  ⛔ המשוב בלחיצה נקבע ⛔ ולא נירש — ⚠️ ברירת המחדל של הדפדפן היא ריבוע
+ *  כחול שאינו מערכת הצבעים שלנו, ⭐ והיא מופיעה במגע בלבד: ⛔ ומי שבודק
+ *  בעכבר אינו רואה אותה. */
+body{-webkit-tap-highlight-color:transparent}
+/*  ⛔ לחיצה ארוכה על משטח לחיץ אינה בחירת טקסט — ⚠️ והכלל חל על הלחיצים
+ *  בלבד, ⭐ ולא על טקסט שהמשתמש מעתיק. */
+button,[data-act]{-webkit-user-select:none;user-select:none}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 :root{
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
@@ -4441,7 +4448,12 @@ function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
       באותה אפליקציה הם שני מקומות שבהם הרוחב נכתב ביד, ⚠️ ושניים כאלה
       נמדדו — הסדרה בבונה, והפס בטבלת הפילוח.
    ⛔ **מה נכנס**: `lab` תווית · `val` הערך · `tgt` היעד · `txt` הטקסט
-      החלופי · `end` מה שנכתב בסוף השורה. */
+      החלופי · `end` מה שנכתב בסוף השורה.
+   ⛔ **ו-`noTarget` הוא דגל בחתימה** — ⚠️ וכשהוא דולק הפס השני **אינו
+      נוצר**, ⭐ ואינו נוצר-ומוסתר: ⛔ הסתרה ב-CSS פר-אפליקציה משאירה
+      את הקוד רץ ואת האלמנט ב-DOM, ⚠️ ומי שקורא את המודול אינו יודע
+      שהוא מכובה. ⭐ **והמכנה נשמר** — ⛔ `max` עדיין נגזר מ-`val`
+      ומ-`tgt`, ⚠️ והסרת הציור אינה משנה את אורכי הפסים. */
 /*  ⛔ הרוחב נכתב למשתנה CSS ⛔ ולא לתגית — ⚠️ סגנון מוטבע גובר על כל
  *  מחלקה ואינו ניתן לשינוי ממקום אחד: ⭐ והצביעה נדחית לפריים שאחרי
  *  ה-`innerHTML`, ⛔ שהיא הרגע שבו הפסים כבר בעץ. */
@@ -4457,7 +4469,7 @@ function bar(pct, cls) {
   return '<span class="btrack' + (cls ? ' ' + cls : '') +
          '"><i data-pct="' + pct + '"></i></span>';
 }
-function barChart(rows, label) {
+function barChart(rows, label, noTarget) {
   if (!Array.isArray(rows) || rows.length < 2) return '';
   var max = 0, i;
   for (i = 0; i < rows.length; i++) max = Math.max(max, rows[i].val || 0, rows[i].tgt || 0);
@@ -4467,7 +4479,8 @@ function barChart(rows, label) {
   for (i = 0; i < rows.length; i++) {
     h += '<div class="brow" aria-label="' + esc(rows[i].txt) + '">' +
       '<span class="blab">' + esc(rows[i].lab) + '</span>' +
-      '<span class="bbars">' + bar(pct(rows[i].val)) + bar(pct(rows[i].tgt), 'tgt') +
+      '<span class="bbars">' + bar(pct(rows[i].val)) +
+      (noTarget ? '' : bar(pct(rows[i].tgt), 'tgt')) +
       '</span>' +
       '<span class="bval">' + esc(rows[i].end) + '</span></div>';
   }

@@ -124,7 +124,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
  *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
  *  אותה היה מריץ את כולם פעם שנייה. */
-export const ROWS = [40, 41, 29];
+export const ROWS = [41, 42, 30];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
