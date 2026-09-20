@@ -46,6 +46,12 @@ const APP = {
    *  שאין לו קובץ. ⭐ **ולמה הן קיימות**: ⚠️ מבנה שנבדל בלי נימוק נקרא
    *  כטעות — ⛔ **וכאן שתיהן ריקות**: ⭐ אין חריגה, וההצהרה אינה נשמטת. */
   androidExtra: {},
+  /*  ⛔ תיקיית נכסים שקיימת כאן בלבד — ⚠️ **מה נכנס**: השם ⟵ תפקיד
+   *  הנכסים שבתוכה; ⛔ **ומה מפיל**: תיקייה שאינה מוכרזת, ⛔ והכרזה
+   *  שאין לה תיקייה. */
+  /*  ⚠️ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⭐ אין כאן מוסדות מרובים,
+   *  ⛔ ואין גוף חיצוני שמוצג בכותרת. */
+  dirExtra: {},
   toolsDirs: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -163,8 +169,16 @@ const dirs  = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
 const files = entries.filter((e) => !e.isDirectory()).map((e) => e.name).sort();
 
 /* ── א. סט התיקיות ─────────────────────────────────────────────────────── */
+/*  ⛔ תיקיית נכסים פר-אפליקציה — ⚠️ היא נגזרת מתפקיד הנכס, ⭐ ולא כל
+ *  אפליקציה מציגה גוף חיצוני: ⛔ וההצהרה נמדדת משני צדדיה — ⚠️ תיקייה
+ *  שאינה מוכרזת, ⛔ והכרזה שאין לה תיקייה. */
+const dirExtra = APP.dirExtra || {};
 const missingD = DIRS.filter((d) => !dirs.includes(d));
-const extraD   = dirs.filter((d) => !DIRS.includes(d));
+const extraD   = dirs.filter((d) => !DIRS.includes(d) && !(d in dirExtra));
+const ghostD   = Object.keys(dirExtra).filter((d) => !dirs.includes(d));
+if (ghostD.length) fail(`תיקיות מוכרזות שאינן קיימות: ${ghostD.join(', ')} — נמדדו ` +
+                        `${ghostD.length} מתוך ${Object.keys(dirExtra).length} הכרזות והצפוי אפס. ` +
+                        `מסירים אותן מ-APP.dirExtra`);
 if (missingD.length) fail(`תיקיות חסרות בשורש: ${missingD.join(', ')} — נמדדו ${DIRS.length - missingD.length} ` +
                           `מתוך ${DIRS.length} התיקיות הקנוניות. מוסיפים את החסרות`);
 if (extraD.length)   fail(`תיקיות עודפות בשורש: ${extraD.join(', ')} — נמדדו ${extraD.length} ` +

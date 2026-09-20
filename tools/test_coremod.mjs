@@ -70,7 +70,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [18, 59, 204];
+export const ROWS = [18, 59, 136, 205];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -90,7 +90,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ מספר הטענות נגזר ממרשם המודולים,
  *  ⭐ שזהה בכולן: ⛔ ומה שנבדל הוא **תוכן** ההכרזות ⛔ ולא מספרן. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 17, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -463,6 +463,58 @@ export function cssStringSites(html) {
     'מוסיפים `./app.css` ל-`CORE`, שקובץ שאינו מוטמן שובר את האופליין');
 }
 
+/* ── 11. ונכס בינארי יושב בקובץ, לפי תפקידו ────────────────────────────── */
+/*  ⛔ תיקיית נכסים ⟵ תפקידה — ⚠️ `icons/` נכסי האפליקציה עצמה,
+ *  ⭐ ו-`logos/` גופים שהיא מציגה: ⛔ תיקייה נגזרת מתפקיד הנכס
+ *  ⛔ ולא מהיום שבו נוצרה. */
+const ASSET_DIRS = { icons: 'נכסי האפליקציה עצמה', logos: 'גופים שהאפליקציה מציגה' };
+/*  ⛔ הסף הוא 500 תווים — ⚠️ אייקון `svg` מוטבע קצר הוא סימון, ⭐ ותמונה
+ *  היא נכס: ⛔ והמחיר הוא שכל סורק קורא אותה בכל שער, ⚠️ ואין בה שורת קוד. */
+const DATA_URI_MAX = 500;
+
+export function dataUriGaps(html, max) {
+  const out = [];
+  for (const m of html.matchAll(/data:image\/[a-z+]+;base64,[A-Za-z0-9+/=]*/g))
+    if (m[0].length > max) out.push(m[0].slice(0, 28) + '… (' + m[0].length + ' תווים)');
+  return out;
+}
+
+/*  ⛔ שני מנגנוני טעינה לאותו סוג נכס — ⚠️ אחד מנתיב מוצהר ואחד מה-DOM:
+ *  ⭐ והשנייה שקופה לכל סריקה, ⛔ ומי שמחפש את הנכס אינו מוצא אותו.
+ *  ⛔ **והנמדד הוא ההשמה** — ⚠️ קבוע נכס שערכו נקרא מה-DOM, ⭐ ולא כל
+ *  קריאה של `src`: ⛔ מי שמציב `src` הוא הצרכן ⛔ ואינו המקור. */
+export function assetReadGaps(html) {
+  const out = [];
+  for (const m of html.matchAll(/([A-Z][A-Z0-9_]*_LOGO)\s*=\s*([^;\n]{0,160})/g))
+    if (/document\.|getAttribute\(|\.src\b|querySelector/.test(m[2]))
+      out.push(m[1] + ' ⟵ ' + m[2].trim().slice(0, 48));
+  return out;
+}
+
+{
+  /*  ⛔ א — אפס נכס מוטבע ארוך. */
+  const embedded = dataUriGaps(IDX_RAW, DATA_URI_MAX);
+  t(n++, embedded.length === 0,
+    `[asset-file] אפס נכס בינארי מוטבע — נמדדו ${embedded.length} מעל ${DATA_URI_MAX} תווים והצפוי אפס` +
+    (embedded.length ? ` (${embedded.join(' · ')})` : '') +
+    '. מוציאים את הנכס לקובץ בתיקייה שנגזרת מתפקידו');
+
+  /*  ⛔ ב — וכל תיקיית נכסים שקיימת מוטמנת מראש. */
+  const live = Object.keys(ASSET_DIRS).filter((d) => existsSync(join(ROOT, d)));
+  const cold = live.filter((d) => !new RegExp("'\\./" + d + "/").test(SW));
+  t(n++, cold.length === 0,
+    `[asset-file] כל תיקיית נכסים מוטמנת מראש — נמדדו ${live.length} תיקיות ו-${cold.length} ` +
+    `שאינן ב-\`CORE\` והצפוי אפס` + (cold.length ? ` (${cold.join(', ')})` : '') +
+    '. מוסיפים את נכסיה ל-`CORE` שב-sw.js, שנכס שאינו במטמון אינו נטען אופליין');
+
+  /*  ⛔ ג — וכל נכס באותו סוג נטען באותה דרך. */
+  const two = assetReadGaps(IDX_RAW);
+  t(n++, two.length === 0,
+    `[asset-file] דרך טעינה אחת לכל סוג נכס — נמדדו ${two.length} אתרים שנלכדים מה-DOM והצפוי אפס` +
+    (two.length ? ` (${two.join(' · ')})` : '') +
+    '. טוענים את כולם מנתיב מוצהר, שלכידה מה-DOM שקופה לכל סורק');
+}
+
 if (RUN_MUT) {
   mutStage();
   /* ── מוטציות ─────────────────────────────────────────────────────────── */
@@ -548,6 +600,44 @@ if (RUN_MUT) {
     t(n++, sites.indexOf('zzMakeSheet') >= 0 && undecl.length === 0,
       `נ2 · ⭐ מוטציית-נגד: אתר חדש שמוצהר ⛔ אינו מפיל — ` +
       `נמדדו ${sites.length} אתרים ו-${undecl.length} בלי הכרזה, והצפוי אפס`);
+  }
+
+  /*  ⛔ מוטציה שביעית — ⚠️ נכס שחוזר ל-base64. */
+  {
+    const grown = IDX_RAW.replace('</head>',
+      '<img src="data:image/png;base64,' + 'A'.repeat(DATA_URI_MAX + 40) + '"></head>');
+    const got = dataUriGaps(grown, DATA_URI_MAX);
+    t(n++, got.length > 0,
+      `מ7 · ⛔ מוטציה: נכס מוטבע ב-base64 מפיל את «[asset-file]» — ` +
+      `נמדדו ${got.length} והצפוי מעל אפס`);
+  }
+  /*  ⛔ מוטציה שמינית — ⚠️ תיקיית נכסים שיוצאת מ-`CORE`. */
+  {
+    const bent = SW.replace(/\n\s*'\.\/icons\/[^']*',?/g, '');
+    const cold = Object.keys(ASSET_DIRS).filter((d) => existsSync(join(ROOT, d)))
+                       .filter((d) => !new RegExp("'\\./" + d + "/").test(bent));
+    t(n++, cold.indexOf('icons') >= 0,
+      `מ8 · ⛔ מוטציה: תיקיית נכסים מחוץ ל-\`CORE\` מפילה את «[asset-file]» — ` +
+      `נמדדו ${cold.length} תיקיות קרות והצפוי שיכללו את icons`);
+  }
+  /*  ⛔ מוטציה תשיעית — ⚠️ נכס שנלכד מה-DOM במקום ממשתנה. */
+  {
+    const grown = IDX_RAW +
+      "\nvar ZZ_LOGO = document.getElementById('appLogo').getAttribute('src');\n";
+    const got = assetReadGaps(grown);
+    t(n++, got.length > 0,
+      `מ9 · ⛔ מוטציה: נכס שנלכד מה-DOM מפיל את «[asset-file]» — ` +
+      `נמדדו ${got.length} אתרים והצפוי מעל אפס`);
+  }
+  /*  ⭐ מוטציית-נגד: `data:image/svg` קצר ⛔ אינו מפיל — ⚠️ סימון מוטבע
+   *  הוא רכיב ⛔ ואינו נכס בינארי. */
+  {
+    const grown = IDX_RAW.replace('</head>',
+      '<img src="data:image/svg+xml;base64,' + 'A'.repeat(40) + '"></head>');
+    const got = dataUriGaps(grown, DATA_URI_MAX);
+    t(n++, grown !== IDX_RAW && got.length === 0,
+      `נ3 · ⭐ מוטציית-נגד: סימון \`svg\` קצר מוטבע ⛔ אינו מפיל — ` +
+      `נמדדו ${got.length} והצפוי אפס`);
   }
 }
 
