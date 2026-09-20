@@ -514,14 +514,23 @@ if (!RUN_MUT) {
     : bad('נ1 · שינוי תוכן נספר בטעות כשינוי בסט');
 }
 
+/*  ⛔ חמש המוטציות שלמטה מוטטות **הכרזה קיימת** ב-`appGates` — ⚠️ וריפו
+ *  שאין בו שער פרטי אין לו מה למוטט: ⭐ והן נושאות שורת נימוק ⛔ ואינן
+ *  מדולגות בשתיקה — ⚠️ **ובלי השורה הן רצות על `undefined`**, ⛔ ושתיים
+ *  מהן נופלות על כלום ושלוש עוברות על כלום. */
+const GKEY = Object.keys(APP.appGates)[0] || null;
+const noGate = (id, what) =>
+  ok(id + ' · ⛔ אין כאן שער פרטי — ⚠️ ' + what + ', ⛔ ואין הכרזה למוטט');
+
 /*  ⛔ מ3 — שער שקיים כאן בלבד ואינו מוצהר ב-`appGates` (סבב 68).
  *  ⚠️ הפטור הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט,
  *  ⛔ וזה בדיוק מה שאסור. */
-{
+if (!GKEY) noGate('מ3', 'ההכרזה שנמדדת כאן היא של שער פרטי');
+else {
   /*  ⚠️ המוטציה היא **לוגית** ולא על העץ (סבב 68) — `git ls-files` בעותק
    *  קורא את ה-`.git` שהועתק איתו, ⛔ ולכן קובץ חדש אינו נספר שם כלל.
    *  ⭐ הסרת ההכרזה שקולה בדיוק להוספת שער לא-מוצהר. */
-  const key = Object.keys(APP.appGates)[0];
+  const key = GKEY;
   const keep = APP.appGates[key];
   delete APP.appGates[key];
   const hit = audit(ROOT).some((x) => x.startsWith('[extra]') && x.includes('test_' + key));
@@ -556,8 +565,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית שנוקבת בסבבה אינה מפילה:
  *  ⚠️ בלעדיה הטענה אינה מבחינה בין «חסר סבב» ל«המילה מופיעה». */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ3', 'ההכרזה החד-פעמית נכתבת על שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב 147';
   const clean = oneoffGaps(APP.appGates).length === 0;
@@ -568,8 +578,9 @@ if (!RUN_MUT) {
 
 /*  ⛔ מ7 — תוצר חד-פעמי ששרד את סבבו (סבב 148). ⚠️ «נושא את סבבו» עבר
  *  על כלי מסבב 92 ששרד 56 סבבים, ⭐ והמדידה החסרה היא הגיל. */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('מ7', 'התוצר החד-פעמי נמדד על הכרזת שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   const cur = currentRound(ROOT);
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + (cur - 1);
@@ -581,8 +592,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית מהסבב הנוכחי ⛔ אינה מפילה:
  *  ⚠️ בלעדיה הטענה הייתה מפילה כל תוצר ביום שנכתב. */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ4', 'ההכרזה מהסבב הנוכחי נכתבת על שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   const cur = currentRound(ROOT);
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + cur;
@@ -604,8 +616,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ שער ש**כן** מוצהר ⛔ אינו מפיל, ⚠️ אחרת הטענה
  *  אינה מבחינה בין «מודדת הכרזה» ל«אוסרת כל שער פרטי». */
-{
-  const name = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ2', 'השער המוצהר שאינו מפיל הוא שער פרטי');
+else {
+  const name = GKEY;
   audit(ROOT).some((x) => x.includes('test_' + name))
     ? bad('נ2 · שער מוצהר נתפס בטעות')
     : ok('נ2 · ⭐ מוטציית-נגד: שער שמוצהר ב-appGates ⛔ אינו מפיל');

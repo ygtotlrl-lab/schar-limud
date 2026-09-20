@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════════
    test_dbfacts.mjs — עובדות המסד החי: ⛔ מה שאינו נראה מהקבצים
    ══════════════════════════════════════════════════════════════════════════
-   **מה נאכף:** שלוש-עשרה טענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
+   **מה נאכף:** הטענות שנמדדות מול המסד עצמו במפתח ה-`anon` שכבר יושב
    ב-`index.html` — ⛔ אפס רשומות עם חותמת אפס או ריקה · ⛔ כל טבלה ועמודה
    שמוצהרות ב-`migrations/` קיימות · ⛔ כל מפתח הגדרה שהקוד קורא קיים
    בטבלת ההגדרות · ⛔ כל מפתח גיבוי חי נמצא ברשימת-ההיתר של הפינוי ·
@@ -42,7 +42,7 @@ import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [167, 160, 161, 162, 182, 215, 218, 219, 220, 174, 165, 152, 163];
+export const ROWS = [167, 160, 161, 162, 182, 215, 218, 219, 220, 174, 165, 152, 163, 117];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -50,9 +50,11 @@ export const ROWS = [167, 160, 161, 162, 182, 215, 218, 219, 220, 174, 165, 152,
  *  עליו, ⛔ והוא כבר אינו נמדד. ⚠️ ו-`clean` היא מוטציית-הנגד, ⛔ ואינה
  *  דפוס שנאכף. */
 export const PATTERNS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
-                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror'];
+                         'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror',
+                         'cfgpfx', 'cfgcase'];
 export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
-                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror'];
+                     'orphan', 'colreader', 'kvjson', 'staledef', 'derived', 'grantdel', 'grantupd', 'mirror',
+                     'cfgpfx', 'cfgcase'];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -155,7 +157,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 17, app: 0, appWhy: '' };
+const FLOOR = { shared: 19, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -482,6 +484,41 @@ async function claimCfgKeys() {
   if (!missing.length && !orphan.length && !ghost.length && !dead.length)
     ok('ג. כל מפתח שהקוד מבקש — ' + want.size + ' מפתחות נקראים בקוד וכולם קיימים ב-`' +
        APP.cfgTable + '`, ⛔ ומעליהם ' + Object.keys(known).length + ' מוצהרים בלי קורא');
+}
+/*  ⛔ מפתח בטבלת הגדרות **אינו נושא תחילית** — ⚠️ הטבלה נושאת אותה בשמה,
+ *  ⭐ ולכן המפתח שבתוכה חוזר עליה: ⛔ **והתחילית נגזרת משם הטבלה**
+ *  ⛔ ואינה מוקלדת — ⚠️ הכפלה היא מקור אמת שני, ⭐ ושינוי תחילית שובר
+ *  אותו בשקט: ⛔ הקוד מבקש את החדש והמסד מחזיק את הישן, ⚠️ **והקריאה
+ *  אינה נופלת** — ⭐ היא מחזירה ריק. ⛔ **ונמדד משני הצדדים** — ⚠️ מה
+ *  שהקוד מבקש ומה שחי במסד. */
+async function claimCfgNaming() {
+  const pfx = APP.cfgTable.slice(0, APP.cfgTable.indexOf('_') + 1);
+  const SNAKE = /^[a-z][a-z0-9_]*$/;
+  const want = new Set();
+  for (const p of (APP.cfgReads || []))
+    for (const m of SRC.matchAll(new RegExp(p.re, 'g'))) want.add(m[1]);
+  const r = await q(`/${APP.cfgTable}?select=key,deleted`);
+  if (r.status !== 200) throw new Error(`${APP.cfgTable} → ${r.status} ${r.text.slice(0, 120)}`);
+  const live = JSON.parse(r.text).filter((x) => !x.deleted).map((x) => x.key);
+  /*  ⛔ מפתח יתום מוצהר אינו נמדד כאן — ⚠️ הוא שריד שכבר נושא נימוק כתוב
+   *  במקומו, ⭐ והכלל הזה מודד את מה שהקוד **מבקש**: ⛔ מדידה שמפילה על
+   *  שריד מוצהר דורשת לערוך את המסד ההיסטורי, ⚠️ וזה בדיוק מה שההצהרה
+   *  באה למנוע. */
+  const orph = APP.cfgOrphans || {};
+  const all = [...new Set([...want, ...live])].filter((k) => !orph[k]);
+  const pre = all.filter((k) => k.indexOf(pfx) === 0).sort();
+  const shape = all.filter((k) => !SNAKE.test(k)).sort();
+  if (pre.length)
+    bad('טז. מפתח הגדרה בלי תחילית — מפתחות שנושאים את `' + pfx + '`: ' +
+        pre.join(', ') + '. נמדד ' + pre.length + ' מול הצפוי 0. ' +
+        'מסירים את התחילית מהמפתח — `' + APP.cfgTable + '` כבר נושאת אותה');
+  if (shape.length)
+    bad('טז. מפתח הגדרה בלי תחילית — מפתחות שאינם ב-`snake_case`: ' +
+        shape.join(', ') + '. נמדד ' + shape.length + ' מול הצפוי 0. ' +
+        'מיישרים את השם לאותיות קטנות, ספרות וקו תחתון');
+  if (!pre.length && !shape.length)
+    ok('טז. מפתח הגדרה בלי תחילית — ' + all.length + ' מפתחות נמדדו משני הצדדים, ' +
+       '⛔ ואפס נושאים את `' + pfx + '` ⛔ ואפס חורגים מ-`snake_case`');
 }
 async function claimAllowlist() {
   if (!APP.allowlistFn) { ok('ד. רשימת-היתר — הפינוי אינו בבעלות הריפו הזה'); return; }
@@ -837,6 +874,7 @@ if (!CONN && !SELFTEST) {
     await claimSchema();
     await claimSortCols();
     await claimCfgKeys();
+    await claimCfgNaming();
     await claimAllowlist();
     await claimColReaders();
     await claimReplacedDefs();
@@ -873,6 +911,9 @@ if (RUN_MUT && !SELFTEST) {
     return [...s];
   })();
   const cfgOrph = Object.keys(APP.cfgOrphans || {});
+  /*  ⛔ התחילית נגזרת משם הטבלה ⛔ ואינה מוקלדת — ⚠️ אותה גזירה שבטענה,
+   *  ⭐ ורתמה שגוזרת אחרת מודדת מסלול שאינו המסלול החי. */
+  const CFG_PFX = APP.cfgTable.slice(0, APP.cfgTable.indexOf('_') + 1);
   const allowFirst = 'bk_key_in_the_stub_allowlist';
   const DF = (APP.derivedFields || [])[0];
 
@@ -960,7 +1001,9 @@ if (RUN_MUT && !SELFTEST) {
       return [200, JSON.stringify(
         (scen === 'orphan' ? [{ key: 'hr_orphan_key_that_is_not_listed' }] : [])
           .concat([{ key: allowFirst }]))];
-    const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph);
+    const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph)
+      .concat(scen === 'cfgpfx' ? [CFG_PFX + 'legacy_key'] : [])
+      .concat(scen === 'cfgcase' ? ['LegacyKey'] : []);
     return [200, JSON.stringify(keys.map((k) => ({ key: k, deleted: false })))];
   };
 
@@ -1029,6 +1072,8 @@ if (RUN_MUT && !SELFTEST) {
   if (cfgWant.length)
     await mut('⛔ מוטציה: מפתח הגדרה שנעדר מהטבלה מפיל את «כל מפתח שהקוד מבקש»', 'cfg', false);
   else ok('⛔ אין מוטציית מפתח הגדרה — הריפו הזה אינו קורא הגדרה, ⚠️ ואין מה למוטט');
+  await mut('⛔ מוטציה: מפתח הגדרה שנושא את תחילית הטבלה מפיל את «מפתח הגדרה בלי תחילית»', 'cfgpfx', false);
+  await mut('⛔ מוטציה: מפתח הגדרה שאינו `snake_case` מפיל את «מפתח הגדרה בלי תחילית»', 'cfgcase', false);
   if (APP.allowlistFn)
     await mut('⛔ מוטציה: מפתח גיבוי חי שאינו ברשימה מפיל את «רשימת-היתר»', 'orphan', false);
   else ok('⛔ אין מוטציית רשימת-היתר — הפינוי אינו בבעלות הריפו הזה, ⚠️ ואין רשימה למוטט');
@@ -1059,5 +1104,5 @@ if (RUN_MUT && !SELFTEST) {
 
 if (fail) console.error(`\n✗ סבב 93 (עובדות המסד החי) — ${fail} נכשלו`);
 else if (notMeasured) console.log(`\n⚠️ סבב 93 (עובדות המסד החי) — לא נמדד מול המסד, ומסלול המדידה נבדק ברתמה`);
-else console.log(`\n✓ סבב 93 (עובדות המסד החי) — שלוש-עשרה הטענות נמדדו מול המסד`);
+else console.log(`\n✓ סבב 93 (עובדות המסד החי) — הטענות נמדדו מול המסד`);
 process.exit(fail ? 1 : 0);

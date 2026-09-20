@@ -38,7 +38,7 @@ const APP = {
    *  את החותמת בתוך הבלוק החתום, ⭐ ומדידה נוספת עליה כאן הייתה טענה כפולה. */
   touchFns: ['slEnsurePassFp'],
   every: 3000,
-  stampKey: 'sl_last_changed',
+  stampKey: 'last_changed',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 

@@ -2632,10 +2632,15 @@ function kvMetaGaps() {
   const d = APP.kvMeta || {};
   const found = [...new Set(readOnce(APP.file).match(KVMETA_NAME) || [])].sort();
   const out = [];
+  /*  ⛔ אותה שכבה חיה בשני מרחבי שמות ⛔ ובכוונה — ⚠️ בענן המפתח בלי
+   *  תחילית, שהטבלה כבר נושאת אותה, ⭐ ובמכשיר הוא נושא אותה: ⛔ האחסון
+   *  המקומי משותף לכל האפליקציות שעל אותו origin. ⚠️ ולכן שם שנגמר
+   *  ב-`_<השכבה>` הוא **אותה שכבה** ⛔ ואינו שכבה שנייה. */
+  const sameLayer = (x) => x === d.table || x.endsWith('_' + d.table);
   if (d.table) {
     if (found.indexOf(d.table) < 0)
       out.push(`${d.table}: מוצהרת ואינה במקור — נמדדו ${found.length} שכבות`);
-    const stray = found.filter((x) => x !== d.table);
+    const stray = found.filter((x) => !sameLayer(x));
     if (stray.length) out.push(`שכבה שאינה מוצהרת: ${stray.join(', ')}`);
     if (String(d.why || '').trim()) out.push('נימוק להיעדר לצד שכבה מוצהרת');
   } else {
@@ -7040,7 +7045,8 @@ const GATES = {
   46: { claims: { test_period: ['[period-store]', '[period-calendar]'] } },
   /*  ⭐ סבב 148 — ⛔ אוצר מילים אחד לפעולה אחת: ⚠️ המרשם מלא בארבעת
    *  הפעלים, ⭐ ואפס שם ישן ואפס איות משובש. */
-  117: { claims: { test_period: ['[verb-registry]', '[verb-old-name]'] } },
+  117: { claims: { test_period: ['[verb-registry]', '[verb-old-name]'],
+                   test_dbfacts: 'טז. מפתח הגדרה בלי תחילית' } },
   /*  ⭐ סבב 148 — ⛔ תחילית הטבלאות והאחסון נגזרת משם הריפו: ⚠️ ראשי
    *  התיבות מול הסכימה המוצהרת, ⭐ וההגירה המקומית שנוקבת בתחילית שירדה. */
   120: { claims: { test_period: ['[prefix-derived]', '[prefix-legacy]'] } },
