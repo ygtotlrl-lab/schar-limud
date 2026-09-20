@@ -37,7 +37,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 144, app: 0, appWhy: '' };
+const FLOOR = { shared: 152, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -718,6 +718,58 @@ const FILTER_SAMPLE = 2;
 
 ok(`⛔ הצהרת קלט הבדיקות — ${covered} היפוכי תא רצו בסינון «doc» וכולם הפילו`,
    covered > 0 && failed === 0);
+
+/* ────── ⛔ סולם נקודות השבירה (סבב 155) ─────────────────────────────────────
+   ⛔ מה נאכף: הסולם נמדד בכיסוי — ⚠️ כל נקודה שבו יש לה כלל חי בגיליון,
+   ⭐ או הצהרה בשמה: ⛔ ואיתה מיקום של אלמנט צף שנגזר מחצי המסך.
+   ⛔ הנימוק המדוד: ה-probe מדד את **הכיוון ואת האסימונים** ⛔ ולא את
+   הכיסוי — ⚠️ והשורה הייתה ✅ בחמישה בזמן שבאחת מהן חיה נקודה אחת:
+   ⭐ וכל מסך מעליה נראה זהה.
+   ⛔ מה יישבר בלעדיו: סולם חלקי ימשיך להיראות כסולם, ⚠️ וכפתור שמחושב
+   מחצי המסך ימשיך לשאת בתוכו רוחב עמודה שקובע לנצח.
+   ⛔ מה אינו נאכף כאן: **איך הפריסה נראית** בכל נקודה — ⚠️ זו עין ולא
+   מדידה, ⭐ והיא נבדקת בדפדפן בסוף הסבב.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const SHEET = path.join(WORK, 'app.css');
+  const CLEAN_SHEET = fs.readFileSync(SHEET, 'utf8');
+  /*  ⛔ מספר השורה נגזר **משמה** ⛔ ואינו מוקלד — ⚠️ מספור מחדש מזיז את
+   *  השורות, ⭐ ומוטציה שמחפשת מספר מוקלד נופלת על העץ התקין. */
+  const bpRow = rows.find((x) => x.line.split('|')[2].trim() === 'פריסה במסכי טלפון וטאבלט');
+  if (!bpRow) throw new Error('שורת הפריסה אינה בטבלה — ⛔ עדכן את השם או את הטבלה');
+  const ROW_BP = bpRow.row;
+  /*  ⛔ המוטציה נבדקת מול **שם השורה שנפלה** ⛔ ולא מול «נפל» — ⚠️ שער
+   *  שנופל מסיבה אחרת נראה כאכיפה ⭐ ואינו אוכף דבר. */
+  const bpMut = async (label, files, mustFall) => {
+    let changed = false;
+    for (const [, clean, text] of files) if (text !== clean) changed = true;
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', changed);
+    const { held, out } = await why(files, partOf(ROW_BP));
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + ROW_BP,
+       !held && out.some((l) => l.indexOf('❌ שורה ' + ROW_BP + ' ') === 0));
+  };
+  /*  ⛔ הנקודה שמוסרת נגזרת מהגיליון ⛔ ואינה מוקלדת — ⚠️ הסולם זהה
+   *  בחמישה, ⭐ והנקודות שיש להן כלל חי אינן: ⛔ מוטציה שנוקבת במספר
+   *  הייתה עוברת בריפו שאין בו הכלל הזה. */
+  const live = [...CLEAN_SHEET.matchAll(/@media[^{]*?\(min-width\s*:\s*(\d+)px\)/g)]
+    .map((m) => Number(m[1])).sort((a, b) => a - b);
+  const gone = live[live.length - 1], kept = live[0];
+  const dropped = CLEAN_SHEET.split('(min-width:' + gone + 'px)')
+    .join('(min-width:' + kept + 'px)');
+  await bpMut('נקודת השבירה ' + gone + 'px יורדת מהגיליון', [[SHEET, CLEAN_SHEET, dropped]], true);
+  await bpMut('`max-width` בשאילתת פריסה',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\n@media (max-width:' + kept + 'px){main{margin:0}}\n']], true);
+  await bpMut('אלמנט צף שממוקם מחצי המסך',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET +
+      '\n.zz-mut-float{position:fixed;inset-inline-end:calc(50% - 195px)}\n']], true);
+  /*  ⭐ מוטציית-נגד: אותה הסרה בדיוק, ⛔ והנקודה מוצהרת בשמה — ⚠️ שינוי
+   *  חי בשני הקבצים ⛔ ולא הערה: ⭐ וההצהרה היא מה שמחזיק את השורה. */
+  const withDecl = CLEAN_CAP_TXT.replace('  bpNoRule: {',
+    '  bpNoRule: {\n    ' + gone + ": 'הוצהרה במוטציית-הנגד — ⚠️ נקודה שאין בה מה להשתנות',");
+  await bpMut('נקודה שירדה מהגיליון ומוצהרת בשמה',
+    [[SHEET, CLEAN_SHEET, dropped], [CAP_FILE, CLEAN_CAP_TXT, withDecl]], false);
+}
 
 process.chdir(ROOT);
 fs.rmSync(WORK, { recursive: true, force: true });

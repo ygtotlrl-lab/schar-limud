@@ -57,6 +57,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   }
 }
 #app{max-width:800px;margin:0 auto;padding-bottom:var(--sp-7)}
+/*  ⛔ בחלון רחב העמודה מתרחבת — ⚠️ המסכים כאן הם טבלאות, ⭐ ורוחב שנשאר
+   קצוב מקפל את שורת התנועה לשתי שורות במסך שיש בו מקום: ⛔ והסרגל
+   התחתון מתרחב איתה, ⚠️ שהוא נמדד לרוחב העמודה ⛔ ולא לרוחב החלון. */
+@media (min-width:1200px){#app{max-width:1040px}#tabbar{max-width:1040px}}
 #auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:var(--z-7)}
 #auth-screen.hidden{display:none}
 .auth-box{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7) var(--sp-7);width:90%;max-width:360px;box-shadow:0 2px 16px var(--sh-1);text-align:center}

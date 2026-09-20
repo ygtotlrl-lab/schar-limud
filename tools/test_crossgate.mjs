@@ -290,7 +290,7 @@ mutate('שורה שהוחרגה ב-test_matrix ואינה ב-GATES',
   [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
 
 mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
-  [['tools/check-capabilities.mjs', (s) => s.replace(/^ {4}(\d+):/m, '    9999:')]], ['probe-gap']);
+  [['tools/check-capabilities.mjs', (s) => s.replace(/(tableProbe: \{[\s\S]*?\n {4})\d+:/, '$19999:')]], ['probe-gap']);
 
 mutate('רוחב הבאנר בשער נבדל מהכלל הכתוב',
   [['tools/check-comments.mjs', (s) => s.replace(/const BANNER_W = \d+;/, 'const BANNER_W = 76;')]], ['width-gap']);
