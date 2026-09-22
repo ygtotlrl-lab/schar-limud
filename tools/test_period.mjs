@@ -79,7 +79,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [45, 117, 120];
+export const ROWS = [47, 120, 121, 124];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -106,8 +106,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת. */
 const FLOOR_MAX = (() => {
@@ -516,7 +520,7 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
 {
   /*  ⛔ ההצהרה מוצלבת למנוע שבמקור — ⚠️ ומנוע שני הוא שני מקורות אמת
    *  לאותה שאלה: ⭐ והספירה היא על אתר ההגדרה ⛔ ולא על הקריאה. */
-  const engines = (SRC.match(/window\.ysHebDate\s*=\s*function/g) || []).length;
+  const engines = (SRC.match(/window\.hebDate\s*=\s*function/g) || []).length;
   const want = APP.calendar.kind === 'hebrew' ? 1 : 0;
   t(n++, engines === want,
     `[period-calendar] מנוע התאריך העברי מול הלוח המוצהר — נמדדו ${engines} אתרי הגדרה ` +
@@ -689,8 +693,8 @@ if (RUN_MUT) {
       `נמדד «${c.kind}» והצפוי שייפול`);
   }
   {
-    const two = SRC + '\nwindow.ysHebDate = function (d) { return d; };\n';
-    const got = (two.match(/window\.ysHebDate\s*=\s*function/g) || []).length;
+    const two = SRC + '\nwindow.hebDate = function (d) { return d; };\n';
+    const got = (two.match(/window\.hebDate\s*=\s*function/g) || []).length;
     const want = APP.calendar.kind === 'hebrew' ? 1 : 0;
     t(n++, got !== want,
       'מ4 · ⛔ מוטציה: מנוע עברי שני מפיל את «[period-calendar]» — ' +

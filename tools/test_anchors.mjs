@@ -54,7 +54,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [37];
+export const ROWS = [39];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -79,8 +79,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -227,7 +231,7 @@ const MUT = [
    *  מרשם טקסט דו-ממדי ברמת המודול שמצויר לטבלה; ⛔ **ומה מפיל**: שניהם
    *  יחד — ⭐ המרשם שירד, ⚠️ ומרשם חדש בשם אחר. */
   { m: 'מ18', part: 'check-capabilities', lbl: 'המרשם שירד חוזר — «staticProseRegistries»',
-    edit: () => prose(IDX, 'YS_INF_DIMS') },
+    edit: () => prose(IDX, 'ZZ_INF_DIMS') },
   { m: 'מ19', part: 'check-capabilities', lbl: 'מרשם תצוגה קבוע חדש — «staticProseRegistries»',
     edit: () => prose(IDX, '_zzSteps') },
 ];
@@ -255,9 +259,12 @@ for (const r of MUT) {
  *  **טקסט קבוע**, ⛔ ולא הצורה הדו-ממדית: ⭐ מה שנגזר נמדד מול מקורו. */
 {
   const j = IDX.lastIndexOf('</body>');
+  /*  ⛔ השם שנוסף נקרא באותו קטע — ⚠️ מוטציית-נגד היא **שינוי חי**:
+   *  ⭐ שם שאין לו קורא הוא יתום, ⛔ והוא מפיל בדין. */
   const live = '<script>\nvar _zzLive = (window._rows || []).map(function (r) ' +
                '{ return [r.k, r.v]; });\nfunction _zzL() { var h = 0; ' +
-               '_zzLive.forEach(function (x) { h += x.length; }); return h; }\n<\/script>\n';
+               '_zzLive.forEach(function (x) { h += x.length; }); return h; }\n' +
+               '_zzL();\n<\/script>\n';
   if (j < 0) t(true, 'נ2 · ⭕ אין כאן סוגר גוף — ⛔ ואין לאן להוסיף');
   else t(!runGateOn({ 'index.html': IDX.slice(0, j) + live + IDX.slice(j) },
                     'check-capabilities.mjs'),

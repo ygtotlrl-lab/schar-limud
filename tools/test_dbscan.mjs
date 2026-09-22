@@ -67,8 +67,8 @@ const APP = {
   /*  ⛔ שכבת העימוד המשותפת — ⚠️ **מה נכנס**: שם הפונקציה שבה תשובת
    *  השרת הופכת לשורות; ⛔ **ומה מפיל**: שם שאין לו גוף במקור. ⭐ **ולמה
    *  היא כאן**: היא נקודת הקריאה האחת, ⛔ וענף הכשל שבה חל על כל הקוראים. */
-  pagerFn: '_ysRowsPaged',
-  dbPager: '_ysRowsPaged',
+  pagerFn: '_rowsPaged',
+  dbPager: '_rowsPaged',
   /*  ⛔ טבלה שנגרעה מהמסד ושמה נשאר בקוד — ⚠️ **מה נכנס**: השם, הדגל
    *  שמכבה את המסלול, והנימוק; ⛔ **ומה מפיל**: דגל שאינו כבוי, והכרזה
    *  בלי אתר. ⭐ **ולמה ריק**: נמדד ואין. */
@@ -104,7 +104,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [163, 152, 216];
+export const ROWS = [168, 157, 217];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -138,8 +138,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -764,9 +768,9 @@ if (RUN_MUT) {
   /*  ⭐ נ4 · מוטציית-נגד: ⛔ שם שהוחלף בעקביות בשכבת העימוד ⛔ אינו מפיל —
    *  ⚠️ הנמדד הוא ענף הכשל, ⭐ ולא שם הפונקציה. */
   {
-    const src = SRC.split(APP.pagerFn).join('_ysRowsPagedRenamed');
+    const src = SRC.split(APP.pagerFn).join('_rowsPagedRenamed');
     const saved = APP.pagerFn;
-    APP.pagerFn = '_ysRowsPagedRenamed';
+    APP.pagerFn = '_rowsPagedRenamed';
     const g = readGuardGaps(src);
     APP.pagerFn = saved;
     if (!g.length) ok('נ4 · ⭐ מוטציית-נגד: שם שכבת העימוד שהוחלף בעקביות ⛔ אינו מפיל');

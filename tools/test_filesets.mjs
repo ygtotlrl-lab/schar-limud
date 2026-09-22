@@ -3,7 +3,7 @@
    ───────────────────────────────────────────────────────────────────────────
    **מה נאכף:** כל קובץ במעקב הוא אחד משלושה — בסט המשותף לכל הריפו,
    בקטגוריה פטורה **מוכרזת**, או ברשימת-ההיתר של האפליקציה הזו עם נימוק
-   כתוב; ⛔ ושער שנושאו חדל להיות מעבר מאבד את סימן ה-⏳ ואת הטריגר.
+   כתוב; ⛔ ואין שער מעבר — ⚠️ הצהרת שער שנושאת סימן מעבר מפילה.
 
    **הנימוק המדוד:** בודק המבנה אוכף את המבנה **בתוך** ריפו אחד, ⚠️ ולכן
    קובץ שנעלם משלושה ונשאר באחד עובר בו במלואו — ⛔ «קיים רק כאן, בשקט».
@@ -21,10 +21,11 @@
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'schar-limud',
-  /*  ⛔ קובץ שקיים כאן בלבד — כל שורה נושאת את הסיבה. */
-  /*  ⛔ שער שקיים כאן ואינו בסט המשותף (סבב 68) —
-   *  ⚠️ כל שורה נושאת את הסיבה, ⛔ ו-⏳ מסמן **שער מעבר** שנושא
-   *  טריגר להסרה. ⛔ שער תשתית שקיים באחת בלבד בלי שורה כאן מפיל. */
+  /*  ⛔ קובץ שקיים כאן בלבד — ⚠️ כל שורה נושאת את הסיבה: ⭐ בלעדיה היא נקראת כטעות. */
+  /*  ⛔ המרשם הפר-אפליקציתי — ⚠️ **מה נכנס**: שם השער ⟵ היכולת
+   *  שמצדיקה אותו; ⚠️ **ומה מפיל**: נימוק שהוא נוכחות בלבד, הצהרה
+   *  שאין לה קובץ, וסימן מעבר בהצהרה. ⭐ **ולמה המבנה קיים**: שער
+   *  שאינו בסט המשותף נראה משותף ⛔ ואינו — ⚠️ והצהרה היא מה שמבדיל. */
   appGates: {
       'roles': 'מודד את מודל ההרשאות ואת היעדר ההשוואה מול שם התפקיד כסיסמה — ⛔ וביומן אין כניסה ואין תפקיד שיוכרע',
       'offline_login': 'מודד את הכניסה האופליין מול הטביעה ואת ארבע התשובות שלה — ⛔ וביומן אין כניסה ואין משתמש שיאומת',
@@ -40,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 19, 22, 23, 133, 201];
+export const ROWS = [17, 20, 23, 24, 25, 137, 206];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -53,6 +54,7 @@ import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { builtinModules } from 'node:module';
 import { reasonGaps } from './scope.mjs';
+import { PEERS } from './peers.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בכל העותקים (סבב 67). ⚠️ קובץ שיורד
  *  מכאן יורד מכולם באותו סבב, בדיוק כמו חתימת בלוק SHARED. */
@@ -82,6 +84,7 @@ const SHARED = [
   'android/build.gradle',
   'android/gradle.properties',
   'android/settings.gradle',
+  'app.css',
   'core/sync.js',
   'core/util.js',
   'icons/apple-touch-icon.png',
@@ -191,7 +194,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+const FLOOR = { shared: 8, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -200,8 +203,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -330,6 +337,36 @@ export function depGaps(root, files) {
   return out;
 }
 
+/*  ⛔ שער שאינו נוקב בשורה חייב לכסות יכולת שיותר מאפליקציה אחת נושאת —
+ *  ⚠️ **מה נכנס**: שם השער שב-`appGates` ⟵ השורות שהוא מצהיר ⟵ האחיות
+ *  שהקובץ חי בהן; ⛔ **ומה מפיל**: שער בלי שורה שקיים כאן בלבד.
+ *  ⭐ **ולמה המבנה קיים**: סחף הוא **בין** אפליקציות, ⚠️ ולוגיקה שחיה
+ *  באחת אין ממה לסטות — ⛔ ומבחן הקבלה בדפדפן הוא שתופס אותה. */
+export function productGates(root, peers, self) {
+  const out = [], away = [];
+  for (const k of Object.keys(APP.appGates)) {
+    const rel = 'tools/test_' + k + '.mjs';
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) continue;
+    const m = /export const ROWS\s*=\s*\[([\s\S]*?)\]/.exec(fs.readFileSync(p, 'utf8'));
+    const rows = m ? (m[1].replace(/\/\*[\s\S]*?\*\//g, '').match(/\d+/g) || []) : [];
+    if (rows.length) continue;
+    let seen = 0, looked = 0;
+    for (const q of peers) {
+      if (q === self) continue;
+      const d = path.join(root, '..', q);
+      if (!fs.existsSync(d)) { if (!away.includes(q)) away.push(q); continue; }
+      looked++;
+      if (fs.existsSync(path.join(d, rel))) seen++;
+    }
+    /*  ⛔ «לא נמצא» אינו «אינו קיים» — ⚠️ אחות שאינה על הדיסק אינה תשובה,
+     *  ⭐ והיא מדווחת בשמה ב-`away`: ⛔ וכשאף אחות לא נקראה אין מה להכריע,
+     *  ⚠️ **ושער היה מוכרז «מוצר» מפני שלא היה מול מה להשוות**. */
+    if (looked && !seen) out.push(k);
+  }
+  return { out, away };
+}
+
 export function audit(root) {
   let files = trackedFiles(root);
   /*  ⛔ הצלבה מול הדיסק ולא מול האינדקס בלבד (סבב 67) — `git ls-files`
@@ -418,6 +455,30 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
           g6.join(' · ') + '). כותבים את היכולת בפנים, ⛔ שקלון טרי רץ בלי התקנה');
 }
 
+/*  ⛔ שער יושב על שורה תשתיתית — ⚠️ ומה שאינו נוקב בשורה מכסה יכולת
+ *  שיותר מאפליקציה אחת נושאת: ⭐ ולוגיקת מוצר אינה נאכפת בשער. */
+{
+  const r = productGates(ROOT, PEERS, APP.app);
+  r.out.length === 0
+    ? ok('5 · [gate-product] כל שער שאינו נוקב בשורה מכסה יכולת שיותר מאפליקציה אחת נושאת — נמדדו ' +
+         Object.keys(APP.appGates).length + ' מוצהרים ואפס שערי מוצר' +
+         (r.away.length ? ' · ואחיות שאינן על הדיסק: ' + r.away.join(' · ') : ''))
+    : bad('5 · [gate-product] שער מוצר — נמדדו ' + r.out.length + ' מתוך ' +
+          Object.keys(APP.appGates).length + ' והצפוי אפס (' + r.out.join(' · ') +
+          '). מוחקים את השער, ⛔ והמדידה עוברת למבחן הקבלה בדפדפן; ⚠️ או נוקבים בשורה התשתיתית שהוא אוכף');
+}
+
+/*  ⛔ אין שער מעבר — ⚠️ שער שנכתב כדי לאמת ששינוי קרה נשאר לנצח:
+ *  ⭐ האימות הוא דיווח הסבב, ⛔ והוא נאמר פעם אחת. */
+{
+  const g6 = Object.entries(APP.appGates).filter(([k, v]) => (k + ' ' + v).includes('⏳')).map(([k]) => k);
+  g6.length === 0
+    ? ok('6 · [oneoff-gate] אפס הצהרת שער שנושאת סימן מעבר — נמדדו ' +
+         Object.keys(APP.appGates).length + ' מוצהרים')
+    : bad('6 · [oneoff-gate] הצהרת שער מעבר — נמדדו ' + g6.length + ' והצפוי אפס (' +
+          g6.join(' · ') + '). מסיימים את המעבר בסבב אחד ומוחקים את השער, ⛔ ולא מסמנים אותו');
+}
+
 console.log('\n— מוטציות —');
 /*  ⛔ כותב על עותק — ⚠️ המוטציה משנה את סט הקבצים של הריפו, ⛔ ואין סט שאפשר למסור בזיכרון. */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fset-'));
@@ -462,14 +523,23 @@ if (!RUN_MUT) {
     : bad('נ1 · שינוי תוכן נספר בטעות כשינוי בסט');
 }
 
+/*  ⛔ חמש המוטציות שלמטה מוטטות **הכרזה קיימת** ב-`appGates` — ⚠️ וריפו
+ *  שאין בו שער פרטי אין לו מה למוטט: ⭐ והן נושאות שורת נימוק ⛔ ואינן
+ *  מדולגות בשתיקה — ⚠️ **ובלי השורה הן רצות על `undefined`**, ⛔ ושתיים
+ *  מהן נופלות על כלום ושלוש עוברות על כלום. */
+const GKEY = Object.keys(APP.appGates)[0] || null;
+const noGate = (id, what) =>
+  ok(id + ' · ⛔ אין כאן שער פרטי — ⚠️ ' + what + ', ⛔ ואין הכרזה למוטט');
+
 /*  ⛔ מ3 — שער שקיים כאן בלבד ואינו מוצהר ב-`appGates` (סבב 68).
  *  ⚠️ הפטור הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט,
  *  ⛔ וזה בדיוק מה שאסור. */
-{
+if (!GKEY) noGate('מ3', 'ההכרזה שנמדדת כאן היא של שער פרטי');
+else {
   /*  ⚠️ המוטציה היא **לוגית** ולא על העץ (סבב 68) — `git ls-files` בעותק
    *  קורא את ה-`.git` שהועתק איתו, ⛔ ולכן קובץ חדש אינו נספר שם כלל.
    *  ⭐ הסרת ההכרזה שקולה בדיוק להוספת שער לא-מוצהר. */
-  const key = Object.keys(APP.appGates)[0];
+  const key = GKEY;
   const keep = APP.appGates[key];
   delete APP.appGates[key];
   const hit = audit(ROOT).some((x) => x.startsWith('[extra]') && x.includes('test_' + key));
@@ -504,8 +574,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית שנוקבת בסבבה אינה מפילה:
  *  ⚠️ בלעדיה הטענה אינה מבחינה בין «חסר סבב» ל«המילה מופיעה». */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ3', 'ההכרזה החד-פעמית נכתבת על שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב 147';
   const clean = oneoffGaps(APP.appGates).length === 0;
@@ -516,8 +587,9 @@ if (!RUN_MUT) {
 
 /*  ⛔ מ7 — תוצר חד-פעמי ששרד את סבבו (סבב 148). ⚠️ «נושא את סבבו» עבר
  *  על כלי מסבב 92 ששרד 56 סבבים, ⭐ והמדידה החסרה היא הגיל. */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('מ7', 'התוצר החד-פעמי נמדד על הכרזת שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   const cur = currentRound(ROOT);
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + (cur - 1);
@@ -529,8 +601,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ הכרזה חד-פעמית מהסבב הנוכחי ⛔ אינה מפילה:
  *  ⚠️ בלעדיה הטענה הייתה מפילה כל תוצר ביום שנכתב. */
-{
-  const key = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ4', 'ההכרזה מהסבב הנוכחי נכתבת על שער פרטי');
+else {
+  const key = GKEY;
   const keep = APP.appGates[key];
   const cur = currentRound(ROOT);
   APP.appGates[key] = 'מסמך עבודה חד-פעמי שנכתב בסבב ' + cur;
@@ -552,8 +625,9 @@ if (!RUN_MUT) {
 
 /*  ⭐ מוטציית-נגד — ⛔ שער ש**כן** מוצהר ⛔ אינו מפיל, ⚠️ אחרת הטענה
  *  אינה מבחינה בין «מודדת הכרזה» ל«אוסרת כל שער פרטי». */
-{
-  const name = Object.keys(APP.appGates)[0];
+if (!GKEY) noGate('נ2', 'השער המוצהר שאינו מפיל הוא שער פרטי');
+else {
+  const name = GKEY;
   audit(ROOT).some((x) => x.includes('test_' + name))
     ? bad('נ2 · שער מוצהר נתפס בטעות')
     : ok('נ2 · ⭐ מוטציית-נגד: שער שמוצהר ב-appGates ⛔ אינו מפיל');
@@ -583,6 +657,49 @@ if (!RUN_MUT) {
     ? ok('נ5 · ⭐ מוטציית-נגד: ייבוא מובנה ומקומי ⛔ אינו מפיל, ⛔ וחבילה חיצונית כן')
     : bad('נ5 · נמדד מובנה ' + (clean ? 'נקי' : 'נתפס') + ' וחיצוני ' +
           (hit ? 'נתפס' : 'נקי') + ' — והצפוי נקי/נתפס');
+}
+
+/*  ⛔ מ8 — שער בלי שורה שחי כאן בלבד. ⚠️ סחף הוא בין אפליקציות,
+ *  ⭐ ולוגיקה שחיה באחת אין ממה לסטות. */
+{
+  const d = clone('m8');
+  fs.writeFileSync(path.join(d, 'tools', 'test_probe_prod.mjs'), 'export const ROWS = [];\n');
+  /*  ⛔ האחיות נבנות לצד העותק — ⚠️ «שער מוצר» הוא שער שהאחיות **נקראו**
+   *  ואין בהן מקבילה לו: ⭐ בלי האחיות המדידה אינה מכריעה, ⛔ והמוטציה
+   *  הייתה עוברת על סביבה ולא על הפרה. */
+  for (const q of PEERS) if (q !== APP.app) fs.mkdirSync(path.join(d, '..', q), { recursive: true });
+  APP.appGates.probe_prod = 'מודד את חשבון המוצר שחי כאן בלבד — ⛔ ולשאר אין חשבון כזה';
+  const hit = productGates(d, PEERS, APP.app).out.includes('probe_prod');
+  delete APP.appGates.probe_prod;
+  hit ? ok('מ8 · [gate-product] שער בלי שורה שחי כאן בלבד מפיל את טענה 5')
+      : bad('מ8 · שער מוצר לא נתפס');
+}
+{
+  /*  ⭐ מוטציית-נגד — ⛔ שער שנוקב בשורה תשתיתית אינו מפיל, ⚠️ גם כשהקובץ
+   *  עצמו חי כאן בלבד: ⭐ השורה היא מה שמצדיק אותו. */
+  const d = clone('n6');
+  fs.writeFileSync(path.join(d, 'tools', 'test_probe_infra.mjs'), 'export const ROWS = [24];\n');
+  APP.appGates.probe_infra = 'מודד יכולת שקיימת כאן בלבד — ⛔ ולשאר אין מסך כזה';
+  const clean = !productGates(d, PEERS, APP.app).out.includes('probe_infra');
+  delete APP.appGates.probe_infra;
+  clean ? ok('נ6 · ⭐ מוטציית-נגד: שער שנוקב בשורה תשתיתית ⛔ אינו מפיל')
+        : bad('נ6 · שער שנוקב בשורה נתפס בטעות');
+}
+
+/*  ⛔ מ9 — הצהרת שער שנושאת סימן מעבר. ⚠️ שער שנכתב לאמת ששינוי
+ *  קרה נשאר ירוק לנצח, ⭐ ואיש אינו שואל למה הוא שם. */
+{
+  const key = Object.keys(APP.appGates)[0];
+  if (key === undefined) {
+    ok('מ9 · [oneoff-gate] ⛔ אין כאן שער מוצהר — ⚠️ ואין מה למוטט');
+  } else {
+    const keep = APP.appGates[key];
+    APP.appGates[key] = '⏳ מודד את ההסרה עד שתושלם — ⛔ ולאחיות אין מה להסיר';
+    const hit = Object.entries(APP.appGates).some(([k, v]) => (k + ' ' + v).includes('⏳'));
+    APP.appGates[key] = keep;
+    hit ? ok('מ9 · [oneoff-gate] סימן מעבר בהצהרת שער מפיל את טענה 6')
+        : bad('מ9 · סימן מעבר לא נתפס');
+  }
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

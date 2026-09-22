@@ -37,7 +37,7 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-export const ROWS = [206, 223];
+export const ROWS = [211, 224];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -63,8 +63,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -172,11 +176,19 @@ export function callersOf(id, files = TREE, kind = 'member') {
                              : new RegExp(`\\b${id}\\s*\\(`);
   return files.filter((f) => re.test(fs.readFileSync(f, 'utf8'))).map((f) => f.replace(ROOT + '/', ''));
 }
+/*  ⛔ השערים והאפליקציה הם שתי תוכניות (סבב 155) — ⚠️ המקור אינו מייבא
+    מ-`tools/` ⛔ ושער אינו קורא לפונקציה שבמקור: ⭐ ולכן שם שנמחק בצד
+    אחד אינו נמדד מול קריאה בצד השני. ⚠️ הנימוק המדוד: שער שירד נשא מוק
+    של לקוח הענן, ⛔ ושם המתודה שבו נספר כמחוק — ⭐ וכל קריאה למתודה
+    של הספרייה עצמה נספרה כקוראו. */
+const sideOf = (f) => (String(f).indexOf('tools/') === 0 ? 'tools' : 'app');
 export function orphans(before, after, files = TREE, kinds = null) {
   const out = [];
   for (const id of before.keys()) {
     if (after.has(id)) continue;
-    const hits = callersOf(id, files, (kinds && kinds.get(id)) || 'member');
+    const side = sideOf(before.get(id));
+    const hits = callersOf(id, files, (kinds && kinds.get(id)) || 'member')
+      .filter((f) => sideOf(f) === side);
     if (hits.length) out.push({ id, from: before.get(id), hits });
   }
   return out;
@@ -233,19 +245,23 @@ if (!RUN_MUT) {
 /*  ⛔ המוטציה על **מודל** ולא על הריפו (סבב 72) — ⚠️ מחיקת פונקציה אמיתית
     כדי לבדוק שער היא בדיוק מה שהשער בא למנוע. */
 {
-  const before = new Map([['ysDoThing', 'index.html'], ['ysGoneClean', 'index.html']]);
+  const before = new Map([['zzDoThing', 'index.html'], ['zzGoneClean', 'index.html']]);
   const after = new Map();
   const tmp = join(ROOT, 'tools');
   const files = [];
   t(orphans(before, after, files).length === 0, '⭐ מוטציית-נגד: מזהה שנמחק ואין לו קורא ⛔ אינו מפיל');
   const fake = [join(tmp, 'test_removals.mjs')];
-  const withCaller = new Map([['defsOf', 'x.mjs']]);
+  const withCaller = new Map([['defsOf', 'tools/x.mjs']]);
   t(orphans(withCaller, new Map(), fake).length === 1,
     '⛔ מוטציה: מזהה שנמחק ויש לו קורא — נתפס');
+  t(orphans(withCaller, new Map(), [join(ROOT, 'index.html')]).length === 0,
+    '⭐ מוטציית-נגד: שם שנמחק ב-`tools/` וקריאה בשם זהה במקור ⛔ אינו מפיל');
 
   /*  ⛔ מוטציית-נגד על **צורה** (סבב 72) — ⚠️ זו בדיוק המוטציה שהפילה את
       המיזוג: `async` שנוסף לחץ אינו מחיקה, ⛔ ואסור לו להפיל. */
-  const asDefs = (txt) => new Map([...defsOf(txt)].map((d) => [d, 'index.html']));
+  /*  ⚠️ הדגם נושא נתיב ב-`tools/` — ⛔ ולא מפני שזו צורתו שם: ⭐ הקורא
+      שהדגם נשען עליו הוא קובץ שער אמיתי, ⛔ ושני הצדדים נמדדים באותו צד. */
+  const asDefs = (txt) => new Map([...defsOf(txt)].map((d) => [d, 'tools/x.mjs']));
   const plain = asDefs('const callersOf = (id) => { return id; };');
   const asyn = asDefs('const callersOf = async (id) => { return id; };');
   t(plain.has('callersOf') && asyn.has('callersOf'),

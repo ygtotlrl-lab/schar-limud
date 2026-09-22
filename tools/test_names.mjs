@@ -10,7 +10,8 @@
  *  **הנימוק המדוד:** 49 פונקציות בהנהלה נשאו את התחילית `sl` — ⛔ שהיא
  *  תחיליתה של שכר לימוד: ⚠️ `slSetLateMin` נראה בדיוק כמו `lsSweep`,
  *  ⭐ ורק מי שיודע ש-`sl` הוא ריפו אחר רואה את השארית. ⛔ **והשארית שקשה
- *  ביותר לראות היא קבוע** — ⚠️ `YS_PASS_CTX` החזיק `hanhala-ruchanit/hr_users/v1/`:
+ *  ביותר לראות היא קבוע** — ⚠️ קבוע הקשר-הסיסמה נשא בערכו את שם הטבלה
+ *  שאחרי ההסבה, ובשמו את התחילית שלפניה:
  *  ⭐ הערך הוסב והשם לא, ⛔ והוא עבד. ⚠️ **והשער לא ראה אותו משני צדדים** —
  *  ⛔ הוא מדד צורות של **פונקציה** בלבד, ⚠️ ו-`ys` אינה תחיליתה של אף אחות:
  *  ⭐ ונמדד שחיתוך
@@ -40,7 +41,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { whiten } from './whiten.mjs';
-import { appSrc } from './appsrc.mjs';
+import { appSrc, CORE_FILES } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -123,7 +124,7 @@ const APP = {
 
 /*  ⛔ השורה שהקובץ הזה אוכף — ⚠️ נגזרת משם השורה בטבלה ⛔ ואינה מוקלדת
  *  בגוף השער: ⭐ והמרשם הוא המקום היחיד שנוקב במספר. */
-export const ROWS = [119, 91];
+export const ROWS = [123, 94];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -137,12 +138,12 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 /*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בכל הריפו,
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. */
-const FLOOR = { shared: 14, app: 0, appWhy: '' };
+const FLOOR = { shared: 15, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-const SUBRUN = !!process.env.GATE_SUBRUN;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -315,6 +316,30 @@ is(hits.length === 0,
   `[fn-sister-prefix] ⛔ אפס תחילית של אחות ב-${names.length} שמות — נמדדו ${hits.length} והצפוי אפס` +
   (hits.length ? ` (${hits.slice(0, 6).join(' ')})` : ''));
 
+/*  ⛔ שם במודול משותף נושא את תחום המודול (סבב 154) — ⚠️ **מה נכנס**:
+ *  כל שם ברמת המודול שמוגדר ב-`core/`; ⛔ **ומה מפיל**: תחילית שהיא
+ *  תחיליתה החיה של אפליקציה — ⭐ שלה או של אחות. ⚠️ **ולמה זה קיים**:
+ *  המודול נולד באפליקציה אחת ⛔ והשמות באו איתו: ⭐ מי שקורא אותו באחות
+ *  מניח שהוא זר, ⛔ ו«שם שחי גם באחות נשאר» הגן עליו מהסבה שגויה
+ *  ⚠️ ולא שאל אם השם עצמו נכון. */
+{
+  const own = APP.namePolicy.prefix;
+  const all = new Map([...live, ...(own ? [[own, APP.app]] : [])]);
+  const bad = [];
+  let scanned = 0;
+  for (const f of CORE_FILES) {
+    if (!fs.existsSync(f)) continue;
+    for (const nm of allNames(whiten(fs.readFileSync(f, 'utf8')))) {
+      scanned++;
+      const pf = prefixOf(nm);
+      if (pf && all.has(pf)) bad.push(`${nm}⟵${all.get(pf)}`);
+    }
+  }
+  is(bad.length === 0,
+    `[core-app-prefix] ⛔ אפס תחילית של אפליקציה ב-${scanned} שמות שבמודולים — ` +
+    `נמדדו ${bad.length} והצפוי אפס` + (bad.length ? ` (${bad.slice(0, 6).join(' ')})` : ''));
+}
+
 /*  ⛔ תחילית שהוסבה — ⚠️ היא אינה תחיליתה של אחות, ⭐ ולכן הטענה שמעל
  *  אינה רואה אותה: ⛔ והיא בדיוק מה ש-1163 שמות בהנהלה ו-380 ביומן נשאו
  *  אחרי שהטבלאות ומפתחות האחסון כבר הוסבו. */
@@ -382,16 +407,19 @@ is(badCls.length === 0,
   `נמדדו ${badCls.length} חורגות והצפוי אפס` + (badCls.length ? ` (${badCls.slice(0, 6).join(' ')})` : ''));
 
 /* 5. אסימוני עיצוב — ⛔ דפוס אחד למספר, ⚠️ ואסימון שחי כאן בלבד מוצהר */
-/*  ⛔ ההגדרות נקראות מהמקור הגולמי — ⚠️ הן חיות ב-`<style>`, ⭐ שההלבנה
+/*  ⛔ ההגדרות נקראות מהמקור הגולמי — ⚠️ הן חיות בגיליון הסגנון, ⭐ שההלבנה
  *  המשותפת מלבינה **מה שאינו בתוך `<script>`**: ⛔ ומקור מולבן היה
- *  מחזיר אפס אסימונים תמיד. */
+ *  מחזיר אפס אסימונים תמיד.
+ *  ⛔ **והגיליון הוא `app.css`** — ⚠️ הוא יצא מ-`index.html`, ⭐ וקריאה
+ *  מהקובץ לבדו הייתה מחזירה אפס הגדרות ⛔ ומאשרת כל הצהרה. */
 const tokDefs = (text) => {
   const m = new Map();
   for (const x of text.matchAll(/(--[a-zA-Z][\w-]*)\s*:\s*([^;}]*)/g))
     (m.get(x[1]) || m.set(x[1], []).get(x[1])).push(x[2].trim());
   return m;
 };
-const RAW_SRC = fs.readFileSync(join(ROOT, 'index.html'), 'utf8');
+const RAW_SRC = fs.readFileSync(join(ROOT, 'index.html'), 'utf8') + '\n' +
+  fs.readFileSync(join(ROOT, 'app.css'), 'utf8');
 const myTok = tokDefs(RAW_SRC);
 /*  ⛔ `--ls-n1`/`--ls-n2` אינם חריגה — ⚠️ התקן נוקב בהם במפורש ככיוון
  *  שלילי, ⭐ והמספר שם הוא סימן ⛔ ולא מדרגה. */
@@ -409,8 +437,13 @@ const tokMissing = [];
 for (const p of PEERS) {
   if (p === APP.app) continue;
   const f = join(SIBS, p, 'index.html');
+  const c = join(SIBS, p, 'app.css');
   if (!fs.existsSync(f)) { tokMissing.push(p); continue; }
-  for (const k of tokDefs(fs.readFileSync(f, 'utf8')).keys()) sisTok.add(k);
+  /*  ⛔ ואצל האחות הגיליון הוא קובץ אף הוא — ⚠️ קריאת `index.html` לבדו
+   *  הייתה מחזירה אפס אסימונים שלה, ⭐ וכל אסימון כאן היה נראה יחיד. */
+  const txt = fs.readFileSync(f, 'utf8') +
+    (fs.existsSync(c) ? '\n' + fs.readFileSync(c, 'utf8') : '');
+  for (const k of tokDefs(txt).keys()) sisTok.add(k);
 }
 const declTok = { ...(APP.namePolicy.appTokens || {}), ...(APP.namePolicy.slotTokens || {}) };
 const onlyHere = tokMissing.length ? [] : [...myTok.keys()].filter((k) => !sisTok.has(k));
@@ -486,6 +519,21 @@ const m8 = [['#fff']].filter((v) => !(v.length > 1 && v.every((x) => /^var\(--/.
 is(m8.length === 1,
   'מ8 · ⛔ מוטציה: הכרזת חריץ על אסימון שהגדרתו ליטרל — `[token-slot]` הייתה נכשלת');
 
+/*  ⛔ מ13 · מ14 — שם בתחילית של אפליקציה במודול משותף: ⚠️ תחיליתה של
+ *  אחות, ⛔ ותחיליתה של האפליקציה עצמה — ⭐ שני הצדדים. */
+{
+  const own = APP.namePolicy.prefix;
+  const all = new Map([...live, ...(own ? [[own, APP.app]] : [])]);
+  const sis = [...live.keys()][0] || 'zz';
+  const hit = (nm) => { const pf = prefixOf(nm); return !!(pf && all.has(pf)); };
+  is(hit(sis + 'Foo') && [...allNames('function ' + sis + 'Foo(){}')].filter(hit).length === 1,
+    `מ13 · ⛔ מוטציה: \`function ${sis}Foo\` במודול — \`[core-app-prefix]\` הייתה נכשלת`);
+  is(!!own && hit(own + 'Bar'),
+    `מ14 · ⛔ מוטציה: \`function ${own}Bar\` במודול — \`[core-app-prefix]\` הייתה נכשלת`);
+  is(!hit('hebDate') && !hit('mergeCore') && !hit('readNum'),
+    'נ9 · ⭐ מוטציית-נגד: `hebDate` · `mergeCore` · `readNum` — שם בתחום המודול ⛔ אינו מפיל');
+}
+
 /*  ⭐ מוטציות-נגד — ⛔ שינוי חי שאסור לו להפיל. */
 const nLs = [...defNames('function lsSweep(){}')].filter((x) => {
   const p = prefixOf(x); return p && live.has(p);
@@ -539,10 +587,17 @@ is(prefixOf(nOwn) === APP.namePolicy.prefix && !live.has(APP.namePolicy.prefix)
    && !(APP.namePolicy.prefix in (APP.namePolicy.retiredPrefix || {})),
   `נ6 · ⭐ מוטציית-נגד: \`${nOwn}\` — תחילית האפליקציה ⛔ אינה מפילה`);
 
-const nShared = names.filter((nm) => { const p = prefixOf(nm);
-  return !!p && (p in (APP.namePolicy.retiredPrefix || {})) && sisterNames.has(nm); });
-is(nShared.length > 0,
-  `נ7 · ⭐ מוטציית-נגד: ${nShared.length} שמות בתחילית שהוסבה חיים גם באחות — ⛔ שכבה משותפת אינה מפילה`);
+/*  ⛔ המוטציית-נגד סינתטית ⛔ ואינה נשענת על שם חי (סבב 154) — ⚠️ ההסבה
+ *  הושלמה ואפס שמות בתחילית שהוסבה נותרו בעץ: ⭐ והנמדד הוא ההכרעה
+ *  עצמה — שם בתחילית שהוסבה שחי גם באחות ⛔ אינו מפיל, ⚠️ ואותו שם
+ *  שאינו באחות ⛔ כן. */
+const nSh = mRet + 'Shared';
+const wasSh = sisterNames.has(nSh);
+sisterNames.add(nSh);
+const nSharedOk = !!mRet && !isLeft(nSh);
+if (!wasSh) sisterNames.delete(nSh);
+is(nSharedOk && !!mRet && isLeft(nSh),
+  `נ7 · ⭐ מוטציית-נגד: \`${nSh}\` שחי גם באחות — ⛔ שכבה משותפת אינה מפילה`);
 
 is(prefixOf('MSG_OFFLINE') === 'msg' && !live.has('msg')
    && !('msg' in (APP.namePolicy.retiredPrefix || {})),

@@ -58,7 +58,7 @@ const APP = {
 
 /*  ⛔ הקובץ אוכף שורה אחת — ⚠️ והמספר מוצהר כאן בלבד: ⭐ ארבעת המרשמים
  *  המוצהרים הם המקום היחיד שמספר שורה נכתב בו. */
-export const ROWS = [118];
+export const ROWS = [122];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ מדידה,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -80,7 +80,7 @@ const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-const SUBRUN = !!process.env.GATE_SUBRUN;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
