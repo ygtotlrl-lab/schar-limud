@@ -94,7 +94,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 112) — ⚠️ המיפוי נגזר מכאן
  *  ⛔ ואינו רשימה שנייה בבודק. */
-export const ROWS = [23, 58, 60];
+export const ROWS = [23, 58, 60, 226, 227];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -118,7 +118,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 21, app: 0, appWhy: '' };
+const FLOOR = { shared: 23, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -250,6 +250,24 @@ export function uncoveredTools(names, pure, perApp, subset) {
  *  שער: ⭐ שער שהוסר מהרשימה ונשאר בתיקייה מפסיק לרוץ ⛔ ואיש אינו רואה. */
 export function gateRunGaps(mjs, runList, notGates) {
   return mjs.filter((f) => runList.indexOf(f) < 0 && !(f in notGates));
+}
+
+/*  ⛔ רשימת הסריקה נגזרת מרשימת הריצה (סבב 168) — ⚠️ **מה נכנס**: קובצי
+ *  `tools/`, קבוצת הסריקה, וקורא ה-`ROWS` של כל קובץ; ⛔ **ומה מפיל**: קובץ
+ *  מחוץ לקבוצה שמייצא `ROWS`, ⭐ גם ריק — ⚠️ `ROWS` ריק הוא ההצהרה שרשימת
+ *  דילוג נפרדת דרשה, ⛔ והוא נשאר אחריה כשריד שנראה כשער. */
+export function rowsDeclOf(txt) {
+  const m = /^export const ROWS = \[([^\]]*)\];$/m.exec(txt);
+  return m ? (m[1].match(/\d+/g) || []).map(Number) : null;
+}
+export function scanStrays(mjs, scanSet, rowsOf) {
+  return mjs.filter((f) => !scanSet.has(f) && rowsOf(f) !== null);
+}
+/*  ⛔ כלי שאוכף שורה נסרק כשער (סבב 168) — ⚠️ **מה מפיל**: קובץ שמצהיר
+ *  `ROWS` שאינו ריק ואינו בקבוצת הסריקה: ⭐ השורות שהוא אוכף נראות ללא
+ *  כיסוי, ⛔ והמריץ עצמו היה המקרה — ⚠️ הוא אינו ברשימת הריצה של עצמו. */
+export function enforcersUnscanned(mjs, scanSet, rowsOf) {
+  return mjs.filter((f) => !scanSet.has(f) && (rowsOf(f) || []).length > 0);
 }
 
 /*  ⛔ שלושת הסוגים ב-`tools/` — ⚠️ **מה נכנס**: רשימת הקבצים, רשימת
@@ -390,6 +408,20 @@ if (!away.length) {
     `[gate-run] קובץ tools/ שאינו רץ בסט ואינו מוכרז — נמדדו ${notRun.length} מתוך ` +
     `${mjs.length} והצפוי 0${notRun.length ? ` (${notRun.join(', ')})` : ''}. ` +
     'מחווטים לרשימת הריצה שבמריץ, או מכריזים ב-APP.notGates עם מה שהקובץ עושה');
+  /*  ⛔ קבוצת הסריקה היא רשימת הריצה והמריץ — ⚠️ ואין רשימה שלישית. */
+  const scanSet = new Set(runList.concat([RUNNER]));
+  const rowsOf = (f) => rowsDeclOf(readOf(APP.name, f));
+  const strays = scanStrays(mjs, scanSet, rowsOf);
+  t(n++, strays.length === 0,
+    `[scan-derived] קובץ מחוץ לרשימת הריצה שמייצא ROWS — נמדדו ${strays.length} מתוך ` +
+    `${mjs.length - scanSet.size} והצפוי 0${strays.length ? ` (${strays.join(', ')})` : ''}. ` +
+    'מסירים את ההצהרה, ⛔ שקובץ שאינו רץ אינו שער');
+  const unscanned = enforcersUnscanned(mjs, scanSet, rowsOf);
+  t(n++, unscanned.length === 0 && scanSet.has(RUNNER) && (rowsOf(RUNNER) || []).length > 0,
+    `[scan-enforcer] קובץ שאוכף שורה ואינו נסרק — נמדדו ${unscanned.length} והצפוי 0` +
+    `${unscanned.length ? ` (${unscanned.join(', ')})` : ''}, ` +
+    `והמריץ נסרק ומצהיר ${(rowsOf(RUNNER) || []).length} שורות. ` +
+    'מחווטים את הקובץ לרשימת הריצה, או מסירים ממנו את ROWS');
   const ngBad = Object.keys(notGates).filter((f) => !mjs.includes(f) || runList.includes(f));
   const ngWhy = Object.keys(notGates).filter((f) => String(notGates[f] || '').trim().split(/\s+/).length < 4);
   t(n++, ngBad.length === 0 && ngWhy.length === 0,
@@ -558,6 +590,28 @@ t(n++, firstDiff([withPa, withPa, withPa, withPa]) === null,
   t(n++, both.both.length === 1 && one.both.length === 0 && one.gate.length === 1,
     '[tool-kind] מוטציה: קובץ שרץ בסט וגם מוכרז שאינו שער — נתפס, ' +
     '⭐ ומוטציית-נגד: אותו קובץ ברשימת הריצה בלבד ⛔ אינו מפיל');
+}
+/*  ⛔ מ6 — כלי מחוץ לרשימת הריצה שמייצא `ROWS` ריק (סבב 168): ⚠️ זה
+ *  בדיוק השריד שרשימת הדילוג השאירה. ⭐ המוטציה לוגית ⛔ ואינה נכתבת לעץ. */
+{
+  const syn = ['gen-zz.mjs', 'test_zz.mjs'], scan = new Set(['test_zz.mjs']);
+  const withDecl = { 'gen-zz.mjs': 'export const ROWS = [];\n', 'test_zz.mjs': 'export const ROWS = [5];\n' };
+  const noDecl = { 'gen-zz.mjs': 'export const X = 1;\n', 'test_zz.mjs': 'export const ROWS = [5];\n' };
+  t(n++, scanStrays(syn, scan, (f) => rowsDeclOf(withDecl[f])).length === 1 &&
+         scanStrays(syn, scan, (f) => rowsDeclOf(noDecl[f])).length === 0,
+    '[scan-derived] מוטציה: כלי מחוץ לרשימת הריצה שמייצא ROWS ריק — נתפס, ' +
+    '⭐ ומוטציית-נגד: אותו כלי בלי ההצהרה ⛔ אינו מפיל');
+}
+/*  ⛔ מ7 — קבוצת סריקה שהמריץ אינו בה (סבב 168): ⚠️ המריץ אוכף שורות,
+ *  ⭐ ובלעדיו הן נראות ללא כיסוי. */
+{
+  const syn = ['check-zz.mjs', 'test_zz.mjs'];
+  const txt = { 'check-zz.mjs': 'export const ROWS = [31];\n', 'test_zz.mjs': 'export const ROWS = [5];\n' };
+  const rowsOf = (f) => rowsDeclOf(txt[f]);
+  t(n++, enforcersUnscanned(syn, new Set(['test_zz.mjs']), rowsOf).length === 1 &&
+         enforcersUnscanned(syn, new Set(['test_zz.mjs', 'check-zz.mjs']), rowsOf).length === 0,
+    '[scan-enforcer] מוטציה: המריץ אינו בקבוצת הסריקה — נתפס, ' +
+    '⭐ ומוטציית-נגד: המריץ בקבוצה ⛔ אינו מפיל');
 }
 }
 

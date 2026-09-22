@@ -171,18 +171,25 @@ function audit(root) {
     else if (a !== b) v.push({ kind: 'measure-gap', msg: `${what} — check-docs מדד ${a}, test_budget מדד ${b}` });
   }
 
-  /* ג. רשימת השורות המוחרגות ב-test_matrix מול GATES שב-check-capabilities */
-  const gates = [...caps.matchAll(/^ {2}(\d+): /gm)].map((m) => Number(m[1]));
+  /* ג. רשימת השורות שהיפוך התא שלהן אינו נמדד — ⚠️ שורות חיות בלבד, ⛔ ובלי כפל.
+   *  ⭐ הרשימה אינה נגזרת מ-`GATES` (סבב 168): ⛔ שורה ב-`GATES` יכולה להיתפס
+   *  בהיפוך, ⚠️ והחרגתה הייתה מסתירה בדיוק את המדידה. */
+  const tbl = rd(root, 'CLAUDE.md').split('\n');
+  const hd = tbl.findIndex((l) => /^\|\s*#\s*\|\s*שם\s*\|/.test(l));
+  const live = [];
+  for (let k = hd + 1; hd >= 0 && k < tbl.length && /^\|/.test(tbl[k]); k++) {
+    const m = /^\|\s*(\d+)\s*\|/.exec(tbl[k]);
+    if (m) live.push(Number(m[1]));
+  }
   const exempt = nums(/const EXEMPT = \[([\s\S]*?)\];/.exec(matrix)?.[1]);
-  const dbFact = nums(/const DB_FACT_EXEMPT = \[([^\]]*)\]/.exec(matrix)?.[1]);
-  const wantEx = [...new Set([...gates, ...dbFact])].sort((a, b) => a - b);
-  const gotEx  = [...new Set(exempt)].sort((a, b) => a - b);
-  if (!gates.length || !exempt.length)
-    v.push({ kind: 'rows-missing', msg: `GATES ${gates.length} · EXEMPT ${exempt.length}` });
-  else if (wantEx.join(',') !== gotEx.join(','))
-    v.push({ kind: 'rows-gap', msg:
-      `EXEMPT ואינן ב-GATES/DB_FACT: [${gotEx.filter((x) => !wantEx.includes(x))}] · ` +
-      `ב-GATES ואינן ב-EXEMPT: [${wantEx.filter((x) => !gotEx.includes(x))}]` });
+  if (!live.length || !exempt.length)
+    v.push({ kind: 'rows-missing', msg: `טבלה ${live.length} · EXEMPT ${exempt.length}` });
+  else {
+    const ghost = exempt.filter((x) => !live.includes(x));
+    const dup = exempt.filter((x, i) => exempt.indexOf(x) !== i);
+    if (ghost.length || dup.length)
+      v.push({ kind: 'rows-gap', msg: `EXEMPT שאינן בטבלה: [${ghost}] · כפולות: [${dup}]` });
+  }
 
   /* ד. שורות `app: true` מול מפתחות `APP.tableProbe` */
   /*  ⚠️ שורה שמוכרזת ב-`APP.gapRows` היא ⭕ באפליקציה הזו, ⛔ ולכן אין לה
@@ -248,7 +255,7 @@ const of = (k) => base.filter((x) => x.kind === k).map((x) => x.msg).join(' · '
 
 t(n++, !base.some((x) => x.kind.startsWith('const')), `א. ארבע תקרות התיעוד זהות בשני השערים ${of('const-gap')}${of('const-missing')}`);
 t(n++, !base.some((x) => x.kind.startsWith('measure')), `ב. וארבעת המספרים שנמדדו בפועל זהים ${of('measure-gap')}${of('measure-missing')}`);
-t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נגזר מ-GATES ${of('rows-gap')}${of('rows-missing')}`);
+t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נוקב בשורות חיות בלבד ${of('rows-gap')}${of('rows-missing')}`);
 t(n++, !base.some((x) => x.kind === 'probe-gap'), `ד. כל שורת \`app: true\` נושאת מפתח ב-tableProbe ${of('probe-gap')}`);
 t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידים זהים בשער ובכלל הכתוב ${of('width-gap')}`);
 t(n++, !base.some((x) => x.kind === 'sha-dup'), `ו. אין חתימת בלוק שמוצהרת בשני קובצי שערים ${of('sha-dup')}`);
@@ -286,7 +293,7 @@ mutate('פרקי הסבבים מוחרגים מהחלק הפרטי בשער אח
   [['tools/test_budget.mjs', (s) => s.replace('return kind.filter(k => k !== 1).length;',
                    'return kind.filter(k => k === 0).length;')]], ['measure-gap']);
 
-mutate('שורה שהוחרגה ב-test_matrix ואינה ב-GATES',
+mutate('שורה שהוחרגה ב-test_matrix ואינה בטבלה',
   [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
 
 mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
