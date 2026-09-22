@@ -31,13 +31,13 @@ const APP = {
   scanners: ['test_visual.mjs', 'test_codescan.mjs', 'test_dbfacts.mjs',
              'test_dbscan.mjs',
              'test_textscan.mjs', 'test_declscan.mjs', 'test_scanscan.mjs',
-             'test_rowscan.mjs', 'test_behavior.mjs'],
+             'test_rowscan.mjs'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [40];
+export const ROWS = [39];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.

@@ -94,7 +94,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 112) — ⚠️ המיפוי נגזר מכאן
  *  ⛔ ואינו רשימה שנייה בבודק. */
-export const ROWS = [23, 59, 61];
+export const ROWS = [23, 58, 60];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -118,7 +118,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 20, app: 0, appWhy: '' };
+const FLOOR = { shared: 21, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -251,6 +251,27 @@ export function uncoveredTools(names, pure, perApp, subset) {
 export function gateRunGaps(mjs, runList, notGates) {
   return mjs.filter((f) => runList.indexOf(f) < 0 && !(f in notGates));
 }
+
+/*  ⛔ שלושת הסוגים ב-`tools/` — ⚠️ **מה נכנס**: רשימת הקבצים, רשימת
+ *  הריצה, ההכרזות, ומי מהם נושא בלוק `APP`; ⛔ **ומה מפיל**: קובץ
+ *  שאינו נופל לאף סוג, קובץ שנופל לשניים, וסכום שאינו שווה למספר
+ *  הקבצים. ⭐ **ולמה המבנה קיים**: הסוגים חיים בשלושה מרשמים נפרדים,
+ *  ⛔ ואיש לא מדד שהם מכסים את התיקייה **בדיוק פעם אחת**.
+ *  ⚠️ **וההבחנה בין כלי למודול היא בלוק `APP`** — ⛔ ולא השם: ⭐ מודול
+ *  זהה בית-לבית בכל הריפו, ⛔ ולכן אין בו מה שייבדל. */
+export function toolKinds(mjs, runList, notGates, hasApp) {
+  const gate = [], tool = [], mod = [], none = [], both = [];
+  for (const f of mjs) {
+    const runs = runList.indexOf(f) >= 0;
+    const decl = f in notGates;
+    if (runs && decl) { both.push(f); continue; }
+    if (runs) gate.push(f);
+    else if (decl) (hasApp(f) ? tool : mod).push(f);
+    else none.push(f);
+  }
+  return { gate, tool, mod, none, both };
+}
+
 
 /* ── 1. איסוף הקבצים ───────────────────────────────────────────────────── */
 /*  ⛔ הריפו הזה נקרא מ-`ROOT` ⛔ ולא לפי שמו — ⚠️ שער הקריאה-בלבד מריץ את
@@ -385,6 +406,19 @@ if (!away.length) {
     `${Object.keys(notGates).length} מוכרזים)` +
     `${ghostRun.length ? `, ושם ברשימת הריצה שאין לו קובץ: ${ghostRun.join(', ')}` : ''}. ` +
     'מיישרים את רשימת הריצה לקבצים שבתיקייה');
+
+  /*  ⛔ שלושת הסוגים — ⚠️ והמפקד נגזר משלושת המרשמים ⛔ ואינו מוקלד. */
+  const hasApp = (f) => /^const APP = \{/m.test(readOf(APP.name, f));
+  const K = toolKinds(mjs, runList, notGates, hasApp);
+  const sum = K.gate.length + K.tool.length + K.mod.length;
+  t(n++, K.none.length === 0 && K.both.length === 0 && sum === mjs.length,
+    `[tool-kind] שלושת הסוגים ב-tools/ — ${K.gate.length} שערים · ${K.tool.length} כלים · ` +
+    `${K.mod.length} מודולים; סכום ${sum} מתוך ${mjs.length} קבצים, ` +
+    `${K.none.length} בלי סוג ו-${K.both.length} בשני סוגים, והצפוי אפס ואפס` +
+    `${K.none.length ? ` (בלי סוג: ${K.none.join(', ')})` : ''}` +
+    `${K.both.length ? ` (בשניים: ${K.both.join(', ')})` : ''}. ` +
+    'מחווטים לרשימת הריצה, או מכריזים ב-APP.notGates עם מה שהקובץ עושה');
+
 }
 
 /* ── 2ב. קובץ שקיים בחלק מהריפו — זהה בית-לבית בין מי שיש לו ───────────── */
@@ -514,6 +548,16 @@ t(n++, firstDiff([withPa, withPa, withPa, withPa]) === null,
          gateRunGaps(mjsSyn, ['test_zz.mjs'], {}).length === 0,
     '[gate-run] מוטציה: שער שאינו ברשימת הריצה ואינו מוכרז — נתפס, ' +
     '⭐ ומוטציית-נגד: שער שברשימה ⛔ אינו מפיל');
+}
+/*  ⛔ מ5 — קובץ שנופל לשני סוגים: ⚠️ רץ בסט **וגם** מוכרז שאינו שער.
+ *  ⭐ המוטציה לוגית ⛔ ואינה נכתבת לעץ. */
+{
+  const syn = ['test_zz.mjs'];
+  const both = toolKinds(syn, ['test_zz.mjs'], { 'test_zz.mjs': 'נימוק' }, () => true);
+  const one = toolKinds(syn, ['test_zz.mjs'], {}, () => true);
+  t(n++, both.both.length === 1 && one.both.length === 0 && one.gate.length === 1,
+    '[tool-kind] מוטציה: קובץ שרץ בסט וגם מוכרז שאינו שער — נתפס, ' +
+    '⭐ ומוטציית-נגד: אותו קובץ ברשימת הריצה בלבד ⛔ אינו מפיל');
 }
 }
 

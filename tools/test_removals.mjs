@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { whiten, whitenJs } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -37,7 +38,7 @@ const APP = {
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-export const ROWS = [212, 225];
+export const ROWS = [211, 224];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -169,12 +170,24 @@ const TREE = [];
     else if (/\.(mjs|js|html|json|sql|java|xml|yml|sh)$/.test(e.name)) TREE.push(p);
   }
 })(ROOT);
+/*  ⛔ הסריקה על המקור המולבן — ⚠️ שם שחי בהערה אינו קורא: ⭐ הנימוק
+    המדוד — `main` שירד עם שער נמצא חי בשלוש הערות, ⛔ והשער דיווח
+    קורא שאינו קיים. ⚠️ והמטמון הוא מפני שכל מזהה סורק את העץ כולו. */
+const _WHITE = new Map();
+const whiteOf = (f) => {
+  if (!_WHITE.has(f)) {
+    const txt = fs.readFileSync(f, 'utf8');
+    _WHITE.set(f, /\.html$/.test(f) ? whiten(txt)
+              : /\.m?js$/.test(f) ? whitenJs(txt) : txt);
+  }
+  return _WHITE.get(f);
+};
 export function callersOf(id, files = TREE, kind = 'member') {
   /*  ⛔ `member` הוא ברירת המחדל ⛔ והוא הרחב מבין השניים — ⚠️ קריאה
       מנוקדת נספרת בו: ⭐ הצמצום חל אך ורק על שם שהוגדר כשם עצמאי. */
   const re = kind === 'bare' ? new RegExp(`(?<![\\w$.])${id}\\s*\\(`)
                              : new RegExp(`\\b${id}\\s*\\(`);
-  return files.filter((f) => re.test(fs.readFileSync(f, 'utf8'))).map((f) => f.replace(ROOT + '/', ''));
+  return files.filter((f) => re.test(whiteOf(f))).map((f) => f.replace(ROOT + '/', ''));
 }
 /*  ⛔ השערים והאפליקציה הם שתי תוכניות (סבב 155) — ⚠️ המקור אינו מייבא
     מ-`tools/` ⛔ ושער אינו קורא לפונקציה שבמקור: ⭐ ולכן שם שנמחק בצד

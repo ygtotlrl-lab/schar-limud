@@ -282,23 +282,23 @@
 
 <!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68) — ⚠️ פתיחה, סגירה
      ו-Escape חיים במקום אחד; ⛔ שני דפוסים במקביל הם שני מסלולי סגירה. -->
-<div id="modal" class="veil">
+<div class="veil" id="modal">
   <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
     </div>
-    <div class="sheet-bd" id="modal-body"></div>
+    <div id="modal-body"></div>
     <div class="sheet-ft" id="modal-foot"></div>
   </div>
 </div>
-<div id="ask" class="veil">
+<div class="veil" id="ask">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
-    <div class="sheet-hd"><h3 id="ask-title"></h3></div>
-    <div class="sheet-bd" id="ask-body"></div>
+    <div class="sheet-hd"><h3 id="ask-title">אישור</h3></div>
+    <div id="ask-body" class="u-fs-4 u-c-text2"></div>
     <div class="sheet-ft">
-      <button data-act="ask-no">ביטול</button>
-      <button class="danger" data-act="ask-yes" id="ask-yes">אישור</button>
+      <button class="btn out" data-act="ask-no">ביטול</button>
+      <button class="btn danger" data-act="ask-yes" id="ask-yes">אישור</button>
     </div>
   </div>
 </div>

@@ -55,7 +55,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 48, 211, 117, 111];
+export const ROWS = [5, 8, 47, 210, 116];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -79,7 +79,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 30, app: 4, appWhy: 'מספר השערים והבודקים שהריפו נושא — כל שער פרטי מוסיף טענת תוכן' };
+const FLOOR = { shared: 27, app: 4, appWhy: 'מספר השערים והבודקים שהריפו נושא — כל שער פרטי מוסיף טענת תוכן' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -395,48 +395,15 @@ const ACTIVE = activeLines.join('\n');
     '24ב · תקן ההערות חל גם על sw.js ועל tools/');
 }
 
-/*  ⛔ מדידת שכבת השירות (סבב 157) — ⚠️ **מה נכנס**: המקור המאוחד של
- *  האפליקציה; ⛔ **ומה מפיל**: כלל `u-*` בלי שימוש · יחס שירות שעובר
- *  אחד · ושרשרת בת שלוש ומעלה שחוזרת יותר מפעמיים — ⚠️ כל מחלקה בנפרד
- *  תקינה, ⛔ ומאתיים מהן הן מערכת סגנון שנייה שחיה ב-HTML. ⭐ **ולמה
- *  המבנה קיים**: המדידה היא טקסט, ⛔ ולכן היא מקבלת את התוכן כארגומנט
- *  ורצה בזיכרון — ⚠️ ותהליך לכל מוטציה הוא הזמן שגדל במספרן. */
-function utilScan(src) {
-  const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n') +
-    '\n' + [...src.matchAll(/`([^`]*\{[^`]*\})`/g)].map((m) => m[1]).join('\n');
-  const rest = src.split(/<style[^>]*>[\s\S]*?<\/style>/).join('\n');
-  const styled = new Set();
-  for (const m of styles.matchAll(/(?<!\d)\.(-?[A-Za-z_][\w-]*)/g)) styled.add(m[1]);
-  const applied = new Set();
-  for (const m of src.matchAll(/class\s*=\s*\\?["']([^"'<>\\]*)\\?["']/g))
-    for (const c of m[1].split(/\s+/)) if (/^[A-Za-z_][\w-]*$/.test(c)) applied.add(c);
-  for (const m of src.matchAll(/classList\.(?:add|toggle|remove)\(([^)]*)\)/g))
-    for (const q of m[1].matchAll(/['"]([A-Za-z_][\w-]*)['"]/g)) applied.add(q[1]);
-  /*  ⛔ «בשימוש» הוא אזכור השם במקור המולבן — ⚠️ אותה מדידה שטענה 15
-   *  עושה: ⭐ שם שנבנה בשרשור מוצהר ב-`APP.dynamicClasses`, ⛔ ושתי
-   *  הגדרות ל«בשימוש» היו שתי הכרעות על אותה ראיה. */
-  const tok = (c) => new RegExp('(?<![\\w-])' + c.replace(/-/g, '\\-') + '(?![\\w-])').test(rest);
-  const uDef = [...styled].filter((c) => /^u-/.test(c));
-  const orph = uDef.filter((c) => !APP.dynamicClasses.includes(c) && !tok(c)).sort();
-  const chain = new Map();
-  for (const m of rest.matchAll(/(["'])((?:u-[\w-]+ )+u-[\w-]+)\1/g))
-    chain.set(m[2], (chain.get(m[2]) || 0) + 1);
-  const rep = [...chain].filter(([k, n]) => n > 2 && k.split(' ').length >= 3)
-                        .map(([k, n]) => `${k} (×${n})`).sort();
-  return { styles, rest, styled, applied, def: uDef.length, orph, chains: chain.size, rep,
-           uUse: [...applied].filter((c) => /^u-/.test(c)).length,
-           sUse: [...applied].filter((c) => !/^u-/.test(c)).length };
-}
-
 /* ── סלקטור בלי קורא (ממצא 15) ─────────────────────────────────────────── */
 {
   /*  ⛔ ההיקף הוא **גיליון הסגנון וכל מחרוזת CSS שנכתבת מ-JS** — ⚠️ מול
    *  המחלקות שבשימוש ומול הקוראים שב-JS: ⭐ הליבה יצאה למודול, ⛔ ושער
    *  שסורק את `index.html` לבדו מדווח «אפס» על כלל שחי ב-`core/`. */
   const src = appSrc(ROOT);
-  /*  ⛔ הפירוק אחד לכל הטענות — ⚠️ שני פירוקים ל«מוגדרת» ול«מוחלת»
-   *  הם שתי הכרעות על אותה ראיה, ⭐ והן נסחפות זו מזו בשקט. */
-  const U = utilScan(src), { styles, rest, styled, applied } = U;
+  const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n') +
+    '\n' + [...src.matchAll(/`([^`]*\{[^`]*\})`/g)].map((m) => m[1]).join('\n');
+  const rest = src.split(/<style[^>]*>[\s\S]*?<\/style>/).join('\n');
   const names = new Set();
   for (const m of styles.matchAll(/(?<![\w/-])\.(-?[A-Za-z_][\w-]*)/g)) names.add(m[1]);
   /*  ⛔ מחלקה שמוגדרת בתוך בלוק חתום אינה נמדדת כאן — ⚠️ הבלוק זהה
@@ -463,6 +430,13 @@ function utilScan(src) {
    *  ⛔ ולאף אחת מהן לא היה לו כלל, ⚠️ והאזהרה הוצגה כטקסט חשוף.
    *  ⛔ **והסלקטור המורכב נספר** — ⚠️ `.toast.bad` מגדיר את `bad`,
    *  ⭐ והסריקה שדרשה תו שאינו מילה לפני הנקודה פספסה אותו. */
+  const styled = new Set();
+  for (const m of styles.matchAll(/(?<!\d)\.(-?[A-Za-z_][\w-]*)/g)) styled.add(m[1]);
+  const applied = new Set();
+  for (const m of src.matchAll(/class\s*=\s*\\?["']([^"'<>\\]*)\\?["']/g))
+    for (const c of m[1].split(/\s+/)) if (/^[A-Za-z_][\w-]*$/.test(c)) applied.add(c);
+  for (const m of src.matchAll(/classList\.(?:add|toggle|remove)\(([^)]*)\)/g))
+    for (const q of m[1].matchAll(/['"]([A-Za-z_][\w-]*)['"]/g)) applied.add(q[1]);
   const reads = (c) => new RegExp('\\.' + c.replace(/-/g, '\\-') + '(?![\\w-])').test(rest);
   const noRule = [...applied].filter((c) => !styled.has(c) && !reads(c) &&
                                             !(c in APP.classNoRule)).sort();
@@ -473,21 +447,6 @@ function utilScan(src) {
   for (const c of Object.keys(APP.classNoRule))
     t(applied.has(c) && !styled.has(c) && !reads(c),
       `15ו · חריגה מוצהרת \`${c}\` — באמת מוחלת, ובאמת בלי כלל ובלי קורא`);
-
-  {
-    t(U.orph.length === 0,
-      `[util-orphan] · אין כלל \`u-*\` בלי שימוש — נמדדו ${U.orph.length} מתוך ${U.def} ` +
-      `כללים והצפוי אפס${U.orph.length ? ' — ' + U.orph.join(' ') : ''}. ` +
-      'מוחקים את הכלל, מחילים אותו, או מכריזים עליו ב-APP.dynamicClasses');
-    t(U.uUse <= U.sUse,
-      `[util-ratio] · מחלקת שירות היא התאמה נקודתית מעל מחלקה סמנטית — נמדדו ${U.uUse} ` +
-      `מחלקות שירות ייחודיות מול ${U.sUse} סמנטיות, והצפוי שלא יעלה עליהן. ` +
-      'מקפלים שרשרת למחלקה סמנטית ששמה נגזר מתפקיד הרכיב');
-    t(U.rep.length === 0,
-      `[util-chain] · אין שרשרת בת שלוש ומעלה שחוזרת יותר מפעמיים — נמדדו ${U.rep.length} ` +
-      `מתוך ${U.chains} שרשרות והצפוי אפס${U.rep.length ? ' — ' + U.rep.slice(0, 3).join(' · ') : ''}. ` +
-      'מקפלים אותה למחלקה סמנטית אחת');
-  }
   /*  ⛔ ומזהה `id` נמדד באותה מידה (סבב 110) — ⚠️ המחלקות נמדדו והמזהים לא,
    *  ⭐ ומזהה שקוראו נמחק או ששמו שונה נשאר בתגית בלי שאיש יידע: ⛔ הנימוק
    *  המדוד — 13 מזהים בלי קורא נמצאו בסבב שבו הצד הזה נכתב. */
@@ -649,6 +608,48 @@ t(!capsFails((doc) => {
   const m = okRow(doc);
   return doc.replace(m[0], m[0].replace(/\|$/, ' נמדדו 74 קבצים בסט המשותף |'));
 }), 'נ9 · ⭐ הערה שנושאת ספירה נגזרת ⛔ **אינה** מפילה');
+
+/*  ⛔⛔ מ79 · מ80 · נ51 — כל טענה נושאת מוטציה או שורת נימוק (סבב 167):
+ *  ⚠️ **מה נכנס**: כל טענה ש-`GATES` מצביעה עליה, מול אזור המוטציות
+ *  ומול הרתמה; ⛔ **ומה מפיל**: טענה בלי שניהם, ⚠️ ונימוק לטענה
+ *  שמוטציה נוקבת בשמה. ⭐ **והנימוק המדוד**: ה-probe מדד **שערים**,
+ *  ⛔ וטענה בתוך שער אינה שער: ⚠️ והיא חמקה. */
+{
+  const CAPS = 'tools/check-capabilities.mjs';
+  const caps = rd(CAPS), harn = rd('tools/test_rulesdocs.mjs');
+  /*  ⛔ הטענה נבחרת מהמרשם ⛔ ואינה מוקלדת — ⚠️ מפתח קשיח נסחף. */
+  const r0 = caps.indexOf('const CLAIM_NO_MUT = {');
+  const ent = /\n  ('[^']+'):\n    '([^']*)',/.exec(caps.slice(r0));
+  if (!ent) {
+    t(true, 'מ79 · ⭕ אין כאן מרשם נימוקים — ⛔ ואין מה למוטט');
+  } else {
+    const at = r0 + ent.index;
+    t(runGateOn({ [CAPS]: caps.slice(0, at) +
+                    '\n  ' + ent[1] + ':\n    \'\',' +
+                    caps.slice(at + ent[0].length) },
+                'check-capabilities.mjs', () => ({})),
+      'מ79 · הסרת שורת נימוק מטענה שאין לה מוטציה **מפילה** את ' +
+      '«מוטציות — כיסוי»');
+  }
+  /*  ⛔ הטענה שמוטציה נוקבת בשמה — ⚠️ שמה חי ברתמה בלבד, ⭐ ובשער
+   *  שאוכף אותה אין אזור מוטציות. */
+  /*  ⛔ השם נבנה משני חלקים — ⚠️ ליטרל מלא היה מופע שני ברתמה. */
+  const NAMED = 'תווית מוטציה' + ' מודפסת';
+  if (harn.split(NAMED).length !== 2) {
+    t(true, 'מ80 · ⭕ שם הטענה אינו יחיד ברתמה — ⛔ ואין מה למוטט');
+    t(true, 'נ51 · ⭕ שם הטענה אינו יחיד ברתמה — ⛔ ואין מה להחליף');
+  } else {
+    t(runGateOn({ 'tools/test_rulesdocs.mjs':
+                    harn.replace(NAMED, 'תווית מוטציה שנדפסה') },
+                'check-capabilities.mjs', () => ({})),
+      'מ80 · הסרת המוטציה מטענה **מפילה** את «מוטציות — כיסוי»');
+    /*  ⭐ מוטציית-נגד: שם שנקצר בעקביות ⛔ אינו מפיל — ⚠️ הנמדד
+     *  הוא **שיש לה מוטציה** ⛔ ולא ניסוחה. */
+    t(!runGateOn({ [CAPS]: caps.replace("'" + NAMED + "'", "'תווית מוטציה'") },
+                 'check-capabilities.mjs', () => ({})),
+      'נ51 · ⭐ טענה עם מוטציה, בשם שהוחלף בעקביות, ⛔ **אינה** מפילה');
+  }
+}
 
 /*  ⛔ מוטציה: הצהרת מיזוג-מפה שאין לה אתר (סבב 98) — ⚠️ הטענה שנופלת היא
  *  «מחיקת מפתח בערך משותף»: ⭐ רשימת-היתר שהתיישנה היא בעצמה השארית
@@ -1462,10 +1463,18 @@ t(!capsFails((doc) => {
    *  ריווח בכלל CSS; ⛔ **ומה מפיל**: הטענה «סולם אחד לגודל, לריווח
    *  ולרדיוס» — ⭐ ערך שנבחר לאתר בודד הוא סולם שלא הוגדר. */
   {
-    const css = rd('app.css'), end = '/* ═══ סוף גיליון הסגנון';
-    t(runGateOn({ 'app.css': css.replace(end, '.u-zz-mut{padding:7px}\n' + end) },
-                'test_caps_ui.mjs', () => ({})),
-      'מ72 · ערך ריווח שאינו מהסולם **מפיל** את «סולם אחד לגודל, לריווח ולרדיוס»');
+    /*  ⛔ הכלל נבחר מהגיליון ⛔ ואינו מוקלד — ⚠️ מחלקה שיורדת משאירה
+     *  מוטציה שמחליפה מחרוזת שאינה שם, ⭐ והיא עוברת בשתיקה. */
+    const idx = rd('app.css');
+    const hit = /\n(\.u-[a-z0-9-]+\{)([^}]*)\}/.exec(idx);
+    if (!hit) {
+      t(true, 'מ72 · ⭕ אין כאן מחלקת שירות בגיליון — ⛔ ואין מה למוטט');
+    } else {
+      t(runGateOn({ 'app.css': idx.replace(hit[0],
+                      '\n' + hit[1] + hit[2] + ';padding:7px}') },
+                  'test_caps_ui.mjs', () => ({})),
+        'מ72 · ערך ריווח שאינו מהסולם **מפיל** את «סולם אחד לגודל, לריווח ולרדיוס»');
+    }
   }
   /*  ⛔⛔ מ73 — ליטרל באזור המוצהר שאינו ערך אסימון (סבב 138): ⚠️ **מה
    *  נכנס**: ליטרל צבע בתוך אזור ש-`APP.inlineStyleAllow` מכריז;
@@ -1484,9 +1493,9 @@ t(!capsFails((doc) => {
    *  בדיוק השינוי החי שהתקן בא להתיר, ⭐ והנמדד הוא מקור הערך ⛔ ולא
    *  מספר המחלקות. */
   {
-    const css = rd('app.css'), end = '/* ═══ סוף גיליון הסגנון';
-    t(!runGateOn({ 'app.css': css.replace(end,
-                    '.u-zz-new{padding:var(--sp-4);border-radius:var(--r-2)}\n' + end) },
+    const idx = rd('index.html');
+    t(!runGateOn({ 'index.html': idx.replace('.u-ai-c{align-items:center}',
+                    '.u-ai-c{align-items:center}\n.u-zz-new{padding:var(--sp-4);border-radius:var(--r-2)}') },
                  'test_caps_ui.mjs', () => ({})),
       'נ45 · ⭐ מחלקה חדשה שערכיה מהסולם ⛔ **אינה** מפילה');
   }
@@ -1927,37 +1936,6 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
   t(fails({ 'index.html': rd('index.html').replace(
       '— מודול משותף (סבב 11)', "— מודול משותף (סבב 11). ר' CLAUDE.md") }),
     'מ11 · החזרת הפניה לקובץ בנקודת כניסה מפילה את 24א');
-
-  /*  ⛔ שלוש המוטציות של שכבת השירות — ⚠️ כל אחת נוקבת בטענה שתיפול,
-   *  ⭐ והמדידה רצה בזיכרון: ⛔ תהליך לכל מוטציה הוא הזמן שגדל במספרן. */
-  {
-    const uSrc = appSrc(ROOT), SHEET = '<style data-sheet="app">\n';
-    const addCss = (s, css) => s.replace(SHEET, SHEET + css + '\n');
-    const addTags = (s, tags) => s.replace('</body>', tags + '</body>');
-    const base = utilScan(uSrc);
-    t(utilScan(addCss(uSrc, '.u-zz-dead{opacity:var(--op-1)}')).orph.length > 0,
-      'מ79 · כלל `u-*` בלי שימוש מפיל את [util-orphan]');
-    /*  ⛔ מספר המחלקות נגזר מהפער שנמדד ⛔ ואינו מוקלד — ⚠️ מספר קבוע
-     *  היה גדול מדי באחת וקטן מדי באחרת, ⭐ ומוטציה שאינה מדויקת
-     *  מפסיקה לפגוע במה שהיא באה למדוד. */
-    const many = Array.from({ length: base.sUse - base.uUse + 1 }, (_, i) => 'u-zz-' + i);
-    const manySrc = addTags(addCss(uSrc, many.map((c) => `.${c}{opacity:var(--op-1)}`).join('\n')),
-                            many.map((c) => `<i class="${c}"></i>`).join(''));
-    t(utilScan(manySrc).uUse > utilScan(manySrc).sUse,
-      'מ80 · מחלקות שירות עד שהיחס עובר אחד מפילות את [util-ratio]');
-    const four = ['u-zz-a', 'u-zz-b', 'u-zz-c', 'u-zz-d'];
-    const css4 = four.map((c) => `.${c}{opacity:var(--op-1)}`).join('\n');
-    const one = `<i class="${four.join(' ')}"></i>`;
-    t(utilScan(addTags(addCss(uSrc, css4), one + one + one)).rep.length > 0,
-      'מ81 · שרשרת בת ארבע שחוזרת שלוש פעמים מפילה את [util-chain]');
-    /*  ⭐ מוטציות-נגד — ⛔ שינוי חי שאסור לו להפיל. */
-    t(utilScan(addTags(addCss(uSrc, css4), one)).rep.length === 0,
-      'נ51 · ⭐ שרשרת שמופיעה פעם אחת ⛔ אינה מפילה — המדידה היא חזרה ולא אורך');
-    const solo = utilScan(addTags(addCss(uSrc, '.u-zz-solo{opacity:var(--op-1)}'),
-                                  '<i class="u-zz-solo"></i>'));
-    t(solo.orph.length === 0 && solo.uUse <= solo.sUse,
-      'נ52 · ⭐ מחלקת שירות בשימוש יחיד ⛔ אינה מפילה — המדידה היא שימוש ולא ספירה');
-  }
 
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
   t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),

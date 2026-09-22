@@ -33,6 +33,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ החריגות הפרטיות — ⚠️ **מה נכנס**: בורר או שם קובץ שהסריקה מדלגת
@@ -47,24 +48,26 @@ const APP = {
    *  מחדש באפליקציה חדשה נראה תקין בפני עצמו, ⛔ והפער נראה רק בהשוואה. */
   sharedSurfaces: {
     updater: 'באנר העדכון — מודיע שיצאה גרסה, מחיל אותה, ומאפשר לדחות אותה',
-    modal: 'מיכל המודאל — נושא כותרת, גוף ותחתית, ונסגר בכפתור שבכותרת',
-    ask: 'מיכל האישור — שואל «כן/לא» על פעולה שאין ממנה דרך חזרה',
-    toasts: 'מיכל הטוסט — מחזיק את ההודעות, ומכריז אותן לקורא מסך',
   },
+  /*  ⛔ ידיות הגרירה — ⚠️ **מה נכנס**: כל בורר שנושא `touch-action:none`
+   *  ⟵ למה הוא ידית; ⛔ **ומה מפיל**: בורר שאינו כאן, ⭐ והכרזה שאין
+   *  לה כלל. ⚠️ **וריק הוא «נמדד ואין»** — ⛔ ואז `dragWhy` נושא את נימוקו. */
+  dragHandles: [],
+  dragWhy: 'אין כאן רשימה שסדרה נקבע ביד — ⚠️ התלמידים והתנועות ממוינים במיון האחד, ⭐ והסעיפים נערכים ברשימה: ⛔ ואין מסלול גרירה למדוד',
   visualAllow: { fns: [] },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [92, 110, 85, 107, 214, 121];
+export const ROWS = [91, 109, 110, 84, 106, 213, 120, 90];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
 export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
-                         'semantic', 'layer', 'clstok', 'surface'];
+                         'semantic', 'layer', 'clstok', 'surface', 'drag', 'util'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
@@ -72,7 +75,8 @@ export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'sc
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
                      'clstok', 'clstok', 'clstok',
                      'surface', 'surface', 'surface', 'surface',
-                     'surface', 'surface', 'surface', 'surface'];
+                     'drag', 'drag', 'drag',
+                     'util', 'util'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -84,7 +88,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 27, app: 0, appWhy: '' };
+const FLOOR = { shared: 30, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -115,6 +119,47 @@ process.on('exit', () => {
 const t = (c, m) => { RAN++; if (c) { pass++; console.log('  ok   ' + m); }
                       else { fail++; console.error('  FAIL ' + m); } };
 const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+
+/*  ⛔ אירועי גרירת HTML5 אינם קיימים במגע — ⚠️ **מה נכנס**: כל רישום
+ *  מאזין לאחד מחמשת האירועים, וכל מאפיין `draggable`; ⛔ **ומה מפיל**: כל
+ *  אתר כזה. ⭐ **ולמה המבנה קיים**: מערכת שבנויה לעכבר עובדת בעכבר,
+ *  ⛔ והכותב יושב מול מחשב — ⚠️ ואיש אינו רואה שבאצבע היא אינה נורית כלל.
+ *  ⛔ **והמדידה על המקור הגולמי** — ⚠️ הרישום חי כליטרל מחרוזת,
+ *  ⭐ והמאפיין בתגית שנבנית ב-JS: ⛔ והלבנה הייתה מוחקת בדיוק את מה שהיא סורקת. */
+const DRAG_EVENTS = ['dragstart', 'dragover', 'dragleave', 'dragend', 'drop'];
+function dragApiGaps(src) {
+  const out = [];
+  const at = (i) => src.slice(0, i).split('\n').length;
+  const re = new RegExp("addEventListener\\s*\\(\\s*['\"](" + DRAG_EVENTS.join('|') + ")['\"]", 'g');
+  for (const m of src.matchAll(re))
+    out.push('מאזין `' + m[1] + '` בשורה ' + at(m.index));
+  for (const m of src.matchAll(/(?<![\w-])draggable\s*=/g))
+    out.push('`draggable` בשורה ' + at(m.index));
+  return out;
+}
+/*  ⛔ `touch-action:none` יושב על הידית בלבד — ⚠️ **מה נכנס**: כל כלל
+ *  בגיליון שנושא אותו; ⛔ **ומה מפיל**: בורר שאינו מוכרז כידית, ⭐ וידית
+ *  שהוכרזה ואין לה כלל. ⚠️ **ולמה המבנה קיים**: ביטול פעולת המגע על
+ *  שורה שלמה נועל את גלילת המסך, ⭐ והדף מפסיק להיגלל בכל הרשימה. */
+function gripGaps(css, decl) {
+  const out = [], hit = new Set();
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length));
+  for (const m of clean.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    if (!/touch-action\s*:\s*none/.test(m[2])) continue;
+    const sel = m[1].trim().split(/\s*,\s*/);
+    for (const one of sel) {
+      const d = decl.find((x) => x.sel === one);
+      if (!d) out.push('`touch-action:none` על בורר שאינו ידית מוכרזת: ' + one);
+      else hit.add(d.sel);
+    }
+  }
+  for (const d of decl) {
+    if (!d.why || !String(d.why).trim()) out.push('ידית מוכרזת בלי נימוק: ' + d.sel);
+    if (!hit.has(d.sel)) out.push('ידית מוכרזת שאין לה כלל `touch-action:none`: ' + d.sel);
+  }
+  return out;
+}
+
 
 /* ── ההחרגות — קבוצה, ובה תכונות שהערך בהן אינו דרגה בסולם ─────────────── */
 /*  ⛔ **מה נכנס**: תכונה שערכה המספרי אינו דרגה בשום סולם, ⛔ **ומה מפיל**:
@@ -368,6 +413,11 @@ function groupSites(src, names) {
  *  ב-`<style>` שחילוץ ההיקף מוצא אותו: ⛔ סורק שקורא `index.html` לבדו
  *  מדווח «אפס ליטרלים» על גיליון שלם שלא נסרק. */
 const IDX = rd('index.html') + '\n<style data-sheet="app">\n' + rd('app.css') + '\n</style>';
+
+/*  ⛔ הספירה על המקור המחובר — ⚠️ גיליון הסגנון ומודולי הליבה יחד:
+ *  ⭐ מחלקה שנוספת מ-`classList.add` שבמודול אינה ב-`index.html`,
+ *  ⛔ וסריקה שלו לבדו מדווחת פחות ממה שיש. */
+const SRC_ALL = appSrc(ROOT);
 const F = scan(IDX, APP.visualAllow);
 
 t(F.color.length === 0,
@@ -922,24 +972,59 @@ const PEER_SRC = Object.fromEntries(CLS_HAVE.map((p) => [p, CLS_SRC[p]]));
            ' — מה עושים: מביאים את המשטח בצורה שיש לרוב, או מסירים את ההצהרה' : ''));
 }
 
-/*  ⛔ וכל מיכל דיאלוג נמדד ⛔ ולא הראשון בלבד — ⚠️ המיכלים נגזרים מגוף
- *  `openModal` ומגוף `ask`, ⭐ ומיכל הוא מי שנושא `aria-modal` בגופו:
- *  ⛔ מיכל שנכתב מחדש באפליקציה חדשה ואינו מוכרז אינו מושווה לאיש,
- *  ⚠️ והוא נראה תקין בפני עצמו. */
-function dialogSurfaces(html) {
-  return [...dialogIds(fnBodies(html))].filter((id) => {
-    const b = surfaceBody(html, id);
-    return b !== null && b.indexOf('aria-modal="true"') >= 0;
-  }).sort();
-}
+/* ── הגרירה — הצד הטקסטואלי ────────────────────────────────────────────── */
+/*  ⛔ הנמדד כאן הוא המקור ⛔ ולא הדפדפן — ⚠️ שער אינו מריץ דפדפן,
+ *  ⭐ והסדר שנגזר מה-DOM נמדד במבחן הקבלה שהמנהל מריץ. */
 {
-  const dlg = dialogSurfaces(IDX);
-  const undecl = dlg.filter((id) => !(id in (APP.sharedSurfaces || {})));
-  t(dlg.length > 0 && undecl.length === 0,
-    `[dialog-surface] ⛔ כל מיכל דיאלוג מוכרז ב-\`APP.sharedSurfaces\` — נמדדו ` +
-    `${dlg.length} מיכלים ו-${undecl.length} שאינם מוכרזים, והצפוי אפס ולפחות מיכל אחד` +
-    (undecl.length ? ` (${undecl.join(' · ')})` : '') +
-    ' — מה עושים: מכריזים את המיכל עם מה שהוא עושה למשתמש, ומיישרים את גופו לצורה שיש לרוב');
+  const dg = dragApiGaps(rd('index.html'));
+  t(dg.length === 0, `[drag-api] אפס אירוע גרירת HTML5 ואפס מאפיין \`draggable\` — ` +
+    `נמדדו ${dg.length} אתרים והצפוי אפס` +
+    (dg.length ? ` (${dg.slice(0, 3).join(' · ')})` : '') +
+    '. ממירים אותם ל-`pointerdown`/`pointermove`/`pointerup`');
+  const HANDLES = APP.dragHandles || [];
+  if (HANDLES.length) {
+    const hg = gripGaps(styleSheet(IDX), HANDLES);
+    t(hg.length === 0, `[drag-grip] \`touch-action:none\` על הידית בלבד — ` +
+      `${HANDLES.length} ידיות מוכרזות, נמדדו ${hg.length} פערים והצפוי אפס` +
+      (hg.length ? ` (${hg.join(' · ')})` : '') +
+      '. מציבים את הביטול על הידית, או מכריזים אותה עם נימוקה');
+  } else {
+    t(!!APP.dragWhy, `[drag-grip] אפס ידיות גרירה — ${APP.dragWhy || '⛔ בלי נימוק'}`);
+  }
+}
+
+
+/*  ⛔ שכבת השירות — ⚠️ **מה נכנס**: המקור המחובר; ⛔ **ומה מפיל**:
+ *  יחס שירות-לסמנטי גדול מאחד, ⛔ ושרשרת בת שלוש ומעלה שחוזרת
+ *  יותר מפעמיים. ⭐ **ולמה המבנה קיים**: מחלקת שירות אחת
+ *  היא התאמה נקודתית, ⛔ ו-247 מהן הן מערכת סגנון שנייה שחיה ב-HTML. */
+function utilGaps(text) {
+  const applied = new Set(), semantic = new Set(), chains = new Map();
+  for (const m of text.matchAll(/class\s*=\s*\\?["']([^"'<>\\]*)\\?["']/g)) {
+    const list = m[1].split(/\s+/).filter((c) => /^[A-Za-z_][\w-]*$/.test(c));
+    for (const c of list) (/^u-/.test(c) ? applied : semantic).add(c);
+    const u = list.filter((c) => /^u-/.test(c));
+    if (u.length >= 3) { const k = u.slice().sort().join(' '); chains.set(k, (chains.get(k) || 0) + 1); }
+  }
+  for (const m of text.matchAll(/classList\.(?:add|toggle|remove)\(([^)]*)\)/g))
+    for (const q of m[1].matchAll(/['"]([A-Za-z_][\w-]*)['"]/g))
+      (/^u-/.test(q[1]) ? applied : semantic).add(q[1]);
+  return { util: applied.size, sem: semantic.size,
+           over: [...chains].filter(([, n]) => n > 2).map(([k, n]) => n + '\u00d7 ' + k) };
+}
+
+/* ── שכבת השירות אינה מערכת שנייה ──────────────────────────────────────── */
+{
+  const u = utilGaps(SRC_ALL);
+  t(u.util <= u.sem,
+    `[util-ratio] \u26d4 מספר מחלקות השירות אינו עולה על הסמנטיות — ` +
+    `נמדדו ${u.util} שירות מול ${u.sem} סמנטיות והצפוי יחס שאינו עולה על אחד. ` +
+    'מה עושים: מקפלים שרשרת שחוזרת למחלקה סמנטית אחת, ⛔ ולא מוסיפים מחלקת שירות');
+  t(u.over.length === 0,
+    `[util-chain] \u26d4 אפס שרשרת בת שלוש ומעלה שחוזרת יותר מפעמיים — ` +
+    `נמדדו ${u.over.length} והצפוי אפס` +
+    (u.over.length ? ` (${u.over.slice(0, 3).join(' \u00b7 ')})` : '') +
+    '. מקפלים למחלקה סמנטית ששמה נגזר מתפקיד הרכיב');
 }
 
 mutStage();
@@ -954,6 +1039,24 @@ function put(text, decl) {
   const i = text.indexOf(HOST);
   return i < 0 ? null : text.slice(0, i + HOST.length) + decl + text.slice(i + HOST.length);
 }
+/*  ⛔ מוטציות שכבת השירות — ⚠️ הן בונות טקסט סינתטי בזיכרון,
+ *  ⭐ ומריצות עליו את אותה `utilGaps`. */
+{
+  const base = '<div class="card a">x</div>';
+  const b0 = utilGaps(base);
+  t(b0.util === 0 && b0.sem === 2, '\u05e01 · \u2b50 בקרה חיובית: אפס מחלקות שירות ⛔ **אינו** מפיל');
+  const many = base + Array.from({ length: 3 }, (_, i) => `<div class="u-z${i}">y</div>`).join('');
+  const b1 = utilGaps(many);
+  t(b1.util > b1.sem, '\u05de1 · מחלקות שירות עד שהיחס עובר אחד **מפיל** את «[util-ratio]»');
+  const chain = Array.from({ length: 3 }, () => '<div class="u-a u-b u-c u-d">z</div>').join('');
+  const b2 = utilGaps(chain);
+  t(b2.over.length === 1, '\u05de2 · שרשרת בת ארבע שחוזרת שלוש פעמים **מפילה** את «[util-chain]»');
+  const twice = Array.from({ length: 2 }, () => '<div class="u-a u-b u-c u-d">z</div>').join('');
+  t(utilGaps(twice).over.length === 0, '\u05e02 · \u2b50 שרשרת שחוזרת פעמיים ⛔ **אינה** מפילה');
+  t(utilGaps('<div class="card u-p-4">x</div>').util === 1,
+    '\u05e03 · \u2b50 מחלקת שירות בשימוש יחיד ⛔ **אינה** מפילה');
+}
+
 const MUT = [
   { m: 'מ1',  key: 'color',   lbl: 'ליטרל `#RRGGBB` בכלל חי',        edit: () => put(IDX, 'background:#123456;') },
   { m: 'מ2',  key: 'color',   lbl: 'ליטרל `rgb()` בכלל חי',          edit: () => put(IDX, 'color:rgba(1,2,3,.4);') },
@@ -1134,52 +1237,26 @@ const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0
   t(surfGaps(recolor, { 'zz-sister': injCss('#updater .in{background:var(--card)}') }).off.length === 0,
     'נ10 · ⭐ כלל סגנון שנבדל ⛔ **אינו** מפיל את [shared-surface]');
 
-  /*  ⛔ מ34–מ37 — מיכל הדיאלוג: ⚠️ שם מחלקה · מיקום ה-`role` · קישור
-   *  הכותרת · ומיכל שאינו במרשם. ⭐ והאחות סינתטית, ⛔ ולכן הן רצות תמיד. */
-  const DM = [
-    { m: 'מ34', lbl: 'שם מחלקה במיכל נבדל', a: '<div class="sheet ksave" role="dialog"',
-      b: '<div class="modal-box ksave" role="dialog"' },
-    { m: 'מ35', lbl: '`role` עבר למיכל החיצוני', a: '<div id="modal" class="veil">\n  <div class="sheet ksave" role="dialog" aria-modal="true" ',
-      b: '<div id="modal" class="veil" role="dialog" aria-modal="true">\n  <div class="sheet ksave" ' },
-    { m: 'מ36', lbl: 'קישור הכותרת הוסר', a: ' aria-labelledby="modal-title"', b: '' },
-  ];
-  for (const r of DM) {
-    const mutated = IDX.replace(r.a, () => r.b);
-    t(mutated !== IDX && surfGaps(mutated, { 'zz-sister': IDX }).off.length === 1,
-      `${r.m} · ${r.lbl} — [shared-surface] הייתה נכשלת`);
-  }
-  {
-    const extra = '<div id="zz-dlg" class="veil"><div class="sheet" role="dialog" aria-modal="true">' +
-                  '<div class="sheet-bd" id="zz-dlg-body"></div></div></div>';
-    const mutated = IDX.replace("var yes = document.getElementById('ask-yes');",
-      "var yes = document.getElementById('ask-yes');var z = document.getElementById('zz-dlg');")
-      .replace('<div id="ask" class="veil">', extra + '<div id="ask" class="veil">');
-    const dlg = dialogSurfaces(mutated);
-    t(dlg.indexOf('zz-dlg') >= 0 && !('zz-dlg' in (APP.sharedSurfaces || {})),
-      'מ37 · מיכל דיאלוג שאינו במרשם — [dialog-surface] הייתה נכשלת');
-  }
-  /*  ⛔ ותכונת נגישות אינה נראית בשום בדיקה חזותית — ⚠️ מיכל שאיבד אותה
-   *  נראה זהה על המסך, ⭐ ומיכל שקיבל תכונה שאין לאחיות נראה זהה אף הוא. */
-  for (const r of [
-    { m: 'מ38', lbl: '`aria-live` הוסר ממיכל הטוסט',
-      a: '<div id="toasts" aria-live="polite"></div>', b: '<div id="toasts"></div>' },
-    { m: 'מ39', lbl: 'תכונה נוספה למיכל הטוסט',
-      a: '<div id="toasts" aria-live="polite"></div>',
-      b: '<div id="toasts" aria-live="polite" aria-atomic="true"></div>' },
-  ]) {
-    const mutated = IDX.replace(r.a, () => r.b);
-    t(mutated !== IDX && surfGaps(mutated, { 'zz-sister': IDX }).off.length === 1,
-      `${r.m} · ${r.lbl} — [shared-surface] הייתה נכשלת`);
-  }
-  /*  ⭐ מוטציות-נגד: ⛔ דרגת שכבה ורוחב מרבי הם מוצר — ⚠️ הם חיים בגיליון
-   *  ⛔ ולא במיכל, ⭐ ואסור להם להפיל. */
-  t(surfGaps(injCss('#modal .sheet{z-index:var(--z-5)}'), { 'zz-sister': IDX }).off.length === 0,
-    'נ11 · ⭐ דרגת שכבה שנבדלת ⛔ **אינה** מפילה את [shared-surface]');
-  t(surfGaps(injCss('#ask .sheet{max-width:340px}'), { 'zz-sister': IDX }).off.length === 0,
-    'נ12 · ⭐ רוחב מרבי שנבדל ⛔ **אינו** מפיל את [shared-surface]');
-  t(surfGaps(injCss('#toasts{bottom:calc(var(--toast-bottom) + var(--sp-2))}'),
-    { 'zz-sister': IDX }).off.length === 0,
-    'נ13 · ⭐ ערך `--toast-bottom` שנבדל ⛔ **אינו** מפיל את [shared-surface]');
+/* ── הגרירה — שלוש מוטציות ומוטציית-נגד ────────────────────────────────── */
+{
+  const dsrc = rd('index.html');
+  const m1 = dragApiGaps(dsrc.replace('<body', '<div draggable="true"></div><body'));
+  t(m1.length > 0, `מ34 · ⛔ מוטציה: \`draggable="true"\` מפיל את «[drag-api]» — ` +
+    `נמדדו ${m1.length} אתרים והצפוי לפחות אחד`);
+  const m2 = dragApiGaps(dsrc.replace('<body',
+    "<script>document.addEventListener('dragstart', function () {});</script><body"));
+  t(m2.length > 0, `מ35 · ⛔ מוטציה: מאזין \`dragstart\` מפיל את «[drag-api]» — ` +
+    `נמדדו ${m2.length} אתרים והצפוי לפחות אחד`);
+  const m3 = gripGaps(styleSheet(IDX) + '\n.zz-row{touch-action:none}\n', APP.dragHandles || []);
+  t(m3.length > 0, `מ36 · ⛔ מוטציה: \`touch-action:none\` על בורר שאינו ידית מפיל ` +
+    `את «[drag-grip]» — נמדדו ${m3.length} פערים והצפוי לפחות אחד`);
+  /*  ⭐ מוטציית-נגד: `pointerdown` ⛔ אינו מפיל — הוא המנגנון עצמו,
+   *  ⚠️ ושער שהיה נופל עליו אוסר את מה שהוא דורש. */
+  const n1 = dragApiGaps(dsrc.replace('<body',
+    "<script>document.addEventListener('pointerdown', function () {});</script><body"));
+  t(n1.length === 0, `נ11 · ⭐ מוטציית-נגד: מאזין \`pointerdown\` ⛔ אינו מפיל ` +
+    `את «[drag-api]» — נמדדו ${n1.length} אתרים והצפוי אפס`);
+}
 }
 }
 

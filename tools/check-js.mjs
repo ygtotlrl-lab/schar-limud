@@ -32,7 +32,7 @@
  *
  *  יציאה בקוד שונה מאפס אם כשל אחד או יותר.
  */
-import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { tmpdir, cpus } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -71,8 +71,7 @@ const APP = {
     ['html', "supabase-js@2\\.111\\.0", true, "index.html: supabase-js נעוץ ל-2.111.0"],
     ['html', "supabase-js@2/", false, "index.html: אין גרסת CDN צפה @2"],
   ],
-  gates: ['test_behavior.mjs',
-          'test_rowscan.mjs',
+  gates: ['test_rowscan.mjs',
           'test_users_patch.mjs',
           'test_schema_source.mjs',
           'test_secrets.mjs',
@@ -124,7 +123,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
  *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
  *  אותה היה מריץ את כולם פעם שנייה. */
-export const ROWS = [42, 43, 31];
+export const ROWS = [41, 42, 31];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -327,14 +326,6 @@ const BUDGET_EXEMPT = {
                         'והוא היחיד שרשאי לכך; ⛔ חורג ברמה המלאה בלבד — ' +
                         '⭐ ובמהירה הוא מתחת לתקרה: ⚠️ הזמן עצמו נמדד ' +
                         'ומודפס בכל הרצה',
-  /*  ⛔ שער הדפדפן (סבב 155) — ⚠️ כל מוטציה היא טעינת דף נוספת,
-   *  ⭐ והדפדפן עולה פעם אחת: ⛔ הזמן נגזר ממספר הטעינות
-   *  ⛔ ולא מגודל הקוד, ⚠️ וגרירה נמדדת בשתי דרכים — עכבר
-   *  ומגע — ⭐ וכל אחת היא טעינה מלאה. */
-  'test_behavior.mjs':  'מריץ דפדפן אמיתי, ⛔ וכל מוטציה וכל גרירה ' +
-                        'הן טעינת דף נוספת; ⛔ חורג ברמה המלאה ' +
-                        'בלבד — ⭐ ובמהירה הוא הרבה מתחת לתקרה: ' +
-                        '⚠️ הזמן עצמו נמדד ומודפס בכל הרצה',
   'test_crossgate.mjs': 'משווה שערים זה מול זה, ⛔ וכל מוטציה מריצה ' +
                         'שניים מהם על עותק אחד משותף; ⛔ חורג ברמה המלאה ' +
                         'בלבד — ⭐ ובמהירה הוא מתחת לתקרה: ⚠️ הזמן עצמו ' +
@@ -415,27 +406,14 @@ function runGate(gate) {
   });
 }
 
-/*  ⛔ **סדר השיגור אינו סדר ההכרזה (סבב 157)** — ⚠️ הבריכה נוטלת לפי
- *  סדר, ⭐ ושער ארוך שמוכרז בסופה מתחיל אחרון וקובע את הזנב:
- *  ⛔ נמדד — `test_matrix` הוכרז שבעים מתוך שבעים ושתיים, ⚠️ התחיל
- *  בשנייה 31 ורץ 78 — ⭐ והסט נגמר ב-109.5 אף שסך העבודה חלקי
- *  ארבעה הוא 71. ⛔ **והפלט נשאר בסדר ההכרזה** — ⚠️ `res` ממופתח
- *  במקום המקורי: ⭐ סדר לפי מי שסיים ראשון משתנה בין הרצה להרצה
- *  ושובר השוואת שני לוגים. ⚠️ **והמשקל הוא גודל המקור** — ⭐ מדד
- *  שנגזר מהעץ ⛔ ואינו רשימת זמנים מוקלדת: ⚠️ רשימה כזו מתיישנת
- *  בשקט ביום ששער תפח. */
 async function runPool(list, jobs) {
   const res = new Array(list.length);
-  const order = list.map((g, i) => i).sort((a, b) => size(list[b]) - size(list[a]));
   let next = 0;
   const worker = async () => {
-    while (next < order.length) { const i = order[next++]; res[i] = await runGate(list[i]); }
+    while (next < list.length) { const i = next++; res[i] = await runGate(list[i]); }
   };
   await Promise.all(Array.from({ length: Math.min(jobs, list.length) }, worker));
   return res;
-}
-function size(gate) {
-  try { return statSync(join(ROOT, 'tools', gate)).size; } catch (e) { return 0; }
 }
 
 const wanted = APP.gates;

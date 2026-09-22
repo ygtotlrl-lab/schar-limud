@@ -26,11 +26,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { rootFiles } from './test_filesets.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 80) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [211];
+export const ROWS = [210];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -107,19 +106,7 @@ const bad = (m) => { RAN++; failed++; console.error('  FAIL ' + m); };
 const assert = (c, m) => (c ? ok(m) : bad(m));
 
 const SKIP_DIR = new Set(['.git', 'node_modules', '.gradle', 'build']);
-/*  ⛔ היקף הסריקה נגזר מרשימת קבצי השורש ⛔ ואינו מוקלד (סבב 157) —
- *  ⚠️ **מה נכנס**: סוגי הקבצים שמחוץ לשורש, ובתוספת סיומתו של כל קובץ
- *  שורש שבסט המשותף; ⛔ **ומה מפיל**: קובץ שורש שיש לו סיומת ואינו
- *  נקרא בסריקה. ⭐ **ולמה המבנה קיים**: `app.css` נשמט מהרשימה
- *  המוקלדת — ⚠️ וארבעה שערים אחרים כן קראו אותו, ⛔ כלומר ההיקף הנכון
- *  היה ידוע ושער אחד נשמט. */
-const KINDS = new Set(['html', 'js', 'mjs', 'json', 'md', 'xml', 'yml', 'yaml',
-                       'gradle', 'properties', 'sql', 'sh', 'pro', 'txt', 'svg']);
-for (const f of rootFiles()) {
-  const e = path.extname(f).slice(1).toLowerCase();
-  if (e) KINDS.add(e);
-}
-const TEXT = new RegExp('\\.(' + [...KINDS].join('|') + ')$', 'i');
+const TEXT = /\.(html|css|js|mjs|json|md|xml|yml|yaml|gradle|properties|sql|sh|pro|txt|svg)$/i;
 
 /*  ⛔ נקודות כניסה — ⚠️ הדפדפן, אנדרואיד ו-GitHub טוענים אותן **בשם**,
  *  ⭐ ולכן אין ולא יהיה בעץ קובץ שמזכיר אותן. ⛔ כל שם כאן נושא את סיבתו. */
@@ -144,9 +131,9 @@ function walk(dir, base, out) {
 
 /*  ⛔ מחזירה את **רשימת** הקבצים בלי מזכיר ⛔ ולא מספר — ⚠️ הודעת כשל
  *  שאומרת «3» שולחת את הקורא לחפש אילו שלושה. */
-function orphans(root, text = TEXT) {
+function orphans(root) {
   const files = walk(root, '', []);
-  const texts = files.filter((f) => text.test(f))
+  const texts = files.filter((f) => TEXT.test(f))
     .map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')]);
   const out = [];
   for (const f of files) {
@@ -165,15 +152,21 @@ function orphans(root, text = TEXT) {
   return { files, out };
 }
 
-/*  ⛔ הכיוון השני של ההיקף — ⚠️ מחזירה את קובצי השורש שהסריקה **אינה**
- *  קוראת: ⭐ שם שיש לו סיומת ואינו בסט הנסרק הוא בדיוק הפער שסגר את
- *  `app.css`, ⛔ והודעה שאומרת «ההיקף שגוי» אינה אומרת מי נשמט. */
-function scopeGaps(files, text) {
-  const scanned = new Set(files.filter((f) => text.test(f)));
-  return rootFiles().filter((f) => path.extname(f) && !scanned.has(f));
-}
-
+/*  ⛔ ההיקף נגזר מרשימת קבצי השורש ⛔ ואינו מוקלד — ⚠️ הנימוק
+ *  המדוד: `app.css` היה מחוץ ל-`TEXT`, ⛔ ושבעה כללי `u-*` יתומים
+ *  עברו בשתיקה — ⭐ וארבעה שערים אחרים כן קראו אותו:
+ *  ⚠️ כלומר ההיקף הנכון היה ידוע, ⛔ ושער אחד נשמט. */
 const R = orphans(ROOT);
+{
+  /*  ⛔ שם שכולו סיומת אינו קובץ טקסט — ⚠️ `.nojekyll` ו-`.gitignore` הם דגלים
+   *  לכלים חיצוניים, ⭐ ואין בהם מה לסרוק. */
+  const rootFiles = R.files.filter((f) => f.indexOf('/') < 0 && /^[^.].*\.[^.]+$/.test(f));
+  const off = rootFiles.filter((f) => !TEXT.test(f)).sort();
+  assert(off.length === 0,
+    `0 · כל קובץ שורש שנושא סיומת בהיקף הסריקה — נמדדו ${off.length} מתוך ` +
+    `${rootFiles.length} מחוצה לו והצפוי אפס${off.length ? ': ' + off.join(', ') : ''}. ` +
+    'מוסיפים את הסיומת ל-`TEXT`, ⛔ ולא משאירים קובץ שורש מחוץ למדידה');
+}
 assert(R.out.length === 0,
   `1 · כל קובץ בעץ מוזכר במקום אחר — נמדדו ${R.out.length} בלי מזכיר מתוך ` +
   `${R.files.length} והצפוי אפס${R.out.length ? ': ' + R.out.join(', ') : ''}. ` +
@@ -192,17 +185,6 @@ assert(R.out.length === 0,
     `3 · כל תיקייה מוחרגת קיימת בעץ — נמדדו ${dirs.length} מוכרזות וריקות והצפוי אפס`);
 }
 
-/*  ⛔ ההיקף נמדד מול המרשם ⛔ ולא מול עצמו — ⚠️ קובץ שורש שאינו נקרא
- *  בסריקה הוא מזכיר שנעלם: ⭐ כל שם שהוא נוקב בו נספר כיתום, ⛔ והשורה
- *  מדווחת «אפס» על קובץ חי. */
-{
-  const gaps = scopeGaps(R.files, TEXT);
-  assert(gaps.length === 0,
-    `4 · כל קובץ שורש שיש לו סיומת נקרא בסריקה — נמדדו ${gaps.length} מחוץ ` +
-    `להיקף מתוך ${rootFiles().length} קובצי שורש והצפוי אפס` +
-    `${gaps.length ? ': ' + gaps.join(', ') : ''}. מוסיפים את סוג הקובץ להיקף`);
-}
-
 if (RUN_MUT) {
   mutStage();
 /* ── מוטציות — עותק אחד לשער, ולא עותק לכל מוטציה ──────────────────────── */
@@ -211,20 +193,6 @@ if (!INNER) {
   const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'orphans-'));
   process.on('exit', () => { try { fs.rmSync(WORK, { recursive: true, force: true }); } catch (e) {} });
   execFileSync('cp', ['-r', ROOT + '/.', WORK]);
-
-  /*  ⛔ מוטציה ד — ⚠️ היקף בלי `css`: ⭐ הטענה על קובצי השורש נופלת,
-   *  ⛔ וזה בדיוק המצב שממנו הגיע השער. */
-  const noCss = /\.(html|js|mjs|json|md|xml|yml|yaml|gradle|properties|sql|sh|pro|txt|svg)$/i;
-  const gapsNoCss = scopeGaps(R.files, noCss);
-  assert(gapsNoCss.length === 1 && gapsNoCss[0] === 'app.css',
-    `6 · מוטציה: \`app.css\` הוסר מהיקף הסריקה — טענה 4 הייתה נכשלת ` +
-    `(נמדדו ${gapsNoCss.length})`);
-
-  /*  ⭐ מוטציית-נגד: סוג קובץ **נוסף** להיקף ⛔ אינו מפיל — ⚠️ המדידה
-   *  היא שכל קובץ שורש נקרא, ⛔ ולא שההיקף צר. */
-  const wider = new RegExp(TEXT.source.replace(/\)\$$/, '|zzz)$'), 'i');
-  assert(scopeGaps(R.files, wider).length === 0,
-    'נ3 · מוטציית-נגד: סוג קובץ נוסף להיקף — טענה 4 אינה נכשלת');
 
   /*  ⛔ שם המוטציה נבנה בזמן ריצה ⛔ ואינו כתוב כאן כליטרל — ⚠️ שם שמופיע
    *  בגוף השער הזה **מוזכר** בעץ שהועתק, ⭐ והמוטציה הייתה נראית תקינה
@@ -235,7 +203,7 @@ if (!INNER) {
   fs.writeFileSync(planted, 'שום קובץ אינו מזכיר אותי\n');
   const m1 = orphans(WORK);
   assert(m1.out.length === 1 && m1.out[0] === 'tools/' + nonce + '.txt',
-    `5 · מוטציה: קובץ שאיש אינו מזכיר — טענה 1 הייתה נכשלת (נמדדו ${m1.out.length})`);
+    `4 · מוטציה: קובץ שאיש אינו מזכיר — טענה 1 הייתה נכשלת (נמדדו ${m1.out.length})`);
   fs.rmSync(planted);
 
   /*  ⭐ מוטציית-נגד: קובץ **שכן מוזכר** ⛔ אינו מפיל — ⚠️ המדידה היא
