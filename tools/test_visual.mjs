@@ -41,26 +41,34 @@ import { PEERS } from './peers.mjs';
  *  ⚠️ **וריק הוא «נמדד ואין»** ⛔ ואינו נשמט. */
 const APP = {
   app: 'schar-limud',
+  /*  ⛔ המשטחים שכל האפליקציות מציגות — ⚠️ **מה נכנס**: מזהה המיכל ⟵ מה
+   *  המשטח עושה למשתמש; ⛔ **ומה מפיל**: הצהרה שאין לה מיכל, מיכל שגופו
+   *  נבדל מאחות, והצהרה בלי נימוק. ⭐ **ולמה המבנה קיים**: משטח שנכתב
+   *  מחדש באפליקציה חדשה נראה תקין בפני עצמו, ⛔ והפער נראה רק בהשוואה. */
+  sharedSurfaces: {
+    updater: 'באנר העדכון — מודיע שיצאה גרסה, מחיל אותה, ומאפשר לדחות אותה',
+  },
   visualAllow: { fns: [] },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [92, 110, 85, 107, 213];
+export const ROWS = [92, 110, 85, 107, 213, 120];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
 export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
-                         'semantic', 'layer', 'clstok'];
+                         'semantic', 'layer', 'clstok', 'surface'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
                      'classes', 'classes',
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
-                     'clstok', 'clstok', 'clstok'];
+                     'clstok', 'clstok', 'clstok',
+                     'surface', 'surface', 'surface', 'surface'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,7 +80,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 25, app: 0, appWhy: '' };
+const FLOOR = { shared: 26, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -862,6 +870,54 @@ t(CT.bad.length === 0,
   (CT.bad.length ? ` (${CT.bad.slice(0, 6).join(' · ')})` : '') +
   ' — מה עושים: קוראים את האסימון בכלל שחל על האלמנט, או מסירים את ההגדרה');
 
+/* ── משטח משותף זהה בית-לבית בין הריפו ─────────────────────────────────── */
+/*  ⛔ המיכל נחתך בסוגר תואם ⛔ ולא בחלון תווים — ⚠️ גוף שנחתך באורך קבוע
+ *  מסווג את מה שאחריו לקלט שאינו שלו, ⭐ והחיתוך הוא מ-`<div id="…">` עד
+ *  ה-`</div>` שמאזן אותו · ⛔ **וההשוואה מנרמלת רווחים** — ⚠️ הזחה אינה
+ *  רכיב, ⭐ והנמדד הוא הסימון, הטקסט, שמות הפעולות והמחלקות. */
+function surfaceBody(src, id) {
+  const at = src.indexOf('<div id="' + id + '"');
+  if (at < 0) return null;
+  const re = /<div\b[^>]*>|<\/div>/g;
+  re.lastIndex = at;
+  let d = 0, m;
+  while ((m = re.exec(src)) !== null) {
+    d += m[0] === '</div>' ? -1 : 1;
+    if (d === 0) return src.slice(at, m.index + m[0].length).replace(/\s+/g, ' ').trim();
+  }
+  return null;
+}
+/*  ⛔ ושני הצדדים נמדדים — ⚠️ הצהרה שאין לה מיכל, ⛔ ומיכל שגופו נבדל
+ *  מאחות שעל הדיסק: ⭐ וההצהרה בלי נימוק היא היתר שלא נסגר. */
+function surfGaps(src, peers) {
+  const decl = APP.sharedSurfaces || {};
+  const ids = Object.keys(decl);
+  const off = [];
+  for (const id of ids) {
+    const mine = surfaceBody(src, id);
+    if (mine === null) continue;
+    for (const p of Object.keys(peers))
+      if (surfaceBody(peers[p], id) !== mine) off.push('#' + id + ' ⟵ ' + p);
+  }
+  return {
+    missing: ids.filter((id) => surfaceBody(src, id) === null),
+    bare: ids.filter((id) => !decl[id] || String(decl[id]).trim().length < 12),
+    off,
+  };
+}
+const PEER_SRC = Object.fromEntries(CLS_HAVE.map((p) => [p, CLS_SRC[p]]));
+{
+  const g = surfGaps(IDX, PEER_SRC);
+  const bad = g.missing.length + g.bare.length + g.off.length;
+  t(bad === 0,
+    `[shared-surface] ⛔ משטח משותף זהה בית-לבית בין הריפו — נמדדו ` +
+    `${Object.keys(APP.sharedSurfaces || {}).length} משטחים מוצהרים מול ${CLS_HAVE.length} אחיות, ` +
+    `${g.missing.length} בלי מיכל · ${g.bare.length} בלי נימוק · ${g.off.length} שגופם נבדל — והצפוי אפס` +
+    (CLS_AWAY.length ? ` · ⏭ ${CLS_AWAY.join(' · ')} אינם על הדיסק` : '') +
+    (bad ? ` (${[...g.missing, ...g.bare, ...g.off].slice(0, 6).join(' · ')})` +
+           ' — מה עושים: מביאים את המשטח בצורה שיש לרוב, או מסירים את ההצהרה' : ''));
+}
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות בזיכרון — ⚠️ הן מריצות את **אותה** `scan` על טקסט מוטט,
@@ -1028,6 +1084,31 @@ const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0
   const g = classTokenGaps(m);
   t(g.bad.some((x) => x.indexOf('zz-mut-p-1') >= 0 && x.indexOf('zzMutHost') >= 0),
     'מ29 · אתר ההחלה נגזר דרך מפיק־השם — ולא מגוף המפיק עצמו');
+}
+
+/*  ⛔ מ30–מ33 — משטח שנבדל: ⚠️ האחות היא **סינתטית** ⭐ ולכן המוטציות רצות
+ *  תמיד, ⛔ גם כשאין ריפו לצידנו: ⚠️ והמוטציה עורכת את המיכל בזיכרון. */
+{
+  const SM = [
+    { m: 'מ30', lbl: 'טקסט הכפתור נבדל', a: '>עדכן עכשיו<', b: '>רענן<' },
+    { m: 'מ31', lbl: 'שם הפעולה נבדל', a: 'data-act="sw-apply"', b: 'data-act="sw-reload"' },
+    { m: 'מ32', lbl: 'כפתור הסגירה חסר', a: /<button class="x" data-act="sw-dismiss"[^>]*>[^<]*<\/button>/, b: '' },
+    { m: 'מ33', lbl: 'מחלקה שנוספה למשטח', a: '<span>🔄', b: '<span class="zz-mut-fx">🔄' },
+  ];
+  for (const r of SM) {
+    const mutated = IDX.replace(r.a, () => r.b);
+    t(surfGaps(mutated, { 'zz-sister': IDX }).off.length === 1,
+      `${r.m} · ${r.lbl} — [shared-surface] הייתה נכשלת`);
+  }
+  /*  ⭐ מוטציות-נגד: ⛔ הזחה אינה רכיב, ⚠️ וערך בגיליון הוא מוצר — ⭐ ושתיהן
+   *  אסור להן להפיל. */
+  const reindent = IDX.replace('<div id="updater">\n  <div class="in">',
+                               '<div id="updater">\n    <div class="in">');
+  t(surfGaps(reindent, { 'zz-sister': IDX }).off.length === 0,
+    'נ9 · ⭐ הזחה שנבדלת בתוך המשטח ⛔ **אינה** מפילה את [shared-surface]');
+  const recolor = IDX.replace('#updater', '#updater');
+  t(surfGaps(recolor, { 'zz-sister': injCss('#updater .in{background:var(--card)}') }).off.length === 0,
+    'נ10 · ⭐ כלל סגנון שנבדל ⛔ **אינו** מפיל את [shared-surface]');
 }
 }
 
