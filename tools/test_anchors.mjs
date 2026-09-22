@@ -71,7 +71,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל מוטציה שאין לה מה למוטט בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 21, app: 0, appWhy: '' };
+const FLOOR = { shared: 25, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -270,6 +270,45 @@ for (const r of MUT) {
                     'check-capabilities.mjs'),
          'נ2 · ⭐ מרשם שנגזר ממצב חי ⛔ **אינו** מפיל');
 }
+  /*  ⛔⛔ מ81 · מ82 · מ83 · נ52 — התווית מתארת את מה שקורה (סבב 167):
+   *  ⚠️ **מה נכנס**: תווית שדה מול `type`/`inputmode`, ⛔ ותווית כפתור
+   *  מול פעולתו; ⛔ **ומה מפיל**: הפרש. ⭐ **והנימוק המדוד**: תווית
+   *  שהועתקה לטופס אחר כדי לאחד — ⚠️ **והאיחוד הפך אותה לשקר**. */
+  {
+    /*  ⛔ השדה נבחר מהמקור ⛔ ואינו מוקלד — ⚠️ מזהה קשיח חי באחת בלבד. */
+    const idx = rd('index.html');
+    const num = /(<label[^>]*>)([^<]*)(<\/label>'?\s*\+?\s*'?\s*<input[^>]*inputmode="numeric"[^>]*>)/
+      .exec(idx) || /(aria-label=")([^"]*)("[^>]*inputmode="numeric")/.exec(idx);
+    if (!num) {
+      t(true, 'מ81 · ⭕ אין כאן שדה מספרי שנושא תווית — ⛔ ואין מה למוטט');
+      t(true, 'נ52 · ⭕ אין כאן שדה מספרי שנושא תווית — ⛔ ואין מה להחליף');
+    } else {
+      const swap = (txt) => idx.replace(num[0], num[1] + txt + num[3]);
+      t(runGateOn({ 'index.html': swap('תאריך') },
+                  'test_caps_guard.mjs'),
+        'מ81 · תווית «תאריך» על שדה מספרי **מפילה** את «הערה שמתארת מצב שחלף»');
+      /*  ⭐ מוטציית-נגד: «פירוט» ⛔ אינה מפילה — ⚠️ אין לה דרישת טיפוס. */
+      t(!runGateOn({ 'index.html': swap('פירוט') },
+                   'test_caps_guard.mjs'),
+        'נ52 · ⭐ תווית «פירוט» על שדה חופשי ⛔ **אינה** מפילה');
+    }
+    /*  ⛔ טיפוס שהוסר — ⚠️ התווית נשארת, ⭐ והשדה מפסיק לקיים אותה. */
+    const dt = /<input([^>]*)\btype="date"([^>]*)>/.exec(idx);
+    if (!dt) t(true, 'מ82 · ⭕ אין כאן שדה `type="date"` — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html':
+                      idx.replace(dt[0], '<input' + dt[1] + 'type="text"' + dt[2] + '>') },
+                  'test_caps_guard.mjs'),
+        'מ82 · `type="date"` שהוחלף בטקסט **מפיל** את «הערה שמתארת מצב שחלף»');
+    /*  ⛔ ותווית שמבטיחה פעולה אחרת — ⚠️ הכפתור מוחק, ⭐ והיא «שמור». */
+    const bt = /(<button\b[^>]*\bdata-act="[^"]*del[^"]*"[^>]*>)([^<]{1,60})(<\/button>)/.exec(idx);
+    if (!bt) t(true, 'מ83 · ⭕ אין כאן כפתור מחיקה במקור — ⛔ ואין מה למוטט');
+    else
+      t(runGateOn({ 'index.html': idx.replace(bt[0], bt[1] + 'שמור' + bt[3]) },
+                  'test_caps_guard.mjs'),
+        'מ83 · תווית «שמור» על כפתור מחיקה **מפילה** את «הערה שמתארת מצב שחלף»');
+  }
+
 }
 
 if (fail) { console.error(`❌ ${GATE_ID}: ${fail} טענות נכשלו`); process.exitCode = 1; }

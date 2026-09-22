@@ -65,6 +65,12 @@ const APP = {
    *  המבנה ריק**: סבב 139 עיגן את כולן להיקף שלהן — ⚠️ גוף פונקציה או
    *  אזור DOM — ⛔ ומה שנשאר היעדר עבר לרשימה שלידה. */
   presenceOnly: {},
+  /*  ⛔ תוויות שדה שהתקן אינו חל עליהן (סבב 167) — ⚠️ **מה נכנס**: מפתח
+   *  `<מזהה השדה>|<מה שנדרש>` ⛔ והנימוק למה השדה **אינו** יכול לקבל
+   *  אותו; ⛔ **ומה מפיל**: תווית חורגת שאינה כאן, ⚠️ והכרזה שאין לה
+   *  שדה חי. ⭐ **ולמה המבנה קיים**: ⛔ יש שדה שהתווית שלו נכונה
+   *  והטיפוס שהתקן דורש אינו קיים בדפדפן. */
+  labelAllow: {},
   /*  ⛔ טענות היעדר — ⚠️ **מה נכנס**: probe שהטענה שלו היא «אין מסלול
    *  כזה» ⟵ למה המקור כולו הוא ההיקף הנכון לה; ⛔ **ומה מפיל**: רשומה
    *  שאינה כאן, הכרזה שאין לה probe, ⛔ ושם שיושב גם ב-`presenceOnly`.
@@ -5479,6 +5485,88 @@ function staleNoteSites() {
   return out;
 }
 
+/*  ⛔⛔ תווית שדה מתארת את מה שהשדה מקבל (סבב 167) — ⚠️ **מה נכנס**: כל
+ *  `<label for>` וכל `aria-label` שעל שדה, מול `type` · `inputmode` ·
+ *  `pattern` שבו; ⛔ **ומה מפיל**: תווית «תאריך» על שדה שאינו `date`
+ *  ואין לו `pattern`, «סכום» בלי `inputmode="decimal"`, ו«יום» בלי
+ *  `inputmode="numeric"`. ⭐ **ולמה המבנה קיים**: ⛔ תווית שקרית היא
+ *  הטקסט היחיד שהמשתמש סומך עליו, ⚠️ ואינה נראית בשום בדיקה חזותית —
+ *  ⭐ והיא נולדת מאיחוד תוויות בין טפסים לפי **מיקומן בסדר**, ⛔ ולא לפי
+ *  מה שהשדה מקבל.
+ *  ⛔ **והסריקה על המקור הגולמי** — ⚠️ התווית חיה במחרוזת שנבנית ב-JS,
+ *  ⭐ והלבנה הייתה מוחקת בדיוק את מה שהיא סורקת. */
+/*  ⛔ לשון המחיקה — ⚠️ **מה נכנס**: מילה, סימן, או קבוע הודעה שנוקב
+ *  במחיקה; ⛔ **ומה מפיל**: תווית כפתור מחיקה שאין בה אף אחד מהם.
+ *  ⭐ **ולמה סימן נספר**: ⛔ «✕» על שורה הוא לשון המחיקה המקובלת,
+ *  ⚠️ והוא נקרא כך בכל חמש. */
+const DEL_WORD = /מחק|מחיק|הסר|הסרה|בטל|✕|×|&#10005;|🗑|MSG_[A-Z_]*DEL/;
+const LABEL_RULES = [
+  { word: /(?:^|[\s("'])[בלמהוכש]?תאריך(?:$|[\s)"'*])/, need: 'date',
+    ok: (f) => f.type === 'date' || !!f.pattern,
+    why: '`type="date"`, או `pattern` שמתאר את הצורה' },
+  { word: /(?:^|[\s("'])[בלמהוכש]?סכום(?:$|[\s)"'*])/, need: 'decimal',
+    ok: (f) => f.im === 'decimal', why: '`inputmode="decimal"`' },
+  { word: /(?:^|[\s("'])יום(?:$|[\s)"'*])/, need: 'numeric',
+    ok: (f) => f.im === 'numeric', why: '`inputmode="numeric"`' },
+];
+function fieldLabels() {
+  const labs = new Map();
+  for (const m of src.matchAll(/<label[^>]*\bfor="([^"]+)"[^>]*>([^<]*)</g))
+    labs.set(m[1], m[2].trim());
+  /*  ⛔ והתווית העוטפת נקראת אף היא — ⚠️ `<label><span>…</span><input>`
+   *  אין בה `for` ואין בה `aria-label`, ⭐ והיא התווית שהמשתמש קורא:
+   *  ⛔ סריקה שמדלגת עליה מדווחת «אפס» על טופס שלם. */
+  const wrap = new Map();
+  for (const m of src.matchAll(/<label\b[^>]*>\s*'?\s*\+?\s*'?\s*<span[^>]*>([^<]*)<\/span>[\s\S]{0,120}?<(?:input|select|textarea)\b([^>]*)>/g)) {
+    const id = (/\bid="([^"]+)"/.exec(m[2]) || [])[1];
+    if (id) wrap.set(id, m[1].trim());
+  }
+  const out = [];
+  for (const m of src.matchAll(/<(input|select|textarea)\b([^>]*)>/g)) {
+    const a = m[2];
+    const id = (/\bid="([^"]+)"/.exec(a) || [])[1] || '';
+    const aria = (/\baria-label="([^"]*)"/.exec(a) || [])[1];
+    const text = aria !== undefined ? aria : (labs.get(id) || wrap.get(id));
+    if (text === undefined || !text) continue;
+    out.push({ id: id || '(aria)', text,
+      type: (/\btype="([^"]+)"/.exec(a) || [])[1] || '',
+      im: (/\binputmode="([^"]+)"/.exec(a) || [])[1] || '',
+      pattern: (/\bpattern="/.test(a)) });
+  }
+  return out;
+}
+function labelGaps() {
+  const allow = APP.labelAllow || {};
+  const out = [], used = new Set();
+  for (const f of fieldLabels())
+    for (const r of LABEL_RULES) {
+      if (!r.word.test(f.text) || r.ok(f)) continue;
+      const key = `${f.id}|${r.need}`;
+      if (allow[key] && String(allow[key]).trim()) { used.add(key); continue; }
+      out.push(`${f.id}: התווית «${f.text}» ואין ${r.why} — נמדד ` +
+        `type=${f.type || '-'} inputmode=${f.im || '-'}: ` +
+        'מה עושים — מתקנים את **התווית** למה שהשדה מקבל, ⛔ ולא את השדה');
+    }
+  /*  ⛔ ותווית כפתור מתארת את פעולתו — ⚠️ **מה נכנס**: כפתור שפעולתו
+   *  מחיקה; ⛔ **ומה מפיל**: תווית שאין בה לשון מחיקה — ⭐ לא מילה,
+   *  לא סימן, ולא קבוע הודעה שנוקב בה: ⚠️ «שמור» שמוחק הוא הטקסט
+   *  היחיד שהמשתמש סומך עליו לפני שהוא לוחץ. */
+  for (const m of src.matchAll(/<button\b([^>]*)>([^<]{1,60})<\/button>/g)) {
+    const act = (/\bdata-act="([^"]+)"/.exec(m[1]) || [])[1] || '';
+    const txt = m[2].trim();
+    if (!act || !txt) continue;
+    if (!/(?:^|-)del(?:ete)?(?:-|$)/.test(act)) continue;
+    if (DEL_WORD.test(txt)) continue;
+    out.push(`${act}: תווית הכפתור «${txt}» ואין בה לשון מחיקה — ` +
+      'נמדד פעולה=מחיקה: מה עושים — מתקנים את **התווית** לפעולה שהכפתור עושה');
+  }
+  /*  ⛔ וההצהרה נמדדת משני צדדיה — ⚠️ הכרזה שאין לה שדה חי היא היתר
+   *  שלא נסגר, ⭐ בדיוק כמו כל רשימת חריגה. */
+  for (const k of Object.keys(allow))
+    if (!used.has(k)) out.push(`[label-allow] הכרזה בלי שדה חי — ${k}`);
+  return out;
+}
+
 /*  ⛔⛔ שומר ההקשר (סבב 109) — ⚠️ **המנגנון משותף וההצהרה פרטית**: ⭐ הבלוק
  *  החתום נותן את `ctxEpoch`/`ctxSwitch`/`ctxStale`, ⛔ ומה שנלכד מוצהר
  *  ב-`APP.ctxKeys` — ⚠️ המוסד באפליקציה רב-מוסדית, והמשתמש בשאר.
@@ -6450,7 +6538,7 @@ const MATRIX = [
    *  ירדו מאות ספירות, מצבות והפניות לכללים שנמחקו, ⭐ וכולן נמצאו
    *  במקרה: ⛔ אף שורה לא אכפה אותן. */
   { row: 208, name: 'הערה שמתארת מצב שחלף',
-    probe: () => staleNoteSites().length === 0 },
+    probe: () => staleNoteSites().length === 0 && labelGaps().length === 0 },
   /*  ⛔ שאילתת `@media` מתה (סבב 97) — ⚠️ **גוף בלי כלל בלבד**:
    *  ⭐ נקודת שבירה שאינה בסולם נמדדת בשורת הפריסה, ⛔ ומדידה שנייה
    *  לאותו ערך הייתה טענה כפולה. */
