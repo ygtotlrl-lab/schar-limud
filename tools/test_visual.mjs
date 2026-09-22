@@ -47,6 +47,8 @@ const APP = {
    *  מחדש באפליקציה חדשה נראה תקין בפני עצמו, ⛔ והפער נראה רק בהשוואה. */
   sharedSurfaces: {
     updater: 'באנר העדכון — מודיע שיצאה גרסה, מחיל אותה, ומאפשר לדחות אותה',
+    modal: 'מיכל המודאל — נושא כותרת, גוף ותחתית, ונסגר בכפתור שבכותרת',
+    ask: 'מיכל האישור — שואל «כן/לא» על פעולה שאין ממנה דרך חזרה',
   },
   visualAllow: { fns: [] },
 };
@@ -68,6 +70,7 @@ export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'sc
                      'classes', 'classes',
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
                      'clstok', 'clstok', 'clstok',
+                     'surface', 'surface', 'surface', 'surface',
                      'surface', 'surface', 'surface', 'surface'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
@@ -80,7 +83,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 26, app: 0, appWhy: '' };
+const FLOOR = { shared: 27, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -918,6 +921,26 @@ const PEER_SRC = Object.fromEntries(CLS_HAVE.map((p) => [p, CLS_SRC[p]]));
            ' — מה עושים: מביאים את המשטח בצורה שיש לרוב, או מסירים את ההצהרה' : ''));
 }
 
+/*  ⛔ וכל מיכל דיאלוג נמדד ⛔ ולא הראשון בלבד — ⚠️ המיכלים נגזרים מגוף
+ *  `openModal` ומגוף `ask`, ⭐ ומיכל הוא מי שנושא `aria-modal` בגופו:
+ *  ⛔ מיכל שנכתב מחדש באפליקציה חדשה ואינו מוכרז אינו מושווה לאיש,
+ *  ⚠️ והוא נראה תקין בפני עצמו. */
+function dialogSurfaces(html) {
+  return [...dialogIds(fnBodies(html))].filter((id) => {
+    const b = surfaceBody(html, id);
+    return b !== null && b.indexOf('aria-modal="true"') >= 0;
+  }).sort();
+}
+{
+  const dlg = dialogSurfaces(IDX);
+  const undecl = dlg.filter((id) => !(id in (APP.sharedSurfaces || {})));
+  t(dlg.length > 0 && undecl.length === 0,
+    `[dialog-surface] ⛔ כל מיכל דיאלוג מוכרז ב-\`APP.sharedSurfaces\` — נמדדו ` +
+    `${dlg.length} מיכלים ו-${undecl.length} שאינם מוכרזים, והצפוי אפס ולפחות מיכל אחד` +
+    (undecl.length ? ` (${undecl.join(' · ')})` : '') +
+    ' — מה עושים: מכריזים את המיכל עם מה שהוא עושה למשתמש, ומיישרים את גופו לצורה שיש לרוב');
+}
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות בזיכרון — ⚠️ הן מריצות את **אותה** `scan` על טקסט מוטט,
@@ -1109,6 +1132,37 @@ const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0
   const recolor = IDX.replace('#updater', '#updater');
   t(surfGaps(recolor, { 'zz-sister': injCss('#updater .in{background:var(--card)}') }).off.length === 0,
     'נ10 · ⭐ כלל סגנון שנבדל ⛔ **אינו** מפיל את [shared-surface]');
+
+  /*  ⛔ מ34–מ37 — מיכל הדיאלוג: ⚠️ שם מחלקה · מיקום ה-`role` · קישור
+   *  הכותרת · ומיכל שאינו במרשם. ⭐ והאחות סינתטית, ⛔ ולכן הן רצות תמיד. */
+  const DM = [
+    { m: 'מ34', lbl: 'שם מחלקה במיכל נבדל', a: '<div class="sheet ksave" role="dialog"',
+      b: '<div class="modal-box ksave" role="dialog"' },
+    { m: 'מ35', lbl: '`role` עבר למיכל החיצוני', a: '<div id="modal" class="veil">\n  <div class="sheet ksave" role="dialog" aria-modal="true" ',
+      b: '<div id="modal" class="veil" role="dialog" aria-modal="true">\n  <div class="sheet ksave" ' },
+    { m: 'מ36', lbl: 'קישור הכותרת הוסר', a: ' aria-labelledby="modal-title"', b: '' },
+  ];
+  for (const r of DM) {
+    const mutated = IDX.replace(r.a, () => r.b);
+    t(mutated !== IDX && surfGaps(mutated, { 'zz-sister': IDX }).off.length === 1,
+      `${r.m} · ${r.lbl} — [shared-surface] הייתה נכשלת`);
+  }
+  {
+    const extra = '<div id="zz-dlg" class="veil"><div class="sheet" role="dialog" aria-modal="true">' +
+                  '<div class="sheet-bd" id="zz-dlg-body"></div></div></div>';
+    const mutated = IDX.replace("var yes = document.getElementById('ask-yes');",
+      "var yes = document.getElementById('ask-yes');var z = document.getElementById('zz-dlg');")
+      .replace('<div id="ask" class="veil">', extra + '<div id="ask" class="veil">');
+    const dlg = dialogSurfaces(mutated);
+    t(dlg.indexOf('zz-dlg') >= 0 && !('zz-dlg' in (APP.sharedSurfaces || {})),
+      'מ37 · מיכל דיאלוג שאינו במרשם — [dialog-surface] הייתה נכשלת');
+  }
+  /*  ⭐ מוטציות-נגד: ⛔ דרגת שכבה ורוחב מרבי הם מוצר — ⚠️ הם חיים בגיליון
+   *  ⛔ ולא במיכל, ⭐ ואסור להם להפיל. */
+  t(surfGaps(injCss('#modal .sheet{z-index:var(--z-5)}'), { 'zz-sister': IDX }).off.length === 0,
+    'נ11 · ⭐ דרגת שכבה שנבדלת ⛔ **אינה** מפילה את [shared-surface]');
+  t(surfGaps(injCss('#ask .sheet{max-width:340px}'), { 'zz-sister': IDX }).off.length === 0,
+    'נ12 · ⭐ רוחב מרבי שנבדל ⛔ **אינו** מפיל את [shared-surface]');
 }
 }
 
