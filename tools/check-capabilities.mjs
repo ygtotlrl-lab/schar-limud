@@ -2041,15 +2041,55 @@ const hasCode = (re) => re.test(code);
  *  אורך הטקסט. */
 const fnBodyRaw = (name) => { const r = fnRange(name); return r ? src.slice(r[0], r[1]) : ''; };
 
+/*  ⛔ מרשם מיכלי הדיאלוג — ⚠️ **מה נכנס**: מזהה המיכל ⟵ התפקיד שהוא מכריז;
+ *  ⛔ **ומה מפיל**: מיכל שאינו כאן, ומזהה שאין לו מיכל. ⭐ **ולמה המבנה
+ *  קיים**: המיכל השני נשכח, ⚠️ והוא נמדד בדיוק כמו הראשון. */
+const DIALOG_ROLE = { modal: 'dialog', ask: 'alertdialog' };
+/*  ⛔ הנמדד הוא שמות מחלקות המבנה, מיקום ה-`role` וקישור הכותרת — ⚠️ ולא
+ *  מחלקות שירות ולא תוכן הכפתורים: ⭐ הן מוצר, ⛔ והמבנה אינו.
+ *  ⛔ **ו-`ksave` אינו מבנה** — ⚠️ הוא היקף ה-`Enter` שנמדד בשורה שלו,
+ *  ⭐ ומיכל בלי כפתור שמירה אינו נושא אותו · ⛔ **ו-`sheet-bd` אינו מבנה**
+ *  — ⚠️ שתיים מהן מרפדות את `sheet` עצמו, ⭐ וזה ריפוד ⛔ ולא צורה. */
+const SHEET_TOK = /^(?:veil|sheet|sheet-hd|sheet-ft)$/;
+const sheetCls = (tag) => {
+  const c = /class="([^"]*)"/.exec(tag);
+  return c ? c[1].trim().split(/\s+/).filter((x) => SHEET_TOK.test(x)).sort().join(' ') : '';
+};
+/*  ⛔ הגבול הוא `</div>` בתחילת שורה — ⚠️ חמשת המיכלים כתובים כך,
+ *  ⭐ ובלעדיו ביטוי עצל נעצר בסוגר הפנימי הראשון. */
+function dialogShape(text, id) {
+  const open = new RegExp('<div[^>]*\\bid="' + id + '"[^>]*>').exec(text);
+  if (!open) return null;
+  const from = open.index;
+  const end = text.indexOf('\n</div>', from);
+  if (end < 0) return null;
+  const body = text.slice(from, end);
+  const inner = /<div[^>]*>/.exec(body.slice(open[0].length));
+  if (!inner) return null;
+  const att = (t, a) => { const m = new RegExp(a + '="([^"]*)"').exec(t); return m ? m[1] : ''; };
+  const parts = [];
+  for (const m of body.matchAll(/<div[^>]*class="([^"]*)"[^>]*>/g)) {
+    const k = sheetCls(m[0]);
+    if (k && k !== sheetCls(open[0])) parts.push(k);
+  }
+  return ['veil=' + sheetCls(open[0]),
+    'sheet=' + sheetCls(inner[0]),
+    'role=' + att(inner[0], 'role'),
+    'modal=' + att(inner[0], 'aria-modal'),
+    'label=' + att(inner[0], 'aria-labelledby'),
+    'outer-role=' + att(open[0], 'role'),
+    'parts=' + parts.sort().join(',')].join(' | ');
+}
+
 function modalGaps() {
   const out = [];
   for (const id of ['modal', 'ask']) {
     const n = (src.match(new RegExp('id="' + id + '"', 'g')) || []).length;
     if (n !== 1) out.push(`מיכל «${id}» — נמדדו ${n} והצפוי 1`);
   }
-  /*  ⛔ מחלקת המעטפת נגזרת מהמיכל ⛔ ואינה מוקלדת — ⚠️ היא נבדלת בין
-   *  כולן (`modal-overlay` מול `veil`), ⭐ ומה שמשותף הוא ש**שני**
-   *  המיכלים נושאים את **אותה** מחלקה: ⛔ שם מוקלד היה מפיל שלוש מהן. */
+  /*  ⛔ מחלקת המעטפת נגזרת מהמיכל ⛔ ואינה מוקלדת — ⚠️ הנמדד כאן הוא
+   *  ש**שני** המיכלים נושאים את **אותה** מחלקה, ⭐ וזהותה בין הריפו
+   *  נמדדת בהצלבת הצורה שלמטה. */
   const cls = (id) => {
     const m = new RegExp('<div[^>]*id="' + id + '"[^>]*>').exec(src);
     const c = m && /class="([^"]+)"/.exec(m[0]);
@@ -2084,6 +2124,42 @@ function modalGaps() {
   if (stray) out.push(`מסלולי פתיחה/סגירה נוספים למיכלים — נמדדו ${stray} והצפוי 0`);
   if ((code.match(/function openModal\s*\(\s*title\s*,\s*body\s*,\s*foot\s*\)/g) || []).length !== 1)
     out.push('חתימת `openModal(title, body, foot)` אינה כמוצהר');
+  /*  ⛔ גוף המיכל נמדד ולא הפונקציה בלבד — ⚠️ שלוש צורות עברו שלוש שורות
+   *  ירוקות: ⭐ 82 מדדה את החתימה, 83 את ההורה, ו-84 את השכבה, ⛔ ואף אחת
+   *  לא את שמות המחלקות, את מיקום ה-`role` ואת קישור הכותרת. */
+  const shapes = {};
+  for (const id of Object.keys(DIALOG_ROLE)) {
+    const sh = dialogShape(src, id);
+    if (!sh) { out.push(`מיכל «${id}» — גופו אינו נגזר מהמקור`); continue; }
+    shapes[id] = sh;
+    if (!/ sheet=[^|]*\bsheet\b/.test(sh))
+      out.push(`מיכל «${id}» — המיכל הפנימי אינו \`sheet\`: ${sh}`);
+    if (!sh.includes('role=' + DIALOG_ROLE[id]))
+      out.push(`מיכל «${id}» — ה-\`role\` אינו «${DIALOG_ROLE[id]}» על המיכל הפנימי: ${sh}`);
+    if (!sh.includes('outer-role= '))
+      out.push(`מיכל «${id}» — \`role\` על המעטפת החיצונית מוסר לקורא מסך מבנה אחר: ${sh}`);
+    if (!sh.includes('label=' + id + '-title'))
+      out.push(`מיכל «${id}» — אין \`aria-labelledby="${id}-title"\`: ${sh}`);
+  }
+  /*  ⛔ וההצלבה בין הריפו — ⚠️ צורה שתקינה בתוך ריפו אחד אינה עדות לזהות
+   *  **בין** הריפו: ⭐ מי שמעתיק רכיב מאחות מביא איתו את הצורה השנייה. */
+  {
+    const peerIdx = (p) => `../${p}/index.html`;
+    const others = PEERS.filter((p) => p !== APP.app);
+    const near = others.filter((p) => fs.existsSync(peerIdx(p)));
+    for (const peer of (near.length ? others : [])) {
+      if (!fs.existsSync(peerIdx(peer))) {
+        out.push(peer + ': ריפו אחות אינה על הדיסק — גוף המיכל לא הושווה'); continue;
+      }
+      const pt = fs.readFileSync(peerIdx(peer), 'utf8');
+      for (const id of Object.keys(DIALOG_ROLE)) {
+        const ps = dialogShape(pt, id);
+        if (!ps) { out.push(`${peer}: מיכל «${id}» אינו נגזר מהמקור שם`); continue; }
+        if (shapes[id] && ps !== shapes[id])
+          out.push(`${peer}: גוף «${id}» נבדל — «${ps}» מול «${shapes[id]}» כאן`);
+      }
+    }
+  }
   const askB = fnBodyRaw('ask');
   if (askB && !/\.textContent\s*=\s*text\b/.test(askB))
     out.push('גוף ה-`ask` אינו ב-textContent');
