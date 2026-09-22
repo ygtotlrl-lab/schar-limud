@@ -33,6 +33,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ החריגות הפרטיות — ⚠️ **מה נכנס**: בורר או שם קובץ שהסריקה מדלגת
@@ -59,14 +60,14 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [91, 109, 84, 106, 212, 119, 90];
+export const ROWS = [91, 109, 110, 84, 106, 213, 120, 90];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
 export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
-                         'semantic', 'layer', 'clstok', 'surface', 'drag'];
+                         'semantic', 'layer', 'clstok', 'surface', 'drag', 'util'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
@@ -74,7 +75,8 @@ export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'sc
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
                      'clstok', 'clstok', 'clstok',
                      'surface', 'surface', 'surface', 'surface',
-                     'drag', 'drag', 'drag'];
+                     'drag', 'drag', 'drag',
+                     'util', 'util'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -86,7 +88,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 28, app: 0, appWhy: '' };
+const FLOOR = { shared: 30, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -411,6 +413,11 @@ function groupSites(src, names) {
  *  ב-`<style>` שחילוץ ההיקף מוצא אותו: ⛔ סורק שקורא `index.html` לבדו
  *  מדווח «אפס ליטרלים» על גיליון שלם שלא נסרק. */
 const IDX = rd('index.html') + '\n<style data-sheet="app">\n' + rd('app.css') + '\n</style>';
+
+/*  ⛔ הספירה על המקור המחובר — ⚠️ גיליון הסגנון ומודולי הליבה יחד:
+ *  ⭐ מחלקה שנוספת מ-`classList.add` שבמודול אינה ב-`index.html`,
+ *  ⛔ וסריקה שלו לבדו מדווחת פחות ממה שיש. */
+const SRC_ALL = appSrc(ROOT);
 const F = scan(IDX, APP.visualAllow);
 
 t(F.color.length === 0,
@@ -986,6 +993,40 @@ const PEER_SRC = Object.fromEntries(CLS_HAVE.map((p) => [p, CLS_SRC[p]]));
   }
 }
 
+
+/*  ⛔ שכבת השירות — ⚠️ **מה נכנס**: המקור המחובר; ⛔ **ומה מפיל**:
+ *  יחס שירות-לסמנטי גדול מאחד, ⛔ ושרשרת בת שלוש ומעלה שחוזרת
+ *  יותר מפעמיים. ⭐ **ולמה המבנה קיים**: מחלקת שירות אחת
+ *  היא התאמה נקודתית, ⛔ ו-247 מהן הן מערכת סגנון שנייה שחיה ב-HTML. */
+function utilGaps(text) {
+  const applied = new Set(), semantic = new Set(), chains = new Map();
+  for (const m of text.matchAll(/class\s*=\s*\\?["']([^"'<>\\]*)\\?["']/g)) {
+    const list = m[1].split(/\s+/).filter((c) => /^[A-Za-z_][\w-]*$/.test(c));
+    for (const c of list) (/^u-/.test(c) ? applied : semantic).add(c);
+    const u = list.filter((c) => /^u-/.test(c));
+    if (u.length >= 3) { const k = u.slice().sort().join(' '); chains.set(k, (chains.get(k) || 0) + 1); }
+  }
+  for (const m of text.matchAll(/classList\.(?:add|toggle|remove)\(([^)]*)\)/g))
+    for (const q of m[1].matchAll(/['"]([A-Za-z_][\w-]*)['"]/g))
+      (/^u-/.test(q[1]) ? applied : semantic).add(q[1]);
+  return { util: applied.size, sem: semantic.size,
+           over: [...chains].filter(([, n]) => n > 2).map(([k, n]) => n + '\u00d7 ' + k) };
+}
+
+/* ── שכבת השירות אינה מערכת שנייה ──────────────────────────────────────── */
+{
+  const u = utilGaps(SRC_ALL);
+  t(u.util <= u.sem,
+    `[util-ratio] \u26d4 מספר מחלקות השירות אינו עולה על הסמנטיות — ` +
+    `נמדדו ${u.util} שירות מול ${u.sem} סמנטיות והצפוי יחס שאינו עולה על אחד. ` +
+    'מה עושים: מקפלים שרשרת שחוזרת למחלקה סמנטית אחת, ⛔ ולא מוסיפים מחלקת שירות');
+  t(u.over.length === 0,
+    `[util-chain] \u26d4 אפס שרשרת בת שלוש ומעלה שחוזרת יותר מפעמיים — ` +
+    `נמדדו ${u.over.length} והצפוי אפס` +
+    (u.over.length ? ` (${u.over.slice(0, 3).join(' \u00b7 ')})` : '') +
+    '. מקפלים למחלקה סמנטית ששמה נגזר מתפקיד הרכיב');
+}
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות בזיכרון — ⚠️ הן מריצות את **אותה** `scan` על טקסט מוטט,
@@ -998,6 +1039,24 @@ function put(text, decl) {
   const i = text.indexOf(HOST);
   return i < 0 ? null : text.slice(0, i + HOST.length) + decl + text.slice(i + HOST.length);
 }
+/*  ⛔ מוטציות שכבת השירות — ⚠️ הן בונות טקסט סינתטי בזיכרון,
+ *  ⭐ ומריצות עליו את אותה `utilGaps`. */
+{
+  const base = '<div class="card a">x</div>';
+  const b0 = utilGaps(base);
+  t(b0.util === 0 && b0.sem === 2, '\u05e01 · \u2b50 בקרה חיובית: אפס מחלקות שירות ⛔ **אינו** מפיל');
+  const many = base + Array.from({ length: 3 }, (_, i) => `<div class="u-z${i}">y</div>`).join('');
+  const b1 = utilGaps(many);
+  t(b1.util > b1.sem, '\u05de1 · מחלקות שירות עד שהיחס עובר אחד **מפיל** את «[util-ratio]»');
+  const chain = Array.from({ length: 3 }, () => '<div class="u-a u-b u-c u-d">z</div>').join('');
+  const b2 = utilGaps(chain);
+  t(b2.over.length === 1, '\u05de2 · שרשרת בת ארבע שחוזרת שלוש פעמים **מפילה** את «[util-chain]»');
+  const twice = Array.from({ length: 2 }, () => '<div class="u-a u-b u-c u-d">z</div>').join('');
+  t(utilGaps(twice).over.length === 0, '\u05e02 · \u2b50 שרשרת שחוזרת פעמיים ⛔ **אינה** מפילה');
+  t(utilGaps('<div class="card u-p-4">x</div>').util === 1,
+    '\u05e03 · \u2b50 מחלקת שירות בשימוש יחיד ⛔ **אינה** מפילה');
+}
+
 const MUT = [
   { m: 'מ1',  key: 'color',   lbl: 'ליטרל `#RRGGBB` בכלל חי',        edit: () => put(IDX, 'background:#123456;') },
   { m: 'מ2',  key: 'color',   lbl: 'ליטרל `rgb()` בכלל חי',          edit: () => put(IDX, 'color:rgba(1,2,3,.4);') },

@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 80) — ⚠️ הבודק גוזר מכאן
  *  את המיפוי, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [209];
+export const ROWS = [210];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -49,7 +49,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 3, app: 0, appWhy: '' };
+const FLOOR = { shared: 4, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -106,7 +106,7 @@ const bad = (m) => { RAN++; failed++; console.error('  FAIL ' + m); };
 const assert = (c, m) => (c ? ok(m) : bad(m));
 
 const SKIP_DIR = new Set(['.git', 'node_modules', '.gradle', 'build']);
-const TEXT = /\.(html|js|mjs|json|md|xml|yml|yaml|gradle|properties|sql|sh|pro|txt|svg)$/i;
+const TEXT = /\.(html|css|js|mjs|json|md|xml|yml|yaml|gradle|properties|sql|sh|pro|txt|svg)$/i;
 
 /*  ⛔ נקודות כניסה — ⚠️ הדפדפן, אנדרואיד ו-GitHub טוענים אותן **בשם**,
  *  ⭐ ולכן אין ולא יהיה בעץ קובץ שמזכיר אותן. ⛔ כל שם כאן נושא את סיבתו. */
@@ -152,7 +152,21 @@ function orphans(root) {
   return { files, out };
 }
 
+/*  ⛔ ההיקף נגזר מרשימת קבצי השורש ⛔ ואינו מוקלד — ⚠️ הנימוק
+ *  המדוד: `app.css` היה מחוץ ל-`TEXT`, ⛔ ושבעה כללי `u-*` יתומים
+ *  עברו בשתיקה — ⭐ וארבעה שערים אחרים כן קראו אותו:
+ *  ⚠️ כלומר ההיקף הנכון היה ידוע, ⛔ ושער אחד נשמט. */
 const R = orphans(ROOT);
+{
+  /*  ⛔ שם שכולו סיומת אינו קובץ טקסט — ⚠️ `.nojekyll` ו-`.gitignore` הם דגלים
+   *  לכלים חיצוניים, ⭐ ואין בהם מה לסרוק. */
+  const rootFiles = R.files.filter((f) => f.indexOf('/') < 0 && /^[^.].*\.[^.]+$/.test(f));
+  const off = rootFiles.filter((f) => !TEXT.test(f)).sort();
+  assert(off.length === 0,
+    `0 · כל קובץ שורש שנושא סיומת בהיקף הסריקה — נמדדו ${off.length} מתוך ` +
+    `${rootFiles.length} מחוצה לו והצפוי אפס${off.length ? ': ' + off.join(', ') : ''}. ` +
+    'מוסיפים את הסיומת ל-`TEXT`, ⛔ ולא משאירים קובץ שורש מחוץ למדידה');
+}
 assert(R.out.length === 0,
   `1 · כל קובץ בעץ מוזכר במקום אחר — נמדדו ${R.out.length} בלי מזכיר מתוך ` +
   `${R.files.length} והצפוי אפס${R.out.length ? ': ' + R.out.join(', ') : ''}. ` +
