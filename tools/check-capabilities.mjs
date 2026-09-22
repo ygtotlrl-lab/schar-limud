@@ -672,6 +672,7 @@ const APP = {
     '15|בודקים — משימה מוצהרת': 'tools',
     '87|דפוס הודעת שגיאה יחיד': 'src',
     '96|`toast` — חתימה, גוף ומחלקות': 'src',
+    '96|גוף מיכל הטוסט': 'src',
     '96|סיווג ההודעה נגזר מהמסלול': 'src',
     '226|מיכל באנר העדכון במקור': 'src',
     '226|הרענון מ-controllerchange בלבד': 'src',
@@ -6650,6 +6651,16 @@ const MATRIX = [
           && /#toasts\{[^}]*bottom:calc\(var\(--toast-bottom\)/.test(src)
           && (src.match(/--toast-bottom\s*:\s*\d+px/g) || []).length >= 1;
     } },
+  /*  ⛔ ותג המיכל אינו החתימה ואינו המחלקות — ⚠️ הוא נכתב פעם אחת ולא
+   *  נבדק שוב, ⭐ ותכונת נגישות שחסרה בו משתיקה הודעה לקורא מסך
+   *  ⛔ ואינה נראית בשום בדיקה חזותית: ⚠️ **והזהות בין הריפו נמדדת
+   *  במשטח המשותף** — ⭐ וכאן נמדד מה שהמיכל נושא כאן. */
+  { row: 96, name: 'גוף מיכל הטוסט', probe: () => {
+    const m = /<div id="toasts"([^>]*)><\/div>/.exec(src);
+    if (!m) return false;
+    const attrs = m[1].trim();
+    return attrs === 'aria-live="polite"';
+  } },
   { row: 127, name: 'רישום כשלי כתיבה', probe: () => silentWriteCatches().length === 0 },
   { row: 65, name: 'חלון חם במכשיר',
     probe: () => /\benabled\s*:\s*true\b/.test(cfgBlock('HW_CFG')) },

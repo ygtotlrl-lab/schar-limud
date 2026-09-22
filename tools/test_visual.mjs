@@ -49,6 +49,7 @@ const APP = {
     updater: 'באנר העדכון — מודיע שיצאה גרסה, מחיל אותה, ומאפשר לדחות אותה',
     modal: 'מיכל המודאל — נושא כותרת, גוף ותחתית, ונסגר בכפתור שבכותרת',
     ask: 'מיכל האישור — שואל «כן/לא» על פעולה שאין ממנה דרך חזרה',
+    toasts: 'מיכל הטוסט — מחזיק את ההודעות, ומכריז אותן לקורא מסך',
   },
   visualAllow: { fns: [] },
 };
@@ -1157,12 +1158,28 @@ const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0
     t(dlg.indexOf('zz-dlg') >= 0 && !('zz-dlg' in (APP.sharedSurfaces || {})),
       'מ37 · מיכל דיאלוג שאינו במרשם — [dialog-surface] הייתה נכשלת');
   }
+  /*  ⛔ ותכונת נגישות אינה נראית בשום בדיקה חזותית — ⚠️ מיכל שאיבד אותה
+   *  נראה זהה על המסך, ⭐ ומיכל שקיבל תכונה שאין לאחיות נראה זהה אף הוא. */
+  for (const r of [
+    { m: 'מ38', lbl: '`aria-live` הוסר ממיכל הטוסט',
+      a: '<div id="toasts" aria-live="polite"></div>', b: '<div id="toasts"></div>' },
+    { m: 'מ39', lbl: 'תכונה נוספה למיכל הטוסט',
+      a: '<div id="toasts" aria-live="polite"></div>',
+      b: '<div id="toasts" aria-live="polite" aria-atomic="true"></div>' },
+  ]) {
+    const mutated = IDX.replace(r.a, () => r.b);
+    t(mutated !== IDX && surfGaps(mutated, { 'zz-sister': IDX }).off.length === 1,
+      `${r.m} · ${r.lbl} — [shared-surface] הייתה נכשלת`);
+  }
   /*  ⭐ מוטציות-נגד: ⛔ דרגת שכבה ורוחב מרבי הם מוצר — ⚠️ הם חיים בגיליון
    *  ⛔ ולא במיכל, ⭐ ואסור להם להפיל. */
   t(surfGaps(injCss('#modal .sheet{z-index:var(--z-5)}'), { 'zz-sister': IDX }).off.length === 0,
     'נ11 · ⭐ דרגת שכבה שנבדלת ⛔ **אינה** מפילה את [shared-surface]');
   t(surfGaps(injCss('#ask .sheet{max-width:340px}'), { 'zz-sister': IDX }).off.length === 0,
     'נ12 · ⭐ רוחב מרבי שנבדל ⛔ **אינו** מפיל את [shared-surface]');
+  t(surfGaps(injCss('#toasts{bottom:calc(var(--toast-bottom) + var(--sp-2))}'),
+    { 'zz-sister': IDX }).off.length === 0,
+    'נ13 · ⭐ ערך `--toast-bottom` שנבדל ⛔ **אינו** מפיל את [shared-surface]');
 }
 }
 
