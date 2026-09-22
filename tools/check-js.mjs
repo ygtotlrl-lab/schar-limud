@@ -32,7 +32,7 @@
  *
  *  יציאה בקוד שונה מאפס אם כשל אחד או יותר.
  */
-import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { tmpdir, cpus } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -406,14 +406,27 @@ function runGate(gate) {
   });
 }
 
+/*  ⛔ **סדר השיגור אינו סדר ההכרזה (סבב 157)** — ⚠️ הבריכה נוטלת לפי
+ *  סדר, ⭐ ושער ארוך שמוכרז בסופה מתחיל אחרון וקובע את הזנב:
+ *  ⛔ נמדד — `test_matrix` הוכרז שבעים מתוך שבעים ושתיים, ⚠️ התחיל
+ *  בשנייה 31 ורץ 78 — ⭐ והסט נגמר ב-109.5 אף שסך העבודה חלקי
+ *  ארבעה הוא 71. ⛔ **והפלט נשאר בסדר ההכרזה** — ⚠️ `res` ממופתח
+ *  במקום המקורי: ⭐ סדר לפי מי שסיים ראשון משתנה בין הרצה להרצה
+ *  ושובר השוואת שני לוגים. ⚠️ **והמשקל הוא גודל המקור** — ⭐ מדד
+ *  שנגזר מהעץ ⛔ ואינו רשימת זמנים מוקלדת: ⚠️ רשימה כזו מתיישנת
+ *  בשקט ביום ששער תפח. */
 async function runPool(list, jobs) {
   const res = new Array(list.length);
+  const order = list.map((g, i) => i).sort((a, b) => size(list[b]) - size(list[a]));
   let next = 0;
   const worker = async () => {
-    while (next < list.length) { const i = next++; res[i] = await runGate(list[i]); }
+    while (next < order.length) { const i = order[next++]; res[i] = await runGate(list[i]); }
   };
   await Promise.all(Array.from({ length: Math.min(jobs, list.length) }, worker));
   return res;
+}
+function size(gate) {
+  try { return statSync(join(ROOT, 'tools', gate)).size; } catch (e) { return 0; }
 }
 
 const wanted = APP.gates;
