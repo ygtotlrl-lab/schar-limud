@@ -314,19 +314,12 @@ body.locked{overflow:hidden}
 --sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
 --on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
 }
-.u-ai-c{align-items:center}
-.u-d-flex{display:flex}
-.u-fs-2{font-size:var(--fs-2)}
-.u-fs-3{font-size:var(--fs-3)}
-.u-fw-700{font-weight:700}
-.u-fx-1{flex:1}
-.u-g-5{gap:var(--sp-5)}
 .u-mt-2{margin-top:var(--sp-2)}
-.u-mt-5{margin-top:var(--sp-5)}
 /* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
 /* ══ מחלקות הסולם הפרטיות — אינן חיות בכולן ═════════════════════════════
    ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
    המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-ai-c{align-items:center}
 .u-ai-fs{align-items:flex-start}
 .u-bd-2-solid-border{border:2px solid var(--border)}
 .u-bg-bg{background:var(--bg)}
@@ -334,17 +327,23 @@ body.locked{overflow:hidden}
 .u-bt-2-solid-border{border-top:2px solid var(--border)}
 .u-c-credit{color:var(--credit)}
 .u-c-green{color:var(--ok)}
-.u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
+.u-c-text{color:var(--text)}
 .u-cur-def{cursor:default}
+.u-d-flex{display:flex}
 .u-d-none{display:none}
 .u-ff-heebo{font-family:Heebo}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
 .u-fs-4{font-size:var(--fs-4)}
 .u-fw-400{font-weight:400}
 .u-fw-600{font-weight:600}
+.u-fw-700{font-weight:700}
 .u-fwr-wrap{flex-wrap:wrap}
+.u-fx-1{flex:1}
 .u-g-4{gap:var(--sp-4)}
+.u-g-5{gap:var(--sp-5)}
 .u-jc-sb{justify-content:space-between}
 .u-lh-15{line-height:var(--lh-3)}
 .u-lh-17{line-height:var(--lh-5)}
@@ -352,6 +351,7 @@ body.locked{overflow:hidden}
 .u-mb-3{margin-bottom:var(--sp-3)}
 .u-mb-6{margin-bottom:var(--sp-6)}
 .u-minw-120{min-width:120px}
+.u-mt-5{margin-top:var(--sp-5)}
 .u-ol-none{outline:none}
 .u-op-45{opacity:var(--op-3)}
 .u-ovx-a{overflow-x:auto}
