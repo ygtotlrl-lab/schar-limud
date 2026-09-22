@@ -41,7 +41,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [17, 20, 23, 24, 25, 137, 206];
+export const ROWS = [17, 20, 23, 24, 25, 136, 205];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -113,7 +113,6 @@ const SHARED = [
   'tools/test_anchors.mjs',
   'tools/test_android.mjs',
   'tools/test_backup_policy.mjs',
-  'tools/test_behavior.mjs',
   'tools/test_budget.mjs',
   'tools/test_build.mjs',
   'tools/test_bump.mjs',
@@ -194,7 +193,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const FLOOR = { shared: 9, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -342,6 +341,27 @@ export function depGaps(root, files) {
  *  שהקובץ חי בהן; ⛔ **ומה מפיל**: שער בלי שורה שקיים כאן בלבד.
  *  ⭐ **ולמה המבנה קיים**: סחף הוא **בין** אפליקציות, ⚠️ ולוגיקה שחיה
  *  באחת אין ממה לסטות — ⛔ ומבחן הקבלה בדפדפן הוא שתופס אותה. */
+/*  ⛔ שער אינו מריץ דפדפן — ⚠️ **מה נכנס**: כל קובץ ב-`tools/` שנוקב
+ *  במנוע דפדפן או בנהג שלו; ⛔ **ומה מפיל**: כל אתר כזה. ⭐ **ולמה המבנה
+ *  קיים**: התנהגות שנמדדת בשער היא מקרה בודד שהפך לקבוע — ⚠️ הוא נשבר
+ *  בכל שינוי לוגיקה לגיטימי, ⛔ ומי שמשנה לוגיקה מתקן את השער כדי שיעבור:
+ *  ⭐ והשער מפסיק למדוד ומתחיל לתעד. ⚠️ **והמדידה על המקור הגולמי** —
+ *  ⛔ נתיב הבינארי חי כליטרל מחרוזת. */
+const DRIVERS = ['chromium', 'puppeteer', 'playwright', 'webdriver', 'chrome-linux'];
+/*  ⛔ הקובץ שמכריז את המרשם אינו אתר — ⚠️ המרשם עצמו הוא מקור השמות,
+ *  ⭐ ומוטציית הבדיקה נוקבת בנתיב בינארי בכוונה: ⛔ והוא מוחרג בשמו,
+ *  ⚠️ כדרך שהמרשם `PEERS` מוחרג משער שם-האחות. */
+const DRIVER_SELF = 'test_filesets.mjs';
+export function browserGates(root) {
+  const out = [], dir = path.join(root, 'tools');
+  const re = new RegExp('(' + DRIVERS.join('|') + ')', 'i');
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.mjs') && x !== DRIVER_SELF).sort()) {
+    const m = re.exec(fs.readFileSync(path.join(dir, f), 'utf8'));
+    if (m) out.push(f + ' ⟵ ' + m[1]);
+  }
+  return out;
+}
+
 export function productGates(root, peers, self) {
   const out = [], away = [];
   for (const k of Object.keys(APP.appGates)) {
@@ -490,6 +510,18 @@ const clone = (name) => {
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
+/*  ⛔ ולוגיקת מוצר אינה נאכפת בשער — ⚠️ ושער אינו מריץ דפדפן:
+ *  ⭐ ההתנהגות נמדדת במבחן הקבלה, ⛔ שרץ פעם אחת ואינו בסט. */
+{
+  const g7 = browserGates(ROOT);
+  g7.length === 0
+    ? ok('7 · [gate-browser] אפס שער שמריץ דפדפן — נמדדו ' +
+         (fs.readdirSync(path.join(ROOT, 'tools')).filter((x) => x.endsWith('.mjs') && x !== DRIVER_SELF)).length +
+         ' קובצי `tools/` ואפס נהג דפדפן')
+    : bad('7 · [gate-browser] שער שמריץ דפדפן — נמדדו ' + g7.length + ' אתרים והצפוי אפס (' +
+          g7.join(' · ') + '). מעבירים את המדידה למבחן הקבלה, ⛔ שאינו בסט');
+}
+
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_filesets: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
@@ -684,6 +716,27 @@ else {
   delete APP.appGates.probe_infra;
   clean ? ok('נ6 · ⭐ מוטציית-נגד: שער שנוקב בשורה תשתיתית ⛔ אינו מפיל')
         : bad('נ6 · שער שנוקב בשורה נתפס בטעות');
+}
+
+/*  ⛔ מ10 — קובץ ב-`tools/` שמריץ דפדפן. ⚠️ הוא נראה כשער לכל דבר,
+ *  ⭐ והוא מודד התנהגות שנשברת בכל שינוי לוגיקה. */
+{
+  const d = clone('m10');
+  fs.writeFileSync(path.join(d, 'tools', 'test_probe_browser.mjs'),
+    "export const ROWS = [];\nexport const CH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';\n");
+  const hit = browserGates(d).some((x) => x.startsWith('test_probe_browser.mjs'));
+  hit ? ok('מ10 · [gate-browser] שער שנוקב בנתיב דפדפן מפיל את טענה 7')
+      : bad('מ10 · שער שמריץ דפדפן לא נתפס');
+}
+{
+  /*  ⭐ מוטציית-נגד — ⛔ שער שמודד טקסט אינו מפיל, ⚠️ גם כשהוא סורק
+   *  את המילה «מסך»: ⭐ הנמדד הוא נהג הדפדפן ⛔ ולא הנושא. */
+  const d = clone('n7');
+  fs.writeFileSync(path.join(d, 'tools', 'test_probe_text.mjs'),
+    "export const ROWS = [];\nexport const S = 'המסך הראשון נושא תוכן';\n");
+  const clean = !browserGates(d).some((x) => x.startsWith('test_probe_text.mjs'));
+  clean ? ok('נ7 · ⭐ מוטציית-נגד: שער שמודד טקסט ⛔ אינו מפיל')
+        : bad('נ7 · שער טקסטואלי נתפס בטעות');
 }
 
 /*  ⛔ מ9 — הצהרת שער שנושאת סימן מעבר. ⚠️ שער שנכתב לאמת ששינוי

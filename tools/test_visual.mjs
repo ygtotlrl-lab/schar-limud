@@ -48,27 +48,33 @@ const APP = {
   sharedSurfaces: {
     updater: 'באנר העדכון — מודיע שיצאה גרסה, מחיל אותה, ומאפשר לדחות אותה',
   },
+  /*  ⛔ ידיות הגרירה — ⚠️ **מה נכנס**: כל בורר שנושא `touch-action:none`
+   *  ⟵ למה הוא ידית; ⛔ **ומה מפיל**: בורר שאינו כאן, ⭐ והכרזה שאין
+   *  לה כלל. ⚠️ **וריק הוא «נמדד ואין»** — ⛔ ואז `dragWhy` נושא את נימוקו. */
+  dragHandles: [],
+  dragWhy: 'אין כאן רשימה שסדרה נקבע ביד — ⚠️ התלמידים והתנועות ממוינים במיון האחד, ⭐ והסעיפים נערכים ברשימה: ⛔ ואין מסלול גרירה למדוד',
   visualAllow: { fns: [] },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [92, 110, 85, 107, 213, 120];
+export const ROWS = [91, 109, 84, 106, 212, 119, 90];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
 export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
-                         'semantic', 'layer', 'clstok', 'surface'];
+                         'semantic', 'layer', 'clstok', 'surface', 'drag'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
                      'color', 'color', 'future', 'media', 'future',
                      'classes', 'classes',
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
                      'clstok', 'clstok', 'clstok',
-                     'surface', 'surface', 'surface', 'surface'];
+                     'surface', 'surface', 'surface', 'surface',
+                     'drag', 'drag', 'drag'];
 
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -80,7 +86,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 26, app: 0, appWhy: '' };
+const FLOOR = { shared: 28, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -111,6 +117,47 @@ process.on('exit', () => {
 const t = (c, m) => { RAN++; if (c) { pass++; console.log('  ok   ' + m); }
                       else { fail++; console.error('  FAIL ' + m); } };
 const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+
+/*  ⛔ אירועי גרירת HTML5 אינם קיימים במגע — ⚠️ **מה נכנס**: כל רישום
+ *  מאזין לאחד מחמשת האירועים, וכל מאפיין `draggable`; ⛔ **ומה מפיל**: כל
+ *  אתר כזה. ⭐ **ולמה המבנה קיים**: מערכת שבנויה לעכבר עובדת בעכבר,
+ *  ⛔ והכותב יושב מול מחשב — ⚠️ ואיש אינו רואה שבאצבע היא אינה נורית כלל.
+ *  ⛔ **והמדידה על המקור הגולמי** — ⚠️ הרישום חי כליטרל מחרוזת,
+ *  ⭐ והמאפיין בתגית שנבנית ב-JS: ⛔ והלבנה הייתה מוחקת בדיוק את מה שהיא סורקת. */
+const DRAG_EVENTS = ['dragstart', 'dragover', 'dragleave', 'dragend', 'drop'];
+function dragApiGaps(src) {
+  const out = [];
+  const at = (i) => src.slice(0, i).split('\n').length;
+  const re = new RegExp("addEventListener\\s*\\(\\s*['\"](" + DRAG_EVENTS.join('|') + ")['\"]", 'g');
+  for (const m of src.matchAll(re))
+    out.push('מאזין `' + m[1] + '` בשורה ' + at(m.index));
+  for (const m of src.matchAll(/(?<![\w-])draggable\s*=/g))
+    out.push('`draggable` בשורה ' + at(m.index));
+  return out;
+}
+/*  ⛔ `touch-action:none` יושב על הידית בלבד — ⚠️ **מה נכנס**: כל כלל
+ *  בגיליון שנושא אותו; ⛔ **ומה מפיל**: בורר שאינו מוכרז כידית, ⭐ וידית
+ *  שהוכרזה ואין לה כלל. ⚠️ **ולמה המבנה קיים**: ביטול פעולת המגע על
+ *  שורה שלמה נועל את גלילת המסך, ⭐ והדף מפסיק להיגלל בכל הרשימה. */
+function gripGaps(css, decl) {
+  const out = [], hit = new Set();
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length));
+  for (const m of clean.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    if (!/touch-action\s*:\s*none/.test(m[2])) continue;
+    const sel = m[1].trim().split(/\s*,\s*/);
+    for (const one of sel) {
+      const d = decl.find((x) => x.sel === one);
+      if (!d) out.push('`touch-action:none` על בורר שאינו ידית מוכרזת: ' + one);
+      else hit.add(d.sel);
+    }
+  }
+  for (const d of decl) {
+    if (!d.why || !String(d.why).trim()) out.push('ידית מוכרזת בלי נימוק: ' + d.sel);
+    if (!hit.has(d.sel)) out.push('ידית מוכרזת שאין לה כלל `touch-action:none`: ' + d.sel);
+  }
+  return out;
+}
+
 
 /* ── ההחרגות — קבוצה, ובה תכונות שהערך בהן אינו דרגה בסולם ─────────────── */
 /*  ⛔ **מה נכנס**: תכונה שערכה המספרי אינו דרגה בשום סולם, ⛔ **ומה מפיל**:
@@ -918,6 +965,27 @@ const PEER_SRC = Object.fromEntries(CLS_HAVE.map((p) => [p, CLS_SRC[p]]));
            ' — מה עושים: מביאים את המשטח בצורה שיש לרוב, או מסירים את ההצהרה' : ''));
 }
 
+/* ── הגרירה — הצד הטקסטואלי ────────────────────────────────────────────── */
+/*  ⛔ הנמדד כאן הוא המקור ⛔ ולא הדפדפן — ⚠️ שער אינו מריץ דפדפן,
+ *  ⭐ והסדר שנגזר מה-DOM נמדד במבחן הקבלה שהמנהל מריץ. */
+{
+  const dg = dragApiGaps(rd('index.html'));
+  t(dg.length === 0, `[drag-api] אפס אירוע גרירת HTML5 ואפס מאפיין \`draggable\` — ` +
+    `נמדדו ${dg.length} אתרים והצפוי אפס` +
+    (dg.length ? ` (${dg.slice(0, 3).join(' · ')})` : '') +
+    '. ממירים אותם ל-`pointerdown`/`pointermove`/`pointerup`');
+  const HANDLES = APP.dragHandles || [];
+  if (HANDLES.length) {
+    const hg = gripGaps(styleSheet(IDX), HANDLES);
+    t(hg.length === 0, `[drag-grip] \`touch-action:none\` על הידית בלבד — ` +
+      `${HANDLES.length} ידיות מוכרזות, נמדדו ${hg.length} פערים והצפוי אפס` +
+      (hg.length ? ` (${hg.join(' · ')})` : '') +
+      '. מציבים את הביטול על הידית, או מכריזים אותה עם נימוקה');
+  } else {
+    t(!!APP.dragWhy, `[drag-grip] אפס ידיות גרירה — ${APP.dragWhy || '⛔ בלי נימוק'}`);
+  }
+}
+
 mutStage();
 if (RUN_MUT) {
 /*  ⛔ המוטציות בזיכרון — ⚠️ הן מריצות את **אותה** `scan` על טקסט מוטט,
@@ -1109,6 +1177,27 @@ const injBody = (h, x) => { const i = h.lastIndexOf('</body>'); return h.slice(0
   const recolor = IDX.replace('#updater', '#updater');
   t(surfGaps(recolor, { 'zz-sister': injCss('#updater .in{background:var(--card)}') }).off.length === 0,
     'נ10 · ⭐ כלל סגנון שנבדל ⛔ **אינו** מפיל את [shared-surface]');
+
+/* ── הגרירה — שלוש מוטציות ומוטציית-נגד ────────────────────────────────── */
+{
+  const dsrc = rd('index.html');
+  const m1 = dragApiGaps(dsrc.replace('<body', '<div draggable="true"></div><body'));
+  t(m1.length > 0, `מ34 · ⛔ מוטציה: \`draggable="true"\` מפיל את «[drag-api]» — ` +
+    `נמדדו ${m1.length} אתרים והצפוי לפחות אחד`);
+  const m2 = dragApiGaps(dsrc.replace('<body',
+    "<script>document.addEventListener('dragstart', function () {});</script><body"));
+  t(m2.length > 0, `מ35 · ⛔ מוטציה: מאזין \`dragstart\` מפיל את «[drag-api]» — ` +
+    `נמדדו ${m2.length} אתרים והצפוי לפחות אחד`);
+  const m3 = gripGaps(styleSheet(IDX) + '\n.zz-row{touch-action:none}\n', APP.dragHandles || []);
+  t(m3.length > 0, `מ36 · ⛔ מוטציה: \`touch-action:none\` על בורר שאינו ידית מפיל ` +
+    `את «[drag-grip]» — נמדדו ${m3.length} פערים והצפוי לפחות אחד`);
+  /*  ⭐ מוטציית-נגד: `pointerdown` ⛔ אינו מפיל — הוא המנגנון עצמו,
+   *  ⚠️ ושער שהיה נופל עליו אוסר את מה שהוא דורש. */
+  const n1 = dragApiGaps(dsrc.replace('<body',
+    "<script>document.addEventListener('pointerdown', function () {});</script><body"));
+  t(n1.length === 0, `נ11 · ⭐ מוטציית-נגד: מאזין \`pointerdown\` ⛔ אינו מפיל ` +
+    `את «[drag-api]» — נמדדו ${n1.length} אתרים והצפוי אפס`);
+}
 }
 }
 
