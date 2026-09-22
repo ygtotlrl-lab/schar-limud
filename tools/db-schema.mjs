@@ -41,7 +41,7 @@ export const DB_SCHEMA = [
     { p: 'kupa',   t: 'k_settings',        c: 'key,value,updated_at,client_id,deleted,deleted_at,deleted_by' },
     { p: 'kupa',   t: 'k_pledges',         c: 'client_id,hebrew_year,pledge,chumash_opening_balance,created_at,updated_at,deleted,deleted_at,deleted_by' },
     { p: 'kupa',   t: 'k_standing_orders', c: 'client_id,name,amount,day_of_month,method,category,active,valid_from_month,valid_to_month,supersedes_id,created_at,updated_at,deleted,deleted_at,deleted_by' },
-    { p: 'kupa',   t: 'k_so_instances',    c: 'client_id,standing_order_client_id,month_key,amount,status,created_at,updated_at,deleted,deleted_at,deleted_by' },
+    { p: 'kupa',   t: 'k_so_instances',    c: 'client_id,standing_order_client_id,month_key,amount,created_at,updated_at,deleted,deleted_at,deleted_by' },
     { p: 'kupa',   t: 'k_entries',         c: 'client_id,type,amount,description,entry_date,method,category,source,verified,so_instance_client_id,created_at,updated_at,deleted,deleted_at,deleted_by' },
     { p: 'kupa',   t: 'k_lookups',         c: 'client_id,kind,label,sort,created_at,updated_at,deleted,deleted_at,deleted_by' },
     { p: 'kupa',   t: 'sh_backup',        c: 'id,created_at,key,value' },

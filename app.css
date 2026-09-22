@@ -101,8 +101,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .btn:disabled{opacity:var(--op-3);cursor:default}
 .btn.out{background:var(--card);border:1.5px solid var(--text);color:var(--text)}
 .btn.out:hover{background:var(--card-2)}
-.btn.danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid var(--bad-soft)}
-.btn.danger:hover{background:var(--bad-soft-2)}
 .btn.sm{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-2)}
 .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-3)}
 .tbl th{background:var(--bg);color:var(--text-2);padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:600;font-size:var(--fs-2);white-space:nowrap;border-bottom:2px solid var(--border)}
@@ -177,6 +175,13 @@ body.locked{overflow:hidden}
 .sheet-hd .x:hover{background:var(--card-2)}
 .sheet-ft{display:flex;gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 .sheet-ft:empty{display:none}
+/*  ⛔ גוף הדיאלוג — ⚠️ ריק אינו תופס מקום, ⭐ כמו התחתית. */
+.sheet-bd:empty{display:none}
+#ask-body{font-size:var(--fs-4);color:var(--text-2)}
+#ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
+#ask .sheet-ft button:hover{background:var(--card-2)}
+#ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
+#ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
 .acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-5) var(--sp-6);cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
 .acc-hdr:hover{background:var(--card-2)}
@@ -309,19 +314,12 @@ body.locked{overflow:hidden}
 --sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
 --on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
 }
-.u-ai-c{align-items:center}
-.u-d-flex{display:flex}
-.u-fs-2{font-size:var(--fs-2)}
-.u-fs-3{font-size:var(--fs-3)}
-.u-fw-700{font-weight:700}
-.u-fx-1{flex:1}
-.u-g-5{gap:var(--sp-5)}
 .u-mt-2{margin-top:var(--sp-2)}
-.u-mt-5{margin-top:var(--sp-5)}
 /* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
 /* ══ מחלקות הסולם הפרטיות — אינן חיות בכולן ═════════════════════════════
    ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
    המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-ai-c{align-items:center}
 .u-ai-fs{align-items:flex-start}
 .u-bd-2-solid-border{border:2px solid var(--border)}
 .u-bg-bg{background:var(--bg)}
@@ -329,17 +327,23 @@ body.locked{overflow:hidden}
 .u-bt-2-solid-border{border-top:2px solid var(--border)}
 .u-c-credit{color:var(--credit)}
 .u-c-green{color:var(--ok)}
-.u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
+.u-c-text{color:var(--text)}
 .u-cur-def{cursor:default}
+.u-d-flex{display:flex}
 .u-d-none{display:none}
 .u-ff-heebo{font-family:Heebo}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
 .u-fs-4{font-size:var(--fs-4)}
 .u-fw-400{font-weight:400}
 .u-fw-600{font-weight:600}
+.u-fw-700{font-weight:700}
 .u-fwr-wrap{flex-wrap:wrap}
+.u-fx-1{flex:1}
 .u-g-4{gap:var(--sp-4)}
+.u-g-5{gap:var(--sp-5)}
 .u-jc-sb{justify-content:space-between}
 .u-lh-15{line-height:var(--lh-3)}
 .u-lh-17{line-height:var(--lh-5)}
@@ -347,6 +351,7 @@ body.locked{overflow:hidden}
 .u-mb-3{margin-bottom:var(--sp-3)}
 .u-mb-6{margin-bottom:var(--sp-6)}
 .u-minw-120{min-width:120px}
+.u-mt-5{margin-top:var(--sp-5)}
 .u-ol-none{outline:none}
 .u-op-45{opacity:var(--op-3)}
 .u-ovx-a{overflow-x:auto}
