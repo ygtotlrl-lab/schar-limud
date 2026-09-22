@@ -8025,11 +8025,21 @@ if (CORE) {
   /*  ⛔ מודול משותף אינו שער (סבב 111) — ⚠️ הוא **נקרא** משערים ואינו רץ
    *  בעצמו, ⭐ ואינו אוכף שורה: ⛔ ו-`ROWS` ריק בו היה מצהיר שהוא שער
    *  שאינו מכסה דבר. ⚠️ **וההחרגה נמדדת** — ⛔ שם שאינו קיים מפיל. */
-  const MODULE_FILES = ['appsrc.mjs', 'db-schema.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
-  for (const f of MODULE_FILES)
-    if (!fs.existsSync('tools/' + f)) fail(`מודול משותף מוכרז שאינו קיים: ${f} — נמדד שאינו ` +
-      `בעץ והצפוי שיהיה. מסירים את השם מרשימת המודולים`);
-  for (const f of fs.readdirSync('tools').filter((x) => x.endsWith('.mjs') && !MODULE_FILES.includes(x))) {
+  /*  ⛔ מי נסרק נגזר מרשימת הריצה ⛔ ואינו רשימה שנייה כאן — ⚠️ **שער הוא
+   *  מה שהמריץ מפעיל**, ⭐ וכל השאר כלי או מודול: ⛔ ורשימת דילוג מוקלדת
+   *  מכריחה כל כלי לייצא `ROWS` ריק, ⚠️ והצהרה ריקה נראית כשער — ⭐ והיא
+   *  גם מקור אמת שני ל-`APP.notGates`, ⛔ שנסחף ממנה בשקט. */
+  const runSrc = readOnce('tools/check-' + 'js.mjs');
+  const rs = runSrc.indexOf('gates: [');
+  const re = rs < 0 ? -1 : runSrc.indexOf('],', rs);
+  const listed = rs < 0 || re < 0 ? []
+    : [...runSrc.slice(rs, re).matchAll(/'([^']+\.mjs)'/g)].map((m) => m[1]);
+  if (!listed.length) fail('tools/check-js.mjs — רשימת הריצה לא נקראה: נמדדו 0 שערים ' +
+    'והצפוי לפחות אחד. מתקנים את קריאת רשימת הריצה שבמריץ');
+  /*  ⛔ המריץ עצמו אינו ברשימתו ⛔ והוא שער — ⚠️ הוא אוכף שורות ונושא
+   *  `ROWS`: ⭐ ובלעדיו שלוש שורות מאבדות את מי שמצהיר עליהן. */
+  const RUN_SET = new Set(listed.concat(['check-' + 'js.mjs']));
+  for (const f of fs.readdirSync('tools').filter((x) => x.endsWith('.mjs') && RUN_SET.has(x))) {
     const txt = readOnce('tools/' + f);
     const m = /^export const ROWS = \[([^\]]*)\];$/m.exec(txt);
     if (!m) { noDecl.push(f); continue; }
