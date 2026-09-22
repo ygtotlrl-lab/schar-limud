@@ -312,9 +312,47 @@ function censusGaps(c) {
   return out;
 }
 
+/*  ⛔ שמות הישויות שמפקד מונה נגזרים מ-`REGISTRIES` ⛔ ואינם רשימה שנייה —
+ *  ⚠️ מרשם שייכתב מחר מביא איתו את שמותיו, ⭐ ומעליהם «מרשם» עצמו: ⛔ הוא
+ *  הישות היחידה שאין לה מרשם משלה, ⚠️ והיא בדיוק מה שנספר בניסוח. */
+const CENSUS_NOUNS = [...new Set(REGISTRIES.flatMap((r) => r.nouns).concat(['מרשמים', 'מרשם']))];
+/*  ⛔ הנסמך עם ה״א הידיעה הוא מה שהופך מספר למפקד — ⚠️ «שתי שורות» הוא
+ *  כל שתיים, ⭐ ו«שתי השורות» הוא **כל מה שיש**: ⛔ והשני הוא שמתיישן
+ *  ביום שהמרשם משתנה, ⚠️ והראשון הוא כמת ⛔ ואינו ספירה. */
+const CENSUS_BOUND = ['שני', 'שתי', 'שלושת', 'ארבעת', 'חמשת', 'ששת', 'שבעת', 'שמונת', 'תשעת', 'עשרת'];
+const TBL_CENSUS_RE = () => new RegExp(
+  '(?:[מבלוכש]?(?:' + CENSUS_BOUND.join('|') + ')|\\d[\\d,]*)\\s+ה(?:' +
+  CENSUS_NOUNS.join('|') + ')' + HEB_TAIL, 'g');
+/*  ⛔ ציטוט ב-«…» אינו ניסוח משלה — ⚠️ הוא הפניה לתקן, ⭐ ונמדד בטענה יא:
+ *  ⛔ והמחיקה שומרת על האורך, ⚠️ שהמיקום הוא מה שמדווח. */
+const dropQuotes = (s) => s.replace(/«[^»]*»/g, (m) => ' '.repeat(m.length));
+/*  ⛔ הערה שנפתחת ב«נמדד» היא מדידה שהשער חוזר עליה — ⚠️ ושם ספירה
+ *  משתנה חיה בכוונה, ⭐ שבעמודת התקן היא הייתה הופכת כל תוספת להפרה. */
+const MEASURED_NOTE = /^⚠️\s*\*\*נמדד\*\*/;
+
+/* ח · מפקד מוקלד בניסוח — עמודת התקן ועמודת ההערות */
+function censusTableGaps(c) {
+  const out = [];
+  const allow = Object.keys(APP.censusAllow || {});
+  for (const r of tableRows(c.md) || []) {
+    for (const [where, txt] of [['תקן', dropQuotes(r.std)],
+                                ['הערה', MEASURED_NOTE.test(r.note.trim()) ? '' : dropQuotes(r.note)]]) {
+      const re = TBL_CENSUS_RE();
+      let m;
+      while ((m = re.exec(txt)) !== null) {
+        const hit = txt.slice(Math.max(0, m.index - 14), m.index + m[0].length).trim();
+        if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
+        out.push(`${r.n} (${where}): «${m[0]}»`);
+      }
+    }
+  }
+  return out;
+}
+
 /* ח · והצד השני — הכרזה בהיתר שאין לה אתר חי */
 function censusAllowGaps(c) {
-  const body = REGISTRIES.map((r) => declSpan(c[r.src] || '', r.id)).join('\n');
+  const body = REGISTRIES.map((r) => declSpan(c[r.src] || '', r.id)).join('\n') + '\n' +
+               (tableRows(c.md) || []).map((r) => r.std + ' ' + r.note).join('\n');
   return Object.keys(APP.censusAllow || {}).filter((a) => body.indexOf(a) < 0);
 }
 
@@ -670,9 +708,9 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
  *  מתיישן ביום שהמרשם משתנה, ⭐ ואיש אינו חוזר לעדכן אותו: ⛔ והסריקה
  *  הפוכה — היא נבנית מהמרשמים ⛔ ולא מרשימת ניסוחים ידועים. */
 {
-  const g = censusGaps(C0), a = censusAllowGaps(C0);
+  const g = censusGaps(C0).concat(censusTableGaps(C0)), a = censusAllowGaps(C0);
   t(g.length + a.length === 0,
-    `ח · מפקד נגזר ואינו מוקלד — נמדדו ${g.length} מפקדים מוקלדים ו-${a.length} היתרים בלי אתר, והצפוי אפס` +
+    `ח · מפקד נגזר ואינו מוקלד — נמדדו ${g.length} מפקדים מוקלדים בהיקף המרשמים ובניסוח שבטבלה ו-${a.length} היתרים בלי אתר, והצפוי אפס` +
     (g.length + a.length ? `: ${[...g, ...a].slice(0, 8).join(' · ')}. גוזרים את המספר מהמרשם, או מכריזים ב-\`APP.censusAllow\` עם נימוקו` : ''));
 }
 
@@ -862,6 +900,43 @@ if (RUN_MUT) {
   for (const r of ANTI) {
     const c2 = { ...C0, [r.src]: C0[r.src].replace(r.at, () => r.txt + r.at) };
     t(censusGaps(c2).length === censusGaps(C0).length,
+      `${r.m} · «${r.lbl}» ⛔ אינו מפיל את «ח»`);
+  }
+  /*  ⛔ והניסוח הוא הטבלה — ⚠️ המוטציה מזריקה לתא קיים, ⭐ והיא בזיכרון
+   *  ⛔ ואינה נוגעת בעץ: ⚠️ עמודת התקן אינה סובלת מפקד כלל, ⛔ ועמודת
+   *  ההערות סובלת אותו תחת «נמדד» בלבד. */
+  const TMUT = [
+    { m: 'מ17', lbl: 'מפקד בעמודת התקן', col: 'std',
+      txt: 'והמקומות המותרים הם שלושת המרשמים · ' },
+    { m: 'מ18', lbl: 'מפקד בהערה שאינה «נמדד»', col: 'note',
+      txt: '⛔ **הבדל מכוון**: ארבעת השערים אינם כאן · ' },
+  ];
+  for (const r of TMUT) {
+    const rows = tableRows(C0.md) || [];
+    const pick = rows.find((x) => (r.col === 'std' ? x.std : x.note).trim().length > 0 &&
+                                  !MEASURED_NOTE.test(x.note.trim()));
+    const cell = r.col === 'std' ? pick.std : pick.note;
+    const c2 = { ...C0, md: C0.md.replace(cell, () => (r.col === 'std' ? ' ' : '') + r.txt + cell.trim()) };
+    t(censusTableGaps(c2).length > censusTableGaps(C0).length,
+      `${r.m} · ${r.lbl} **מפיל** את «ח»`);
+  }
+  /*  ⭐ מוטציית-נגד: כמת בלי ה״א הידיעה אינו מפקד — ⚠️ «שתי שורות» הוא
+   *  כל שתיים, ⛔ ואינו מונה את מה שיש · ⭐ וספירה תחת «נמדד» חיה בכוונה. */
+  const TANTI = [
+    { m: 'נ11', lbl: 'כמת בלי ה״א הידיעה', col: 'std', txt: 'ושתי שורות אינן נופלות על אותו קלט · ' },
+    { m: 'נ12', lbl: 'ספירה תחת «נמדד»', col: 'note', txt: null },
+  ];
+  for (const r of TANTI) {
+    const rows = tableRows(C0.md) || [];
+    let md2;
+    if (r.txt === null) {
+      const pick = rows.find((x) => MEASURED_NOTE.test(x.note.trim()));
+      md2 = C0.md.replace(pick.note, () => '⚠️ **נמדד**: ארבעת השערים משותפים · ' + pick.note.replace(/^⚠️ \*\*נמדד\*\*: /, ''));
+    } else {
+      const pick = rows.find((x) => x.std.trim().length > 0);
+      md2 = C0.md.replace(pick.std, () => ' ' + r.txt + pick.std.trim());
+    }
+    t(censusTableGaps({ ...C0, md: md2 }).length === censusTableGaps(C0).length,
       `${r.m} · «${r.lbl}» ⛔ אינו מפיל את «ח»`);
   }
   /*  ⛔ מ11 — מרשם חישוב בלי מקרה ריק: ⚠️ המוטציה בזיכרון, ⭐ והיא מזינה
