@@ -6719,7 +6719,10 @@ const MATRIX = [
           && /createElement\('div'\)/.test(b)
           && /\.className = 'toast' \+ \(kind \? ' ' \+ kind : ''\)/.test(b)
           && /\.appendChild\(el\)/.test(b)
-          && /id="toasts"/.test(src)
+          /*  ⛔ המיכל מוכרז לקורא מסך — ⚠️ `aria-live="polite"`: ⭐ הודעה
+              שנכנסת ל-DOM ואינה מוכרזת נאמרה למי שרואה בלבד, ⛔ והיא
+              המשטח היחיד של כשל מערכת — ⚠️ והתגית זהה בית-לבית בכולן. */
+          && /<div id="toasts" aria-live="polite"><\/div>/.test(src)
           && /\.toast\{/.test(src) && /\.toast\.bad\{/.test(src) && /\.toast\.good\{/.test(src)
           && /#toasts\{[^}]*bottom:calc\(var\(--toast-bottom\)/.test(src)
           && (src.match(/--toast-bottom\s*:\s*\d+px/g) || []).length >= 1;
