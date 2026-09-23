@@ -843,7 +843,7 @@ const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
     docRows: ['אחסון מקומי', 'אסטרטגיית `localStorage`'],
-    block: { sha: '3769ea7880cd7264', lines: 674,
+    block: { sha: 'cd8b860dcd8a8289', lines: 674,
              start: '/* ═══ עמידות אחסון מקומי — מודול משותף',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -7556,7 +7556,7 @@ const GATES = {
   58: { claim: 'א · אין שתי שורות על אותו probe' },
   40: { claim: 'א · כל דפוס מוכרז נושא מוטציה' },
   35: { claim: 'א · כל מפתח נקרא' },
-  36: { claims: { test_declscan: ['[decl-cases-probe]', '[decl-cases-bare]', '[decl-cases-dead]', '[decl-cases-gone]'] } },
+  36: { claims: { test_declscan: ['[decl-cases-probe]', '[decl-cases-bare]', '[decl-cases-dead]', '[decl-cases-gone]', '[decl-lists-content]'] } },
   /*  ⛔ שם פונקציה חלקי: ⚠️ השער מודד את שני הצדדים,
    *  ⭐ ואת טיב הנימוק — ⛔ הצהרה שהיא נוכחות בלבד נופלת בו. */
   62: { claim: 'fn-undeclared' },

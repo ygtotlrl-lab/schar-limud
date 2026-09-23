@@ -21,7 +21,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS, appFacts } from './app-facts.mjs';
-import { whitenJs } from './whiten.mjs';
+import { whitenJs, whiten, commentRanges } from './whiten.mjs';
+import { DB_SCHEMA } from './db-schema.mjs';
 import { declCases, dumpCases, caseGaps, appListNames, listValues, whyOk } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
@@ -70,7 +71,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 15, app: 0, appWhy: '' };
+const FLOOR = { shared: 16, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -621,6 +622,82 @@ const goneGaps = (files) => Object.entries(GONE)
 { const g = deadGaps(TOOLS, null);
   t(g.length === 0, `[decl-cases-dead] ט3 · רשומה שבה כל ערך פטר מקרה אינה מפילה — נמדדו ${g.length} והצפוי אפס` +
     (g.length ? `: ${g.slice(0, 8).join(' · ')}. מיישרים את ההצלבה למבנה הרשומה` : '')); }
+/*  ⛔ ט5 · הרשימה נמצאת לפי תוכנה ⛔ ולא לפי שמה — ⚠️ **מה נכנס**: כל
+ *  ליטרל מערך או אובייקט במקור האפליקציה שנוקב בשני מפתחות או טבלאות
+ *  ומעלה; ⛔ **ומה מפיל**: שם בתוכו שאין לו מקרה — ⚠️ טבלה או עמודה
+ *  שאינן בסכימה, ⭐ ומפתח שאין קוד שכותב אותו. ⭐ **ולמה**: חיפוש לפי
+ *  שם ראה את מה שנקרא «פטור», ⛔ ורשימה שנקראה אחרת חמקה בשקט. */
+const APP_SRC = (root) => ['index.html', 'sw.js', ...(fs.existsSync(path.join(root, 'core'))
+  ? fs.readdirSync(path.join(root, 'core')).filter((f) => f.endsWith('.js')).map((f) => 'core/' + f) : [])]
+  .filter((f) => fs.existsSync(path.join(root, f)));
+const APPSRC = Object.fromEntries(APP_SRC(ROOT).map((f) => [f, rd(f)]));
+/*  ⛔ מחרוזות המקור ומיקומן — ⚠️ ההלבנה מסמנת היכן הן, ⭐ והמקור הגולמי
+ *  נותן את תוכנן: ⛔ והערה אינה מחרוזת. */
+function strsOf(src, html) {
+  const w = html ? whiten(src) : whitenJs(src);
+  const cm = html ? commentRanges(src, 'html') : commentRanges(src);
+  const cmS = cm.slice().sort((x, y) => x[0] - y[0]);
+  let ci = 0;
+  const inC = (p) => { while (ci < cmS.length && cmS[ci][1] <= p) ci++; return ci < cmS.length && cmS[ci][0] <= p; };
+  const out = [];
+  for (let p = 0; p < src.length; p++) {
+    const q = src[p];
+    if ((q !== "'" && q !== '"') || w[p] !== ' ' || inC(p)) continue;
+    let j = p + 1, v = '';
+    while (j < src.length && src[j] !== q && src[j] !== '\n') { if (src[j] === '\\') { v += src[j + 1]; j += 2; } else v += src[j++]; }
+    out.push({ p, e: j + 1, v }); p = j;
+  }
+  return { w, out };
+}
+const TBL = new Set(DB_SCHEMA.map((x) => x.t));
+const COL = new Set(DB_SCHEMA.flatMap((x) => x.c.split(',')));
+/*  ⛔ המפתחות שהקוד כותב — ⚠️ ארגומנט ליטרלי ראשון לכותב, ⭐ ושדה תצורה
+ *  שמוסר מפתח לכותב המשותף: ⛔ בכל ריפו שעל הדיסק, ⚠️ שהרשימה שנמדדת
+ *  נוקבת גם בתחיליות האחיות. */
+const WRITER = /\b(?:[a-zA-Z]*(?:Set|Put)[A-Za-z]*|localStorage\.setItem|mirrorKey)\(\s*(['"])([^'"]+)\1/g;
+const CFGKEY = /\b[a-zA-Z]*(?:[kK]ey|[pP]refix)\s*:\s*(['"])([^'"]+)\1/g;
+const writtenOf = (srcs) => {
+  const s = new Set();
+  for (const src of srcs) { for (const m of src.matchAll(WRITER)) s.add(m[2]); for (const m of src.matchAll(CFGKEY)) s.add(m[2]); }
+  return s;
+};
+const SIB_SRC = REPOS.filter((r) => fs.existsSync(path.join(SIBS, r)))
+  .flatMap((r) => APP_SRC(path.join(SIBS, r)).map((f) => fs.readFileSync(path.join(SIBS, r, f), 'utf8')));
+const NAMEISH = /^[a-z][a-z0-9]*_[a-z0-9_]*$/;
+function listScan(files) {
+  const wr = writtenOf([...SIB_SRC, ...Object.values(files)]);
+  const names = [...TBL, ...wr];
+  const kc = new Map();
+  const known = (v) => { if (!kc.has(v)) kc.set(v, TBL.has(v) || wr.has(v) || (v.endsWith('_') && names.some((k) => k.startsWith(v)))); return kc.get(v); };
+  let lists = 0; const gaps = new Map();
+  for (const [f, src] of Object.entries(files)) {
+    const { w, out } = strsOf(src, f.endsWith('.html'));
+    const lo = (a) => { let x = 0, y = out.length; while (x < y) { const m = (x + y) >> 1; if (out[m].p <= a) x = m + 1; else y = m; } return x; };
+    const st = [];
+    for (let i = 0; i < w.length; i++) {
+      const c = w[i];
+      if (c === '[' || c === '{') { st.push([c, i]); continue; }
+      if ((c !== ']' && c !== '}') || !st.length) continue;
+      const [o, a] = st.pop();
+      if ((o === '[') !== (c === ']')) continue;
+      /*  ⛔ ליטרל נתונים בלבד — ⚠️ גוף קוד נושא `;` או פונקציה, ⭐ והוא אינו רשימה. */
+      if (/;|\bfunction\b|=>/.test(w.slice(a + 1, i))) continue;
+      let z = a - 1; while (z >= 0 && /\s/.test(w[z])) z--;
+      if (!/[=(,:[?]/.test(w[z] || '') && w.slice(Math.max(0, z - 5), z + 1) !== 'return') continue;
+      const inside = []; for (let k = lo(a); k < out.length && out[k].p < i; k++) if (out[k].e <= i + 1) inside.push(out[k]);
+      if (inside.filter((s) => known(s.v)).length < 2) continue;
+      lists++;
+      for (const s of inside) if (NAMEISH.test(s.v) && !known(s.v) && !COL.has(s.v))
+        gaps.set(f + ':' + s.p, `${f}:${src.slice(0, s.p).split('\n').length} '${s.v}'`);
+    }
+  }
+  return { lists, gaps: [...gaps.values()] };
+}
+{ const { lists, gaps } = listScan(APPSRC);
+  t(lists > 0 && gaps.length === 0,
+    `[decl-lists-content] ט5 · כל רשימה שנוקבת במפתח או בטבלה נמדדת לפי תוכנה — נמדדו ${lists} רשימות ` +
+    `ו-${gaps.length} שמות בלי מקרה; והצפוי רשימות ואפס` +
+    (gaps.length ? `: ${gaps.slice(0, 8).join(' · ')}. מסירים את הערך, ⛔ או כותבים את מה שהוא נוקב בו` : '')); }
 { const g = goneGaps(TOOLS);
   t(g.length === 0, `[decl-cases-gone] ט4 · רשימה שהוחלפה במדידה אינה חוזרת — נמדדו ${g.length} והצפוי אפס` +
     (g.length ? `: ${g.join(' · ')}. מסירים את הרשימה, ⛔ והיחס הוא המדידה` : '')); }
@@ -721,6 +798,10 @@ if (RUN_MUT) {
         const src = TOOLS[L.f].split('CASE(\'' + L.k + '\'').join('NOCASE(\'' + L.k + '\'')
           .split('CASE.unmeasured(\'' + L.k + '\'').join('NOCASE(\'' + L.k + '\'');
         return probeGaps({ ...TOOLS, [L.f]: src }).length > probeGaps(TOOLS).length; } },
+    { m: 'מ13', claim: 'ט5', lbl: '[decl-lists-content] ערך בלי מקרה ב-`LS_APPS`',
+      /*  ⛔ אפליקציה שאין לה מפתח — ⚠️ בדיוק ערך שנשאר אחרי שמקרהו נסגר. */
+      run: () => listScan({ ...APPSRC, 'index.html': APPSRC['index.html'].replace(/(var LS_APPS = \[\n)/,
+        "$1  { id: 'zz', name: 'zz', pre: ['zz_'] },\n") }).gaps.length > listScan(APPSRC).gaps.length },
   ];
   for (const r of MUT) {
     const got = r.run();
@@ -765,6 +846,12 @@ if (RUN_MUT) {
     const files = { ...TOOLS, [f]: src };
     t(probeGaps(files).length === probeGaps(TOOLS).length && bareGaps(files).length === bareGaps(TOOLS).length &&
       deadGaps(files, null).length === 0, 'נ4 · רשימה בלי מדידה חלופית, עם אתר ונימוק — ⛔ אינה מפילה את «ט1» · «ט2» · «ט3»');
+  }
+  /*  ⭐ מוטציית-נגד חמישית: ערך שנוסף ויש לו מקרה ⛔ אינו מפיל את «ט5» — ⚠️ תחילית שיש לה מפתח חי. */
+  {
+    const src = APPSRC['index.html'].replace(/(var LS_APPS = \[\n)/, "$1  { id: 'zz', name: 'zz', pre: ['hr_'] },\n");
+    t(src !== APPSRC['index.html'] && listScan({ ...APPSRC, 'index.html': src }).gaps.length === listScan(APPSRC).gaps.length,
+      'נ5 · ערך שנוסף ויש לו מקרה — ⛔ אינו מפיל את «ט5»');
   }
 }
 
