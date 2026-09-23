@@ -5,7 +5,7 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v160';
+var CACHE_NAME = 'schar-limud-v161';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -126,12 +126,33 @@ function swSubMiss() {
   catch (e) { return new Response('', { status: 504, statusText: 'Offline' }); }
 }
 
+/*  ⛔ ממדי ההצהרה נקראים משם הקובץ — ⚠️ המספר שבשם הוא הצלע,
+ *  ⭐ ואייקון אייפון בצלע הקבועה של אפל; ⛔ ושם בלי טביעה אינו נבדק. */
+function swImgSize(url) {
+  var m = /\/([a-z-]+?)(?:-(\d+))?\.[0-9a-f]{8}\.png$/.exec(new URL(url, self.location.href).pathname);
+  if (!m) return 0;
+  return m[2] ? Number(m[2]) : (m[1] === 'apple-touch-icon' ? 180 : 0);
+}
+
+/*  ⛔ כל כתיבה למטמון עוברת כאן — ⚠️ מסנן שהחליף אייקון בתמונה
+ *  אחרת היה ננעל במטמון לנצח: ⭐ תמונה שאינה בממדי ההצהרה אינה נכנסת. */
+function swPut(cache, key, res) {
+  var want = swImgSize(typeof key === 'string' ? key : key.url);
+  if (!want || typeof createImageBitmap !== 'function') return cache.put(key, res);
+  return res.clone().blob().then(createImageBitmap).then(function (bmp) {
+    var ok = bmp.width === want && bmp.height === want;
+    if (bmp.close) bmp.close();
+    if (!ok) throw new Error('image ' + bmp.width + 'x' + bmp.height + ' != ' + want);
+    return cache.put(key, res);
+  });
+}
+
 /*  ⛔ רק תשובה שאומתה נשמרת — ר' כותרת המודול. */
 function swStore(key, res) {
   if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
   var clone = res.clone();
   caches.open(CACHE_NAME).then(function (cache) {
-    return cache.put(key, clone);
+    return swPut(cache, key, clone);
   }).catch(function () {});
 }
 
@@ -198,7 +219,7 @@ function swCachePut(cache, url, opts) {
   return fetch(url, opts).then(function (res) {
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '?'));
     if (res.type === 'opaque') throw new Error('opaque response');
-    return cache.put(url, res);
+    return swPut(cache, url, res);
   });
 }
 
@@ -212,7 +233,7 @@ function ensureCdnCached() {
       return cache.match(url, SW_SUB_OPTS).then(function (hit) {
         if (hit) return;
         return swFetchCors(url).then(function (res) {
-          if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
+          if (res && res.ok && res.type !== 'opaque') return swPut(cache, url, res);
         });
       }).catch(function () {});
     }));
@@ -289,7 +310,7 @@ self.addEventListener('install', function (event) {
         .catch(function () {});
     }).concat(CDN_ASSETS.map(function (url) {
       return swFetchCors(url).then(function (res) {
-        if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
+        if (res && res.ok && res.type !== 'opaque') return swPut(cache, url, res);
       }).catch(function () {});
     }));
     return Promise.all(jobs);

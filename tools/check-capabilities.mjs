@@ -1149,7 +1149,7 @@ const CAPS = {
   swcore: {
     name: 'מודול ה-service worker',
     docRows: ['ליבת `sw.js`'],
-    block: { file: 'sw.js', sha: 'c386d84c2efa27ed', lines: 277,
+    block: { file: 'sw.js', sha: 'b585572249d21038', lines: 298,
              start: '/* ═══ מודול ה-service worker — מודול משותף',
              end:   '/* ═══════════════ סוף מודול ה-service worker' },
   },
@@ -7348,6 +7348,10 @@ const CLAIM_NO_MUT = {
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
   '147|CANON_MANIFEST':
     'המוטציה מריצה את הבודק על עותק ברתמה — ⛔ והתווית נוקבת בשם הבודק שנפל, ⚠️ ולא בשם הטענה',
+  '147|[mf-install-only]':
+    'המוטציה ב-test_md מריצה את הבודק על עותק ברתמה — ⛔ ומאמתת בפלט שהטענה הזו היא שנפלה',
+  '147|[icon-links]':
+    'המוטציה ב-test_md מריצה את הבודק על עותק ברתמה — ⛔ ומאמתת בפלט שהטענה הזו היא שנפלה',
   '159|ג. כל מפתח שהקוד מבקש':
     'הטענה נמדדת מול המסד החי — ⛔ ומוטציה הייתה כותבת לייצור',
   '163|migrations':
@@ -7694,7 +7698,7 @@ const GATES = {
   117: { claim: ['הפניה לקובץ', '[round-num]'] },
   138: { claim: 'android/app/src/main' },
   146: { claim: 'fgDriftMax' },
-  147: { claim: 'CANON_MANIFEST' },
+  147: { claims: { 'check-docs': ['CANON_MANIFEST', '[mf-install-only]', '[icon-links]'], test_swcore: '[sw-img-dims]' } },
   148: { claim: 'שדות זהים' },
   151: { claim: 'BUILD_SHA' },
   152: { claims: { test_build: '[uses-supported]' } },

@@ -12,11 +12,8 @@
   "dir": "rtl",
   "orientation": "portrait",
   "icons": [
-    { "src": "icons/favicon-16.aa306d87.png",      "sizes": "16x16",   "type": "image/png" },
-    { "src": "icons/favicon-32.c7721cea.png",      "sizes": "32x32",   "type": "image/png" },
     { "src": "icons/icon-192.af5952e2.png",        "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.6e7eb2aa.png",        "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.6e7eb2aa.png","sizes": "512x512","type": "image/png", "purpose": "maskable" },
-    { "src": "icons/apple-touch-icon.837fbb2e.png","sizes": "180x180", "type": "image/png" }
+    { "src": "icons/icon-maskable-512.6e7eb2aa.png","sizes": "512x512","type": "image/png", "purpose": "maskable" }
   ]
 }

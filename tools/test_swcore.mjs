@@ -81,7 +81,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [229, 230];
+export const ROWS = [147, 229, 230];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -129,7 +129,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 39, app: 0, appWhy: '' };
+const FLOOR = { shared: 40, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך
@@ -208,6 +208,7 @@ class FakeResponse {
     this.type = init.type || 'basic';
     this.ok = this.status >= 200 && this.status < 300;
   }
+  blob() { return Promise.resolve({ body: this.body }); }
   clone() {
     return new FakeResponse(this.body, {
       status: this.status, statusText: this.statusText, type: this.type,
@@ -299,6 +300,11 @@ const sandbox = {
   self: self_, caches, console: { log() {}, warn() {}, error() {} },
   Response: FakeResponse, Request: FakeRequest, URL, Headers: Map,
   AbortController, setTimeout, clearTimeout, Promise, Set, Map, JSON,
+  /*  ⚠️ גוף `IMG-<רוחב>X<גובה>` הוא תמונה בממדים האלה — ⛔ וכל גוף אחר אינו תמונה. */
+  createImageBitmap(b) {
+    const m = /^IMG-(\d+)X(\d+)$/.exec(b && b.body);
+    return m ? Promise.resolve({ width: Number(m[1]), height: Number(m[2]) }) : Promise.reject(new TypeError('not an image'));
+  },
   fetch(input, init) {
     const req = (input && typeof input === 'object' && input.url) ? input : new FakeRequest(input, init);
     return net(req.url, req);
@@ -566,6 +572,18 @@ function iconGaps(files, texts) {
       if (!ICON_RE.test(r[1]) || !(r[1] in files)) g.push(`${f}: icons/${r[1]}`);
   return g;
 }
+/*  ⛔ תמונה שאינה בממדיה אינה נכנסת למטמון — ⚠️ **מה מפיל**: כתיבה למטמון
+ *  מחוץ ל-`swPut`, ⭐ ו-`swPut` שאינו מודד את התמונה לפני הכתיבה. */
+function imgGaps(src) {
+  const f = src.indexOf('function swPut(');
+  if (f < 0) return ['אין swPut'];
+  const e = src.indexOf('\n}\n', f), w = whitenJs(src), g = [];
+  for (const m of w.matchAll(/\.put\s*\(/g))
+    if (m.index < f || m.index > e) g.push('כתיבה למטמון מחוץ ל-swPut');
+  const body = w.slice(f, e), c = body.indexOf('createImageBitmap');
+  if (c < 0 || !/\bthrow\b/.test(body.slice(c))) g.push('swPut אינה מודדת את התמונה');
+  return g;
+}
 const ICON_DIR = join(ROOT, 'icons');
 const ICON_FILES = fs.existsSync(ICON_DIR) ? Object.fromEntries(fs.readdirSync(ICON_DIR)
   .filter((n) => n.endsWith('.png')).map((n) => [n, fs.readFileSync(join(ICON_DIR, n))])) : {};
@@ -581,6 +599,16 @@ is(globalMatch(SRC) === 0 && ownMatch(SRC),
   is(Object.keys(ICON_FILES).length > 0 && g.length === 0,
      `[icon-hash-name] שם קובץ אייקון נושא את תוכנו — נמדדו ${Object.keys(ICON_FILES).length} נכסים ו-${g.length} פערים; והצפוי אפס` +
      (g.length ? `: ${g.slice(0, 6).join(' · ')}. מריצים את מחולל האייקונים` : '')); }
+{ const g = imgGaps(SRC);
+  const u = F.root + 'icons/icon-192.deadbeef.png', kept = async (body) => {
+    FULL(); netHandler = online(body); await fireFetch(sub(u)); await flush();
+    return store.get(CACHE_NAME).map.has(u);
+  };
+  const bad = await kept('IMG-2X2'), good = await kept('IMG-192X192');
+  is(g.length === 0 && !bad && good,
+     `[sw-img-dims] מטמון ה-service worker אינו שומר תמונה שאינה בממדיה — נמדדו ${g.length} פערים, ` +
+     `2×2 במקום 192 ${bad ? 'נשמר' : 'לא נשמר'} ו-192×192 ${good ? 'נשמר' : 'לא נשמר'}; והצפוי אפס · לא · כן` +
+     (g.length ? `: ${g.join(' · ')}. כותבים למטמון דרך swPut בלבד` : '')); }
 
 if (RUN_MUT) {
   mutStage();
@@ -647,6 +675,9 @@ is(sweepGaps(SRC.replace('return swOwnsCache(name).then(function (own) {',
   const files = { ...ICON_FILES }; const buf = files[n32]; delete files[n32]; files['favicon-32.png'] = buf;
   const texts = Object.fromEntries(Object.entries(ICON_TEXTS).map(([f, t]) => [f, t.split(n32).join('favicon-32.png')]));
   is(iconGaps(files, texts).length > 0, '⛔ מוטציה: `favicon-32.png` בשם קבוע **מפיל** את [icon-hash-name]'); }
+is(imgGaps(SRC.replace(/function swPut\(cache, key, res\) \{[\s\S]*?\n\}\n/,
+  'function swPut(cache, key, res) {\n  return cache.put(key, res);\n}\n')).length > 0,
+   '⛔ מוטציה: `swPut` בלי בדיקת הממדים **מפילה** את [sw-img-dims]');
 /*  ⭐ מוטציית-נגד: נכס שבתיו השתנו ושמו נגזר מחדש בעקביות — ⚠️ שינוי תקין, ⭐ והשער אינו נופל עליו. */
 { const n16 = Object.keys(ICON_FILES).find((n) => n.startsWith('favicon-16.'));
   const nb = Buffer.concat([ICON_FILES[n16], Buffer.from([0])]); const nn = iconName('favicon-16', nb);
