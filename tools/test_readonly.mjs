@@ -4,7 +4,8 @@
  *  **מה נאכף:** (א) הרצת כל השערים על עותק של העץ אינה משנה בו אף בית —
  *  לא קובץ שנכתב, לא קובץ שנוסף ולא קובץ שנמחק; (ב) `check-structure`
  *  נופל על קובץ זר, תיקייה חסרה, בודק חסר ושם שער בתבנית ישנה;
- *  (ג) שגיאת תחביר ב-JS המוטבע מפילה את `check-js`.
+ *  (ג) שגיאת תחביר ב-JS המוטבע מפילה את `check-js`; (ד) שער אחד שחוצה
+ *  את מחצית תקציב הסט מפיל את `check-js`, ⛔ ושני חלקים מתחתיה אינם.
  *
  *  **הנימוק המדוד:** שני שערים נפרדים הריצו את `check-js` המלא על עותק —
  *  16.2 שניות של אותה עבודה פעמיים. ⛔ ריצת הבסיס כאן היא גם הבקרה
@@ -17,7 +18,9 @@
  *
  *  **מה אינו נאכף כאן:** תוכן הקבצים תחת `android/` — ⛔ הסט נאכף כאן
  *  והחתימות בשער האנדרואיד, ⚠️ וכפילות הייתה שני מקורות אמת. וכן שער
- *  שמשנה ומשחזר **בדיוק** — ⛔ מגבלת הסנפשוט, מוצהרת בטענה עצמה.
+ *  שמשנה ומשחזר **בדיוק** — ⛔ מגבלת הסנפשוט, מוצהרת בטענה עצמה. ⚠️ וכן
+ *  תנודת המכונה — ⛔ המחצית נשפטת על הזמן שנמדד בהרצה הזו, ⭐ ושער שעבר
+ *  כאן קרוב אליה עלול לחצות אותה במכונה עמוסה יותר.
  *
  *  ⚠️ זהה בית-לבית בכל הריפו — ⛔ ואין בו בלוק `APP`.
  */
@@ -36,7 +39,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 20, app: 0, appWhy: '' };
+const FLOOR = { shared: 23, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -98,7 +101,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [27];
+export const ROWS = [27, 43];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -376,6 +379,54 @@ console.log('  ok   מוטנט');
     '⭐ מוטציית-נגד: אותה תבנית מאוזנת ⛔ אינה מפילה');
   fs.writeFileSync(cap, CLEAN);
 
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/* ── ט. מחצית תקציב הסט — שער אחד שתופס את רובו ────────────────────────── */
+/*  ⛔ התקציב מוקטן בעותק ⛔ והשערים סינתטיים — ⚠️ הרצת הסט האמיתי כדי
+ *  לחצות מחצית של 105 שניות הייתה עולה בעצמה יותר מהתקציב: ⭐ המנגנון
+ *  הנבדק הוא ההשוואה למחצית, ⛔ והיחס בין השער לתקרה הוא מה שנשמר.
+ *  ⚠️ והנמדד הוא התווית שהבודק מדפיס ⛔ ולא קוד היציאה — ⭐ בעותק עם תקרה
+ *  מוקטנת גם תקרת הסט נחצית, ⛔ וקוד היציאה היה עונה על שאלה אחרת. */
+{
+  const dir = copyRepo();
+  const cj = path.join(dir, 'tools', 'check-js.mjs');
+  const CLEAN = fs.readFileSync(cj, 'utf8');
+  const SCALE = 'const SET_BUDGET_MS = 2400;';
+  const sleeper = (ms) => writer(`Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${ms});`);
+  const partA = path.join(dir, 'tools', 'test_zz_part_a.mjs');
+  const partB = path.join(dir, 'tools', 'test_zz_part_b.mjs');
+  const run = (gates) => {
+    fs.writeFileSync(cj, CLEAN.replace(/const SET_BUDGET_MS = \d+;/, SCALE)
+                              .replace('const wanted = APP.gates;',
+                                       `const wanted = ${JSON.stringify(gates)};`));
+    const env = { ...process.env, R33_INNER: '1' };
+    delete env.GATE_MUT;
+    const r = spawnSync(process.execPath, [cj], { cwd: dir, env, encoding: 'utf8' });
+    return (r.stdout || '') + (r.stderr || '');
+  };
+  const FELL = '❌ מחצית תקציב הסט:';
+  const HELD = '✅ מחצית תקציב הסט —';
+
+  fs.writeFileSync(partA, sleeper(600));
+  fs.writeFileSync(partB, sleeper(600));
+  const split = run(['test_zz_part_a.mjs', 'test_zz_part_b.mjs']);
+  t(n++, split.includes(HELD) && !split.includes(FELL),
+    '⭐ מוטציית-נגד: שני חלקים שכל אחד מתחת למחצית ⛔ אינם מפילים את «מחצית תקציב הסט»');
+
+  fs.writeFileSync(partA, sleeper(1500));
+  const joined = run(['test_zz_part_a.mjs']);
+  t(n++, joined.includes(FELL),
+    '⛔ מוטציה: שני החלקים מאוחדים לשער אחד מפילים את «מחצית תקציב הסט»');
+
+  fs.writeFileSync(partA, sleeper(600));
+  fs.writeFileSync(partB, sleeper(1500));
+  const grown = run(['test_zz_part_a.mjs', 'test_zz_part_b.mjs']);
+  t(n++, grown.includes(FELL) && grown.includes('test_zz_part_b.mjs') &&
+         !/❌ מחצית תקציב הסט:[^\n]*test_zz_part_a/.test(grown),
+    '⛔ מוטציה: עבודה שנוספה לחלק אחד עד שחצה את המחצית מפילה את «מחצית תקציב הסט» — ובו בלבד');
+
+  fs.writeFileSync(cj, CLEAN);
   fs.rmSync(dir, { recursive: true, force: true });
 }
 

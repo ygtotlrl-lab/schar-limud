@@ -140,7 +140,7 @@ function audit(root) {
   const docs   = rd(root, 'tools/check-docs.mjs');
   const budget = rd(root, 'tools/test_budget.mjs');
   const caps   = rd(root, 'tools/check-capabilities.mjs');
-  const matrix = rd(root, 'tools/test_matrix.mjs');
+  const matrix = rd(root, 'tools/test_matrix_doc.mjs');
   const cmts   = rd(root, 'tools/check-comments.mjs');
   const md     = rd(root, 'CLAUDE.md');
 
@@ -255,7 +255,7 @@ const of = (k) => base.filter((x) => x.kind === k).map((x) => x.msg).join(' · '
 
 t(n++, !base.some((x) => x.kind.startsWith('const')), `א. ארבע תקרות התיעוד זהות בשני השערים ${of('const-gap')}${of('const-missing')}`);
 t(n++, !base.some((x) => x.kind.startsWith('measure')), `ב. וארבעת המספרים שנמדדו בפועל זהים ${of('measure-gap')}${of('measure-missing')}`);
-t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נוקב בשורות חיות בלבד ${of('rows-gap')}${of('rows-missing')}`);
+t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix_doc נוקב בשורות חיות בלבד ${of('rows-gap')}${of('rows-missing')}`);
 t(n++, !base.some((x) => x.kind === 'probe-gap'), `ד. כל שורת \`app: true\` נושאת מפתח ב-tableProbe ${of('probe-gap')}`);
 t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידים זהים בשער ובכלל הכתוב ${of('width-gap')}`);
 t(n++, !base.some((x) => x.kind === 'sha-dup'), `ו. אין חתימת בלוק שמוצהרת בשני קובצי שערים ${of('sha-dup')}`);
@@ -293,8 +293,8 @@ mutate('פרקי הסבבים מוחרגים מהחלק הפרטי בשער אח
   [['tools/test_budget.mjs', (s) => s.replace('return kind.filter(k => k !== 1).length;',
                    'return kind.filter(k => k === 0).length;')]], ['measure-gap']);
 
-mutate('שורה שהוחרגה ב-test_matrix ואינה בטבלה',
-  [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
+mutate('שורה שהוחרגה ב-test_matrix_doc ואינה בטבלה',
+  [['tools/test_matrix_doc.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
 
 mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
   [['tools/check-capabilities.mjs', (s) => s.replace(/(tableProbe: \{[\s\S]*?\n {4})\d+:/, '$19999:')]], ['probe-gap']);

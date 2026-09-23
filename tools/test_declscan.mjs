@@ -166,7 +166,7 @@ function* toks(body) {
   }
 }
 const MARK = 'const APP = {';
-function topKeys(block) {
+function topKeysScan(block) {
   const at = block.indexOf(MARK);
   if (at < 0) return [];
   const body = block.slice(at + MARK.length);
@@ -182,7 +182,7 @@ function topKeys(block) {
   }
   return [...new Set(out)];
 }
-function keyAt(block, key) {
+function keyAtScan(block, key) {
   const at = block.indexOf(MARK);
   if (at < 0) return -1;
   const body = block.slice(at + MARK.length);
@@ -197,7 +197,7 @@ function keyAt(block, key) {
   }
   return -1;
 }
-function valueOf(block, key) {
+function valueOfScan(block, key) {
   const from = keyAt(block, key);
   if (from < 0) return null;
   let d = 0, end = block.length;
@@ -210,7 +210,7 @@ function valueOf(block, key) {
 }
 /*  ⛔ הסרת הערות בלבד ⛔ **ולא מחרוזות** — ⚠️ `${APP.x}` בתוך תבנית הוא
  *  קריאה חיה, ⭐ והלבנה גורפת הייתה מוחקת אותה ומדווחת «מפתח בלי קורא». */
-function noCmt(src) {
+function noCmtScan(src) {
   let out = '', i = 0;
   while (i < src.length) {
     const c = src[i], c2 = src[i + 1];
@@ -226,7 +226,7 @@ function noCmt(src) {
  *  יחד יכולת אחת, ⛔ ודרישה להערה לכל שדה הייתה שלושים ושש הערות
  *  שחוזרות זו על זו. ⚠️ **ושורה ריקה חותכת** — ⛔ הערה שמעברה השני של
  *  שורה ריקה אינה נימוק של המפתח, ⭐ והיא שייכת למה שלפניה. */
-function reasonOf(block, key) {
+function reasonOfScan(block, key) {
   const at = keyAt(block, key);
   if (at < 0) return '';
   let before = block.slice(0, block.lastIndexOf('\n', at) + 1);
@@ -248,6 +248,19 @@ function reasonOf(block, key) {
     before = cut.slice(0, nl + 1);
   }
 }
+/*  ⛔ הסריקה נשמרת לכל טקסט — ⚠️ המוטציות משכפלות את המפה ומחליפות קובץ
+ *  אחד, ⭐ ושאר הבלוקים הם אותה מחרוזת: ⛔ סריקה חוזרת עליהם הייתה
+ *  מכפילה את זמן השער במספר המוטציות. */
+const memo1 = (fn) => { const m = new Map();
+  return (a) => { if (!m.has(a)) m.set(a, fn(a)); return m.get(a); }; };
+const memo2 = (fn) => { const m = new Map();
+  return (a, b) => { let n = m.get(a); if (!n) m.set(a, (n = new Map()));
+    if (!n.has(b)) n.set(b, fn(a, b)); return n.get(b); }; };
+const topKeys = memo1(topKeysScan);
+const keyAt = memo2(keyAtScan);
+const valueOf = memo2(valueOfScan);
+const noCmt = memo1(noCmtScan);
+const reasonOf = memo2(reasonOfScan);
 /*  ⛔ נימוק תפקידי ⛔ ולא נוכחות — ⚠️ «אינו בכולן» הוא המדידה ⛔ ולא
  *  הנימוק: ⭐ הנימוק אומר **מה תפקיד המפתח**, ⛔ ולמה התפקיד אינו קיים שם. */
 const PRESENCE = /אינו בכולן|אינה בכולן|לא קיים בשאר|אין כאן\s*$|קיים רק ב|אינו קיים בשאר/;
