@@ -1149,7 +1149,7 @@ const CAPS = {
   swcore: {
     name: 'מודול ה-service worker',
     docRows: ['ליבת `sw.js`'],
-    block: { file: 'sw.js', sha: '521400ad859c25bc', lines: 250,
+    block: { file: 'sw.js', sha: 'c386d84c2efa27ed', lines: 277,
              start: '/* ═══ מודול ה-service worker — מודול משותף',
              end:   '/* ═══════════════ סוף מודול ה-service worker' },
   },
@@ -7521,7 +7521,7 @@ const GATES = {
   /*  ⛔ התקנה טרייה עובדת: ⚠️ «האפליקציה נפתחת ושמישה מול מסד ריק»
    *  ו«המסך הראשון נושא תוכן» אינם נגזרים מהטקסט — ⭐ הם נמדדים
    *  במבחן הקבלה שהמנהל מריץ, ⛔ ושער אינו מריץ דפדפן. */
-  231: { manual: 'המסך הראשון מול מסד ריק אינו נגזר מהטקסט — ⛔ הוא נמדד במבחן הקבלה, ⚠️ ושער אינו מריץ דפדפן' },
+  232: { manual: 'המסך הראשון מול מסד ריק אינו נגזר מהטקסט — ⛔ הוא נמדד במבחן הקבלה, ⚠️ ושער אינו מריץ דפדפן' },
   /*  ⛔ שם אפליקציה אחות בקוד — ⚠️ אפס אזכור לשם של ריפו
    *  אחר בקבצי המוצר והמעטפת, ⭐ ואפס נכס אייקון שזהה בית-לבית לאחות. */
   224: { claims: { test_sistername: ['[sister-name]', '[sister-asset]', '[sister-orphan]'] } },
@@ -7643,7 +7643,7 @@ const GATES = {
   50: { claim: ['מספור רציף ובלי כפילויות', 'nameSignGaps', 'catOrderGaps'] },
   51: { claims: { 'check-capabilities': ['הערה ריקה', 'COUNT_NOTE'],
                   'check-comments': 'פתיחת ההערה בטבלה' } },
-  230: { claim: 'CACHE_NAME' },
+  231: { claim: 'CACHE_NAME' },
   44: { manual: 'הסט רץ בתוך עצמו — ⛔ שער אינו רואה מה רץ לצידו, ⚠️ ונאכף בתוצאתו: הזמן שמודפס בכל הרצה' },
   47: { manual: 'הדיווח אינו בעץ — ⛔ אין קובץ שאפשר למדוד בו מספר שהוקלד, ⚠️ ונאכף בתוצאתו בלבד' },
   27: { claims: { test_readonly: 'drift', 'check-capabilities': 'writeGateGaps' } },
@@ -7760,6 +7760,7 @@ const GATES = {
   197: { claims: { test_users_patch: 'partialLeak' } },
   200: { claims: { test_offline_login: 'pass_fp' } },
   229: { claims: { test_swcore: 'respondWith' } },
+  230: { claims: { test_swcore: ['[sw-own-match]', '[sw-own-sweep]', '[icon-hash-name]'] } },
 };
 
 /*  ⛔ מדידה מוכרת בפתיחת ההערה ⛔ ולא בספרה — ⚠️ «נמדד: אפס

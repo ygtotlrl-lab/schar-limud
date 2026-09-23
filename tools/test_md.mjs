@@ -312,7 +312,7 @@ const mfEdit = async (fn) => {
 };
 /*  ⚠️ לפי `src` ולא לפי אינדקס — ב-schar המניפסט מצהיר גם על
  *  favicons, ו-`icons[0]` שם אינו אחד משלושת הקנוניים. */
-t((await mfEdit((mf) => { mf.icons.find((i) => i.src === 'icons/icon-192.png').purpose = 'any maskable'; })).status !== 0,
+t((await mfEdit((mf) => { mf.icons.find((i) => i.src.startsWith('icons/icon-192.')).purpose = 'any maskable'; })).status !== 0,
   '⛔ `"any maskable"` על האייקון המלא מפיל את check-docs');
 t((await mfEdit((mf) => { mf.icons = mf.icons.filter((i) => i.src.indexOf('maskable') < 0); })).status !== 0,
   '⛔ הסרת האייקון ה-maskable מפילה את check-docs');

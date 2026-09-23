@@ -5,7 +5,7 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v159';
+var CACHE_NAME = 'schar-limud-v160';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -15,8 +15,8 @@ var CORE = [
   './core/util.js',
   './core/sync.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-192.af5952e2.png',
+  './icons/icon-512.6e7eb2aa.png'
 ];
 
 // ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף —
@@ -135,10 +135,37 @@ function swStore(key, res) {
   }).catch(function () {});
 }
 
+/*  ⛔ חיפוש במטמון של האפליקציה בלבד — ⚠️ ה-origin משותף לכל
+ *  האפליקציות, ⭐ ו-`caches.match()` הגלובלי סורק את כולם והישן ראשון:
+ *  ⛔ מטמון בשם שננטש הגיש אייקון של אחות. */
+function swMatch(request, opts) {
+  return caches.open(CACHE_NAME).then(function (cache) {
+    return cache.match(request, opts);
+  });
+}
+
+/*  ⛔ המטמון שלנו לפי תוכנו ⛔ ולא לפי שמו — ⚠️ כל מפתח בתוך ה-scope או
+ *  נכס CDN, ⭐ ולפחות אחד בתוך ה-scope: ⛔ קידומת שהשתנתה השאירה מטמון
+ *  שאיש אינו מוחק, ⚠️ ומטמון של אחות נושא מפתח מחוץ ל-scope ונשאר. */
+function swOwnsCache(name) {
+  if (name === CACHE_NAME) return Promise.resolve(false);
+  return caches.open(name).then(function (cache) {
+    return cache.keys();
+  }).then(function (reqs) {
+    var mine = 0, u;
+    for (var i = 0; i < reqs.length; i++) {
+      try { u = new URL(reqs[i].url); } catch (e) { return false; }
+      if (swInScope(u)) mine++;
+      else if (!swIsCdn(u)) return false;
+    }
+    return mine > 0;
+  });
+}
+
 /*  הקליפה שבמטמון — index.html, ובהיעדרו שורש ה-scope. */
 function swShell() {
-  return caches.match(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
-    return hit || caches.match(SW_ROOT, SW_NAV_OPTS);
+  return swMatch(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
+    return hit || swMatch(SW_ROOT, SW_NAV_OPTS);
   });
 }
 
@@ -215,7 +242,7 @@ function swNavigate(request, u) {
 function swNavOffline(request) {
   var first = SW_CFG.navFallback === 'shell'
     ? swShell()
-    : caches.match(request, SW_CFG.navIgnoreSearch ? SW_NAV_OPTS : SW_SUB_OPTS)
+    : swMatch(request, SW_CFG.navIgnoreSearch ? SW_NAV_OPTS : SW_SUB_OPTS)
         .then(function (hit) { return hit || swShell(); });
   return first.then(function (hit) { return hit || swOfflinePage(); });
 }
@@ -225,7 +252,7 @@ function swNetworkFirst(request) {
     swStore(request, res);
     return res;
   }).catch(function () {
-    return caches.match(request, SW_SUB_OPTS).then(function (hit) {
+    return swMatch(request, SW_SUB_OPTS).then(function (hit) {
       return hit || swSubMiss();
     });
   });
@@ -282,10 +309,10 @@ self.addEventListener('activate', function (event) {
        *  ר' כותרת המודול. */
       if (!hit) return;
       return caches.keys().then(function (names) {
-        return Promise.all(names.filter(function (name) {
-          return name.indexOf(SW_CFG.prefix) === 0 && name !== CACHE_NAME;
-        }).map(function (name) {
-          return caches.delete(name);
+        return Promise.all(names.map(function (name) {
+          return swOwnsCache(name).then(function (own) {
+            if (own) return caches.delete(name);
+          });
         }));
       });
     }).catch(function () {})

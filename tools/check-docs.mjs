@@ -41,7 +41,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { APP_SCOPES } from './peers.mjs';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, iconCanon } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -53,11 +53,11 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 147, 230];
+export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 147, 231];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', 'aa203c4bf14bb70f'],
+  ['table', '2c92a57a3d8ee20c'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -630,7 +630,7 @@ const CANON_APP_ID = APP_SCOPES;
       ];
       let iok = true;
       for (const [src, sizes, purpose] of CANON_ICONS) {
-        const e = icons.find((i) => i && i.src === src);
+        const e = icons.find((i) => i && iconCanon(i.src) === src);
         if (!e) { iok = false; fail(`manifest.json: האייקון "${src}" אינו מוצהר — נמדד היעדר ` +
         `והצפוי הצהרה. מוסיפים אותו לרשימה`); continue; }
         if (e.sizes !== sizes) {

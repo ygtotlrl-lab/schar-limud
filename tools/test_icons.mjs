@@ -23,6 +23,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
+import { iconCanon, iconFiles } from './app-facts.mjs';
 
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
@@ -108,7 +109,7 @@ const ICONS = ['apple-touch-icon.png', 'favicon-16.png', 'favicon-32.png',
                'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 const MASTER_RE = /^icon-master\.(svg|png)$/;
 
-const iFiles = fs.readdirSync(path.join(ROOT, 'icons')).sort();
+const iFiles = fs.readdirSync(path.join(ROOT, 'icons')).map(iconCanon).sort();
 const dFiles = fs.readdirSync(path.join(ROOT, 'design')).sort();
 
 let n = 1;
@@ -163,10 +164,10 @@ function runStructOn(mutate) {
 
 t(n++, runStructOn(() => {}) === true, '⭐ קו הבסיס — check-structure עובר על העץ כפי שהוא');
 
-t(n++, runStructOn(d => fs.rmSync(path.join(d, 'icons', 'favicon-16.png'))) === false,
+t(n++, runStructOn(d => fs.rmSync(path.join(d, 'icons', iconFiles(d)['favicon-16']))) === false,
   '⛔ מוטציה: נכס חסר ב-icons/ **מפיל**');
 
-t(n++, runStructOn(d => fs.copyFileSync(path.join(d, 'icons', 'favicon-32.png'),
+t(n++, runStructOn(d => fs.copyFileSync(path.join(d, 'icons', iconFiles(d)['favicon-32']),
                                         path.join(d, 'icons', 'favicon-64.png'))) === false,
   '⛔ מוטציה: נכס עודף ב-icons/ **מפיל** — גם כששמו תמים');
 
@@ -188,7 +189,7 @@ t(n++, runStructOn(d => {
 
 /* ⭐ ומוטציית-נגד: שינוי **תוכן** של נכס אינו מפיל — ⛔ הגודל, הצבע
    והפיקסלים נגזרים מהעיצוב הייחודי ואינם ניתנים ליישור. */
-t(n++, runStructOn(d => fs.writeFileSync(path.join(d, 'icons', 'favicon-16.png'),
+t(n++, runStructOn(d => fs.writeFileSync(path.join(d, 'icons', iconFiles(d)['favicon-16']),
                                          Buffer.from([1, 2, 3]))) === true,
   'נ1 · ⭐ מוטציית-נגד: שינוי תוכן הנכס ⛔ אינו מפיל — הסט נאכף, לא התמונה');
 
