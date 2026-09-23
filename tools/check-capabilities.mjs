@@ -2914,6 +2914,13 @@ function gateSealGaps() {
     if (sk && !/RAN\s*(?:\+\+|\+=)/.test(sk[1]))
       out.push(f + ': עוזר הדילוג אינו מקדם את המונה — נמדד גוף בלי `RAN++` ' +
                    'מול אחד נדרש');
+    /*  ⛔ דחייה שנבלעת היא תהליך שנסגר באמצע — ⚠️ מאזין `unhandledRejection`
+     *  שאינו מציב קוד יציאה, זורק או יוצא מחזיר «עבר» על טענות שלא רצו:
+     *  ⭐ שם האירוע הוא מחרוזת, ⛔ ולכן הוא נקרא גולמי. */
+    const rawTxt = readOnce('tools/' + f);
+    for (const m of rawTxt.matchAll(/process\.on\(\s*['"]unhandledRejection['"]\s*,([\s\S]{0,240})/g))
+      if (!/exitCode|process\.exit\(|throw\b/.test(m[1]))
+        out.push(f + ': מאזין `unhandledRejection` שבולע — נמדד 0 קוד יציאה מול 1 נדרש');
     const sealed = /process\.on\(/.test(txt);
     const why = exempt[name];
     if (why && sealed) out.push(name + ': מוכרז חריג ובכל זאת נושא מאזין');
