@@ -57,7 +57,7 @@ const CASE = declCases(import.meta.url, APP);
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [5, 8, 47, 209, 115];
+export const ROWS = [5, 8, 49, 212, 117];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -1509,7 +1509,7 @@ t(!capsFails((doc) => {
    *  המקור כולו ואינו טענת היעדר מוכרזת — ⭐ ואין לו חריגה אחרת. */
   {
     const caps = rd(CAPS);
-    const decl = "    '180|מחיקה רכה בלבד — אין `DELETE` פיזי':\n";
+    const decl = "    '183|מחיקה רכה בלבד — אין `DELETE` פיזי':\n";
     const at = caps.indexOf(decl);
     const end = at < 0 ? -1 : caps.indexOf("',\n", caps.indexOf("\n", at + decl.length));
     t(at >= 0 && end > at && runGateOn({ [CAPS]: caps.slice(0, at) + caps.slice(end + 3) },
