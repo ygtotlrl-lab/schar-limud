@@ -44,7 +44,7 @@ const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [211];
+export const ROWS = [210];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`), בסוף הסבב ולפני מיזוג. */
@@ -63,7 +63,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ שלוש הטענות רצות בכולן, ⭐ והרביעית
  *  תלויה בריפו האחיות: ⛔ הטווח מוצהר ב-`APP.floorRange` שב-`check-js`. */
-const FLOOR = { shared: 3, app: 0, appWhy: '' };
+const FLOOR = { shared: 4, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
