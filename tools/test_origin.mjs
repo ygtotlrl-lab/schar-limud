@@ -235,16 +235,17 @@ function peerFacts() {
   }
   return { peers: out, missing };
 }
-function appsGaps(apps, peers) {
+/*  ⚠️ אחות שאינה על הדיסק אינה נמדדת — ⛔ ערך שאינו תואם אחות נמדדת נספר
+ *  בלי ריפו רק כשאין אחות חסרה שהוא יכול להיות שלה. */
+function appsGaps(apps, peers, missing = 0) {
   const out = [];
   for (const p of peers) {
     const hit = apps.find((a) => a.pre.includes(p.pre));
     if (!hit) out.push(`${p.slug}: התחילית ${p.pre} אינה ב-LS_APPS`);
     else if (hit.name !== p.name) out.push(`${p.slug}: השם «${hit.name}» ולא «${p.name}»`);
   }
-  for (const a of apps) {
-    if (!peers.some((p) => a.pre.includes(p.pre))) out.push(`${a.id}: ערך בלי ריפו`);
-  }
+  const orphan = apps.filter((a) => !peers.some((p) => a.pre.includes(p.pre)));
+  if (orphan.length > missing) for (const a of orphan) out.push(`${a.id}: ערך בלי ריפו`);
   return out;
 }
 /*  ⛔ [mirror-evict] — כל טבלת מראה בפינוי או קבועה בגודלה, ⚠️ והצהרה בלי
@@ -340,7 +341,7 @@ assert(MOD.length > 0, 'מודול האחסון נמצא — ' + `נמדדו ${M
 const PF = peerFacts();
 if (PF.missing.length) console.log('  ⏭ אחיות שאינן על הדיסק — שמן ותחיליתן לא נמדדו מול `LS_APPS`: ' + PF.missing.join(', '));
 {
-  const g = appsGaps(lsApps(SRC), PF.peers);
+  const g = appsGaps(lsApps(SRC), PF.peers, PF.missing.length);
   assert(PF.peers.length > 0 && g.length === 0, '[ls-apps-peers] LS_APPS מול כל הריפו — ' +
     `נמדדו ${g.length} פערים מול ${PF.peers.length} ריפו והצפוי 0` + (g.length ? ': ' + g.join(' · ') : ''));
 }
