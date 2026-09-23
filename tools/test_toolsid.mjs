@@ -3,9 +3,9 @@
    ───────────────────────────────────────────────────────────────────────────
    **מה נאכף:** קובץ `tools/` שקיים בכל הריפו זהה בית-לבית **אחרי
    הסרת בלוק `APP` ואחרי הסרת אזורי «פר-אפליקציה» המסומנים** — ⛔ וקובץ
-   שאין בו `APP` כלל מוכרז ב-`APP.pureTools` ⚠️ או ב-`APP.perAppTools`
-   עם נימוקו: ⭐ ושני הצדדים מפילים — ⛔ הכרזה שאין לה קובץ, וקובץ שאינו
-   מוכרז. ⛔ **והמרשם נבנה מכל קובצי `tools/` שבריפו הזה** ⛔ ולא מהחיתוך —
+   שאין בו `APP` כלל מסווג מהעץ — ⚠️ זהה אצל כל מי שיש לו, או נבדל
+   ⭐ ונושא נימוק ב-`APP.perAppTools`: ⛔ ושני הצדדים מפילים — נימוק
+   לקובץ שאינו נבדל, וקובץ נבדל בלי נימוק. ⛔ **והמרשם נבנה מכל קובצי `tools/` שבריפו הזה** ⛔ ולא מהחיתוך —
    ⚠️ גם קובץ שחי באחת בלבד נמדד. ⛔ **וכל `.mjs` רץ בסט** — ⚠️ או מוכרז
    ב-`APP.notGates` עם מה שהוא עושה שאינו מדידה, ⭐ ומספר השערים שרצים
    נגזר משני המרשמים ⛔ ואינו מוקלד.
@@ -38,19 +38,9 @@ import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⛔ קובץ `tools/` שאין בו `APP` — ⚠️ ואין לו מה שיבדיל אותו בין
-   *  הריפו, ⭐ ולכן הוא חייב להיות זהה בית-לבית: ⛔ והרשימה נמדדת משני
-   *  צדדיה — שם שאין לו קובץ, וקובץ שאינו ברשימה. */
-  pureTools: [
-    '_capability-notes.md', 'test_budget.mjs', 'test_caps_build.mjs',
-    'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
-    'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
-    'test_readonly.mjs', 'scope.mjs', 'whiten.mjs', 'db-schema.mjs',
-    'peers.mjs', 'appsrc.mjs', 'app-facts.mjs', 'deep-check.mjs', 'decl-cases.mjs',
-  ],
-  /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
-   *  שתוכנו זהה בכולן **מפיל**: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה
-   *  השארית שהשער בא לסלק. */
+  /*  ⛔ נימוק לקובץ בלי `APP` שנבדל בין הריפו — ⚠️ **מה נכנס**: הנימוק
+   *  בלבד, ⭐ שהרשימה עצמה נגזרת מהבייטים; ⛔ **ומה מפיל**: קובץ נבדל בלי
+   *  נימוק, ונימוק לקובץ שאינו נבדל. */
   /*  ⛔ קובץ תשתית שקיים בחלק מהריפו (סבב 114) — ⚠️ כל שם נושא את הסיבה,
    *  ⭐ והוא נמדד בית-לבית בין מי שיש לו: ⛔ קובץ שנופל בין הכיסאות
    *  אינו נמדד כלל. */
@@ -126,7 +116,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 23, app: 0, appWhy: '' };
+const FLOOR = { shared: 21, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -251,6 +241,13 @@ export function firstDiff(texts) {
 /*  ⛔ המרשם נמדד על **רשימת שמות** ⛔ ואינו קורא מהדיסק — ⚠️ ולכן המוטציה
  *  מזינה לו קובץ סינתטי ⛔ בלי לגעת בעץ: ⭐ והמדידה היא **הכיסוי** —
  *  שם בלי מרשם, ⛔ ולא נוכחות הקובץ. */
+/*  ⛔ פער הנימוקים — ⚠️ **מה נכנס**: רשימת הנבדלים שנגזרה מהעץ, ומפת
+ *  הנימוקים; ⛔ **ומה מפיל**: נבדל בלי נימוק, ונימוק לקובץ שאינו נבדל. */
+export function perAppGaps(derived, reasons) {
+  return { bare: derived.filter((f) => !(f in reasons)),
+           stale: Object.keys(reasons).filter((f) => derived.indexOf(f) < 0) };
+}
+
 export function uncoveredTools(names, pure, perApp, subset) {
   return names.filter((f) => pure.indexOf(f) < 0 && !(f in perApp) && !(f in subset));
 }
@@ -321,49 +318,40 @@ t(n++, mine.length > 0,
 const shared = away.length ? [] :
   mine.filter((f) => order.filter((p) => existsSync(join(dirOf(p), 'tools', f))).length === order.length);
 
-/* ── 2. `pureTools` — קובץ בלי `APP` זהה בית-לבית ──────────────────────── */
-const declPure = APP.pureTools || [];
+/* ── 2. קובץ בלי `APP` — הסיווג נגזר מהעץ, ⛔ והנימוק בלבד מוצהר ────────── */
+/*  ⛔ הסיווג נגזר מהבייטים ⛔ ואינו מוצהר — ⚠️ קובץ בלי `APP` שזהה אצל כל
+ *  מי שיש לו **הוא** משותף, ⭐ ומה שנבדל **הוא** פרטי: ⛔ רשימה מוקלדת של
+ *  המשותפים הייתה מקור אמת שני לשאלה שהבייטים כבר עונים עליה. ⚠️ ומה
+ *  שנשאר מוצהר הוא הנימוק לפרטי בלבד, ⭐ שאין לו מקור בעץ. */
 const declPerApp = APP.perAppTools || {};
+const holdersOf = (f) => order.filter((p) => existsSync(join(dirOf(p), 'tools', f)));
+const sameAll = (f) => {
+  const h = holdersOf(f);
+  if (h.length < 2) return false;
+  const b = h.map((p) => readOf(p, f));
+  return b.length > 1 && b.every((x) => x === b[0]);
+};
+const noAppOf = (f) => {
+  let txt = '';
+  try { txt = readOf(FACTS.slug, f); } catch (e) { return false; }
+  return !txt.includes(APP_HEAD) && !txt.includes(PA_HEAD);
+};
+/*  ⛔ בלי האחיות על הדיסק אין סיווג — ⚠️ «זהה» נמדד מול מי שיש לו, ⭐
+ *  ולכן הרשימה הנגזרת ריקה ⛔ והטענות שנשענות עליה מדווחות ואינן רצות. */
+const PURE = away.length ? [] : shared.filter((f) => noAppOf(f) && sameAll(f));
+const PRIVATE_TOOLS = away.length ? [] : mine.filter((f) => noAppOf(f) && !sameAll(f));
 if (!away.length) {
-  const noApp = shared.filter((f) => !readOf(FACTS.slug, f).includes(APP_HEAD) &&
-                                     !readOf(FACTS.slug, f).includes(PA_HEAD));
-  const drifted = declPure.filter((f) => {
-    if (!shared.includes(f)) return true;
-    const b = order.map((p) => readOf(p, f));
-    return b.some((x) => x !== b[0]);
-  });
-  t(n++, drifted.length === 0,
-    `[pure-tools] קובץ מוכרז שאינו זהה בכולן — נמדדו ${drifted.length} מתוך ` +
-    `${declPure.length} והצפוי 0${drifted.length ? ` (${drifted.join(', ')})` : ''}. ` +
-    'מיישרים את הקובץ בכל הריפו באותו סבב');
-
-  const undeclared = noApp.filter((f) => !declPure.includes(f) && !(f in declPerApp));
-  t(n++, undeclared.length === 0,
-    `[pure-undeclared] קובץ בלי APP שאינו מוכרז — נמדדו ${undeclared.length} והצפוי 0` +
-    `${undeclared.length ? ` (${undeclared.join(', ')})` : ''}. ` +
-    'מכניסים ל-APP.pureTools, או ל-APP.perAppTools עם הנימוק');
-
-  const stalePure = declPure.filter((f) => !noApp.includes(f));
-  t(n++, stalePure.length === 0,
-    `[pure-stale] הכרזת pureTools שאין לה קובץ בלי APP — נמדדו ${stalePure.length} והצפוי 0` +
-    `${stalePure.length ? ` (${stalePure.join(', ')})` : ''}. מסירים מהרשימה`);
-
-  /*  ⛔ הכרזה שתוכנה זהה אצל **כל מי שיש לו** מפילה — ⚠️ קובץ שחי בכולן
-   *  וזהה מקומו ב-`pureTools`, ⭐ וקובץ שחי בחלקן וזהה ביניהם מקומו
-   *  ב-`subsetTools`: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה השארית
-   *  שהשער בא לסלק. ⚠️ **וקובץ שחי כאן בלבד אינו נמדד כאן** — ⛔ אין לו
-   *  מול מה להישוות. */
+  t(n++, PURE.length > 0,
+    `[pure-derived] קובץ בלי APP שזהה בכל הריפו — נגזרו ${PURE.length} והצפוי לפחות אחד. ` +
+    'מריצים את הסבב עם כל הריפו זה לצד זה');
   const paNames = Object.keys(declPerApp);
-  const paSame = paNames.filter((f) => {
-    const holders = order.filter((p) => existsSync(join(dirOf(p), 'tools', f)));
-    if (holders.length < 2) return false;
-    const b = holders.map((p) => readOf(p, f));
-    return b.filter((x) => x !== b[0]).length === 0;
-  });
-  t(n++, paSame.length === 0,
-    `[perapp-tools] הכרזת perAppTools שתוכנה זהה אצל כל מי שיש לו — נמדדו ${paSame.length} ` +
-    `והצפוי 0${paSame.length ? ` (${paSame.join(', ')})` : ''}. ` +
-    'מעבירים ל-pureTools אם הוא בכולן, ⛔ ול-subsetTools אם בחלקן');
+  const { bare: noReason, stale } = perAppGaps(PRIVATE_TOOLS, declPerApp);
+  t(n++, noReason.length === 0 && stale.length === 0,
+    `[perapp-derived] קובץ בלי APP שנבדל בין הריפו — נגזרו ${PRIVATE_TOOLS.length}, ` +
+    `מהם ${noReason.length} בלי נימוק, ו-${stale.length} נימוקים לקובץ שאינו נבדל, והצפוי 0 ו-0` +
+    `${noReason.length ? ` (בלי נימוק: ${noReason.join(', ')})` : ''}` +
+    `${stale.length ? ` (בלי מקרה: ${stale.join(', ')})` : ''}. ` +
+    'כותבים ב-APP.perAppTools למה הקובץ פרטי, ⛔ או מסירים נימוק שאין לו קובץ נבדל');
   const noWhy = paNames.filter((f) => typeof declPerApp[f] !== 'string' || declPerApp[f].length < 20);
   t(n++, paNames.length > 0 && noWhy.length === 0,
     `[perapp-reason] נימוק לכל הכרזת perAppTools — נמדדו ${noWhy.length} בלי נימוק ` +
@@ -375,19 +363,15 @@ if (!away.length) {
  *  שנבנית מהמשותף בלבד עיוורת בדיוק למקום שבו הסחף נולד: ⭐ קובץ בלי `APP`
  *  שחי באחת בלבד לא נמדד בה באף כיוון. */
 {
-  const allNoApp = mine.filter((f) => {
-    let txt = '';
-    try { txt = readOf(FACTS.slug, f); } catch (e) { return false; }
-    return !txt.includes(APP_HEAD) && !txt.includes(PA_HEAD);
-  });
+  const allNoApp = mine.filter(noAppOf);
   const subset = APP.subsetTools || {};
-  const uncovered = uncoveredTools(allNoApp, declPure, declPerApp, subset);
+  const uncovered = uncoveredTools(allNoApp, PURE, declPerApp, subset);
   for (const f of Object.keys(subset))
-    if (allNoApp.includes(f) && uncoveredTools([f], declPure, declPerApp, {}).length) CASE('subsetTools', f);
+    if (allNoApp.includes(f) && uncoveredTools([f], PURE, declPerApp, {}).length) CASE('subsetTools', f);
   t(n++, uncovered.length === 0,
     `[tool-uncovered] קובץ בלי APP שאינו מוכרז באף מרשם — נמדדו ${uncovered.length} ` +
     `מתוך ${allNoApp.length} והצפוי 0${uncovered.length ? ` (${uncovered.join(', ')})` : ''}. ` +
-    'מכניסים ל-pureTools, ל-subsetTools או ל-perAppTools עם הנימוק');
+    'מיישרים את הקובץ בכל הריפו, או כותבים ב-subsetTools או ב-perAppTools את הנימוק');
 
   const paMissing = Object.keys(declPerApp).filter((f) => !mine.includes(f));
   t(n++, paMissing.length === 0,
@@ -467,9 +451,9 @@ if (!away.length) {
 
 /* ── 2ב. קובץ שקיים בחלק מהריפו — זהה בית-לבית בין מי שיש לו ───────────── */
 /*  ⛔ קובץ תשתית שקיים בכמה ריפו ולא בכולם — ⚠️ הוא נופל בין הכיסאות:
- *  ⭐ `pureTools` דורש שיהיה בכולם, ⛔ ובלי מדידה הוא נסחף בשקט.
+ *  ⭐ המשותף נגזר רק מקובץ שבכולם, ⛔ ובלי מדידה הוא נסחף בשקט.
  *  ⚠️ **וההצהרה נמדדת משני צדדיה**: שם שאין לו קובץ אצלנו, ⛔ ושם
- *  שקיים בכולם ולכן מקומו ב-`pureTools`. */
+ *  שקיים בכולם ולכן הוא נגזר כמשותף. */
 if (!away.length) {
   const subset = APP.subsetTools || {};
   const names = Object.keys(subset);
@@ -480,7 +464,7 @@ if (!away.length) {
   const inAll = names.filter((f) => shared.includes(f));
   t(n++, inAll.length === 0,
     `[subset-in-all] קובץ שקיים בכולם ומוכרז כתת-קבוצה — נמדדו ${inAll.length} והצפוי 0` +
-    `${inAll.length ? ` (${inAll.join(', ')})` : ''}. מעבירים ל-pureTools`);
+    `${inAll.length ? ` (${inAll.join(', ')})` : ''}. מסירים מהרשימה — ⛔ קובץ שבכולם נגזר מהעץ`);
   const noWhy2 = names.filter((f) => typeof subset[f] !== 'string' || subset[f].length < 20);
   t(n++, noWhy2.length === 0,
     `[subset-reason] נימוק לכל הכרזת subsetTools — נמדדו ${noWhy2.length} בלי נימוק והצפוי 0. ` +
@@ -551,7 +535,7 @@ t(n++, moved !== SELF && firstDiff([SELF, moved, SELF, SELF]) !== null,
   '[tools-drift] מוטציה: רווח שנוסף מחוץ ל-APP באחות — נתפסה');
 
 /*  ⭐ מוטציית-נגד: שינוי חי **בתוך** בלוק `APP` — ⛔ אינו מפיל. */
-const inApp = SELF.replace('  pureTools: [', "  pureTools: ['כלי-אחר.mjs', ");
+const inApp = SELF.replace('  perAppTools: {', "  perAppTools: { 'כלי-אחר.mjs': 'נימוק', ");
 t(n++, inApp !== SELF && firstDiff([SELF, inApp, SELF, SELF]) === null,
   '[tools-drift] ⭐ מוטציית-נגד: שינוי בתוך בלוק APP ⛔ אינו מפיל');
 
@@ -573,7 +557,7 @@ t(n++, firstDiff([withPa, withPa, withPa, withPa]) === null,
  *  נכתבת לעץ. */
 {
   const synth = ['zz_only_here.mjs'];
-  t(n++, uncoveredTools(synth, APP.pureTools || [], APP.perAppTools || {},
+  t(n++, uncoveredTools(synth, PURE, APP.perAppTools || {},
                         APP.subsetTools || {}).length === 1,
     '[tool-uncovered] מוטציה: קובץ בלי APP שחי באחת בלבד ואינו מוכרז — נתפס');
 }
@@ -582,8 +566,18 @@ t(n++, firstDiff([withPa, withPa, withPa, withPa]) === null,
 {
   const synth = ['zz_only_here.mjs'];
   const decl = { 'zz_only_here.mjs': 'נימוק סינתטי שאורכו מעל עשרים תווים' };
-  t(n++, uncoveredTools(synth, APP.pureTools || [], decl, {}).length === 0,
+  t(n++, uncoveredTools(synth, PURE, decl, {}).length === 0,
     '[tool-uncovered] ⭐ מוטציית-נגד: אותו קובץ כשהוא מוכרז ⛔ אינו מפיל');
+}
+/*  ⛔ מ8 — קובץ שנבדל בין הריפו ושמו נגזר בלי נימוק: ⚠️ הרשימה נגזרת
+ *  מהעץ, ⭐ והנימוק הוא הדבר היחיד שמוצהר. */
+{
+  const derived = ['zz_private.md'];
+  const g1 = perAppGaps(derived, {});
+  const g2 = perAppGaps(derived, { 'zz_private.md': 'נימוק סינתטי שאורכו מעל עשרים תווים' });
+  t(n++, g1.bare.length === 1 && g2.bare.length === 0 && g2.stale.length === 0,
+    '[perapp-derived] מוטציה: שם נבדל בלי נימוק — נתפס, ' +
+    '⭐ ומוטציית-נגד: אותו שם עם נימוקו ⛔ אינו מפיל');
 }
 /*  ⛔ מ4 — שער שהוסר מרשימת הריצה ונשאר בתיקייה (סבב 148). */
 {

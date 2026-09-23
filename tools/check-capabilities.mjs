@@ -7300,9 +7300,7 @@ const CLAIM_NO_MUT = {
     'המוטציה מריצה את הבודק על עותק ברתמה — ⛔ והתווית נוקבת בשם הבודק שנפל, ⚠️ ולא בשם הטענה',
   '56|א · אין שתי שורות על אותו probe':
     'אין אוכף מכני לסעיף שחוזר בשתי שורות — ⭐ ושער שמחמיר מהתקן מלמד את הקורא הלא נכון',
-  '57|pure-tools':
-    'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
-  '57|pure-undeclared':
+  '57|pure-derived':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
   '59|[gate-count]':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
@@ -7674,7 +7672,7 @@ const GATES = {
   57: { claims: { 'check-capabilities': ['sha:', 'orderGaps', 'blockRowGaps'],
                   test_sharedsync: ['block-drift', 'canon-drift'],
                   test_signedshared: 'unsignedTwins',
-                  test_toolsid: ['pure-tools', 'pure-undeclared'], test_lists: 'SHARED_BLOCKS' } },
+                  test_toolsid: ['pure-derived', 'perapp-derived'], test_lists: 'SHARED_BLOCKS' } },
   97: { claim: 'storage' },
   96: { claim: 'ג · פעולה שדורשת רשת' },
   114: { claim: 'עברית' },

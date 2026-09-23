@@ -66,7 +66,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 34, app: 0, appWhy: '' };
+const FLOOR = { shared: 35, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -370,7 +370,7 @@ const budgetRows = (md) => tableOf(md)
   .map((r) => `${r.n} «${r.name}»`);
 /*  ⛔ [flow-deep] — הזרימה זהה בית-לבית בכולן, ⚠️ ואין בה שם ריפו: ⭐ השמות
  *  נגזרים מהמרשם ומהריפו שמריץ. */
-const DEEP_SHA = '2ae3024961d7a760';
+const DEEP_SHA = '3e69a4743bc4a16e';
 const deepLeak = (src) => PEERS.filter((p) => src.includes(p));
 const wfFiles = () => Object.fromEntries(fs.readdirSync(join(ROOT, WF_DIR))
   .filter((f) => f.endsWith('.yml')).map((f) => [f, fs.readFileSync(join(ROOT, WF_DIR, f), 'utf8')]));
@@ -399,6 +399,33 @@ const MD = fs.readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');
     (got === DEEP_SHA ? '' : '. שינוי מכוון = עדכון בכל הריפו ובכל עותקי השער, באותו סבב'));
   tf(leak.length === 0, `[flow-deep] deep-check.yml אינו נוקב בשם ריפו — נמדדו ${leak.length} והצפוי אפס` +
     (leak.length ? `: ${leak.join(' · ')}. גוזרים מהמרשם` : ''));
+}
+
+/*  ⛔ [uses-supported] — כל `uses:` בזרימה נושא גרסה ראשית נתמכת. ⚠️ **מה
+ *  נכנס**: שם ה-action ⟵ הגרסה הראשית הנמוכה ביותר שנתמכת; ⛔ **ומה מפיל**:
+ *  `uses:` בלי גרסה ראשית, action שאינו במרשם, וגרסה שנמוכה ממנו. ⭐ **ולמה
+ *  המרשם קיים**: גרסה שיצאה מתמיכה ממשיכה לרוץ עם אזהרה עד היום שבו היא
+ *  נשברת, ⛔ ואיש אינו קורא אזהרות בזרימה שעברה. */
+const USES_MIN = {
+  'actions/checkout': 7, 'actions/setup-java': 6,
+  'actions/upload-artifact': 7, 'android-actions/setup-android': 4,
+};
+function usesGaps(wf) {
+  const out = [];
+  for (const [f, src] of Object.entries(wf))
+    for (const m of noHash(src).matchAll(/^\s*(?:-\s*)?uses:\s*(\S+)/gm)) {
+      const u = /^([\w.-]+\/[\w.-]+)@v(\d+)$/.exec(m[1]);
+      if (!u) { out.push(`${f}: \`${m[1]}\` בלי גרסה ראשית`); continue; }
+      if (!(u[1] in USES_MIN)) out.push(`${f}: \`${u[1]}\` אינו במרשם`);
+      else if (Number(u[2]) < USES_MIN[u[1]]) out.push(`${f}: \`${m[1]}\` מתחת ל-v${USES_MIN[u[1]]}`);
+    }
+  return out;
+}
+{
+  const g = usesGaps(WF);
+  const n = Object.values(WF).reduce((k, src) => k + (noHash(src).match(/^\s*(?:-\s*)?uses:/gm) || []).length, 0);
+  tf(n > 0 && g.length === 0, `[uses-supported] כל \`uses:\` נושא גרסה נתמכת — נמדדו ${g.length} חורגים מתוך ${n} והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מקדמים את הגרסה בכל הריפו באותו סבב` : ''));
 }
 
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
@@ -466,8 +493,8 @@ for (const [label, mut] of MUTATIONS) {
 const BUILD    = '.github/workflows/build-apk.yml';
 const CLEANUP  = '.github/workflows/cleanup-merged-branches.yml';
 const ALL_SLUGS = PEERS;
-const BUILD_SHA   = '81016a096b25c107';
-const CLEANUP_SHA = 'a48da4dd75a3245c';
+const BUILD_SHA   = '847e2d8267314817';
+const CLEANUP_SHA = '02f214e7cbf41121';
 const PRIV = /^(EXPECTED_SHA256=|OUT=)/;
 const SHARED_SHA = '7604a64b1efb7457';
 
@@ -562,7 +589,7 @@ const nb = norm(buildSrc), nc = norm(cleanupSrc);
 mut('שלב שנוסף ל-build-apk מפיל את החתימה',
     nb, norm(buildSrc.replace('    steps:', "    steps:\n      - run: echo x")), true);
 mut('גרסת action שנסחפה מפילה את החתימה',
-    nb, norm(buildSrc.replace('actions/upload-artifact@v4', 'actions/upload-artifact@v3')), true);
+    nb, norm(buildSrc.replace('actions/upload-artifact@v7', 'actions/upload-artifact@v3')), true);
 mut('הזחה שהשתנתה מפילה את החתימה — ⛔ הרווחים אינם מקופלים',
     nb, norm(buildSrc.replace('      - name: Upload signed APK', '        - name: Upload signed APK')), true);
 mut('בדיקת ה-prefix ב-cleanup מפילה את החתימה כשהיא נפרצת',
@@ -635,7 +662,7 @@ t(cleanupGuards(cleanupSrc.split('deleted=').join('gone=').split('$deleted').joi
  *  «מסנן הנתיבים». */
 t(buildGuards(buildSrc.replace("      - 'signing/**'", "      - 'signing/**'\n      - 'index.html'")).length > 0,
   'יב5 · מוטציה: `index.html` בטריגר **מפילה** את «מסנן הנתיבים»');
-t(buildGuards(buildSrc.replace('actions/setup-java@v4', 'actions/setup-java@v4 ')).length === 0,
+t(buildGuards(buildSrc.replace('actions/setup-java@v6', 'actions/setup-java@v6 ')).length === 0,
   'יב6 · ⭐ מוטציית-נגד: רווח בסוף שורה ⛔ **אינו** מפיל את המנגנון');
 
 /* ── יג. מוטציות הזרימה ────────────────────────────────────────────────── */
@@ -658,6 +685,10 @@ t(buildGuards(buildSrc.replace('actions/setup-java@v4', 'actions/setup-java@v4 '
   t(deepLeak((WF['deep-check.yml'] || '').replace('self="${GITHUB_REPOSITORY#*/}"', 'self=' + FACTS.slug)).length >
     deepLeak(WF['deep-check.yml'] || '').length,
     'יג5 · מוטציה: שם ריפו שנכתב בזרימה **מפיל** את [flow-deep]');
+  t(usesGaps({ ...WF, 'build-apk.yml': (WF['build-apk.yml'] || '').replace('actions/checkout@v7', 'actions/checkout@v4') }).length >
+    usesGaps(WF).length, 'יג6 · מוטציה: `uses:` שחזר לגרסה ישנה **מפיל** את [uses-supported]');
+  t(usesGaps({ ...WF, 'build-apk.yml': (WF['build-apk.yml'] || '').replace('actions/checkout@v7', 'actions/checkout@v9') }).length ===
+    usesGaps(WF).length, 'יג7 · ⭐ מוטציית-נגד: גרסה שקודמה מעבר לרצפה ⛔ **אינה** מפילה את [uses-supported]');
 }
 
 console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער הבנייה, החתימה וה-workflows`
