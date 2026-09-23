@@ -80,7 +80,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת: ⭐ ריצפה שאינה מתעדכנת מפסיקה למדוד
  *  את מה שנוסף. */
@@ -519,7 +519,7 @@ if (RUN_MUT) {
   /*  ⛔ הזהות בבלוק נמדדת ב-`sha256` — ⚠️ ושם אחות בגוף משותף הוא אותו
    *  גוף בדיוק בכולן: ⭐ מדידה שנייה שלו כאן הייתה שתי הכרעות על אותה ראיה. */
   {
-    const head = '/* ═══ פינג — מודול משותף (סבב 0) ═══\n';
+    const head = '/* ═══ פינג — מודול משותף ═══\n';
     const body = SISTERS[0] + '\n';
     const tail = '/* ═══════════════ סוף מודול פינג ═══ */\n';
     const text = head + body + tail;
@@ -600,7 +600,7 @@ if (RUN_MUT) {
 
 }
 
-console.log(`\n${fail ? '✗' : '✓'} סבב 147 (שם אפליקציה אחות בקוד) — ` +
+console.log(`\n${fail ? '✗' : '✓'} שם אפליקציה אחות בקוד — ` +
             `${pass} טענות עברו, ${fail} נכשלו · ` +
             `${SISTERS.length} אחיות · ${TARGETS.length} קבצים · ${ICONS.length} נכסים`);
 if (fail) process.exitCode = 1;

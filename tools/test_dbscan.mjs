@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ───────────────────────────────────────────────────────────────────────────
-   test_dbscan.mjs — כל שאילתה מול הסכימה המוצהרת (סבב 142)
+   test_dbscan.mjs — כל שאילתה מול הסכימה המוצהרת
 
    **מה נאכף:** ⛔ כל `.from(…)` שבמקור, וכל תנאי שאחריו — `select` · `order` ·
    `eq` · `neq` · `gt` · `gte` · `lt` · `lte` · `in` · `insert` · `update` ·
@@ -141,7 +141,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -494,7 +494,7 @@ function schemaGaps(scan, map) {
 }
 
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
-console.log(`── סבב 142 — כל שאילתה מול הסכימה המוצהרת (${FACTS.slug})`);
+console.log(`── כל שאילתה מול הסכימה המוצהרת (${FACTS.slug})`);
 
 const SCHEMA = schemaMap(APP.dbSchema, APP.project);
 const SCAN = dbScan(SRC);

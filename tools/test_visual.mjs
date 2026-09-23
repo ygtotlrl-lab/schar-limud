@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ───────────────────────────────────────────────────────────────────────────
-   test_visual.mjs — כל ערך חזותי נגזר, בסריקה הפוכה (סבב 141)
+   test_visual.mjs — כל ערך חזותי נגזר, בסריקה הפוכה
 
    **מה נאכף:** ⛔ כל ערך שבגיליון הסגנון — ובכל מחרוזת CSS שנכתבת מ-JS —
    הוא `var(--…)` או מילת מפתח, ⚠️ **והסריקה הפוכה**: מה שאינו אחד מהם
@@ -98,7 +98,7 @@ const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -577,7 +577,7 @@ function classStates(css) {
  *  ⭐ ושתי מחלקות שנושאות את אותם מצבים בסדר אחר הן אותה התנהגות. */
 const stateSig = (s) => CLS_STATES.filter((x) => s.has(x)).join(' ');
 /*  ⛔ ההיקף שהמדידה מגיעה אליו — ⚠️ **מה נכנס**: כלל מצב בבורר שהוא
- *  מחלקה אחת; ⛔ **ומה נשאר בחוץ**: כלל מצב בבורר מורכב — ⭐ `.a .b:hover`
+ *  מחלקה אחת; ⛔ **ומה נשאר בחוץ**: כלל מצב בבורר מורכב — ⭐ `.a.b:hover`
  *  ו-`.a.b:hover` הם כלל על **הצירוף** ⛔ ולא על המחלקה: ⚠️ והם נסרקים
  *  ידנית בסבב שנוגע. ⭐ **ולמה הוא מודפס**: שער שאינו אומר כמה הוא מודד
  *  נקרא כאילו מדד הכול. */

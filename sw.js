@@ -1,11 +1,11 @@
 /*  שכר לימוד — service worker.
- *  ⚠️ מוסכמות משותפות (סבב 8): שם קבוע הגרסה הוא CACHE_NAME, מערך הליבה
+ *  ⚠️ מוסכמות משותפות: שם קבוע הגרסה הוא CACHE_NAME, מערך הליבה
  *  נקרא CORE ורשימת ה-CDN נקראת CDN_ASSETS, וסדר המאזינים הוא
  *  install → activate → fetch → message. ⛔ אין לשנות שם/סדר בפרויקט אחד.
- *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
+ *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v156';
+var CACHE_NAME = 'schar-limud-v157';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -19,13 +19,13 @@ var CORE = [
   './icons/icon-512.png'
 ];
 
-// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף (כלל קריטי 2, סבב 6) —
+// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף —
 // שחרור מצד הספק היה שובר את האפליקציה בלי שום שינוי קוד כאן.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js'
 ];
 
-/*  ⭐ דף אופליין — נוסף כאן בסבב 42ג. עד אז schar הייתה היחידה בלי אחד,
+/*  ⭐ דף אופליין — נוסף כאן. עד אז schar הייתה היחידה בלי אחד,
  *  וכל בקשה שנכשלה ברשת ואינה במטמון החזירה respondWith(undefined) —
  *  TypeError, כלומר כשל כפול. */
 var SW_OFFLINE_HTML =
@@ -50,7 +50,7 @@ var SW_OFFLINE_HTML =
   '<button onclick="location.reload()">נסה שוב</button>' +
   '</div></body></html>';
 
-/*  ⚠️ SW_CFG — הדבר היחיד שנבדל בין האפליקציות (סבב 42ג). כל ידית
+/*  ⚠️ SW_CFG — הדבר היחיד שנבדל בין האפליקציות. כל ידית
  *  כאן היא התנהגות **שנמדדה** ברתמת קו-הבסיס, ⛔ ולא ברירת מחדל שנפלה
  *  מאליה: שינוי שלה מפיל את `tools/test_sw.mjs`, וזה הרצוי.
  *  ⛔ **ושתי ידיות בלבד נבדלות ביניהן** — ⚠️ `prefix` שהוא זהות
@@ -69,8 +69,8 @@ var SW_CFG = {
   cdnTimeoutMs: 10000
 };
 
-/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)
-   ⛔ שינוי כאן (סבב 65) — כל האפליקציות **וכל עותקי השער**, באותו
+/* ═══ מודול ה-service worker — מודול משותף ═════════════════════════════
+   ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -78,11 +78,11 @@ var SW_SCOPE = new URL('./', self.location);
 var SW_ROOT = SW_SCOPE.href;
 var SW_SHELL = new URL('./index.html', self.location).href;
 
-/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון (סבב 42ג) —
+/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון —
  *  ר' הנימוק בכותרת המודול. */
 var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
 
-/*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן (סבב 42ג): ignoreSearch
+/*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן: ignoreSearch
  *  מתעלם מה-query, וב-PostgREST כל הפילטרים יושבים דווקא שם. חיפוש כללי
  *  איתו גרם לכך שבקשת כניסה של משתמש אחד התאימה לתשובה שנשמרה
  *  עבור אחר — כניסה בזהות זרה. ניווט בלבד רשאי להשתמש ב-NAV_OPTS. */
@@ -108,7 +108,7 @@ function swIsShellPath(u) {
 }
 
 /*  דף אופליין — HTML אמיתי עם Content-Type מפורש, ⛔ לא מחרוזת 'Offline'
- *  שנראית כמסך שחור עם טקסט זעיר בפינה (סבב 42ג). */
+ *  שנראית כמסך שחור עם טקסט זעיר בפינה. */
 function swOfflinePage() {
   return new Response(SW_OFFLINE_HTML, {
     status: SW_CFG.offlineStatus,
@@ -117,7 +117,7 @@ function swOfflinePage() {
   });
 }
 
-/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML (סבב 42ג) — ר' כותרת
+/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML — ר' כותרת
  *  המודול. `Response.error()` הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט
  *  שנמדד ונשמר כידית. */
 function swSubMiss() {
@@ -126,7 +126,7 @@ function swSubMiss() {
   catch (e) { return new Response('', { status: 504, statusText: 'Offline' }); }
 }
 
-/*  ⛔ רק תשובה שאומתה נשמרת (סבב 42ג) — ר' כותרת המודול. */
+/*  ⛔ רק תשובה שאומתה נשמרת — ר' כותרת המודול. */
 function swStore(key, res) {
   if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
   var clone = res.clone();
@@ -142,9 +142,9 @@ function swShell() {
   });
 }
 
-/*  ⚠️ בקשת CDN חייבת mode:'cors' (סבב 35) — תגובת no-cors היא opaque עם
+/*  ⚠️ בקשת CDN חייבת mode:'cors' — תגובת no-cors היא opaque עם
  *  status 0, ו-cache.put דוחה אותה; כך הנכסים מעולם לא נשמרו.
- *  ⚠️ והפסק-זמן אינו קישוט (סבב 42ג): בקשת CDN שנתקעת משאירה את
+ *  ⚠️ והפסק-זמן אינו קישוט: בקשת CDN שנתקעת משאירה את
  *  waitUntil של install תלוי לנצח, והעובד נשאר «installing» בלי אופליין. */
 function swFetchCors(url) {
   var opts = { mode: 'cors', credentials: 'omit' };
@@ -175,7 +175,7 @@ function swCachePut(cache, url, opts) {
   });
 }
 
-/*  ריפוי עצמי של מטמון ה-CDN (סבב 9, ובשאר סבב 35) — סקריפט CDN
+/*  ריפוי עצמי של מטמון ה-CDN — סקריפט CDN
  *  שחסר במטמון לא היה מושלם לעולם: install אינו רץ שוב לאותו CACHE_NAME,
  *  ובזמן-ריצה הדף מבקש אותו כ-no-cors ⇒ opaque ⇒ לא נשמר. רץ ב-activate
  *  וגם פעם אחת בכל עליית SW, משלים רק את מה שחסר, וכשל בו שקט. */
@@ -210,7 +210,7 @@ function swNavigate(request, u) {
 /*  ⚠️ `navFallback` — הידית שנמדדה: 'shell' פונה ישר לקליפה, 'request'
  *  מחפש קודם את הבקשה עצמה (ועם `navIgnoreSearch` גם '?apk=1' מוצא את
  *  './'). ⛔ שתיהן מסתיימות בדף האופליין ולעולם לא ב-undefined
- *  (סבב 42ג) — respondWith על Promise<undefined> זורק TypeError, כלומר
+ *   — respondWith על Promise<undefined> זורק TypeError, כלומר
  *  כל בקשה שנכשלת ברשת ואינה במטמון נכשלת פעמיים. */
 function swNavOffline(request) {
   var first = SW_CFG.navFallback === 'shell'
@@ -231,8 +231,8 @@ function swNetworkFirst(request) {
   });
 }
 
-/*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה (סבב 40) ונשמרה
- *  (סבב 42ג). ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
+/*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ונשמרה.
+ *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
  *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה. */
 function swCacheFirst(request, u) {
   return caches.open(CACHE_NAME).then(function (cache) {
@@ -278,7 +278,7 @@ self.addEventListener('activate', function (event) {
     caches.open(CACHE_NAME).then(function (cache) {
       return cache.match(SW_SHELL, SW_NAV_OPTS);
     }).then(function (hit) {
-      /*  ⛔ אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש (סבב 42ג) —
+      /*  ⛔ אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש —
        *  ר' כותרת המודול. */
       if (!hit) return;
       return caches.keys().then(function (names) {

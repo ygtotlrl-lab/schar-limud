@@ -101,7 +101,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת. */
 const FLOOR_MAX = (() => {
@@ -300,15 +300,16 @@ export function movingRound(root) {
     return m ? Number(m[1]) : 0;
   } catch { return 0; }
 }
-/*  ⛔ הכרזת מעבר בלי סבב, או שסבבה חלף — ⚠️ **מה מפיל**: נימוק בלי
- *  `(סבב N)`, ⛔ ו-`N` שאינו הסבב הנוכחי: ⭐ הכרזה שנשארת אחרי שהסעיף
- *  רץ היא היתר שלא נסגר. */
+/*  ⛔ הכרזת מעבר בלי סבב, או שסבבה חלף — ⚠️ **מה מפיל**: הכרזה בלי
+ *  שדה `round` מספרי, ⛔ ו-`round` שאינו הסבב הנוכחי: ⭐ הכרזה שנשארת
+ *  אחרי שהסעיף רץ היא היתר שלא נסגר. ⚠️ **והסבב בשדה ולא בנימוק** —
+ *  ⛔ מספר סבב בטקסט הוא זמן ולא נימוק, ⭐ ושדה מספרי נמדד ואינו נקרא. */
 export function movingStale(allow, now) {
   const out = [];
   for (const [slug, v] of Object.entries(allow || {})) {
-    const m = /\(סבב (\d+)\)/.exec(String((v || {}).why || ''));
-    if (!m) { out.push('[בלי סבב] ' + slug); continue; }
-    if (Number(m[1]) !== now) out.push('[סבב שחלף] ' + slug + ' (' + m[1] + '≠' + now + ')');
+    const r = (v || {}).round;
+    if (!Number.isInteger(r)) { out.push('[בלי סבב] ' + slug); continue; }
+    if (r !== now) out.push('[סבב שחלף] ' + slug + ' (' + r + '≠' + now + ')');
   }
   return out;
 }
@@ -667,7 +668,7 @@ if (RUN_MUT) {
     /*  ⛔ והכיוון ההפוך על אותו קלט — ⚠️ ההכרזה היא מה שמשתיק את הפער:
      *  ⭐ בלעדיה `zz_` נופל, ⛔ ואיתה הוא אינו — ⚠️ וזו הראיה שהמרשם נקרא. */
     const rogue = DB_SCHEMA.concat([{ p: 'kupa', t: 'zz_prefs', c: 'key,value' }]);
-    const decl = { 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } };
+    const decl = { 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה', round: 148 } };
     const off = prefixGaps(PEERS, rogue, {});
     const on = prefixGaps(PEERS, rogue, decl);
     t(n++, off.length === 1 && off[0] === 'zz_' && on.length === 0,
@@ -676,7 +677,7 @@ if (RUN_MUT) {
   }
   {
     const got = prefixGhosts(PEERS, DB_SCHEMA,
-      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } }));
+      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה', round: 148 } }));
     t(n++, got.length === 1,
       'מ12 · ⛔ מוטציה: הכרזה שאין לה ריפו מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
@@ -686,8 +687,8 @@ if (RUN_MUT) {
      *  רצה על מרשם ריק ⛔ ואינה יכולה להיכשל: ⭐ והכרזה שנשארה בשקט
      *  הייתה חיה לנצח — ⚠️ וזה בדיוק «probe שאינו יכול להיכשל». */
     const now = movingRound(ROOT);
-    const stale = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + (now - 1) + ')' } }, now);
-    const none = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + now + ')' } }, now);
+    const stale = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת', round: now - 1 } }, now);
+    const none = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת', round: now } }, now);
     const noRound = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה בלי סבב נקוב' } }, now);
     t(n++, stale.length === 1 && noRound.length === 1 && none.length === 0,
       'מ12ב · ⛔ מוטציה: הכרזת מעבר שסבבה חלף מפילה את «[prefix-derived]» — ' +

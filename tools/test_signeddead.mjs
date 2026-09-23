@@ -76,7 +76,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;

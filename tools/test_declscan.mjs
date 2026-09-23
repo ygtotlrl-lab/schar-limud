@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ───────────────────────────────────────────────────────────────────────────
-   test_declscan.mjs — כל הצהרה ב-`APP` נאכפת (סבב 141)
+   test_declscan.mjs — כל הצהרה ב-`APP` נאכפת
 
    **מה נאכף:** ⛔ חמישה כיוונים על כל בלוק `APP` שבכל הריפו — ⚠️ כל מפתח
    נקרא · כל קורא מוצהר · מפתח פרטי נושא נימוק **תפקידי** · ערך ריק
@@ -83,7 +83,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;

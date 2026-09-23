@@ -107,7 +107,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת: ⭐ ריצפה שאינה מתעדכנת מפסיקה למדוד
  *  את מה שנוסף. */
@@ -242,7 +242,7 @@ const SW = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 const HERE = CORE_FILES.filter((f) => existsSync(join(ROOT, f)));
 const MODS = HERE.map((f) => readFileSync(join(ROOT, f), 'utf8'));
 
-console.log(`\n· ${FACTS.slug} — סבב 148: הליבה המשותפת היא מודול`);
+console.log(`\n· ${FACTS.slug} — הליבה המשותפת היא מודול`);
 let n = 1;
 
 /* ── 1. כל מודול קיים נטען ומוטמן ──────────────────────────────────────── */
@@ -751,7 +751,7 @@ if (RUN_MUT) {
   }
 }
 
-console.log(`\n${fail ? '✗' : '✓'} סבב 148 (הליבה המשותפת היא מודול) — ` +
+console.log(`\n${fail ? '✗' : '✓'} הליבה המשותפת היא מודול — ` +
             `${pass} טענות עברו, ${fail} נכשלו · ` +
             `${HERE.length} מודולים · ${Object.keys(APP.coreAllow).length} הכרזות`);
 if (fail) process.exitCode = 1;
