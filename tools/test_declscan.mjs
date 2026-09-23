@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS, appFacts } from './app-facts.mjs';
 import { whitenJs } from './whiten.mjs';
-import { declCases, dumpCases } from './decl-cases.mjs';
+import { declCases, dumpCases, caseGaps, appListNames, listValues, whyOk } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -70,7 +70,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 11, app: 0, appWhy: '' };
+const FLOOR = { shared: 15, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -545,6 +545,73 @@ t(LONE || (missing.length === 0 && FILES.length > 0),
       ? `; חסרות: ${APP.newDecls.filter((x) => !found.includes(x)).map((x) => x.join('::')).join(' · ')}` : ''));
 }
 
+/*  ⛔ ט · ההצהרה נמדדת מול מקריה — ⚠️ **מה נכנס**: כל קובץ ב-`tools/` של
+ *  הריפו הזה, ⭐ ובו כל רשימת פטור שנגזרת מסיומת שמה; ⛔ **ומה מפיל**:
+ *  רשימה בלי אתר רישום · ערך בלי נימוק · ערך שההצלבה אינה מסמנת מת ·
+ *  ⚠️ ורשימה שהוחלפה במדידה וחזרה. ⭐ **ולמה כאן**: המריץ מצליב את
+ *  הרישומים בזמן ריצה, ⛔ וכאן נמדד שההצלבה עצמה יכולה ליפול. */
+const TOOLS = Object.fromEntries(fs.readdirSync(path.join(ROOT, 'tools'))
+  .filter((f) => f.endsWith('.mjs')).map((f) => [f, rd('tools/' + f)]));
+/*  ⛔ ערכי הרשימה נקראים מהליטרל שבבלוק — ⚠️ רשימה שהליטרל שלה אינו
+ *  ליטרל טהור מדווחת בשמה ⛔ ואינה נספרת כנמדדת. */
+function listsOf(files) {
+  const out = [], opaque = [];
+  for (const [f, src] of Object.entries(files)) {
+    const b = appBlock(src); if (!b) continue;
+    for (const k of appListNames(src)) {
+      let val;
+      try { val = Function('"use strict"; return (' + valueOf(b, k) + ');')(); }
+      catch (_) { opaque.push(`${f}::${k}`); continue; }
+      out.push({ f, k, vals: listValues(val) });
+    }
+  }
+  return { out, opaque };
+}
+const probeGaps = (files) => {
+  const bad = [];
+  for (const [f, src] of Object.entries(files)) for (const k of appListNames(src)) {
+    /*  ⛔ רשימה ריקה בכל הריפו יורדת — ⚠️ ריקה כאן ומלאה באחות היא «נמדד
+     *  ואין» ⛔ ונושאת אתר רישום כמו כל רשימה: ⭐ הגוף משותף. */
+    const blank = (x) => /^\[\s*\]$|^\{\s*\}$/.test(String(x || ''));
+    if (blank(valueOf(appBlock(src), k)) && !LONE && Object.keys(ST).every((r) =>
+      !ST[r][f] || !appBlock(ST[r][f]) || blank(valueOf(appBlock(ST[r][f]), k)))) { bad.push(`${f}::${k} (ריקה בכולן)`); continue; }
+    if (!new RegExp(`\\bCASE(?:\\.unmeasured)?\\(\\s*['"]${k}['"]`).test(noCmt(src))) bad.push(`${f}::${k}`);
+  }
+  return bad;
+};
+const bareGaps = (files) => listsOf(files).out
+  .flatMap(({ f, k, vals }) => Object.keys(vals).filter((n) => !whyOk(vals[n])).map((n) => `${f}::${k}::${n}`));
+/*  ⛔ ההצלבה נמדדת על הרשימות החיות — ⚠️ רשומת ריצה שבה כל ערך פטר מקרה
+ *  היא הבקרה החיובית, ⭐ וערך שהרשומה אינה נוקבת בו הוא מה שהמוטציה שותלת. */
+const recOf = (lists, drop) => {
+  const by = {};
+  for (const { f, k, vals } of lists) (by[f] ??= {})[k] = { vals: Object.keys(vals), bare: [],
+    hits: Object.keys(vals).filter((n) => n !== drop), unmeasured: '' };
+  return Object.entries(by).map(([o, l]) => '[decl-cases] ' + JSON.stringify({ owner: o, root: ROOT, lists: l }));
+};
+const deadGaps = (files, drop) => caseGaps(recOf(listsOf(files).out, drop), files, ROOT).dead;
+/*  ⛔ רשימה שהוחלפה במדידה אינה חוזרת — ⚠️ פער הזמן בין הריפו נמדד בשני
+ *  יחסים מול סף, ⭐ ורשימת נימוקים לצידם היא פטור שני לאותה ראיה. */
+const GONE = { 'deep-check.mjs': /\b(?:const|let|var)\s+[A-Z_]*WHY\b/ };
+const goneGaps = (files) => Object.entries(GONE)
+  .filter(([f, re]) => files[f] && re.test(white(files[f]))).map(([f]) => f);
+
+{ const g = probeGaps(TOOLS);
+  t(g.length === 0, `[decl-cases-probe] ט1 · כל רשימת פטור נושאת אתר רישום — נמדדו ${g.length} בלעדיו והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. רושמים \`CASE\` באתר שבו הערך פוטר, ⛔ או מסירים רשימה ריקה` : '')); }
+{ const g = bareGaps(TOOLS); const { out, opaque } = listsOf(TOOLS);
+  const n = out.reduce((a, x) => a + Object.keys(x.vals).length, 0);
+  t(g.length === 0 && opaque.length === 0,
+    `[decl-cases-bare] ט2 · כל ערך נושא בערך עצמו את המקרה שהוא פוטר — נמדדו ${g.length} בלי נימוק ` +
+    `ו-${opaque.length} רשימות שאינן ליטרל, מתוך ${n} ערכים ב-${out.length} רשימות; והצפוי אפס` +
+    (g.length + opaque.length ? `: ${[...g, ...opaque].slice(0, 8).join(' · ')}. כותבים בערך מה המקרה` : '')); }
+{ const g = deadGaps(TOOLS, null);
+  t(g.length === 0, `[decl-cases-dead] ט3 · רשומה שבה כל ערך פטר מקרה אינה מפילה — נמדדו ${g.length} והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. מיישרים את ההצלבה למבנה הרשומה` : '')); }
+{ const g = goneGaps(TOOLS);
+  t(g.length === 0, `[decl-cases-gone] ט4 · רשימה שהוחלפה במדידה אינה חוזרת — נמדדו ${g.length} והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מסירים את הרשימה, ⛔ והיחס הוא המדידה` : '')); }
+
 mutStage();
 if (RUN_MUT) {
   /*  ⛔ המוטציות בזיכרון — ⚠️ כל אחת מחליפה מקור אחד במפה, ⭐ ואינה
@@ -623,6 +690,24 @@ if (RUN_MUT) {
         return deriveTwice(clone((c) => { for (const f of two) c[R0][f] = c[R0][f] + dup; })).length >
           base(deriveTwice) + 1;
       } },
+    { m: 'מ9', claim: 'ט3', lbl: '[decl-cases-dead] ערך פטור שאין לו מקרה',
+      /*  ⛔ ערך חי שהרשומה אינה נוקבת בו — ⚠️ בדיוק ההצהרה שנשארה אחרי שמקרהו נסגר. */
+      run: () => { const L = listsOf(TOOLS).out.find((x) => Object.keys(x.vals).length);
+        return deadGaps(TOOLS, Object.keys(L.vals)[0]).length > 0; } },
+    { m: 'מ10', claim: 'ט2', lbl: '[decl-cases-bare] ערך בלי נימוק',
+      run: () => { const L = listsOf(TOOLS).out.find((x) => Object.keys(x.vals).length);
+        const isArr = /^\[/.test(valueOf(appBlock(TOOLS[L.f]), L.k));
+        const src = TOOLS[L.f].replace(new RegExp('(\\n  ' + L.k + '\\s*:\\s*[\\[{])'),
+          '$1 ' + (isArr ? "'zzBare'," : "zzBare: '',"));
+        return bareGaps({ ...TOOLS, [L.f]: src }).length > bareGaps(TOOLS).length; } },
+    { m: 'מ11', claim: 'ט4', lbl: '[decl-cases-gone] רשימת נימוקי הפער חזרה',
+      run: () => goneGaps({ ...TOOLS, 'deep-check.mjs': TOOLS['deep-check.mjs'] +
+        '\nconst GAP_' + 'WHY = {};\n' }).length > 0 },
+    { m: 'מ12', claim: 'ט1', lbl: '[decl-cases-probe] רשימה בלי אתר רישום',
+      run: () => { const L = listsOf(TOOLS).out.find((x) => Object.keys(x.vals).length);
+        const src = TOOLS[L.f].split('CASE(\'' + L.k + '\'').join('NOCASE(\'' + L.k + '\'')
+          .split('CASE.unmeasured(\'' + L.k + '\'').join('NOCASE(\'' + L.k + '\'');
+        return probeGaps({ ...TOOLS, [L.f]: src }).length > probeGaps(TOOLS).length; } },
   ];
   for (const r of MUT) {
     const got = r.run();
@@ -649,6 +734,25 @@ if (RUN_MUT) {
     declNoWhy(anti2).length === base(declNoWhy) &&
     deriveTwice(anti2).length === base(deriveTwice),
     'נ2 · `sortFn` עם נימוקו — ⛔ אינו מפיל את «ו» · «ז» · «ח»');
+
+  /*  ⭐ מוטציית-נגד שלישית: ערך שנוסף **ויש לו מקרה** ⛔ אינו מפיל — ⚠️ הסרתו
+   *  הייתה מפילה שער, ⭐ ולכן הוא חי ונשאר. */
+  {
+    const L = listsOf(TOOLS).out.find((x) => Object.keys(x.vals).length);
+    const recs = recOf(listsOf(TOOLS).out.map((x) => x === L
+      ? { ...x, vals: { ...x.vals, zzLive: 'ערך שפוטר מקרה שנרשם בריצה הזו' } } : x), null);
+    t(caseGaps(recs, TOOLS, ROOT).dead.length === 0, 'נ3 · ערך שנוסף ויש לו מקרה — ⛔ אינו מפיל את «ט3»');
+  }
+  /*  ⭐ מוטציית-נגד רביעית: רשימה **שאין לה מדידה חלופית** ⛔ ונושאת אתר רישום
+   *  ונימוק לכל ערך — ⚠️ אינה מפילה: ⭐ היא נשארת רשימה, ⛔ והמדידה היא מקריה. */
+  {
+    const f = 'zz_decl.mjs';
+    const src = "/* ── APP — x */\nconst APP = {\n  zzAllow: { a: 'ערך שפוטר מקרה אחד שנרשם כאן' },\n};\n" +
+      "/* ── סוף APP */\nCASE('zzAllow', 'a');\n";
+    const files = { ...TOOLS, [f]: src };
+    t(probeGaps(files).length === probeGaps(TOOLS).length && bareGaps(files).length === bareGaps(TOOLS).length &&
+      deadGaps(files, null).length === 0, 'נ4 · רשימה בלי מדידה חלופית, עם אתר ונימוק — ⛔ אינה מפילה את «ט1» · «ט2» · «ט3»');
+  }
 }
 
 if (fail) {
