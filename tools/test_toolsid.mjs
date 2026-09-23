@@ -365,10 +365,11 @@ if (!away.length) {
 {
   const allNoApp = mine.filter(noAppOf);
   const subset = APP.subsetTools || {};
-  const uncovered = uncoveredTools(allNoApp, PURE, declPerApp, subset);
+  /*  ⛔ בלי האחיות אין `PURE` — ⚠️ וכל קובץ בלי `APP` היה נקרא כלא-מוכרז. */
+  const uncovered = away.length ? [] : uncoveredTools(allNoApp, PURE, declPerApp, subset);
   for (const f of Object.keys(subset))
-    if (allNoApp.includes(f) && uncoveredTools([f], PURE, declPerApp, {}).length) CASE('subsetTools', f);
-  t(n++, uncovered.length === 0,
+    if (allNoApp.includes(f) && (away.length || uncoveredTools([f], PURE, declPerApp, {}).length)) CASE('subsetTools', f);
+  if (!away.length) t(n++, uncovered.length === 0,
     `[tool-uncovered] קובץ בלי APP שאינו מוכרז באף מרשם — נמדדו ${uncovered.length} ` +
     `מתוך ${allNoApp.length} והצפוי 0${uncovered.length ? ` (${uncovered.join(', ')})` : ''}. ` +
     'מיישרים את הקובץ בכל הריפו, או כותבים ב-subsetTools או ב-perAppTools את הנימוק');
