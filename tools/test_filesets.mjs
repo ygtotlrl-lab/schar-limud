@@ -135,6 +135,7 @@ const SHARED = [
   'tools/test_failsurface.mjs',
   'tools/test_filesets.mjs',
   'tools/test_hotwin.mjs',
+  'tools/test_origin.mjs',
   'tools/test_iconlayer.mjs',
   'tools/test_icons.mjs',
   'tools/test_idarg.mjs',

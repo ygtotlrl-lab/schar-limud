@@ -555,6 +555,9 @@ var MIRROR_CFG = {
 
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין האפליקציות; המודול שמתחתיה זהה בכולן.
+/*  ⭐ חלון הפינוי של התנועות — ⚠️ חצי שנת לימודים, ⛔ ומה שמעבר לו נקרא
+ *  מהענן כשיש רשת: ⭐ הפינוי רץ רק כשהאחסון מעל סף האזהרה. */
+var SL_EVICT_MS = 180 * 86400000;
 var LS_CFG = {
   /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
    *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
@@ -568,29 +571,26 @@ var LS_CFG = {
    *  ⭐ ה-origin משותף לכולן, וסימן אחד היה נדרס בכל דחייה. */
   dismissKey: 'sl_sw_dismissed',
 
-  // ⚠️ לשתיהן **עֵד דחיפה משלהן** (`_slPushedAt`) — הן נכתבות
-  //    מקומית-תחילה מאז 009, ושלב א מוחק מפתח **שלם**.
-  tier1: [
-    { key: mirrorKey(KV_TABLE), syncedThrough: _slPushedFor(KV_TABLE) },
-    { key: mirrorKey('sl_lists'),    syncedThrough: _slPushedFor('sl_lists') }
+  // `wholeKeys` — ⛔ ריק ומוצהר: ⚠️ ההגדרות והרשימות נכתבות מקומית-תחילה,
+  // ⭐ ומחיקת מפתח שלם מרוקנת את המסך אופליין — ⛔ הן קבועות בגודלן (למטה).
+  wholeKeys: [],
+  // `oldRecords` — ⚠️ התנועות, 180 יום, הישנה קודם: ⛔ עם עֵד דחיפה משלהן
+  // (`_slPushedAt`) ⭐ ואימות מול הענן למכשיר שרק קורא. ⛔ תנועה שנערכה
+  // עכשיו אינה ישנה — ⚠️ החותמת היא `updated_at`, ⭐ והיא גם זו שהמראה
+  // מסננת בה את האופק: ⛔ שתי חותמות היו מוחקות בכתיבה הבאה תנועה שלא פונתה.
+  oldRecords: [
+    { key: mirrorKey('sl_transactions'), label: 'תנועות', ts: slTs, minAgeMs: SL_EVICT_MS,
+      idOf: _slRowId, syncedThrough: _slPushedFor('sl_transactions'), verify: _slVerify(function () { return SB.from('sl_transactions').select('client_id,updated_at'); }) }
   ],
-  // ⛔ `sl_mirror_transactions` **אינה כאן, וגם לא תיכנס** — אלה כספים:
-  // רשומה שפונתה מהדיסק אינה נראית באפליקציה אופליין, וחישוב חוב על נתון
-  // חסר גרוע מכל מכסה. `sl_mirror_students` הם אבות המפתח הזר שלהן —
-  // גם הם בחוץ, אחרת נשארות תנועות בלי שם מוצג.
-  tier2: [],
-
-  // ⚠️ עדות סנכרון חלופית (אימות מול הענן): **המודול המשותף מכיל
-  // אותה, וכאן אין לה על מה לחול.** המסלול נכנס לפעולה רק עבור מפתח
-  // ב-`tier2` שהגדיר `idOf`+`verify`, ו-`tier2` כאן ריק — ונשאר ריק:
-  // `sl_mirror_transactions` הם **כספים** ו-`sl_mirror_students` הם אבות
-  // המפתח הזר שלהם. אימות מול הענן מוכיח שהרשומה שם, אבל **אינו הופך
-  // רשומה כספית לניתנת לפינוי**: פינוי שלה מסתיר תנועה מהמסך אופליין
-  // וחישוב חוב על נתון חסר גרוע מכל מכסה. `sl_mirror_settings`/
-  // `sl_mirror_lists` נכתבות מקומית-תחילה מאז 009 (ר' `tier1`).
-  // המשמעות המעשית: schar אינה מפנה מקום, ואם הדומיין מלא היא זו שתתריע
-  // בלי לפתור. הפתרון שם הוא yoman ו-hanhala, שכן מפנות — לא צמצום
-  // העותק המקומי של הכסף.
+  /*  ⛔ טבלת מראה שאינה בפינוי קבועה בגודלה — ⚠️ **מה נכנס**: שם הטבלה
+   *  ולמה אין לה גדילה; ⛔ **ומה מפיל**: טבלה שגדלה ואינה בפינוי —
+   *  ⭐ היא ממלאת את האחסון **המשותף**, ⚠️ וחונקת את כל האפליקציות. */
+  fixedSize: [
+    { t: 'sl_students', why: 'תלמידים — שורה לתלמיד, ⛔ והם אבות התנועות שנשארות' },
+    { t: KV_TABLE,      why: 'הגדרות — שורה למפתח, ⛔ ומספר המפתחות קבוע בקוד' },
+    { t: 'sl_lists',    why: 'רשימות בחירה — פריטים שנערכים בהגדרות, ⛔ ואינם גדלים עם התנועות' },
+    { t: 'sl_users',    why: 'משתמשים — שורה למשתמש, ⚠️ והיא מסלול הכניסה האופליין' }
+  ],
 
   // ⛔ יש משהו שטרם עלה לענן ⇒ אין פינוי כלל — ספק נחשב "יש".
   pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
@@ -612,6 +612,17 @@ var _slPushedAt = {};
 function _slMarkPushed(t) { _slPushedAt[t] = Date.now(); }
 function _slPushedThrough(t) { return _slPushedAt[t] || 0; }
 function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
+function _slRowId(r) { return r ? r.client_id : null; }
+/*  ⛔ ראיה מהענן למכשיר שרק קורא — ⚠️ **נכשל סגור**: עמוד שנכשל מחזיר
+ *  `null`, ⭐ ו«אין ראיה» אינו «הענן ריק». */
+function _slVerify(mkQuery) {
+  return function () {
+    if (!SB) return Promise.resolve({ ok: false, rows: [] });
+    return _rowsPaged(mkQuery, 'client_id', null)
+      .then(function (rs) { return Array.isArray(rs) ? { ok: true, rows: rs } : { ok: false, rows: [] }; },
+            function () { return { ok: false, rows: [] }; });
+  };
+}
 
 /*  ⛔ שם המפתח הישן פר-אפליקציה — ⚠️ וההגירה שמוחקת אותו משותפת:
  *  ⭐ הקבוע כאן הוא מה שמפריד בין הגוף הזהה לערך שנבדל. */
@@ -620,9 +631,16 @@ function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
    ══════════════════════════════════════════════════════════════════════════ */
 
-var LS_QUOTA_BYTES = 5 * 1024 * 1024;   // מכסת origin טיפוסית
-var LS_WARN_BYTES  = 3 * 1024 * 1024;   // התרעה
-var LS_CRIT_BYTES  = 4 * 1024 * 1024;   // התרעה בולטת
+/*  ⛔ המכסה היא מספר שנמדד בדפדפן — ⚠️ Chromium מקבל 10 MiB במדידת
+ *  `lsEntryBytes` (תווים × 2) ⛔ ונופל ב-`QuotaExceededError` מעליהם:
+ *  ⭐ מד שמראה יותר ממאה אחוז בזמן שהכתיבה מצליחה — מודד שגוי.
+ *  ⛔ והספים נגזרים ממנה באחוזים — ⚠️ סף שמוקלד בבתים נשאר במקומו
+ *  ביום שהמכסה נמדדת מחדש. */
+var LS_QUOTA_BYTES = 10 * 1024 * 1024;
+var LS_WARN_PCT    = 0.60;              // התרעה
+var LS_CRIT_PCT    = 0.80;              // התרעה בולטת
+var LS_WARN_BYTES  = Math.floor(LS_QUOTA_BYTES * LS_WARN_PCT);
+var LS_CRIT_BYTES  = Math.floor(LS_QUOTA_BYTES * LS_CRIT_PCT);
 var LS_SWEEP_PCT   = 0.60;              // מעל זה — פינוי יזום בעלייה
 var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
 var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
@@ -635,12 +653,15 @@ var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — התח
 var MSG_LS_RESTORED = '✅ האחסון התפנה — הנתונים הישנים חוזרים בסנכרון הזה';
 var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
 
-// כל האפליקציות שחולקות את ה-origin. הקידומת היא מה שמזהה מי תופס מה.
+/*  ⛔ כל האפליקציות שחולקות את ה-origin — ⚠️ הקידומת היא מה שמזהה מי תופס
+ *  מה, ⛔ והרשימה נמדדת מול כל הריפו: ⭐ אפליקציה שנולדה אחרי הרשימה
+ *  נספרת כ«אחר», ⚠️ ואיש אינו רואה. */
 var LS_APPS = [
   { id: 'hanhala', name: 'הנהלה רוחנית', pre: ['hr_'] },
   { id: 'schar',   name: 'שכר לימוד',    pre: ['sl_'] },
   { id: 'yoman',   name: 'יומן עבודה',   pre: ['ya_'] },
-  { id: 'gius',    name: 'גיוס',         pre: ['g_', 'gius'] }
+  { id: 'gius',    name: 'גיוס',         pre: ['g_', 'gius'] },
+  { id: 'kupa',    name: 'הקופה',        pre: ['k_'] }
 ];
 
 function lsFmtBytes(n) {
@@ -819,7 +840,7 @@ function lsRemove(key) {
 }
 
 /* ── אופק הפינוי ────────────────────────────────────────────────────────
-   פינוי שלב ב׳ גורע רשומות ישנות מהעותק **שעל הדיסק** בלבד. כדי שהן לא
+   פינוי הרשומות הישנות גורע רשומות ישנות מהעותק **שעל הדיסק** בלבד. כדי שהן לא
    יחזרו לדיסק בשמירה הבאה (מנוע המיזוג מחזיר כל רשומה מרוחקת שאין לה
    מקבילה מקומית — ולכן פינוי בלי אופק הוא חסר משמעות), נשמר לכל מפתח
    "אופק": חותמת הזמן של הרשומה החדשה ביותר שפונתה. `lsSetArray` מסננת
@@ -886,25 +907,25 @@ function lsSweep(reason, needBytes) {
   var need = Number(needBytes) || 0, freed = 0, i;
   lsLog('פינוי התחיל', reason, 0);
 
-  // ⛔ כלל ג נאכף לפני **שני** השלבים: יש **משהו** בתור שטרם עלה
-  // לענן ⇒ אי אפשר לדעת מה כבר בטוח שם, ולא מפנים דבר. ⚠️ שלב א הוא
+  // ⛔ כלל ג נאכף לפני **שתי** הרשימות: יש **משהו** בתור שטרם עלה
+  // לענן ⇒ אי אפשר לדעת מה כבר בטוח שם, ולא מפנים דבר. ⚠️ פינוי המפתחות השלמים הוא
   // המסוכן מבין השניים דווקא — הוא מוחק **מפתח שלם**, ומפתח שנכתב
   // מקומית-תחילה ופונה לפני שנדחף אינו חוזר משום מקום. ⛔ ומחסום אחד
-  // לשני השלבים ולא שניים: תנאי שנכפל הוא תנאי שאחד מעותקיו יתיישן.
+  // לשתי הרשימות ולא שניים: תנאי שנכפל הוא תנאי שאחד מעותקיו יתיישן.
   if (LS_CFG.pending && LS_CFG.pending()) {
     lsLog('פינוי דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
     return 0;
   }
 
-  // ── שלב א: מטמונים שניתן לשחזר מהענן ──
+  // ── מפתחות שלמים: מטמונים שניתן לשחזר מהענן ──
   // ⛔ העֵד נבדק **פר-פריט**, בתוך המערך — ⚠️ ולא בכניסה
-  // לרשימה: שלב א מוחק מפתח **שלם**, ומפתח שנכתב מקומית-תחילה ולא נדחף
+  // לרשימה: פינוי המפתחות השלמים מוחק מפתח **שלם**, ומפתח שנכתב מקומית-תחילה ולא נדחף
   // אינו חוזר משום מקום. ⭐ ולכן כל פריט נושא `syncedThrough` משלו, בדיוק
-  // כמו ב-tier2, ⛔ ומחסום `pending()` שלמעלה אינו מחליף אותו: «התור ריק»
+  // כמו ב-oldRecords, ⛔ ומחסום `pending()` שלמעלה אינו מחליף אותו: «התור ריק»
   // הוא ראיה על **התור** ⛔ ולא על המפתח.
   var through = lsGlobalWitness();
   var sized = [];
-  (LS_CFG.tier1 || []).forEach(function (spec) {
+  (LS_CFG.wholeKeys || []).forEach(function (spec) {
     if (!lsSpecWitness(spec, through)) return;
     var v = lsGet(spec.key, null);
     if (v != null) sized.push({ k: spec.key, b: lsEntryBytes(spec.key, v) });
@@ -915,22 +936,22 @@ function lsSweep(reason, needBytes) {
     if (need && freed >= need) break;
     if (lsRemove(sized[i].k)) { freed += sized[i].b; hit.push(sized[i].k); }
   }
-  if (hit.length) lsLog('פינוי א׳ — מטמונים', hit.join(', '), freed);
+  if (hit.length) lsLog('פינוי מפתחות שלמים', hit.join(', '), freed);
   if (need && freed >= need) return freed;
 
-  // ── שלב ב: רשומות ישנות מסונכרנות ──
-  var specs = (LS_CFG.tier2 || []).slice();
+  // ── רשומות ישנות מסונכרנות ──
+  var specs = (LS_CFG.oldRecords || []).filter(function (s) { return !lsIsChild(s); });
   // מפתח בלי עֵד מקומי אך עם מסלול אימות מול הענן אינו מפונה כאן — האימות
   // אסינכרוני ולכן הוא רץ ב-`lsBootDeferred`, אחרי העלייה. מדווח כדי
   // שהיומן לא יראה כאילו לא נעשה כלום.
   var defer = lsVerifySpecs(through);
-  if (defer.length) lsLog('פינוי ב׳ — ' + defer.length + ' מפתחות ללא עֵד מקומי', 'ימשיכו באימות מול הענן', 0);
+  if (defer.length) lsLog('פינוי רשומות ישנות — ' + defer.length + ' מפתחות ללא עֵד מקומי', 'ימשיכו באימות מול הענן', 0);
   // מפתח יכול להביא עֵד סנכרון משלו (`spec.syncedThrough`) כשהחותמת הגלובלית
   // אינה מעידה עליו — למשל מערך שנדחף בנפרד ובהצלחה נפרדת.
   var anyOwn = false;
   for (i = 0; i < specs.length; i++) if (typeof specs[i].syncedThrough === 'function') anyOwn = true;
   if (!through && !anyOwn) {
-    lsLog('פינוי ב׳ דולג', 'אין חותמת סנכרון מאומתת', 0);
+    lsLog('פינוי רשומות ישנות דולג', 'אין חותמת סנכרון מאומתת', 0);
     return freed;
   }
   for (i = 0; i < specs.length; i++) specs[i]._b = lsEntryBytes(specs[i].key, lsGet(specs[i].key, ''));
@@ -938,6 +959,7 @@ function lsSweep(reason, needBytes) {
   for (i = 0; i < specs.length; i++) {
     if (need && freed >= need) break;
     freed += lsPruneKey(specs[i], through, need ? Math.max(0, need - freed) : 0);
+    freed += lsPruneChildren(specs[i]);
   }
   return freed;
 }
@@ -981,17 +1003,87 @@ function lsPruneKey(spec, through, want) {
   if (!lsSetRaw(spec.key, json)) return 0;
   lsSetRaw(LS_CFG.hzPrefix + spec.key, String(hz));
   var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
-  lsLog('פינוי ב׳ — ' + (spec.label || spec.key),
+  lsLog('פינוי רשומות ישנות — ' + (spec.label || spec.key),
         (arr.length - next.length) + ' רשומות ישנות, עד ' + new Date(hz).toLocaleDateString('he-IL'),
         gained);
   if (typeof spec.after === 'function') { try { spec.after(next); } catch (e3) { } }
   return gained;
 }
 
+/*  ⛔ רשומת בן יורדת עם אביה — ⚠️ **מה נכנס**: פריט ב-`oldRecords` שנושא
+ *  `parent` (מפתח האב) ו-`parentOf` (מזהה האב שבשורת הבן); ⛔ **ומה מפיל**:
+ *  בן שנגרע בזכות עצמו — ⭐ אב שנשאר בלי בניו מוצג ריק אופליין, ⚠️ ודחיפה
+ *  שלו אחר כך נקראת בענן כמחיקת הבנים.
+ *  ⛔ ולכן הבן יורד רק כשאביו ירד, ⚠️ ורק כשהעֵד שלו מכסה את חותמת
+ *  האב: ⭐ בלי עֵד הבן נשאר יתום עד הפינוי הבא — ⛔ יתום צורך מקום,
+ *  ⚠️ ובן שנגרע בלי ראיה אובד. */
+function lsIsChild(spec) {
+  return !!spec && typeof spec.parent === 'string' && typeof spec.parentOf === 'function';
+}
+function lsChildrenOf(spec) {
+  return (LS_CFG.oldRecords || []).filter(function (c) { return lsIsChild(c) && c.parent === spec.key; });
+}
+/*  ⛔ בן שאביו אינו במראה ושחותמתו בתוך אופק האב — ⚠️ והוא יורד רק אם
+ *  `proven` מאשרת אותו: ⭐ ראיה פר-שורה, ⛔ ושורה בלי ראיה נשארת. */
+function lsDropOrphans(c, parent, proven) {
+  var hz = lsHorizon(parent.key), parr, arr, alive = {};
+  if (!hz || typeof parent.idOf !== 'function') return 0;
+  try { parr = JSON.parse(lsGet(parent.key, null) || '[]'); } catch (e) { return 0; }
+  if (!Array.isArray(parr)) return 0;
+  parr.forEach(function (r) { var id = parent.idOf(r); if (id != null) alive[String(id)] = 1; });
+  var raw = lsGet(c.key, null);
+  if (raw == null) return 0;
+  try { arr = JSON.parse(raw); } catch (e2) { return 0; }
+  if (!Array.isArray(arr)) return 0;
+  var keep = arr.filter(function (r) {
+    var p = c.parentOf(r), t = Number(c.ts(r));
+    if (p == null || alive[String(p)] || !(isFinite(t) && t > 0 && t <= hz)) return true;
+    return !proven(r);
+  });
+  if (keep.length === arr.length) return 0;
+  var json = JSON.stringify(keep);
+  if (!lsSetRaw(c.key, json)) return 0;
+  if (hz > lsHorizon(c.key)) lsSetRaw(LS_CFG.hzPrefix + c.key, String(hz));
+  var g = Math.max(0, lsEntryBytes(c.key, raw) - lsEntryBytes(c.key, json));
+  lsLog('פינוי רשומות ישנות — ' + (c.label || c.key),
+        (arr.length - keep.length) + ' רשומות בן יחד עם אביהן', g);
+  return g;
+}
+function lsPruneChildren(spec) {
+  var through = lsGlobalWitness(), gained = 0;
+  lsChildrenOf(spec).forEach(function (c) {
+    var w = lsSpecWitness(c, through);
+    if (!w) return;
+    gained += lsDropOrphans(c, spec, function (r) { return Number(c.ts(r)) <= w; });
+  });
+  return gained;
+}
+/*  ⚠️ הבן בלי עֵד מקומי — ⛔ הראיה מהענן, פר-שורה, ⭐ כמו אביו. */
+function lsVerifyChildren(spec) {
+  var kids = lsChildrenOf(spec).filter(function (c) {
+    return typeof c.verify === 'function' && typeof c.idOf === 'function';
+  });
+  var freed = 0, i = 0;
+  function step() {
+    if (i >= kids.length) return Promise.resolve(freed);
+    var c = kids[i++], p;
+    try { p = Promise.resolve(c.verify()); } catch (e) { p = Promise.reject(e); }
+    return p.then(function (res) {
+      if (!res || res.ok !== true || !Array.isArray(res.rows)) return;
+      var idx = lsCloudIndex(c, res.rows);
+      freed += lsDropOrphans(c, spec, function (r) {
+        var id = c.idOf(r);
+        return id != null && (String(id) in idx) && idx[String(id)] >= Number(c.ts(r));
+      });
+    }, function () { }).then(step);
+  }
+  return step();
+}
+
 /* ── עדות סנכרון חלופית: אימות ישיר מול הענן ─────────────────────────────
-   שלב ב מותנה בעֵד סנכרון **מקומי** — חותמת שנכתבת רק אחרי דחיפה מוצלחת
+   פינוי הרשומות הישנות מותנה בעֵד סנכרון **מקומי** — חותמת שנכתבת רק אחרי דחיפה מוצלחת
    מהמכשיר הזה. בדפדפן שקורא ולא כותב (המחשב שממנו רק מסתכלים) אין דחיפה,
-   ולכן אין עֵד, ולכן שלב ב מדולג לגמרי: הפינוי מחזיר 0 וההתרעה הצהובה
+   ולכן אין עֵד, ולכן פינוי הרשומות הישנות מדולג לגמרי: הפינוי מחזיר 0 וההתרעה הצהובה
    נשארת קבועה — בזמן שכל הנתונים כבר בענן, והפינוי מחזיר 0.
 
    התיקון אינו הרפיה של הדרישה אלא **החלפת מקור הראיה**: במקום להסיק
@@ -1004,7 +1096,7 @@ function lsPruneKey(spec, through, want) {
       כלל אינו קיים בענן ⇒ לא מפנים דבר. היעדר ראיה אינו ראיה.
    ⛔ **רצפות הגיל (`minAgeMs`) נשארות כמו שהיו** — הן שכבת בטיחות נפרדת
       מהראיה, ולא תחליף לה.
-   ⛔ **`LS_CFG.pending()` נבדק כאן בדיוק כמו בשלב ב הסינכרוני**: יש משהו
+   ⛔ **`LS_CFG.pending()` נבדק כאן בדיוק כמו בפינוי הרשומות הישנות הסינכרוני**: יש משהו
       שטרם עלה ⇒ לא מפנים דבר.
    ⛔ **פינוי רצף בלבד.** הרשומות נבדקות מהישנה לחדשה, והפינוי **נעצר**
       בראשונה שלא אומתה — לא מדלג עליה וממשיך מעליה. הסיבה היא האופק:
@@ -1033,8 +1125,8 @@ function lsSpecWitness(spec, through) {
 // המפתחות שאין להם עֵד מקומי אך יש להם מסלול אימות מול הענן.
 function lsVerifySpecs(through) {
   var t = (through === undefined) ? lsGlobalWitness() : through;
-  return (LS_CFG.tier2 || []).filter(function (s) {
-    return !!s && typeof s.verify === 'function' && typeof s.idOf === 'function' && !lsSpecWitness(s, t);
+  return (LS_CFG.oldRecords || []).filter(function (s) {
+    return !!s && !lsIsChild(s) && typeof s.verify === 'function' && typeof s.idOf === 'function' && !lsSpecWitness(s, t);
   });
 }
 function lsHasVerifiers() { return lsVerifySpecs().length > 0; }
@@ -1102,7 +1194,7 @@ function lsPruneKeyVerified(spec, idx, want) {
   if (!lsSetRaw(spec.key, json)) return 0;
   lsSetRaw(LS_CFG.hzPrefix + spec.key, String(hz));
   var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
-  lsLog('פינוי ב׳ (אומת מול הענן) — ' + (spec.label || spec.key),
+  lsLog('פינוי רשומות ישנות (אומת מול הענן) — ' + (spec.label || spec.key),
         (arr.length - next.length) + ' רשומות ישנות, עד ' + new Date(hz).toLocaleDateString('he-IL') +
         (stopped ? ' · נעצר ב' + stopped : ''),
         gained);
@@ -1117,7 +1209,7 @@ function lsSweepNeed() {
   return Math.max(0, u.total - Math.floor(u.quota * LS_SWEEP_TO));
 }
 
-/* שלב ב בגרסה האסינכרונית: לכל מפתח בלי עֵד מקומי — משיכת העותק הענני
+/* פינוי הרשומות הישנות בגרסה האסינכרונית: לכל מפתח בלי עֵד מקומי — משיכת העותק הענני
    ופינוי של מה שאומת בלבד. מחזירה Promise עם מספר הבתים שפונו. */
 var _lsVerifying = false;
 function lsSweepVerified(reason, needBytes) {
@@ -1143,6 +1235,8 @@ function lsSweepVerified(reason, needBytes) {
       }
       freed += lsPruneKeyVerified(spec, lsCloudIndex(spec, res.rows),
                                   need ? Math.max(0, need - freed) : 0);
+      freed += lsPruneChildren(spec);
+      return lsVerifyChildren(spec).then(function (g) { freed += g; });
     }, function (e) {
       lsLog('אימות נכשל — ' + (spec.label || spec.key),
             (e && e.message) ? String(e.message) : 'שגיאת רשת', 0);
@@ -1196,10 +1290,10 @@ function lsBoot(opts) {
 }
 function lsBootAlert(u) {
   if (u.total >= LS_CRIT_BYTES) {
-    lsLog('⚠️ מעל 4MB', lsFmtBytes(u.total), u.total);
+    lsLog('⚠️ מעל סף הקריטי', lsFmtBytes(u.total), u.total);
     lsAlert(MSG_LS_CRIT + ' (' + lsFmtBytes(u.total) + ' מתוך ' + lsFmtBytes(u.quota) + ')');
   } else if (u.total >= LS_WARN_BYTES) {
-    lsLog('⚠️ מעל 3MB', lsFmtBytes(u.total), u.total);
+    lsLog('⚠️ מעל סף האזהרה', lsFmtBytes(u.total), u.total);
     try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000, 'bad'); } catch (e) { }
   }
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }

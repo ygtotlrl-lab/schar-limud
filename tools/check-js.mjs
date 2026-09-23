@@ -115,7 +115,7 @@ const APP = {
           'test_failsurface.mjs',
           'test_md.mjs', 'test_docfacts.mjs', 'test_signeddead.mjs', 'test_orphans.mjs', 'test_period.mjs', 'test_removals.mjs', 'test_wiring.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_offline_login.mjs', 'test_roles.mjs',
-          'test_stage_a.mjs', 'test_hotwin.mjs', 'test_cron.mjs',
+          'test_stage_a.mjs', 'test_hotwin.mjs', 'test_origin.mjs', 'test_cron.mjs',
           'test_parentchild.mjs',
           'test_merge_pending.mjs', 'test_matrix_doc.mjs', 'test_matrix_src.mjs', 'test_matrix_tools.mjs', 'test_ids.mjs'],
 };
