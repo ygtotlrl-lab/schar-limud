@@ -27,10 +27,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ תאום בלי חתימה שנשאר בכוונה — ⚠️ כל שם נושא את הסיבה, ⛔ ושם
    *  שכבר בבלוק ⛔ או שאין לו תאום **מפיל**: ⭐ רשימת-היתר שהתיישנה היא
    *  בעצמה השארית שהשער בא לסלק. ⛔ **ותאום חדש נכנס לבלוק** ⛔ ואינו
@@ -186,7 +186,7 @@ t(n++, R.declared > 0 && R.ranges.length > 0,
 /*  ⚠️ שורש הייחוס הוא הריפו הזה, והאחיות נמצאות לצידו — ⛔ ריפו שאינו על
  *  הדיסק **מדווח בשמו**: ⭐ ההשוואה שלא רצה נראית, ⛔ ואינה נספרת כטענה
  *  שעברה. ⚠️ והמוטציות בונות לעצמן אחות סינתטית ולכן רצות תמיד. */
-const others = PEERS.filter((p) => p !== APP.name);
+const others = PEERS.filter((p) => p !== FACTS.slug);
 const have = others.filter((p) => existsSync(join(SIBS, p, 'index.html')));
 const away = others.filter((p) => have.indexOf(p) < 0);
 
@@ -208,7 +208,7 @@ if (!away.length) {
     '. מסירים מ-APP.unsignedAllow שם שכבר בבלוק או שאין לו תאום');
 } else {
   console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}. ` +
+              `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}. ` +
               `מריצים את הסבב עם כל הריפו זה לצד זה`);
 }
 /* ── 3. רשימת החרגה משותפת — גוף זהה בין הריפו ─────────────────────────── */
@@ -243,7 +243,7 @@ for (const L of SHARED_LISTS) {
     `מחזירים את הרשימה לקובץ`);
   if (away.length) {
     console.log(`  ⚠️  ההשוואה של ${L.name} לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-                `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}. ` +
+                `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}. ` +
                 `מריצים את הסבב עם כל הריפו זה לצד זה`);
     continue;
   }

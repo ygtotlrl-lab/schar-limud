@@ -20,10 +20,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bodyOf, scopeOf } from './scope.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ הסורקים שהסבב הוסיף — ⚠️ **מה נכנס**: שם קובץ שער שמכריז דפוסים
    *  ומייצא `PATTERNS` ו-`MUTS`; ⛔ **ומה מפיל**: רשימה ריקה, שם שאין לו
    *  קובץ, ושם שאינו מחווט. ⭐ **ולמה המבנה קיים**: רשימה ריקה הופכת את

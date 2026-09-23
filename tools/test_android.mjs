@@ -31,10 +31,10 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /* ⚠️ אין כאן גשר שיתוף — אין `navigator.share` בקוד, ולכן אין
      `<queries>`, אין `<provider>` ואין תלויות androidx. ⛔ אין לתת גשר
      מקורי לדף שנטען מהרשת בלי צורך (סבב 41). שתי החתימות כאן הן
@@ -400,8 +400,10 @@ else {
   /* עץ מינימלי: השער, קובץ הבנייה, המניפסט, וטבלת ה-README. */
   const readmeSrc = fs.readFileSync(join(ROOT, 'android/README.md'), 'utf8');
   const seed = () => {
-    put('tools/test_bump.mjs',
-        fs.readFileSync(join(ROOT, 'tools/test_bump.mjs'), 'utf8'));
+    /*  ⚠️ השער מייבא את זהות האפליקציה מהמודול המשותף — ⛔ והעותק נושא
+     *  אותו, ⭐ שעץ מינימלי בלעדיו נופל בייבוא ⛔ ולא בטענה. */
+    for (const m of ['test_bump.mjs', 'app-facts.mjs', 'peers.mjs'])
+      put('tools/' + m, fs.readFileSync(join(ROOT, 'tools', m), 'utf8'));
     put(GRADLE, gradleSrc);
     put(MANIFEST, manifestSrc);
     put('android/README.md', readmeSrc);
@@ -491,6 +493,6 @@ else {
 
 }
 
-console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער שכבת האנדרואיד`
-                     : `\n✅ ${APP.app}: שער שכבת האנדרואיד עבר`);
+console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער שכבת האנדרואיד`
+                     : `\n✅ ${FACTS.slug}: שער שכבת האנדרואיד עבר`);
 process.exit(failures ? 1 : 0);

@@ -23,10 +23,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ כלי ההתקנה החד-פעמי — ⚠️ **מה נכנס**: שם הקובץ שמושך את קובץ
    *  הסכימה ומריץ אותו; ⛔ **ומה מפיל**: שם שאין לו קובץ. ⭐ **ולמה
    *  המבנה קיים**: כלי שמחזיק עותק סכימה משלו הוא מקור אמת שני.
@@ -200,7 +200,7 @@ function t3() {
 }
 
 /* ─ הרצת בדיקות הנכונות ────────────────────────────────────────────────── */
-console.log(`\n═══ מקור אמת יחיד לסכימה, ואין מפתח שירות (${APP.app}) ═══\n`);
+console.log(`\n═══ מקור אמת יחיד לסכימה, ואין מפתח שירות (${FACTS.slug}) ═══\n`);
 for (const t of [() => t1(SRC), () => t2(SRC), t3]) {
   try { t(); }
   catch (e) { failN++; console.error(`❌ טענה זרקה: ${(e && e.stack) || e}`); }
@@ -212,7 +212,7 @@ for (const t of [() => t1(SRC), () => t2(SRC), t3]) {
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_schema_source: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
-  console.log(`\n[${APP.app}] ${passN} עברו, ${failN} נכשלו`);
+  console.log(`\n[${FACTS.slug}] ${passN} עברו, ${failN} נכשלו`);
   process.exit(failN ? 1 : 0);
 }
 
@@ -258,5 +258,5 @@ for (const t of [t4, t5]) {
   catch (e) { failN++; console.error(`❌ מוטציה זרקה: ${(e && e.stack) || e}`); }
 }
 
-console.log(`\n[${APP.app}] ${passN} עברו, ${failN} נכשלו`);
+console.log(`\n[${FACTS.slug}] ${passN} עברו, ${failN} נכשלו`);
 process.exit(failN ? 1 : 0);

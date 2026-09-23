@@ -28,10 +28,10 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /* ⭐ הליבה המשותפת (סבב 41) — זהה בית-לבית בכל הריפו פרט לשורת
      ה-`package`, וכל חוזה ההתנהגות יושב בה. */
   core:  'android/app/src/main/java/com/schar/limud/ShellActivity.java',
@@ -281,8 +281,8 @@ if (!APP.shareBridge && APP.shellSha !== SHELL_SHA_NO_BRIDGE) {
   pass('⚠️ מעטפת עם גשר — חתימה משלה, חריגה מדודה ורשומה במטריצה');
 }
 
-console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער המעטפת`
-                     : `\n✅ ${APP.app}: שער המעטפת עבר`);
+console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער המעטפת`
+                     : `\n✅ ${FACTS.slug}: שער המעטפת עבר`);
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */

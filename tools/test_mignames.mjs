@@ -24,10 +24,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ הגשר בין העץ לטבלת המעקב שבמסד — ⚠️ **מה נכנס**: שם קובץ
    *  מיגרציה ⟵ שם הרשומה שרצה, או `null` לקובץ שאין לו רשומה.
    *  ⛔ **ומה מפיל**: קובץ בעץ שאין לו רשומה במרשם, רשומה במרשם שאין
@@ -230,14 +230,14 @@ function refGaps(docs, trees) {
 }
 
 /* ─ הרצת בדיקות הנכונות ────────────────────────────────────────────────── */
-console.log(`\n═══ שם מיגרציה נגזר, ומותאם לרשומה שרצה (${APP.app}) ═══\n`);
+console.log(`\n═══ שם מיגרציה נגזר, ומותאם לרשומה שרצה (${FACTS.slug}) ═══\n`);
 const FILES = fs.readdirSync(path.join(ROOT, 'migrations')).sort();
 const DOCS = walk(ROOT, '', []).map((f) => {
   try { return [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]; } catch { return [f, '']; }
 });
 const SIBS = path.resolve(ROOT, '..');
 const TREES = {};
-for (const r of PEERS) TREES[r] = r === APP.app ? new Set(FILES) : migSet(path.join(SIBS, r));
+for (const r of PEERS) TREES[r] = r === FACTS.slug ? new Set(FILES) : migSet(path.join(SIBS, r));
 
 function t1() {
   const bad = badNames(FILES);
@@ -292,7 +292,7 @@ for (const t of [t1, t2, t3]) {
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_mignames: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
-  console.log(`\n[${APP.app}] ${passN} עברו, ${failN} נכשלו`);
+  console.log(`\n[${FACTS.slug}] ${passN} עברו, ${failN} נכשלו`);
   process.exit(failN ? 1 : 0);
 }
 
@@ -316,7 +316,7 @@ function t4() {
     '[mig-pattern] 4ג · ⛔ מוטציה: שם בעברית מפיל — נמדד 0 ⟵ 1');
   /*  ⛔ שם הריפו נבנה בזמן ריצה ⛔ ואינו ליטרל — ⚠️ ליטרל בגוף השער היה
    *  נסרק כהפניה אמיתית, ⭐ והשער היה מפיל את עצמו. */
-  const mutRepo = PEERS.find((r) => TREES[r]) || APP.app;
+  const mutRepo = PEERS.find((r) => TREES[r]) || FACTS.slug;
   const mD = [['tools/_mut.md', `ר\` ${mutRepo}/migrations/099_x.sql \``]];
   ok(refGaps(mD, TREES).broken.length === 1,
     `[mig-ref] 4ד · ⛔ מוטציה: הפניה ל-${mutRepo}/migrations/099_x.sql שאינו קיים מפילה — נמדד 0 ⟵ 1`);
@@ -342,7 +342,7 @@ function t5() {
     'נ1 · מוטציית-הנגד אכן מוסיפה הכרזה');
   ok(g.ranBad.length === 0 && g.fileNoEntry.length === 0 && g.entryNoFile.length === 0,
     `נ2 · ⭐ ואף על פי כן אינה מפילה — נמדדו ${g.ranBad.length} חריגות והצפוי אפס`);
-  const docs = DOCS.concat([['tools/_nc.md', `ר\` ${APP.app}/migrations/${FILES[0]} \``]]);
+  const docs = DOCS.concat([['tools/_nc.md', `ר\` ${FACTS.slug}/migrations/${FILES[0]} \``]]);
   ok(refGaps(docs, TREES).broken.length === 0,
     'נ3 · ⭐ והפניה תקינה לריפו אחר אינה מפילה — נמדדו 0 שבורות והצפוי אפס');
 }
@@ -352,5 +352,5 @@ for (const t of [t4, t5]) {
   catch (e) { failN++; console.error(`❌ מוטציה זרקה: ${(e && e.stack) || e}`); }
 }
 
-console.log(`\n[${APP.app}] ${passN} עברו, ${failN} נכשלו`);
+console.log(`\n[${FACTS.slug}] ${passN} עברו, ${failN} נכשלו`);
 process.exit(failN ? 1 : 0);

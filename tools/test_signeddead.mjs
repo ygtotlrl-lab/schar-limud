@@ -26,10 +26,10 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { whiten, whitenJs } from './whiten.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ שם מת בבלוק חתום שנשאר בכוונה — ⚠️ **מה נכנס**: השם ⟵ מה שהוא
    *  משרת שאין לו קורא היום; ⛔ **ומה מפיל**: שם כזה שאינו כאן, והכרזה
    *  שאין לה שם מת. ⭐ **ולמה ריק**: נמדד ואין — ⚠️ תשעת השמות שמתו
@@ -215,7 +215,7 @@ export function skipGaps(files, allow) {
   return { sites: out, undeclared, ghost };
 }
 
-console.log(`· ${APP.name} — בלוק חתום נמדד כמו כל קוד`);
+console.log(`· ${FACTS.slug} — בלוק חתום נמדד כמו כל קוד`);
 let n = 1;
 
 const SRCS = appSources(ROOT);
@@ -229,7 +229,7 @@ for (const src of Object.values(SRCS)) {
   NAMES.push(...namesIn(src, r.ranges));
 }
 const W = corpus(ROOT);
-const others = PEERS.filter((p) => p !== APP.name);
+const others = PEERS.filter((p) => p !== FACTS.slug);
 const have = others.filter((p) => existsSync(join(SIBS, p, 'index.html')));
 const away = others.filter((p) => have.indexOf(p) < 0);
 const SIB_W = have.map((p) => corpus(join(SIBS, p)));
@@ -242,7 +242,7 @@ if (away.length) {
   /*  ⛔ ריפו שאינו על הדיסק מדווח בשמו — ⚠️ והטענה **אינה נספרת כטענה
    *  שעברה**: ⭐ הטווח מוצהר ב-`APP.floorRange` שב-`check-js`. */
   console.log(`  ⚠️  ההצלבה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}`);
+              `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}`);
 } else {
   const g = deadGaps(W, NAMES, SIB_W, APP.signedDeadAllow);
   const bad = g.undeclared.length + g.ghost.length + g.bare.length;
@@ -323,7 +323,7 @@ if (RUN_MUT) {
   }
 }
 
-console.log(`\n${fail ? '✗' : '✓'} ${APP.name} — בלוק חתום נמדד כמו כל קוד: ` +
+console.log(`\n${fail ? '✗' : '✓'} ${FACTS.slug} — בלוק חתום נמדד כמו כל קוד: ` +
             `${pass} טענות עברו, ${fail} נכשלו · ${FOUND} בלוקים · ` +
             `${NAMES.length} שמות · ${have.length} אחיות`);
 if (fail) process.exitCode = 1;

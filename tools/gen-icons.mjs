@@ -22,10 +22,10 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ המאסטר כאן הוא **ציור** ולא צורות (סבב 71) — ⚠️ כל ניסיון לתאר
       אותו בפרימיטיבים היה מייצר סמל אחר, ⛔ ולא את זה שעל המכשירים.
       ⛔ **ולכן הצורה המוצהרת רסטרית** (סבב 148) — ⚠️ והיא תואמת את סיומת
@@ -726,4 +726,4 @@ for (const [d, scale] of DENS) {
     throw new Error(`${d}: שוליים L=${L}/R=${R} · T=${T}/B=${B} בתוכן ${cw}×${chh} — ⛔ נדרש L=R ו-T=B`);
   put(join(dir, 'ic_launcher_foreground.png'), encodePng(fg, fg, px));
 }
-console.log(`gen-icons — ${wrote} קבצים נכתבו (${APP.name})`);
+console.log(`gen-icons — ${wrote} קבצים נכתבו (${FACTS.slug})`);

@@ -174,8 +174,8 @@ for (const [a, v] of APP_ID)
     `⭐ והזוג ["${a}", "${v}"] נגזר מהמרשם ש-check-docs קורא — המזהה הייחודי נאכף ב-check-docs`);
 t(n++, /new Set\(idVals\)\.size !== CANON_APP_ID\.length/.test(docs),
   '⛔ ו-check-docs מודד **ייחודיות** ולא התאמה בלבד — נמדדה בדיקת ה-Set בגופו');
-t(n++, /APP\.app/.test(docs) && /for \(const key of \['id', 'scope'\]\)/.test(docs),
-  '⛔ ושני השדות — `id` ו-`scope` — נמדדים מול הרישום לפי APP.app');
+t(n++, /FACTS\.slug/.test(docs) && /for \(const key of \['id', 'scope'\]\)/.test(docs),
+  '⛔ ושני השדות — `id` ו-`scope` — נמדדים מול הרישום לפי שם הריפו הנגזר');
 t(n++, !PRIVATE.some(k => new RegExp(`\\['${k}',`).test(docs)),
   '⛔ ואף מפתח פרטי אינו ברשימה — יישור שלו היה שובר זהות חזותית');
 

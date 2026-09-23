@@ -36,6 +36,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { whiten } from './whiten.mjs';
 import { appSrc } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ הפונקציות החלקיות של הריפו הזה — ⚠️ **מה נכנס**: שם שמוגדר כאן
@@ -44,7 +45,7 @@ import { appSrc } from './appsrc.mjs';
  *  שהוא נוכחות בלבד. ⭐ **ולמה המבנה קיים**: שם שחי בשתיים או בשלוש הוא
  *  המקום שבו יכולת הועתקה ולא הוכרעה — ⚠️ וכל אחד נראה תקין בריפו שלו. */
 const APP = {
-  name: 'schar-limud',
+  /*  ⭐ הפונקציות החלקיות ונימוקן — ⛔ **אינו נגזר**: הנימוק הוא החלטה, ⚠️ ואין קובץ שמצהיר עליה */
   appFns: {
     barPaint:
       'כותבת את רוחב כל פס למשתנה ה-CSS שלו אחרי שהפסים בעץ — ⛔ וביומן ובהנהלה אין יעד חודשי ואין סדרה, ולכן אין פס שרוחבו נגזר',
@@ -397,8 +398,8 @@ t(n++, MINE.size > 0,
   'מריצים את השער משורש הריפו');
 
 /* ── 4. ההצלבה בין כל הריפו ────────────────────────────────────────────── */
-const others = PEERS.filter((p) => p !== APP.name);
-const dirOf = (p) => (p === APP.name ? ROOT : join(SIBS, p));
+const others = PEERS.filter((p) => p !== FACTS.slug);
+const dirOf = (p) => (p === FACTS.slug ? ROOT : join(SIBS, p));
 const away = others.filter((p) => !existsSync(join(dirOf(p), 'index.html')));
 /*  ⚠️ המקורות נשמרים ⛔ ואינם נקראים פעמיים — ⭐ שלב המוטציות מזין אותם
  *  לליבה אחרי עריכה, ⛔ בלי לגעת בעץ ובלי תהליך נוסף. */
@@ -446,7 +447,7 @@ if (!away.length) {
   /*  ⛔ ההצלבה שלא רצה **נראית** ⛔ ואינה מדלגת בשתיקה — ⚠️ ואינה נספרת
    *  כטענה שעברה: ⭐ עותק עץ בתיקייה זמנית אין לצידו אחיות. */
   console.log(`  ⚠️  ההצלבה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; מריצים את הסבב עם כל הריפו זה לצד זה`);
+              `לצד ${FACTS.slug}; מריצים את הסבב עם כל הריפו זה לצד זה`);
 }
 
 /* ── שתי שכבות נוספות — חתימת הקריאה · והשוואה לאפס ────────────────────── */
@@ -604,7 +605,7 @@ if (away.length) {
 } else {
   /*  ⛔ מ1: שם שחי בכולן ⟵ הגדרתו מוסרת באחות — ⚠️ הוא הופך לחלקי,
    *  ⭐ ואין לו הצהרה: ⛔ והשער חייב ליפול על `[fn-undeclared]`. */
-  const k = PEERS.findIndex((p) => p !== APP.name);
+  const k = PEERS.findIndex((p) => p !== FACTS.slug);
   const host = IN_ALL.find((x) => defPair(SRCS[k], x));
   const pr = host ? defPair(SRCS[k], host) : null;
   if (!pr) t(n++, true, 'מ1 · ⭕ אין שם שחי בכולן ומוגדר באחות — ⛔ ואין מה למוטט');
@@ -648,7 +649,7 @@ t(n++, reasonGaps({ synFn: 'הפונקציה אינה בכולן' }).length === 
  *  ⛔ **והמוטציה שוברת את המנגנון** — ⚠️ הגוף עצמו משתנה, ⭐ ולא שמו
  *  ולא ריווחו: ⛔ הערה שנוספה מולבנת ואינה משנה דבר. */
 {
-  const k = PEERS.findIndex((p) => p !== APP.name);
+  const k = PEERS.findIndex((p) => p !== FACTS.slug);
   const mineB = away.length ? null : fnBodies(MY_SRC);
   const peerB = away.length ? null : fnBodies(SRCS[k]);
   let twin = null;

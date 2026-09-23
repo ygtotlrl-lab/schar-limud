@@ -29,11 +29,10 @@ import crypto from 'node:crypto';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'שכר לימוד',
-  file: 'index.html',
   /*  ⛔ תלמידים לפני תנועות — ⚠️ התנועה מפנה לתלמיד, ⭐ ובכסף שורה שאיבדה
    *  את האב שלה היא תשלום בלי בעלים. */
   tables: ['sl_students', 'sl_transactions', 'sl_settings', 'sl_lists'],
@@ -176,7 +175,7 @@ const pass = (m) => (RAN++, console.log('✅ ' + m));
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SIBS = resolve(ROOT, '..');
-const src = fs.readFileSync(APP.file, 'utf8');
+const src = fs.readFileSync(FACTS.entry, 'utf8');
 
 function grab(text) {
   const i = text.indexOf(BLOCK.start);
@@ -188,11 +187,11 @@ function grab(text) {
   return text.slice(i, k + 2);
 }
 
-console.log('\n🔎 שכבת הדחיפה (סבב 102) — ' + APP.app + '\n');
+console.log('\n🔎 שכבת הדחיפה (סבב 102) — ' + FACTS.title + '\n');
 
 const block = grab(src);
 if (!block) {
-  fail('הבלוק המשותף לא נמצא ב-' + APP.file);
+  fail('הבלוק המשותף לא נמצא ב-' + FACTS.entry);
   console.log('\n❌ בדיקת שכבת הדחיפה נכשלה (' + failures + ')');
   process.exit(1);
 }

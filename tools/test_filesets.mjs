@@ -20,7 +20,6 @@
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ קובץ שקיים כאן בלבד — ⚠️ כל שורה נושאת את הסיבה: ⭐ בלעדיה היא נקראת כטעות. */
   /*  ⛔ המרשם הפר-אפליקציתי — ⚠️ **מה נכנס**: שם השער ⟵ היכולת
    *  שמצדיקה אותו; ⚠️ **ומה מפיל**: נימוק שהוא נוכחות בלבד, הצהרה
@@ -55,12 +54,14 @@ import { execFileSync } from 'node:child_process';
 import { builtinModules } from 'node:module';
 import { reasonGaps } from './scope.mjs';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בכל העותקים (סבב 67). ⚠️ קובץ שיורד
  *  מכאן יורד מכולם באותו סבב, בדיוק כמו חתימת בלוק SHARED. */
 const SHARED = [
   '.github/workflows/build-apk.yml',
   '.github/workflows/cleanup-merged-branches.yml',
+  '.github/workflows/deep-check.yml',
   '.gitignore',
   '.nojekyll',
   'CLAUDE.md',
@@ -105,7 +106,9 @@ const SHARED = [
   'tools/check-js.mjs',
   'tools/check-structure.mjs',
   'tools/gen-icons.mjs',
+  'tools/app-facts.mjs',
   'tools/appsrc.mjs',
+  'tools/deep-check.mjs',
   'tools/db-schema.mjs',
   'tools/peers.mjs',
   'tools/scope.mjs',
@@ -423,7 +426,7 @@ const SELF = process.argv[1] &&
 if (SELF) {
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-console.log('\n— סבב 67 · סט הקבצים (' + APP.app + ') —');
+console.log('\n— סבב 67 · סט הקבצים (' + FACTS.slug + ') —');
 const base = audit(ROOT);
 base.length === 0
   ? ok('1 · כל קובץ במעקב הוא משותף, פטור מוכרז, או חריגה מנומקת')
@@ -478,7 +481,7 @@ ok('2 · הסט המשותף מונה ' + SHARED.length + ' קבצים, ורשי
 /*  ⛔ שער יושב על שורה תשתיתית — ⚠️ ומה שאינו נוקב בשורה מכסה יכולת
  *  שיותר מאפליקציה אחת נושאת: ⭐ ולוגיקת מוצר אינה נאכפת בשער. */
 {
-  const r = productGates(ROOT, PEERS, APP.app);
+  const r = productGates(ROOT, PEERS, FACTS.slug);
   r.out.length === 0
     ? ok('5 · [gate-product] כל שער שאינו נוקב בשורה מכסה יכולת שיותר מאפליקציה אחת נושאת — נמדדו ' +
          Object.keys(APP.appGates).length + ' מוצהרים ואפס שערי מוצר' +
@@ -699,9 +702,9 @@ else {
   /*  ⛔ האחיות נבנות לצד העותק — ⚠️ «שער מוצר» הוא שער שהאחיות **נקראו**
    *  ואין בהן מקבילה לו: ⭐ בלי האחיות המדידה אינה מכריעה, ⛔ והמוטציה
    *  הייתה עוברת על סביבה ולא על הפרה. */
-  for (const q of PEERS) if (q !== APP.app) fs.mkdirSync(path.join(d, '..', q), { recursive: true });
+  for (const q of PEERS) if (q !== FACTS.slug) fs.mkdirSync(path.join(d, '..', q), { recursive: true });
   APP.appGates.probe_prod = 'מודד את חשבון המוצר שחי כאן בלבד — ⛔ ולשאר אין חשבון כזה';
-  const hit = productGates(d, PEERS, APP.app).out.includes('probe_prod');
+  const hit = productGates(d, PEERS, FACTS.slug).out.includes('probe_prod');
   delete APP.appGates.probe_prod;
   hit ? ok('מ8 · [gate-product] שער בלי שורה שחי כאן בלבד מפיל את טענה 5')
       : bad('מ8 · שער מוצר לא נתפס');
@@ -712,7 +715,7 @@ else {
   const d = clone('n6');
   fs.writeFileSync(path.join(d, 'tools', 'test_probe_infra.mjs'), 'export const ROWS = [24];\n');
   APP.appGates.probe_infra = 'מודד יכולת שקיימת כאן בלבד — ⛔ ולשאר אין מסך כזה';
-  const clean = !productGates(d, PEERS, APP.app).out.includes('probe_infra');
+  const clean = !productGates(d, PEERS, FACTS.slug).out.includes('probe_infra');
   delete APP.appGates.probe_infra;
   clean ? ok('נ6 · ⭐ מוטציית-נגד: שער שנוקב בשורה תשתיתית ⛔ אינו מפיל')
         : bad('נ6 · שער שנוקב בשורה נתפס בטעות');

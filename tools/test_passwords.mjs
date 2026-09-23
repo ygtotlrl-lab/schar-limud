@@ -29,20 +29,26 @@
 import fs from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ טבלת המשתמשים — ⛔ **אינה נגזרת**: שם טבלה בסכימה, ⚠️ והשער מודד את הקוד שכותב אליה */
   usersTable: 'sl_users',
+  /*  ⭐ עמודת הסיסמה הגלויה שאסור לקרוא — ⛔ **אינה נגזרת**: שם עמודה שירדה, ⚠️ ואין קובץ חי שמצהיר עליה */
   plainCol: 'password',
+  /*  ⭐ המאמת האופליין — ⛔ **אינו נגזר**: שם פונקציה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */
   verifyFn: 'slVerifyOffline',
+  /*  ⭐ מסלול השלמת הטביעה — ⛔ **אינו נגזר**: שם פונקציה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */
   backfillFn: 'slBackfillPassFp',
   /*  ⛔ שני מסלולי אימות ואין מעבר משתמש — ⚠️ אין כאן מסך ניהול משתמשים:
       ⭐ המנהל יוצר משתמש ב-`INSERT` ידני, ⛔ ומאז צעד ב הוא גוזר לו טביעה
       בעצמו (הנוסח בבאנר המיגרציה). */
   authPaths: [['async function doLogin', 'הכניסה המקוונת'],
               ['async function slSaveMyPassword', 'שינוי סיסמה עצמי']],
+  /*  ⭐ המיגרציה שסגרה את הכתיבה הגלויה — ⛔ **אינה נגזרת**: שם קובץ ב-`migrations/`, ⚠️ ומיגרציה שרצה אינה נערכת */
   migrationA: '015_users_drop_plaintext_password.sql',
+  /*  ⭐ המיגרציה שמפילה את העמודה — ⛔ **אינה נגזרת**: שם קובץ ב-`migrations/`, ⚠️ ומיגרציה שרצה אינה נערכת */
   migrationB: '016_drop_sl_users_password.sql',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -160,7 +166,7 @@ const ok = (m) => (RAN++, console.log(`  ok   ${++n} · ${m}`));
 const no = (m) => { RAN++; bad++; console.error(`  FAIL ${++n} · ${m}`); };
 const is = (c, m) => (c ? ok(m) : no(m));
 
-console.log(`\n─────────────── ${APP.app}: הסיסמאות, וצעד ב שסגר את העמודה ──`);
+console.log(`\n─────────────── ${FACTS.slug}: הסיסמאות, וצעד ב שסגר את העמודה ──`);
 
 /*  ⛔ דגל נתיב-החזרה של הטקסט הגלוי נמדד בכולן ⛔ ולא בשלוש (צעד ב) —
  *  ⚠️ אפליקציה בלי משתמשים היא בדיוק המקום שבו דגל כזה יצמח בשקט, ⭐ ומה
@@ -192,7 +198,7 @@ if (!APP.usersTable) {
   is(!/pass_fp|pass_salt|password/.test(
        stripComments(js + "\n// שריד תיעודי: כאן ישבה פעם password\n")),
      '⭐ מוטציית-נגד: הערה שמזכירה `password` ⛔ אינה נספרת כשדה סיסמה');
-  console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
+  console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
                   : `\n✓ צעד ב (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
   process.exit(bad ? 1 : 0);
 }
@@ -304,6 +310,6 @@ is((anti.match(EQ_PLAIN) || []).length === 0 && writeSites(anti).length === 0,
 
 }
 
-console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
+console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ צעד ב (סיסמאות) — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);

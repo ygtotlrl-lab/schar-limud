@@ -23,10 +23,10 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { whiten, whitenJs } from './whiten.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ נקודת ההצהרה — ⚠️ **מה נכנס**: החתימה של הקומיט שקדם לשורה;
    *  ⛔ **ומה מפיל**: חתימה שאינה בהיסטוריה. ⭐ **ולמה המבנה קיים**:
    *  ההיסטוריה אינה נערכת, ⚠️ ותקן שמפיל על מה שאי-אפשר לתקן אינו תקן —
@@ -207,7 +207,7 @@ export function orphans(before, after, files = TREE, kinds = null) {
   return out;
 }
 
-console.log(`── שער ההסרות (${APP.app}) ─────────────────────────────────────────────`);
+console.log(`── שער ההסרות (${FACTS.slug}) ─────────────────────────────────────────────`);
 let head = null, prev = null;
 try { head = git('rev-parse', 'HEAD').trim(); prev = git('rev-parse', 'HEAD^').trim(); }
 catch (e) { prev = null; }

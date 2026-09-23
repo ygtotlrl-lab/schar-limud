@@ -31,17 +31,14 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PEERS } from './peers.mjs';
+import { PEERS, COL_FIRST, COL_NOTE } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  /* שם הריפו המלא הוא גם שם ה-artifact וגם שם קובץ הפלט.
-     ⛔ לא שם הקיצור של ה-keystore (סבב 41) — «schar.apk» היה שם המפתח
-     ולא שם התוצר, וזה בדיוק סוג ההיסט ששני שמות לאותו דבר מייצרים. */
-  repo: 'schar-limud',
-  /* שם הריפו — מוכרז פרטי בחתימת ה-workflows ומנורמל החוצה. */
-  slug: 'schar-limud',
+  /*  ⚠️ שם קובץ הפלט של החתימה — ⛔ **אינו נגזר**: אין קובץ שמצהיר עליו
+   *  מלבד `sign-apk.sh` שהשער מודד, ⭐ וצורתו נבדלת בין הריפו — שם הריפו
+   *  לבדו או עם `-signed`, ⚠️ ולכן גם שם הריפו אינו מקור שלו. */
   out: 'schar-limud.apk',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -49,7 +46,7 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [149, 127, 153];
+export const ROWS = [149, 127, 153, 34, 43];
 
 /*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
@@ -69,7 +66,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 29, app: 0, appWhy: '' };
+const FLOOR = { shared: 34, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -153,18 +150,18 @@ function assertions(yml, sh, mode) {
       `שם ה-workflow הוא «Build APK» (נמצא: ${nm ? nm[1] : 'חסר'})`);
 
   /* ב. שם ה-artifact */
-  add(new RegExp(`^\\s+name:\\s*${APP.repo}-apk\\s*$`, 'm').test(code),
-      `שם ה-artifact הוא «${APP.repo}-apk»`);
+  add(new RegExp(`^\\s+name:\\s*${FACTS.slug}-apk\\s*$`, 'm').test(code),
+      `שם ה-artifact הוא «${FACTS.slug}-apk»`);
 
   /* ג. שם קובץ הפלט, ובשורש — ⛔ `path:` בלי לוכסן */
   const pth = /^\s+path:\s*(.+?)\s*$/m.exec(code);
-  add(!!pth && pth[1] === `${APP.repo}.apk`,
-      `קובץ הפלט הוא «${APP.repo}.apk» בשורש (נמצא: ${pth ? pth[1] : 'חסר'})`);
+  add(!!pth && pth[1] === `${FACTS.slug}.apk`,
+      `קובץ הפלט הוא «${FACTS.slug}.apk» בשורש (נמצא: ${pth ? pth[1] : 'חסר'})`);
   add(!!pth && pth[1].indexOf('/') < 0,
       'קובץ הפלט אינו בתת-תיקייה');
-  add(new RegExp(`\\b${APP.repo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.apk\\b`)
+  add(new RegExp(`\\b${FACTS.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.apk\\b`)
         .test(code.split('Sign with the permanent key')[1] || code),
-      `שלב החתימה מייצר «${APP.repo}.apk»`);
+      `שלב החתימה מייצר «${FACTS.slug}.apk»`);
 
   /* ד. ⭐ הליבה — אין לוגיקת חתימה שנייה ב-YAML */
   add(!/apksigner/.test(code),
@@ -304,6 +301,106 @@ for (const [ok, msg] of assertions(ymlSrc, shSrc)) (ok ? pass : fail)(msg);
   }
 }
 
+/* ══ זרימה שרצה מחוץ לסט (סבב 171) ═══════════════════════════════════════
+ *  ⛔ **מה נאכף**: כל workflow שמריץ כלי מ-`tools/` הוא זרימת בדיקה —
+ *  ⚠️ והוא מוצהר ב-`FLOWS` עם השורות שהוא אוכף, ⭐ כל שורה כזו נוקבת
+ *  בשמו, ⛔ והוא מופעל ביד בלבד: ⚠️ בדיקה שרצה כשאיש אינו מסתכל אינה
+ *  נקראת. ⛔ **ואין שורה ⭕ שנימוקה תקציב הזמן** — ⚠️ מה שניתן למדידה
+ *  ואינו נכנס בתקציב נמדד בזרימה, ⭐ ואינו נשאר «אינו ניתן לאכיפה».
+ *  ⚠️ **והמדידה פונקציה טהורה של הטקסט** — ⭐ המוטציות רצות בזיכרון. */
+/*  ⛔ הזרימות — ⚠️ **מה נכנס**: שם הזרימה ⟵ הכלי שהיא מריצה ⟵ שמות השורות
+ *  שהיא אוכפת; ⛔ **ומה מפיל**: זרימה שאין לה קובץ, קובץ שאין לו הצהרה,
+ *  ושורה שאינה נוקבת בה. ⭐ **ולמה בשם ולא במספר**: מספר השורה זז. */
+const FLOWS = {
+  'deep-check': { check: 'tools/deep-check.mjs', rows: ['שער משותף רץ בזמן דומה בכולם'] },
+};
+const WF_DIR = '.github/workflows';
+/*  ⚠️ `t` מוגדרת רק בשלב המלא — ⛔ והטענות כאן רצות גם ברמה המהירה. */
+const tf = (c, m) => (c ? pass(m) : fail(m));
+const noHash = (t) => t.split('\n').map((l) => l.replace(/(^|\s)#.*$/, '')).join('\n');
+const isFlow = (t) => /\btools\/[\w-]+\.mjs\b/.test(noHash(t));
+function tableOf(md) {
+  const out = [];
+  for (const l of md.split('\n')) {
+    const m = /^\|\s*(\d+)\s*\|/.exec(l);
+    if (!m) continue;
+    const c = l.split('|');
+    out.push({ n: Number(m[1]), name: (c[2] || '').trim(),
+               marks: c.slice(COL_FIRST, COL_NOTE).map((x) => (x || '').trim()),
+               note: (c[COL_NOTE] || '').trim() });
+  }
+  return out;
+}
+/*  ⛔ [flow-row] — הזרימה והשורה נוקבות זו בזו, ⚠️ משני הצדדים. */
+function flowRowGaps(md, wf) {
+  const out = [], rows = tableOf(md);
+  for (const [flow, d] of Object.entries(FLOWS)) {
+    const src = wf[flow + '.yml'];
+    if (src == null) { out.push(`${flow}: אין \`${WF_DIR}/${flow}.yml\``); continue; }
+    if (!noHash(src).includes(d.check)) out.push(`${flow}: אינה מריצה את \`${d.check}\``);
+    if (!fs.existsSync(join(ROOT, d.check))) out.push(`${flow}: \`${d.check}\` אינו קיים`);
+    for (const name of d.rows) {
+      const r = rows.find((x) => x.name === name);
+      if (!r) out.push(`${flow}: השורה «${name}» אינה בטבלה`);
+      else if (!r.note.includes('`' + flow + '`')) out.push(`«${name}» אינה נוקבת ב-\`${flow}\``);
+    }
+  }
+  for (const [f, src] of Object.entries(wf))
+    if (isFlow(src) && !FLOWS[f.replace(/\.yml$/, '')]) out.push(`${f}: זרימה בלי שורה`);
+  for (const r of rows) for (const m of r.note.matchAll(/`([\w-]+)`/g))
+    if (FLOWS[m[1]] && !FLOWS[m[1]].rows.includes(r.name)) out.push(`«${r.name}» נוקבת ב-\`${m[1]}\` ואינה מוצהרת`);
+  return out;
+}
+/*  ⛔ [flow-dispatch] — הזרימה מופעלת ביד בלבד: ⚠️ `workflow_dispatch`,
+ *  ⛔ ולא `schedule` ולא `push`. */
+function flowTriggers(wf) {
+  const out = [];
+  for (const [f, src] of Object.entries(wf)) {
+    if (!isFlow(src)) continue;
+    const t = noHash(src);
+    if (!/^\s*workflow_dispatch\s*:/m.test(t)) out.push(`${f}: אין \`workflow_dispatch\``);
+    for (const k of ['schedule', 'push', 'pull_request'])
+      if (new RegExp('^\\s*' + k + '\\s*:', 'm').test(t)) out.push(`${f}: \`${k}\``);
+  }
+  return out;
+}
+/*  ⛔ [flow-budget] — שורה ⭕ שנימוקה תקציב הזמן היא מדידה שלא הועברה לזרימה. */
+const budgetRows = (md) => tableOf(md)
+  .filter((r) => r.marks.length && r.marks.every((x) => x === '⭕') && /תקציב הזמן/.test(r.note))
+  .map((r) => `${r.n} «${r.name}»`);
+/*  ⛔ [flow-deep] — הזרימה זהה בית-לבית בכולן, ⚠️ ואין בה שם ריפו: ⭐ השמות
+ *  נגזרים מהמרשם ומהריפו שמריץ. */
+const DEEP_SHA = '2ae3024961d7a760';
+const deepLeak = (src) => PEERS.filter((p) => src.includes(p));
+const wfFiles = () => Object.fromEntries(fs.readdirSync(join(ROOT, WF_DIR))
+  .filter((f) => f.endsWith('.yml')).map((f) => [f, fs.readFileSync(join(ROOT, WF_DIR, f), 'utf8')]));
+const WF = wfFiles();
+const MD = fs.readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');
+{
+  const g = flowRowGaps(MD, WF);
+  tf(g.length === 0, `[flow-row] כל זרימה נוקבת בשורה וכל שורה בזרימה — נמדדו ${g.length} פערים והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מצהירים ב-\`FLOWS\` ונוקבים בשם הזרימה בהערת השורה` : ''));
+}
+{
+  const g = flowTriggers(WF);
+  tf(g.length === 0, `[flow-dispatch] זרימת בדיקה מופעלת ביד בלבד — נמדדו ${g.length} טריגרים אחרים והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מסירים אותם — ⛔ בדיקה שרצה כשאיש אינו מסתכל אינה נקראת` : ''));
+}
+{
+  const g = budgetRows(MD);
+  tf(g.length === 0, `[flow-budget] שורה ⭕ שנימוקה תקציב הזמן — נמדדו ${g.length} והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מעבירים את המדידה לזרימה שרצה לפני המיזוג` : ''));
+}
+{
+  const src = WF['deep-check.yml'] || '';
+  const got = crypto.createHash('sha256').update(src).digest('hex').slice(0, 16);
+  const leak = deepLeak(src);
+  tf(got === DEEP_SHA, `[flow-deep] deep-check.yml זהה לחתימה הקנונית — נמדד ${got} והצפוי ${DEEP_SHA}` +
+    (got === DEEP_SHA ? '' : '. שינוי מכוון = עדכון בכל הריפו ובכל עותקי השער, באותו סבב'));
+  tf(leak.length === 0, `[flow-deep] deep-check.yml אינו נוקב בשם ריפו — נמדדו ${leak.length} והצפוי אפס` +
+    (leak.length ? `: ${leak.join(' · ')}. גוזרים מהמרשם` : ''));
+}
+
 /*  ⛔ מכאן ולמטה מוטציות ובדיקות שלמות (סבב 92) — ⚠️ הן רצות ברמה
  *  המלאה בלבד: ⛔ הרמה המהירה עוצרת כאן עם קוד היציאה של הטענות
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
@@ -320,9 +417,9 @@ const MUTATIONS = [
   ['שם ה-workflow חזר ל-«Build Signed APK»',
    (y, s) => [y.replace(/^name: Build APK$/m, 'name: Build Signed APK'), s]],
   ['שם ה-artifact חזר ל-«-signed-apk»',
-   (y, s) => [y.replace(`name: ${APP.repo}-apk`, `name: ${APP.repo}-signed-apk`), s]],
+   (y, s) => [y.replace(`name: ${FACTS.slug}-apk`, `name: ${FACTS.slug}-signed-apk`), s]],
   ['קובץ הפלט הועבר לתת-תיקייה',
-   (y, s) => [y.replace(`path: ${APP.repo}.apk`, `path: android/${APP.repo}.apk`), s]],
+   (y, s) => [y.replace(`path: ${FACTS.slug}.apk`, `path: android/${FACTS.slug}.apk`), s]],
   ['⭐ לוגיקת apksigner הוחזרה ל-YAML',
    (y, s) => [y.replace('./signing/sign-apk.sh',
                         '"$BT/apksigner" sign --ks signing/x.keystore #'), s]],
@@ -418,7 +515,7 @@ t(sig(shScript.replace('apksigner verify --print-certs', 'true')) !== SHARED_SHA
  *  ב-YAML ההזחה **היא** המבנה, וקיפולה היה הופך שלב שהוזז לתוך `with:`
  *  לשינוי בלתי-נראה. מה שכן מנורמל: סופי שורה, רווחי סוף שורה, ושם
  *  הריפו.                                                               */
-const norm = (t, slug = APP.slug) =>
+const norm = (t, slug = FACTS.slug) =>
   t.replace(/\r\n/g, '\n')
    .split(slug).join('§')
    .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n')
@@ -447,7 +544,7 @@ checkSha(`חתימת ${CLEANUP}`, cleanupSrc, CLEANUP_SHA);
  *  ריפו אחר ב-workflow הוא העתקה שלא הושלמה — ה-APK היה נבנה תחת השם
  *  הלא נכון, וזה שווה הודעה מפורשת.                                      */
 for (const [label, src] of [[BUILD, buildSrc], [CLEANUP, cleanupSrc]]) {
-  const leaked = ALL_SLUGS.filter((s) => s !== APP.slug && src.includes(s));
+  const leaked = ALL_SLUGS.filter((s) => s !== FACTS.slug && src.includes(s));
   if (leaked.length) fail(`${label}: שם ריפו זר — ${leaked.join(', ')}`);
   else pass(`${label}: אין זליגת שם ריפו`);
 }
@@ -475,7 +572,7 @@ mut('בדיקת ה-prefix ב-cleanup מפילה את החתימה כשהיא נ�
  *  בדיוק הטענה שההיפוך נשען עליה — קבצים ששמם שונה נושאים חתימה
  *  אחת.                                                                 */
 mut('שם הריפו אינו בחתימה',
-    nb, norm(buildSrc.split(APP.slug).join('some-other-repo'), 'some-other-repo'), false);
+    nb, norm(buildSrc.split(FACTS.slug).join('some-other-repo'), 'some-other-repo'), false);
 mut('רווח בסוף שורה אינו בחתימה',
     nc, norm(cleanupSrc.replace('\njobs:', '   \njobs:')), false);
 
@@ -541,6 +638,28 @@ t(buildGuards(buildSrc.replace("      - 'signing/**'", "      - 'signing/**'\n  
 t(buildGuards(buildSrc.replace('actions/setup-java@v4', 'actions/setup-java@v4 ')).length === 0,
   'יב6 · ⭐ מוטציית-נגד: רווח בסוף שורה ⛔ **אינו** מפיל את המנגנון');
 
-console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער הבנייה, החתימה וה-workflows`
-                     : `\n✅ ${APP.app}: שער הבנייה, החתימה וה-workflows עבר`);
+/* ── יג. מוטציות הזרימה ────────────────────────────────────────────────── */
+{
+  const rows = tableOf(MD);
+  const omLine = MD.split('\n').find((l) => {
+    const m = /^\|\s*(\d+)\s*\|/.exec(l);
+    const r = m && rows.find((x) => x.n === Number(m[1]));
+    return r && r.marks.length && r.marks.every((x) => x === '⭕') && r.note && !/תקציב הזמן/.test(r.note);
+  });
+  const withNote = (w) => { const c = omLine.split('|'); c[COL_NOTE] = ' ' + w + ' '; return c.join('|'); };
+  t(!!omLine && budgetRows(MD.replace(omLine, withNote('⛔ **אינו ניתן לאכיפה** בתקציב הזמן'))).length > budgetRows(MD).length,
+    'יג1 · מוטציה: שורה ⭕ שנימוקה «תקציב הזמן» **מפילה** את [flow-budget]');
+  t(!!omLine && budgetRows(MD.replace(omLine, withNote('⛔ **אינו ניתן לאכיפה**: ⚠️ נמדד בשימוש בפועל'))).length === budgetRows(MD).length,
+    'יג2 · ⭐ מוטציית-נגד: שורה ⭕ שנימוקה «נמדד בשימוש בפועל» ⛔ **אינה** מפילה את [flow-budget]');
+  t(flowRowGaps(MD, { ...WF, 'zz-flow.yml': 'on:\n  workflow_dispatch:\njobs:\n  x:\n    steps:\n      - run: node tools/zz.mjs\n' }).length >
+    flowRowGaps(MD, WF).length, 'יג3 · מוטציה: זרימה בלי שורה **מפילה** את [flow-row]');
+  t(flowTriggers({ ...WF, 'deep-check.yml': (WF['deep-check.yml'] || '').replace('  workflow_dispatch:', "  workflow_dispatch:\n  schedule:\n    - cron: '0 3 * * *'") }).length >
+    flowTriggers(WF).length, 'יג4 · מוטציה: `schedule` בזרימה **מפיל** את [flow-dispatch]');
+  t(deepLeak((WF['deep-check.yml'] || '').replace('self="${GITHUB_REPOSITORY#*/}"', 'self=' + FACTS.slug)).length >
+    deepLeak(WF['deep-check.yml'] || '').length,
+    'יג5 · מוטציה: שם ריפו שנכתב בזרימה **מפיל** את [flow-deep]');
+}
+
+console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער הבנייה, החתימה וה-workflows`
+                     : `\n✅ ${FACTS.slug}: שער הבנייה, החתימה וה-workflows עבר`);
 process.exit(failures ? 1 : 0);

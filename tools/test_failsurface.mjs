@@ -31,10 +31,10 @@ import fs from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ ההודעות שמבטיחות סנכרון מאוחר — ⚠️ **מה נכנס**: שם הקבוע ⟵ מה
    *  שכבר בתור בזמן שהוא נאמר; ⛔ **ומה מפיל**: קבוע שמבטיח ואינו כאן,
    *  והכרזה שאין לה קבוע מבטיח. ⭐ **ולמה המבנה קיים**: «יסונכרן כשתחזור
@@ -248,7 +248,7 @@ const MSG_BLOCK_END = '/* ═══════════════ סוף �
 const PROMISE = /יסונכרנו|יסונכרן|יישלחו|תסתנכרן|יעלה כשה/;
 
 /* ── המדידות ───────────────────────────────────────────────────────────── */
-console.log(`\n────────────────── ${APP.app}: משטח הכשל ונוסחו (סבב 148) ──`);
+console.log(`\n────────────────── ${FACTS.slug}: משטח הכשל ונוסחו (סבב 148) ──`);
 
 const IDS = inlineErrIds(CAPS);
 const WRITERS = [...surfaceWriters(RAW, IDS)];
@@ -317,7 +317,7 @@ const MSGS = msgConsts(RAW);
   const outside = privateMsgs(RAW, RANGES, MSGS);
   const missing = [], shared = [];
   for (const p of PEERS) {
-    if (p === APP.app) continue;
+    if (p === FACTS.slug) continue;
     const f = join(SIBS, p, 'index.html');
     if (!fs.existsSync(f)) { missing.push(p); continue; }
     const t = fs.readFileSync(f, 'utf8');
@@ -451,6 +451,6 @@ is(surfMut("mutSurface('שגיאה כלשהי');").heb === SURF_BASE.heb + 1,
 
 }
 
-console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
+console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ סבב 148 (משטח הכשל ונוסחו) — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);

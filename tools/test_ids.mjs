@@ -25,12 +25,13 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { appSrc } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ הוא `true` בכולן
  *  מסבב 38 — ⚠️ ביומן עברו שני אתרי היצירה ל-`newClientId()` יחד עם שלושת
  *  הממדים שחסמו את ההמרה: המיון, הציטוט וההשוואה. כך במטריצה.            */
-const APP = { app: 'schar-limud', wired: true };
+const APP = { wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
@@ -155,7 +156,7 @@ function gen(src, mode, n) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-console.log('· ' + APP.app + ' — סבב 37א: מודול מזהי הרשומות');
+console.log('· ' + FACTS.slug + ' — סבב 37א: מודול מזהי הרשומות');
 
 /* ── 1 · הליבה עצמה ────────────────────────────────────────────────────── */
 const B = blockOf(SRC);

@@ -18,8 +18,6 @@
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
   /*  ⛔ אין כאן מגן שליחה כפולה, וזה נימוק ולא השמטה (סבב 67) — מסבב 12
    *  כל כתיבה כאן היא מקומית-תחילה (`slLocalWrite`) וחוזרת מיד; הדחיפה
    *  לענן היא `upsert` על `client_id`, כלומר אידמפוטנטית בהגדרה. */
@@ -49,6 +47,7 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { FACTS } from './app-facts.mjs';
 
 let pass = 0, failed = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
@@ -190,7 +189,7 @@ function bareProbes(capSrc) {
 /*  ⭐ הביקורת המלאה — ⛔ מוחזרת כמערך הפרות, כדי ש-`check-capabilities`
  *  יוכל למדוד את שורת שכבת הקלט מכאן ולא לממש מדידה שנייה משלו.               */
 export function audit(root) {
-  const src = fs.readFileSync(path.join(root, APP.file), 'utf8');
+  const src = fs.readFileSync(path.join(root, FACTS.entry), 'utf8');
   const v = [];
   /*  א1 — דפוס שדה מספרי אחד ומוצהר. */
   const nums = (stripComments(src).match(/type="number"/g) || []).length;
@@ -209,7 +208,7 @@ const SELF = process.argv[1] &&
 if (SELF) {
 
 /* ── הטענות ────────────────────────────────────────────────────────────── */
-const SRC = fs.readFileSync(APP.file, 'utf8');
+const SRC = fs.readFileSync(FACTS.entry, 'utf8');
 
 sec('א · שדה מספרי ושדה סיסמה — דפוס אחד מוצהר');
 const nums = (stripComments(SRC).match(/type="number"/g) || []).length;
@@ -304,7 +303,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'inp-'));
 const mut = (name, edit, expectFail, why) => {
   const dir = path.join(tmp, name);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, APP.file), edit(SRC));
+  fs.writeFileSync(path.join(dir, FACTS.entry), edit(SRC));
   const got = audit(dir);
   const fell = got.length > 0;
   if (fell === expectFail) ok(why);

@@ -34,11 +34,10 @@
  */
 import fs from 'node:fs';
 import { COL_NOTE, ROW_CELLS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
   /*  ⛔ **ההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא נשאל»,
    *  ⭐ וריק נקרא «נמדד ואין»: ⛔ ואין כאן בלוק משותף שנעדר מהמקור. */
   skipBlocks: [],
@@ -236,7 +235,7 @@ function blankComments(t) {
   return out;
 }
 
-const src = fs.readFileSync(APP.file, 'utf8');
+const src = fs.readFileSync(FACTS.entry, 'utf8');
 
 /* ── בניית «הקוד הפרטי» — אותו קובץ, כשכל מה שאינו JS פרטי מולבן ───────── */
 /* ⚠️ מלבינים ולא חותכים: מספרי השורות בהודעות השגיאה חייבים להתאים לקובץ
@@ -265,12 +264,12 @@ let priv = src;
      *  להחריג מהסריקה. */
     if ((APP.skipBlocks || []).indexOf(start) >= 0) continue;
     const i0 = priv.indexOf(start);
-    if (i0 < 0) { fail(`סמן הבלוק המשותף «${start}» לא נמצא ב-${APP.file} — נמדדו ` +
+    if (i0 < 0) { fail(`סמן הבלוק המשותף «${start}» לא נמצא ב-${FACTS.entry} — נמדדו ` +
         `0 מופעים והצפוי אחד. מוסיפים את הסמן, או מעדכנים את רשימת הבלוקים`); continue; }
     const open = priv.lastIndexOf('/*', i0);
     const j = priv.indexOf(end, i0);
     const k = j < 0 ? -1 : priv.indexOf('*/', j);
-    if (open < 0 || j < 0 || k < 0) { fail(`הבלוק המשותף «${start}» אינו סגור ב-${APP.file} — נמדד סמן ` +
+    if (open < 0 || j < 0 || k < 0) { fail(`הבלוק המשותף «${start}» אינו סגור ב-${FACTS.entry} — נמדד סמן ` +
         `פתיחה בלי סוגר. מוסיפים את סמן הסיום`); continue; }
     priv = blank(priv, open, k + 2);
   }
@@ -427,7 +426,7 @@ function sqlBlocksOf(text) {
     for (const f of fs.readdirSync('migrations').sort()) if (f.endsWith('.sql')) addSql('migrations/' + f);
   } catch (e) {}
 }
-const SCOPE = [{ name: APP.file, blocks, lines: src.split('\n') }, ...EXTRA];
+const SCOPE = [{ name: FACTS.entry, blocks, lines: src.split('\n') }, ...EXTRA];
 
 /* ── א. כותרות בלוק — צורה וכיסוי ──────────────────────────────────────── */
 {
@@ -739,7 +738,7 @@ const PCT_LIVE = ['60% מהקיבולת', 'הסטה של 2%'];
 {
   let bad = 0, seen = 0;
   for (const { name, blocks: bs, lines: srcLines } of SCOPE) {
-    if (name === APP.file) continue;          /* ⚠️ שם התקן הוא מסגרת ה-`═` של סעיף א */
+    if (name === FACTS.entry) continue;          /* ⚠️ שם התקן הוא מסגרת ה-`═` של סעיף א */
     for (const b of bs) {
       const ls = b.text.split('\n');
       for (let k = 0; k < ls.length; k++) {
@@ -760,7 +759,7 @@ const PCT_LIVE = ['60% מהקיבולת', 'הסטה של 2%'];
 }
 
 if (failures) {
-  console.error(`\n❌ ${APP.app}: ${failures} סטיות מתקן ההערות`);
+  console.error(`\n❌ ${FACTS.slug}: ${failures} סטיות מתקן ההערות`);
   process.exit(1);
 }
 /* ───────────────────────────────────────────────────────────────────────────
@@ -1156,27 +1155,27 @@ if (failures) {
  *  ⚠️ מה שאינו נאכף כאן: `sw.js` עצמו — ⭐ שם הערך **נקבע**, ⛔ וזה מקומו. */
 {
   let vsrc = '', vsw = '';
-  try { vsrc = fs.readFileSync(APP.file, 'utf8'); } catch (e) {}
+  try { vsrc = fs.readFileSync(FACTS.entry, 'utf8'); } catch (e) {}
   try { vsw = fs.readFileSync('sw.js', 'utf8'); } catch (e) {}
   const vcn = (vsw.match(/CACHE_NAME\s*=\s*'([^']+)'/) || [])[1] || '';
   if (!vsrc) {
-    fail(APP.file + ' לא נקרא — נמדדו 0 בייטים והצפוי מקור האפליקציה. ' +
+    fail(FACTS.entry + ' לא נקרא — נמדדו 0 בייטים והצפוי מקור האפליקציה. ' +
          'מתקנים את הקריאה — ⛔ הטענה שמתחת רצה על מקור ריק ומדווחת «עבר»');
   } else if (!vcn) {
     fail('sw.js: קבוע שם המטמון לא אותר — נמדדו 0 התאמות והצפוי אחת. ' +
          'בודקים שהוא מוגדר במרכאות בודדות');
   } else {
-    const vre = new RegExp('[\'"]' + APP.app.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+    const vre = new RegExp('[\'"]' + FACTS.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
                            '-v\\d+[\'"]', 'g');
     const vhits = [...vsrc.matchAll(vre)];
     if (vhits.length) {
       const vln = vsrc.slice(0, vhits[0].index).split('\n').length;
-      fail(APP.file + ':' + vln + ': גרסת האפליקציה מוקלדת גם כאן (' + vhits[0][0] +
+      fail(FACTS.entry + ':' + vln + ': גרסת האפליקציה מוקלדת גם כאן (' + vhits[0][0] +
            ') בעוד ששם המטמון ב-sw.js מחזיק ' + vcn + ' — נמדדו ' + (vhits.length + 1) +
            ' מקומות לערך אחד והצפוי 1. מחליפים את הליטרל בקריאה משם המטמון החי ' +
            '(caches.keys) במקום להקליד אותו');
     } else {
-      pass('גרסת האפליקציה: מוגדרת ב-sw.js בלבד (' + vcn + '), ואפס ליטרלים ב-' + APP.file);
+      pass('גרסת האפליקציה: מוגדרת ב-sw.js בלבד (' + vcn + '), ואפס ליטרלים ב-' + FACTS.entry);
     }
   }
 }
@@ -1366,7 +1365,7 @@ if (failures) {
   /*  ⚠️ שמות שהם **מונח תפעולי** ולא כלל — ⛔ פרק שנושא אותם אינו חופף
    *  (סבב 72): הוא הוראה מעשית ולא הסבר, ⭐ ולכן הם מוצהרים כרשימה. */
   const OPERATIONAL = ['Build', 'מה בפנים', 'אייקונים', 'מסכים', 'פיתוח', 'APK'];
-  /*  ⛔ `CLAUDE.md` במפורש (סבב 72) — ⚠️ `APP.file` כאן הוא `index.html`,
+  /*  ⛔ `CLAUDE.md` במפורש (סבב 72) — ⚠️ `FACTS.entry` כאן הוא `index.html`,
    *  והטבלה אינה שם: קריאה ממנו החזירה רשימת שמות **ריקה**, ⛔ והשער
    *  עבר על כל חפיפה. ⭐ שער שקורא קובץ רשאי לנקוב בשמו. */
   const docLines = fs.readFileSync('CLAUDE.md', 'utf8').split('\n');
@@ -1549,7 +1548,7 @@ if (failures) {
  *  כשל והחזיר קוד יציאה אפס. ⭐ הנימוק המדוד: סעיף שאחריה תפס את
  *  המוטציה, ⛔ והמוטציה בכל זאת «עברה». */
 if (failures) {
-  console.error(`\n❌ ${APP.app}: ${failures} סטיות מתקן ההערות`);
+  console.error(`\n❌ ${FACTS.slug}: ${failures} סטיות מתקן ההערות`);
   process.exit(1);
 }
-console.log(`\n✅ ${APP.app}: תקן ההערות תקין`);
+console.log(`\n✅ ${FACTS.slug}: תקן ההערות תקין`);

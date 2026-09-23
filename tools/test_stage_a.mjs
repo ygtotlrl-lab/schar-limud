@@ -24,11 +24,10 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -42,7 +41,7 @@ export const ROWS = [62];
 const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, APP.file), 'utf8');
+const SRC = fs.readFileSync(path.join(ROOT, FACTS.entry), 'utf8');
 const START = '/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30)';
 const END = 'סוף מודול הגיבוי היומי';
 
@@ -125,10 +124,10 @@ async function waitFor(pred, label, ms = 5000) {
 /* ── חיתוך המודול מהקובץ האמיתי ────────────────────────────────────────── */
 const MODULE_SRC = (() => {
   const i = SRC.indexOf(START);
-  if (i < 0) throw new Error('סמן פתיחת המודול לא נמצא ב-' + APP.file);
+  if (i < 0) throw new Error('סמן פתיחת המודול לא נמצא ב-' + FACTS.entry);
   const j = SRC.indexOf(END, i);
   const k = j < 0 ? -1 : SRC.indexOf('*/', j);
-  if (j < 0 || k < 0) throw new Error('המודול אינו סגור ב-' + APP.file);
+  if (j < 0 || k < 0) throw new Error('המודול אינו סגור ב-' + FACTS.entry);
   return SRC.slice(i, k + 2);
 })();
 
@@ -136,7 +135,7 @@ const MODULE_SRC = (() => {
 const PAGED_SRC = (() => {
   const a = SRC.indexOf('/* ═══ משיכה מסוננת בשרת — מודול משותף');
   const b = SRC.indexOf('/* ═══════════════ סוף מודול משיכה מסוננת בשרת', a);
-  if (a < 0 || b < 0) throw new Error('מודול המשיכה המסוננת לא נמצא ב-' + APP.file);
+  if (a < 0 || b < 0) throw new Error('מודול המשיכה המסוננת לא נמצא ב-' + FACTS.entry);
   return SRC.slice(a, b);
 })();
 
@@ -738,5 +737,5 @@ for (const t of tests) {
   try { await t(); }
   catch (e) { failN++; console.error(`❌ ${t.name} זרקה: ${e && e.stack || e}`); }
 }
-console.log(`\n[${APP.app}] שלב א — ${passN} עברו, ${failN} נכשלו`);
+console.log(`\n[${FACTS.slug}] שלב א — ${passN} עברו, ${failN} נכשלו`);
 process.exit(failN ? 1 : 0);

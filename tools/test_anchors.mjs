@@ -26,6 +26,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ השמות שהמוטציות מזיזות — ⚠️ **מה נכנס**: שם שהמוטציה בונה ממנו את
@@ -33,9 +34,11 @@ import { execFileSync } from 'node:child_process';
  *  מדווחת ⭕ ⛔ ואינה מדלגת בשתיקה. ⚠️ **וריק הוא «נמדד ואין»** ⛔ ואינו
  *  נשמט: ⭐ שדה חסר נקרא «לא נשאל». */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ שם מפת הפעולות שהמוטציה מזיזה — ⛔ **אינו נגזר**: שם משתנה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליו */
   actMap: 'DOM_ACTIONS',
+  /*  ⭐ שם פונקציית המיון האחת — ⛔ **אינו נגזר**: שם פונקציה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */
   sortFn: 'slApplyMirror',
+  /*  ⭐ הסמל הגלובלי של ספריית ה-CDN שהמוטציה מזיזה — ⛔ **אינו נגזר**: הוא נקבע בספרייה, ⚠️ ואין קובץ בעץ שמצהיר עליו */
   cdnSym: 'supabase',
   /* ⚠️ אתרי הקריאה של מסלול הייצוא, וההחלפה שמנטרלת כל אחד — ריק כשאין ייצוא */
   exportCalls: [],

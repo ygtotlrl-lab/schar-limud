@@ -32,10 +32,10 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ הערכים המדידים — ⚠️ **מה נכנס**: מזהה הערך ⟵ הקובץ שבו הוא נכתב,
    *  הביטוי שמאתרו שם, והגזירה שקוראת את מקור האמת; ⛔ **ומה מפיל**: רשומה
    *  שאין לה אתר בקובץ, גזירה שאינה מוכרזת, וערך שאינו שווה למקורו.
@@ -281,7 +281,7 @@ export function roundGaps(lines, born) {
   return out;
 }
 
-console.log(`· ${APP.name} — ערך בקובץ תיאור נמדד מול מקורו`);
+console.log(`· ${FACTS.slug} — ערך בקובץ תיאור נמדד מול מקורו`);
 let n = 1;
 
 const TEXTS = {};
@@ -304,7 +304,7 @@ const IGNORED = (has('.gitignore') ? rd('.gitignore').split('\n') : [])
   .map((l) => l.trim()).filter((l) => l && l.charAt(0) !== '#')
   .map((l) => new RegExp('^' + l.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*') + '$'));
 
-const NAMES = docNames(ALL, PEERS.filter((p) => p !== APP.name));
+const NAMES = docNames(ALL, PEERS.filter((p) => p !== FACTS.slug));
 const GRADLE = has('android/app/build.gradle') ? rd('android/app/build.gradle') : '';
 const TREE = has('design') ? readdirSync(join(ROOT, 'design')).map((f) => 'design/' + f) : [];
 
@@ -498,7 +498,7 @@ if (RUN_MUT) {
   }
 }
 
-console.log(`\n${fail ? '✗' : '✓'} ${APP.name} — ערך בקובץ תיאור נמדד מול מקורו: ` +
+console.log(`\n${fail ? '✗' : '✓'} ${FACTS.slug} — ערך בקובץ תיאור נמדד מול מקורו: ` +
             `${pass} טענות עברו, ${fail} נכשלו · ${Object.keys(TEXTS).length} קבצים · ` +
             `${NAMES.length} שמות · ${Object.keys(APP.docFacts || {}).length} ערכים`);
 if (fail) process.exitCode = 1;

@@ -33,10 +33,10 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ קובץ `tools/` שאין בו `APP` — ⚠️ ואין לו מה שיבדיל אותו בין
    *  הריפו, ⭐ ולכן הוא חייב להיות זהה בית-לבית: ⛔ והרשימה נמדדת משני
    *  צדדיה — שם שאין לו קובץ, וקובץ שאינו ברשימה. */
@@ -45,7 +45,7 @@ const APP = {
     'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
     'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
     'test_readonly.mjs', 'scope.mjs', 'whiten.mjs', 'db-schema.mjs',
-    'peers.mjs', 'appsrc.mjs',
+    'peers.mjs', 'appsrc.mjs', 'app-facts.mjs', 'deep-check.mjs',
   ],
   /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
    *  שתוכנו זהה בכולן **מפיל**: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה
@@ -66,6 +66,10 @@ const APP = {
       'מראת סכימת המסד — מודול שהשערים קוראים ממנו, ⛔ ואין בו טענה משלו',
     'gen-icons.mjs':
       'מחולל האייקונים — ⛔ הוא כותב נכסים ואינו מודד, ⚠️ ושער נפרד מודד שהרצתו אינה משנה נכס',
+    'app-facts.mjs':
+      'עובדות האפליקציה מהעץ — מודול שגוזר את זהות האפליקציה לשערים, ⛔ ואין בו טענה',
+    'deep-check.mjs':
+      'הבדיקה העמוקה — מודול שהזרימה קוראת לו בשמו לפני המיזוג, ⛔ ואינו מריץ את עצמו: ⚠️ שלוש הרצות לכל שער משותף בכל הריפו ארוכות מהסט',
     'appsrc.mjs':
       'מקור האפליקציה — מודול שמחבר את `index.html` ואת מודולי `core/` לסורקים, ⛔ ואין בו טענה',
     'peers.mjs':
@@ -295,16 +299,16 @@ export function toolKinds(mjs, runList, notGates, hasApp) {
 /*  ⛔ הריפו הזה נקרא מ-`ROOT` ⛔ ולא לפי שמו — ⚠️ שער הקריאה-בלבד מריץ את
  *  הסט על עותק בתיקייה זמנית ששמה אינו שם הריפו, ⭐ ושם חיפוש לפי שם היה
  *  מחזיר אפס קבצים: ⛔ והטענה הראשונה הייתה נופלת על עותק תקין. */
-const others = PEERS.filter((p) => p !== APP.name);
-const dirOf = (p) => (p === APP.name ? ROOT : join(SIBS, p));
+const others = PEERS.filter((p) => p !== FACTS.slug);
+const dirOf = (p) => (p === FACTS.slug ? ROOT : join(SIBS, p));
 const away = others.filter((p) => !existsSync(join(dirOf(p), 'tools')));
-const order = [APP.name].concat(others);
+const order = [FACTS.slug].concat(others);
 const listOf = (p) => {
   try { return readdirSync(join(dirOf(p), 'tools')).sort(); } catch (e) { return []; }
 };
 const readOf = (p, f) => readFileSync(join(dirOf(p), 'tools', f), 'utf8');
 
-const mine = listOf(APP.name);
+const mine = listOf(FACTS.slug);
 t(n++, mine.length > 0,
   `קובצי tools/ נקראו — נמדדו ${mine.length} והצפוי לפחות אחד. ` +
   'מריצים את השער משורש הריפו');
@@ -316,8 +320,8 @@ const shared = away.length ? [] :
 const declPure = APP.pureTools || [];
 const declPerApp = APP.perAppTools || {};
 if (!away.length) {
-  const noApp = shared.filter((f) => !readOf(APP.name, f).includes(APP_HEAD) &&
-                                     !readOf(APP.name, f).includes(PA_HEAD));
+  const noApp = shared.filter((f) => !readOf(FACTS.slug, f).includes(APP_HEAD) &&
+                                     !readOf(FACTS.slug, f).includes(PA_HEAD));
   const drifted = declPure.filter((f) => {
     if (!shared.includes(f)) return true;
     const b = order.map((p) => readOf(p, f));
@@ -368,7 +372,7 @@ if (!away.length) {
 {
   const allNoApp = mine.filter((f) => {
     let txt = '';
-    try { txt = readOf(APP.name, f); } catch (e) { return false; }
+    try { txt = readOf(FACTS.slug, f); } catch (e) { return false; }
     return !txt.includes(APP_HEAD) && !txt.includes(PA_HEAD);
   });
   const subset = APP.subsetTools || {};
@@ -393,7 +397,7 @@ if (!away.length) {
    *  שנוקב בו כליטרל, ⭐ שזו הצורה של שער ש**מריץ** אותו: ⛔ וכאן הוא
    *  נקרא בלבד. */
   const RUNNER = 'check-' + 'js.mjs';
-  const runSrc = readOf(APP.name, RUNNER);
+  const runSrc = readOf(FACTS.slug, RUNNER);
   const a = runSrc.indexOf('gates: [');
   const b = a < 0 ? -1 : runSrc.indexOf('],', a);
   const runList = a < 0 || b < 0 ? []
@@ -410,7 +414,7 @@ if (!away.length) {
     'מחווטים לרשימת הריצה שבמריץ, או מכריזים ב-APP.notGates עם מה שהקובץ עושה');
   /*  ⛔ קבוצת הסריקה היא רשימת הריצה והמריץ — ⚠️ ואין רשימה שלישית. */
   const scanSet = new Set(runList.concat([RUNNER]));
-  const rowsOf = (f) => rowsDeclOf(readOf(APP.name, f));
+  const rowsOf = (f) => rowsDeclOf(readOf(FACTS.slug, f));
   const strays = scanStrays(mjs, scanSet, rowsOf);
   t(n++, strays.length === 0,
     `[scan-derived] קובץ מחוץ לרשימת הריצה שמייצא ROWS — נמדדו ${strays.length} מתוך ` +
@@ -440,7 +444,7 @@ if (!away.length) {
     'מיישרים את רשימת הריצה לקבצים שבתיקייה');
 
   /*  ⛔ שלושת הסוגים — ⚠️ והמפקד נגזר משלושת המרשמים ⛔ ואינו מוקלד. */
-  const hasApp = (f) => /^const APP = \{/m.test(readOf(APP.name, f));
+  const hasApp = (f) => /^const APP = \{/m.test(readOf(FACTS.slug, f));
   const K = toolKinds(mjs, runList, notGates, hasApp);
   const sum = K.gate.length + K.tool.length + K.mod.length;
   t(n++, K.none.length === 0 && K.both.length === 0 && sum === mjs.length,
@@ -522,7 +526,7 @@ if (!away.length) {
    *  כטענה שעברה: ⭐ עותק עץ בתיקייה זמנית אין לצידו אחיות, ⛔ ושער
    *  שהיה נופל שם היה מפיל את קו הבסיס של שער הקריאה-בלבד. */
   console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; מריצים את הסבב עם כל הריפו זה לצד זה`);
+              `לצד ${FACTS.slug}; מריצים את הסבב עם כל הריפו זה לצד זה`);
 }
 
 if (RUN_MUT) {
@@ -539,7 +543,7 @@ t(n++, moved !== SELF && firstDiff([SELF, moved, SELF, SELF]) !== null,
   '[tools-drift] מוטציה: רווח שנוסף מחוץ ל-APP באחות — נתפסה');
 
 /*  ⭐ מוטציית-נגד: שינוי חי **בתוך** בלוק `APP` — ⛔ אינו מפיל. */
-const inApp = SELF.replace(`name: '${APP.name}',`, "name: 'שם-אחר',");
+const inApp = SELF.replace('  pureTools: [', "  pureTools: ['כלי-אחר.mjs', ");
 t(n++, inApp !== SELF && firstDiff([SELF, inApp, SELF, SELF]) === null,
   '[tools-drift] ⭐ מוטציית-נגד: שינוי בתוך בלוק APP ⛔ אינו מפיל');
 

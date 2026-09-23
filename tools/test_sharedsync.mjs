@@ -29,10 +29,10 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -193,16 +193,16 @@ export { audit };
 const SELF = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (SELF) {
 
-console.log(`\n── סבב 81 — הבלוק המשותף זהה בין הריפו (${APP.name}) ──────────────────`);
+console.log(`\n── סבב 81 — הבלוק המשותף זהה בין הריפו (${FACTS.slug}) ──────────────────`);
 
 /*  ⚠️ שורש הייחוס הוא הריפו הזה, והאחיות נמצאות לצידו — ⛔ ריפו שאינו על
  *  הדיסק **מדווח בשמו**: ⭐ ההשוואה שלא רצה נראית, ⛔ ואינה נספרת כטענה
  *  שעברה. */
 const here = join(ROOT, '..');
-const roots = [[APP.name, ROOT]];
+const roots = [[FACTS.slug, ROOT]];
 const away = [];
 for (const p of PEERS) {
-  if (p === APP.name) continue;
+  if (p === FACTS.slug) continue;
   const dir = join(here, p);
   if (existsSync(join(dir, DOC)) && existsSync(join(dir, DOCGATE))) roots.push([p, dir]);
   else away.push(p);
@@ -218,7 +218,7 @@ if (roots.length === PEERS.length) {
     `ב. והחתימות המוצהרות להם זהות בכל עותקי השער ${of('canon-drift')}${of('canon-missing')}`);
 } else {
   console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; נמדדו ${roots.length} מתוך ${PEERS.length}. ` +
+              `לצד ${FACTS.slug}; נמדדו ${roots.length} מתוך ${PEERS.length}. ` +
               `מריצים את הסבב עם כל הריפו זה לצד זה`);
 }
 

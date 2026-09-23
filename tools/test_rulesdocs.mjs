@@ -31,10 +31,10 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { PEERS, COL_NOTE } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',  cachePrefix: 'schar-limud-',
   /*  מחלקות CSS שמורכבות בזמן ריצה (`'role-' + role`) — ⛔ הן נראות מתות
    *  לסורק סטטי, והן חיות. ⚠️ כל שורה כאן היא הצהרה שאדם מתחזק. */
   /*  ⛔ מחלקה שמוחלת ואין לה כלל CSS ואין קורא (סבב 113) — ⚠️ **מה נכנס**:
@@ -281,7 +281,7 @@ const ACTIVE = activeLines.join('\n');
 {
   /*  ⛔ מספר גרסה בתיעוד נסחף תמיד (סבב 65) — נמדד: חמישה מקומות הצהירו
    *  גרסה, והפער היה 15–35 קידומים. */
-  const VER = new RegExp('(?<![\\w-])' + APP.cachePrefix.replace(/[-]/g, '\\-') + 'v\\d+');
+  const VER = new RegExp('(?<![\\w-])' + FACTS.cachePrefix.replace(/[-]/g, '\\-') + 'v\\d+');
   const hits = [];
   for (const f of ['CLAUDE.md', 'CONTEXT.md', 'README.md']) {
     const ls = rd(f).split('\n');
@@ -1914,7 +1914,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
   };
   const CSS = (add) => rd('app.css') + '\n' + add + '\n';
 
-  t(fails({ 'CLAUDE.md': atTop('`CACHE_NAME` הנוכחי: `' + APP.cachePrefix + "v99`.") }),
+  t(fails({ 'CLAUDE.md': atTop('`CACHE_NAME` הנוכחי: `' + FACTS.cachePrefix + "v99`.") }),
     'מ1 · הצהרת גרסה בפרק פעיל מפילה את 21א');
   t(fails({ 'CLAUDE.md': atTop('פרק זה זהה מילה במילה בכל קבצי ה-CLAUDE.md.') }),
     'מ3 · החזרת הצהרת «זהה בכולן» מפילה את 21ד');
@@ -1938,7 +1938,7 @@ t(!fails({ 'sw.js': rd('sw.js') + '\nconst _r72 = (n) => `שורה ${n} נמדד
     'מ11 · החזרת הפניה לקובץ בנקודת כניסה מפילה את 24א');
 
   /*  ⭐ מוטציות-נגד — ⛔ שינוי שחייב **לעבור**. */
-  t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + APP.cachePrefix + "v99`.") }),
+  t(!fails({ 'CLAUDE.md': inRound('`CACHE_NAME` קודם ל-`' + FACTS.cachePrefix + "v99`.") }),
     'נ1 · ⭐ אותה הצהרה **בתוך פרק סבב** אינה מפילה — הפרק הוא היסטוריה');
   /*  ⛔ המוטציה נוגעת בשני קבצים — ⚠️ הכלל חי ב-`app.css` וההחלה
    *  ב-`index.html`: ⭐ כלל בלי אתר החלה הוא בדיוק מה שטענה 15 מפילה. */

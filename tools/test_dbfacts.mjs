@@ -39,6 +39,7 @@ import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db-schema.mjs';
 import { dirname, join } from 'node:path';
 import { appSrc } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
@@ -64,7 +65,6 @@ export const MUTS = ['stamp', 'stamptype', 'twin', 'schema', 'sortcol', 'cfg',
 const RUN_MUT = process.env.GATE_MUT === '1';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ ארבע טבלאות הכספים נושאות חותמת שרת מטריגר `touch` — ⚠️ ובה הכשל
    *  היחיד האפשרי הוא ריק, ⭐ שאפס אינו ניתן לייצוג ב-`timestamptz`. */
   /*  ⛔ הטבלאות שנושאות `updated_at` — ⚠️ **וכולן `bigint`**: ⭐ חותמת
@@ -858,7 +858,7 @@ async function claimSchemaMirror() {
 
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
 
-console.log(`── סבב 93 — עובדות המסד החי (${APP.name}) ${'─'.repeat(Math.max(0, 40 - APP.name.length))}`);
+console.log(`── סבב 93 — עובדות המסד החי (${FACTS.slug}) ${'─'.repeat(Math.max(0, 40 - FACTS.slug.length))}`);
 
 mutStage();
 if (!RUN_MUT) {

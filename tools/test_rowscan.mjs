@@ -23,10 +23,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS, COL_FIRST, COL_NOTE, ROW_CELLS } from './peers.mjs';
 import { whitenJs } from './whiten.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ שורות שחולקות `probe` בהכרעה — ⛔ **אינו נגזר**: ההחרגה היא החלטה, ⚠️ ואין קובץ שמצהיר עליה */
   sameProbeOk: [],
   /*  ⛔ `probe` של שורה ✅ שאינו נוגע במקור — ⚠️ **מה נכנס**: `<מספר>|<שם>` ⟵ למה
    *  נוכחות מספיקה שם; ⛔ **ומה מפיל**: probe כזה שאינו כאן, ⛔ והכרזה שאין לה מקרה.
@@ -45,7 +46,6 @@ const APP = {
    *  בתוך שורה שנראית מוכרעת, ⛔ ואיש לא יחפש אותו. */
   gapClauses: {
     33: ['שני שערים על אותו נושא'],
-    34: ['טענה שהשער מפיל עליה כתובה בתקן'],
     49: ['**וההערה מסבירה למה**', '**וספירה שנמדדה בכלי חיצוני היא ספירת אירוע**'],
     113: ['יופתע'],
     124: ['סטייה מדפוס'],
@@ -542,7 +542,7 @@ function probeEntries(RAWC, W) {
 function probeDeclOnly(c) {
   const W = whitenJs(c.cap);
   const map = probeBodies(W);
-  const col = COL_FIRST + PEERS.indexOf(APP.app);
+  const col = COL_FIRST + PEERS.indexOf(FACTS.slug);
   const green = new Set();
   for (const r of (tableRows(c.md) || []))
     if ((r.marks[col - COL_FIRST] || '') === '✅') green.add(r.n);
@@ -823,20 +823,20 @@ if (RUN_MUT) {
   {
     const base = probeDeclOnly(C0).length;
     const green = (tableRows(C0.md) || []).find((r) =>
-      (r.marks[PEERS.indexOf(APP.app)] || '') === '✅');
+      (r.marks[PEERS.indexOf(FACTS.slug)] || '') === '✅');
     const a = C0.cap.indexOf('const MATRIX = [');
     const b = C0.cap.indexOf('\n];', a);
     const inj = (body) => C0.cap.slice(0, b) +
       "\n  { row: " + green.n + ", name: 'zzהזרקה',\n    probe: () => " + body + " }," +
       C0.cap.slice(b);
-    const after = probeDeclOnly({ ...C0, cap: inj('APP.app === APP.app') }).length;
+    const after = probeDeclOnly({ ...C0, cap: inj('FACTS.slug === FACTS.slug') }).length;
     t(after > base,
       'מ10 · ⛔ מוטציה: probe שכל גופו הצהרה מפיל את טענה ט — ' +
       `נמדדו ${after} מול ${base} בקו הבסיס, והצפוי יותר`);
     /*  ⭐ מוטציית-נגד: אותה רשומה בדיוק, ⛔ עם קריאה למקור — ⚠️ שינוי חי
      *  שאסור לו להפיל: ⭐ זו העבודה היומיומית, ⛔ ושער שנופל עליה חוסם
      *  כל probe חדש. */
-    const anti = probeDeclOnly({ ...C0, cap: inj('src.indexOf(APP.app) >= 0') }).length;
+    const anti = probeDeclOnly({ ...C0, cap: inj('src.indexOf(FACTS.slug) >= 0') }).length;
     t(anti === base,
       'נ10 · ⭐ מוטציית-נגד: probe שנוגע במקור ⛔ אינו מפיל — ' +
       `נמדדו ${anti} והצפוי ${base}`);

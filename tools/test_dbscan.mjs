@@ -28,10 +28,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { whiten } from './whiten.mjs';
 import { DB_SCHEMA } from './db-schema.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ הפרויקט שהריפו הזה שואל — ⚠️ **מה נכנס**: המפתח שמסנן את
    *  `dbSchema`; ⛔ **ומה מפיל**: שם שאין לו אף טבלה בסכימה. ⭐ **ולמה
    *  המבנה קיים**: שני פרויקטים חיים בסכימה אחת, ⛔ וריפו ששואל טבלה
@@ -505,7 +505,7 @@ function schemaGaps(scan, map) {
 }
 
 /* ── ההרצה ─────────────────────────────────────────────────────────────── */
-console.log(`── סבב 142 — כל שאילתה מול הסכימה המוצהרת (${APP.name})`);
+console.log(`── סבב 142 — כל שאילתה מול הסכימה המוצהרת (${FACTS.slug})`);
 
 const SCHEMA = schemaMap(APP.dbSchema, APP.project);
 const SCAN = dbScan(SRC);

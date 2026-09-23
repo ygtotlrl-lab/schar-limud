@@ -26,10 +26,10 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /* ⚠️ `null` באפליקציה שהמיגרציה אינה יושבת בריפו שלה — ⛔ הפרויקט
      המשותף מחזיק קובץ אחד, ועותק שני בכל ריפו היה מקור אמת שני (אותו
      כלל של 004). שם נאכף צד התיעוד בלבד, והשקילות מול ה-SQL נאכפת
@@ -278,7 +278,7 @@ function t5(sql) {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-console.log('· ' + APP.name + ' — סבב 61: מדיניות הגיבויים');
+console.log('· ' + FACTS.slug + ' — סבב 61: מדיניות הגיבויים');
 t1();
 if (APP.migration) {
   const p = join(ROOT, APP.migration);

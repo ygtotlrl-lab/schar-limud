@@ -37,10 +37,10 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { PEERS, COL_FIRST, COL_LAST } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ אזכור שנשאר בכוונה — ⚠️ **מה נכנס**: הקובץ והשם ⟵ מה שהאזכור
    *  עושה שאי-אפשר בלעדיו; ⛔ **ומה מפיל**: הכרזה שאין לה אזכור בפועל,
    *  ⛔ ואזכור שאינו כאן. ⭐ **ולמה ריק**: נמדד ואין. */
@@ -369,7 +369,7 @@ export function mechNoConsumer(src, isHtml) {
 }
 
 const CAPS = readFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'), 'utf8');
-const SISTERS = PEERS.filter((p) => p !== APP.name);
+const SISTERS = PEERS.filter((p) => p !== FACTS.slug);
 
 /*  ⛔ הסריקה על המקור הגולמי — ⚠️ השם חי במחרוזת ובהערה, ⭐ והלבנה
  *  הייתה מוחקת בדיוק את מה שהיא סורקת: ⛔ מקור מולבן היה מחזיר אפס
@@ -415,7 +415,7 @@ t(n++, stale.length === 0,
  *  ⭐ הקורא אינו יכול לאמת אותה ממקום עמידתו, ⛔ והיא הופכת לשקר בשקט
  *  כשהריפו האחר משתנה. */
 const SHORTS = shortNames(readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8'));
-const MY_IDX = PEERS.indexOf(APP.name);
+const MY_IDX = PEERS.indexOf(FACTS.slug);
 const SIB_SHORTS = SHORTS.filter((s, i) => i !== MY_IDX);
 t(n++, SHORTS.length === PEERS.length && SIB_SHORTS.length === SISTERS.length,
   `שמות האפליקציות בעברית נגזרו מכותרת הטבלה — נמדדו ${SHORTS.length} והצפוי ` +
@@ -489,7 +489,7 @@ const haveSibs = SISTERS.filter((s) => existsSync(join(SIBS, s, 'icons')));
 const awaySibs = SISTERS.filter((s) => haveSibs.indexOf(s) < 0);
 if (awaySibs.length) {
   console.log(`  ⚠️  ההשוואה בין הנכסים לא רצה — ${awaySibs.join(' · ')} אינם על הדיסק ` +
-              `לצד ${APP.name}; נמדדו ${haveSibs.length} מתוך ${SISTERS.length}. ` +
+              `לצד ${FACTS.slug}; נמדדו ${haveSibs.length} מתוך ${SISTERS.length}. ` +
               'מריצים את הסבב עם כל הריפו זה לצד זה');
 }
 const twinAssets = [];
@@ -538,7 +538,7 @@ if (RUN_MUT) {
    *  ⭐ ושער שנופל עליו חוסם כל עבודה. */
   {
     const base = TARGETS[0];
-    const grown = base.text + '\nvar _ncSisterPing = "' + APP.name + '";\n';
+    const grown = base.text + '\nvar _ncSisterPing = "' + FACTS.slug + '";\n';
     t(n++, grown !== base.text &&
            sisterHits(grown, base.ranges, SISTERS).length ===
            sisterHits(base.text, base.ranges, SISTERS).length,
@@ -601,7 +601,7 @@ if (RUN_MUT) {
     const amb = Object.keys(AMBIG)[0];
     const text = 'var a = 1;\n// הרישום נכתב ל' + amb + ' הפעולות\nvar b = 2;\n';
     const got = sisterCmtHits(text, commentRanges(text, false), [],
-                              PEERS.filter((p) => p !== APP.name),
+                              PEERS.filter((p) => p !== FACTS.slug),
                               SHORTS.filter((s, i) => i !== MY_IDX));
     t(n++, got.length === 0,
       'נ4 · ⭐ מוטציית-נגד: שם קצר דו-משמעי בשימושו הרגיל ⛔ אינו מפיל — ' +

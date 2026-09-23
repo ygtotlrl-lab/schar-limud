@@ -23,11 +23,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { CORE_FILES } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
   /*  ⚠️ `sites` — כמה אתרי העברת-מזהה נמדדו כאן. ⛔ אפס אינו כישלון:
    *  יש אפליקציות שאינן מעבירות מזהה לתוך ביטוי JS במארקאפ כלל, והן
    *  מסומנות «לא רלוונטי» בשורת העברת המזהה שבמטריצה. מה שכן כישלון הוא אתר
@@ -208,11 +207,11 @@ const badWraps = (text) => wrappedArgs(text).filter((a) => {
   return !looksLikeId(a.arg);
 });
 
-console.log(`\n— סבב 64 · העברת מזהה ל-DOM (${APP.app}) —`);
+console.log(`\n— סבב 64 · העברת מזהה ל-DOM (${FACTS.slug}) —`);
 /*  ⛔ מקור האפליקציה הוא הקובץ **ומודולי הליבה** — ⚠️ קוד שיצא למודול
  *  אינו מפסיק להיות קוד האפליקציה: ⭐ שער שסורק את הקובץ בלבד מדווח
  *  «אפס אתרים» על קוד שרץ. */
-const src = [APP.file].concat(CORE_FILES)
+const src = [FACTS.entry].concat(CORE_FILES)
   .filter((f) => fs.existsSync(path.join(root, f)))
   .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
 

@@ -27,6 +27,7 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
@@ -92,7 +93,7 @@ process.on('exit', () => {
 });
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
-const APP = { app: 'schar-limud', col: 3 };
+const APP = {};
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
@@ -151,7 +152,7 @@ const EXEMPT = [
 
 function copyRepo() {
   /*  ⛔ כותב על עותק — ⚠️ מוטציה בגוף הבודק עצמו, ⛔ וייבוא חדש קורא את הקובץ מהדיסק. */
-  const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37-'));
+  const dst = fs.mkdtempSync(path.join(os.tmpdir(), FACTS.slug + '-r37-'));
   fs.cpSync(ROOT, dst, {
     recursive: true,
     filter: (src) => {
@@ -270,7 +271,7 @@ const stale = [];
 for (const r of rows) {
   const exempt = EXEMPT.indexOf(r.row) >= 0;
   const lines = CLEAN_DOC.toString('utf8').split('\n');
-  const flipped = flipCell(lines[r.at], APP.col);
+  const flipped = flipCell(lines[r.at], FACTS.col);
   if (flipped === null || flipped === lines[r.at]) {
     ok(`שורה ${r.row}: המוטציה לא הצליחה לשנות את התא`, false);
     continue;
@@ -285,7 +286,7 @@ for (const r of rows) {
   let caught = !runChecker(over, DOC_ONLY, mine) ? mine : '';
   if (!caught && mine !== CORE) caught = !runChecker(over, DOC_ONLY, CORE) ? CORE : '';
   if (exempt) {
-    if (caught && r.line.split('|')[3 + APP.col].indexOf('✅') >= 0) stale.push(r.row);
+    if (caught && r.line.split('|')[3 + FACTS.col].indexOf('✅') >= 0) stale.push(r.row);
     continue;
   }
   ok(`שורה ${r.row}: היפוך התא מפיל את ${caught || mine}`, !!caught);
@@ -324,7 +325,7 @@ const FILTER_SAMPLE = 2;
   for (let n = 0; n < cand.length && seen < FILTER_SAMPLE; n++) {
     const r = cand[(start + n) % cand.length];
     const lines = CLEAN_DOC.toString('utf8').split('\n');
-    const flipped = flipCell(lines[r.at], APP.col);
+    const flipped = flipCell(lines[r.at], FACTS.col);
     if (flipped === null || flipped === lines[r.at]) continue;
     lines[r.at] = flipped;
     const over = docOver(lines.join('\n'));
@@ -346,7 +347,7 @@ const FILTER_SAMPLE = 2;
   const target = rows.find((r) => EXEMPT.indexOf(r.row) < 0);
   const lines = CLEAN_DOC.toString('utf8').split('\n');
   const parts = lines[target.at].split('|');
-  parts[3 + APP.col] = '  ' + parts[3 + APP.col].trim() + '   ';
+  parts[3 + FACTS.col] = '  ' + parts[3 + FACTS.col].trim() + '   ';
   lines[target.at] = parts.join('|');
   const held = runChecker(docOver(lines.join('\n')), DOC_ONLY, partOf(target.row));
   ok(`⭐ מוטציית-נגד: ריפוד התא בשורה ${target.row} ברווחים ⛔ אינו מפיל`, held);
@@ -419,7 +420,7 @@ const FILTER_SAMPLE = 2;
   const CLEAN_IDX = fs.readFileSync(IDX, 'utf8');
   const cellOf = (n) => {
     const r = rows.find((x) => x.row === n);
-    return r ? r.line.split('|')[3 + APP.col] : '';
+    return r ? r.line.split('|')[3 + FACTS.col] : '';
   };
   /*  ⛔ מספר השורה נגזר **משמה** ⛔ ואינו מוקלד (סבב 76) — ⚠️ מספור מחדש
    *  הזיז את השורות, ⛔ והמוטציה המשיכה לחפש טענה במספר שכבר שייך לשורה

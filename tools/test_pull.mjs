@@ -24,11 +24,11 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
+  /*  ⭐ פונקציית העלייה שממנה המשיכה נקראת — ⛔ **אינה נגזרת**: שם פונקציה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */
   bootFn: 'slBoot',
   /*  פונקציית המשיכה — מה ש-`PL_CFG.pull` מפעיל. */
   syncFn: 'syncAll',
@@ -136,7 +136,7 @@ process.on('exit', () => {
 const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
 const pass = (m) => (RAN++, console.log('✅ ' + m));
 
-const src = fs.readFileSync(APP.file, 'utf8');
+const src = fs.readFileSync(FACTS.entry, 'utf8');
 
 function grab(text) {
   const i = text.indexOf(BLOCK.start);
@@ -148,11 +148,11 @@ function grab(text) {
   return text.slice(i, k + 2);
 }
 
-console.log('\n🔎 מנגנון המשיכה (סבב 51) — ' + APP.app + '\n');
+console.log('\n🔎 מנגנון המשיכה (סבב 51) — ' + FACTS.slug + '\n');
 
 const block = grab(src);
 if (!block) {
-  fail('הבלוק המשותף לא נמצא ב-' + APP.file);
+  fail('הבלוק המשותף לא נמצא ב-' + FACTS.entry);
   console.log('\n❌ בדיקת מנגנון המשיכה נכשלה (' + failures + ')');
   process.exit(1);
 }

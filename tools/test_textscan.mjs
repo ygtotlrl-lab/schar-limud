@@ -27,6 +27,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { whiten } from './whiten.mjs';
 import { PEERS } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ אתר תצוגה שליטרל עברי בו מוצהר — ⚠️ **מה נכנס**: גוף המחרוזת ⟵
@@ -39,8 +40,9 @@ import { PEERS } from './peers.mjs';
  *  המבנה קיים**: יש נוסח שנבדל בהחלטת מנהל, ⚠️ והרשימה היא המקום
  *  שבו אומרים למה ⛔ ולא שקט. */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ נוסחים שנבדלים בהחלטת מנהל — ⛔ **אינו נגזר**: ההחלטה אינה בעץ, ⚠️ ואין קובץ שמצהיר עליה */
   textAllow: {},
+  /*  ⭐ הודעות משותפות שנוסחן נבדל כאן — ⛔ **אינו נגזר**: ההחלטה אינה בעץ, ⚠️ ואין קובץ שמצהיר עליה */
   sharedExempt: {
     MSG_BAD_LOGIN: 'נוסחו נבדל בגיוס בהחלטת מנהל — ⚠️ שם הוא נושא סימן ' +
                    'שגיאה, ⛔ וכאן הוא בלעדיו',
@@ -356,7 +358,7 @@ t(SHARED.length > 0,
 function peerTextSet() {
   const missing = [], peerTexts = new Set();
   for (const p of PEERS) {
-    if (p === APP.app) continue;
+    if (p === FACTS.slug) continue;
     const f = path.join(SIBS, p, 'index.html');
     const c = path.join(SIBS, p, 'tools', 'check-capabilities.mjs');
     if (!fs.existsSync(f) || !fs.existsSync(c)) { missing.push(p); continue; }
@@ -380,7 +382,7 @@ function peerTextSet() {
    *  ⛔ ולכן אין כאן דילוג שקט: ⭐ **חלקן** על הדיסק הוא המקרה המסוכן. */
   const lone = missing.length === PEERS.length - 1;
   if (lone) console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${missing.join(' · ')} ` +
-                        `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם כל הריפו זה לצד זה`);
+                        `אינם על הדיסק לצד ${FACTS.slug}; מריצים את הסבב עם כל הריפו זה לצד זה`);
   t(lone || missing.length === 0,
     `הריפו האחיות — נמדדו ${PEERS.length - 1 - missing.length} מתוך ${PEERS.length - 1} ` +
     'על הדיסק והצפוי כולן' + (missing.length ? ' (חסרות: ' + missing.join(' · ') + ')' : '') +

@@ -32,11 +32,11 @@ import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db-schema.mjs';
 import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
-  file: 'index.html',
+  /*  ⭐ תחילית הטבלאות — ⛔ **אינה נגזרת**: ה״א הידיעה אינה ניתנת לזיהוי מכני, ⚠️ והיא מקור האמת שהשער מודד מולו */
   tablePrefix: 'sl_',
   /*  ⛔ הלוח שהאפליקציה מונה בו — ⚠️ **מה נכנס**: `hebrew` או `gregorian`
    *  ⟵ התפקיד שמחייב אותו; ⛔ **ומה מפיל**: לוח שאינו אחד משניהם, ונימוק
@@ -143,7 +143,7 @@ const t = (n, cond, m) => { RAN++; if (cond) { pass++; console.log(`  ok   ${n} 
 /*  ⛔ מקור האפליקציה הוא הקובץ **ומודולי הליבה** — ⚠️ קוד שיצא למודול
  *  אינו מפסיק להיות קוד האפליקציה: ⭐ שער שסורק את הקובץ בלבד מדווח
  *  «אפס אתרים» על קוד שרץ. */
-const SRC = [APP.file].concat(CORE_FILES)
+const SRC = [FACTS.entry].concat(CORE_FILES)
   .filter((f) => existsSync(join(ROOT, f)))
   .map((f) => readFileSync(join(ROOT, f), 'utf8')).join('\n');
 
@@ -478,7 +478,7 @@ function treeFiles(rel) {
   return out;
 }
 
-console.log(`· ${APP.name} — התקופה נגזרת, ואוצר המילים אחד`);
+console.log(`· ${FACTS.slug} — התקופה נגזרת, ואוצר המילים אחד`);
 let n = 1;
 
 /* ── א · התקופה אינה מאוחסנת ───────────────────────────────────────────── */
@@ -544,11 +544,11 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
    *  האמת**, ⭐ והוא נמדד מול שם הריפו ומול הסכימה החיה: ⛔ הצהרה שאין לה
    *  טבלה היא תחילית שאיש אינו נושא. */
   const mine = APP.tablePrefix;
-  const consistent = prefixConsistent(APP.name, mine) ||
+  const consistent = prefixConsistent(FACTS.slug, mine) ||
     Object.values(PREFIX_MOVING).some((v) => (v || {}).pfx === mine);
   const live = livePrefixes(DB_SCHEMA).indexOf(mine) >= 0;
   t(n++, consistent && live,
-    `[prefix-derived] \`APP.tablePrefix\` = \`${mine}\` — עקבית עם \`${APP.name}\`: ` +
+    `[prefix-derived] \`APP.tablePrefix\` = \`${mine}\` — עקבית עם \`${FACTS.slug}\`: ` +
     `${consistent ? 'כן' : 'לא'} · חיה בסכימה: ${live ? 'כן' : 'לא'}, והצפוי שניהם. ` +
     'מיישרים את ההצהרה לתחילית שבמסד, או מכריזים אותה כמעבר');
 }
@@ -844,7 +844,7 @@ if (RUN_MUT) {
   }
 }
 
-console.log(`\n${fail ? '✗' : '✓'} ${APP.name} — התקופה נגזרת ואוצר המילים אחד: ` +
+console.log(`\n${fail ? '✗' : '✓'} ${FACTS.slug} — התקופה נגזרת ואוצר המילים אחד: ` +
             `${pass} טענות עברו, ${fail} נכשלו · ${MY_TABLES.length} טבלאות · ` +
             `${VERBS.length} פעלים · ${ROLES.length} תפקידים`);
 if (fail) process.exitCode = 1;

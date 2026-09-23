@@ -41,10 +41,11 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { APP_SCOPES } from './peers.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ קובץ ההוראות שהבודק קורא — ⛔ **אינו נגזר**: אין קובץ שמצהיר על שמו, ⚠️ והמניפסט אינו נוקב בו */
   file: 'CLAUDE.md',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -56,7 +57,7 @@ export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 145, 229];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', 'ad8ac89bd8b8248a'],
+  ['table', '7cc12fea16386280'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -597,16 +598,16 @@ const CANON_APP_ID = APP_SCOPES;
              `${CANON_APP_ID.length}. מעדכנים את הרישום כך שלכל אפליקציה ערך משלה — מזהה ` +
              'משותף מאחד את כולן לאפליקציה אחת בדפדפן');
       else pass(`CANON_APP_ID — ${CANON_APP_ID.length} מזהים, וכולם שונים זה מזה`);
-      const wantId = (CANON_APP_ID.find(([a]) => a === APP.app) || [])[1];
+      const wantId = (CANON_APP_ID.find(([a]) => a === FACTS.slug) || [])[1];
       if (!wantId)
-        fail(`CANON_APP_ID: «${APP.app}» אינו ברישום — נמדד היעדר והצפוי ערך. ` +
+        fail(`CANON_APP_ID: «${FACTS.slug}» אינו ברישום — נמדד היעדר והצפוי ערך. ` +
              'מוסיפים לו שורה ברישום, בכל עותקי הבודק');
       else for (const key of ['id', 'scope']) {
         if (mf[key] !== wantId)
           fail(`manifest.json: "${key}" הוא «${mf[key]}» במקום «${wantId}». ` +
                'מיישרים אותו לערך שברישום — ערך שאינו ייחודי מאחד את ' +
                'ההתקנות לאפליקציה אחת');
-        else pass(`manifest.json: "${key}" = «${wantId}» — ייחודי ל-${APP.app}`);
+        else pass(`manifest.json: "${key}" = «${wantId}» — ייחודי ל-${FACTS.slug}`);
       }
       /*  ⭐ שכבת האייקונים במניפסט (סבב 67) — ⛔ שלושה
        *  אייקונים מוצהרים, ⛔ ואייקון מלא אינו נושא `maskable`.

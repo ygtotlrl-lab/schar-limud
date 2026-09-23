@@ -20,11 +20,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
+import { FACTS, appFacts } from './app-facts.mjs';
+import { whitenJs } from './whiten.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  idKeys: ['app', 'name'],
+  /*  ⭐ קבצים שבלוק ה-`APP` שלהם נפרס בידי אחר — ⛔ **אינו נגזר**: הנימוק הוא התפקיד, ⚠️ ואין קובץ שמצהיר עליו */
   readerExempt: {
     'check-capabilities.mjs': 'הבודק המרוכז פורס את בלוקי ה-APP של שאר השערים ומודד אותם — ⚠️ והאזכורים בגופו מפנים לבלוק שנפרס',
     'test_rulesdocs.mjs': 'רתמת המוטציות שלו מזריקה מפתחות מדומים לבלוק כדי לאמת שהשער נופל עליהם',
@@ -51,7 +52,7 @@ const APP = {
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
-export const ROWS = [35];
+export const ROWS = [35, 208];
 
 /*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה ⟵ שחזור,
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
@@ -68,7 +69,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 8, app: 0, appWhy: '' };
+const FLOOR = { shared: 11, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -259,8 +260,8 @@ const isFunctional = (why) => {
  *  ⛔ ושם כל דפוס שיש לו מוטציה; ⛔ **ומה מפיל**: דפוס בלי מוטציה,
  *  ומוטציה בלי דפוס. ⭐ **ולמה המבנה קיים**: הוא מה שמאפשר להצליב
  *  את השער מבחוץ — ⛔ דפוס בלי מוטציה נשחק בשקט. */
-export const PATTERNS = ['א', 'ב', 'ג', 'ד', 'ה'];
-export const MUTS = ['א', 'ב', 'ג', 'ד', 'ה'];
+export const PATTERNS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
+export const MUTS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
 
 /*  ⛔ קובצי `tools/` שקיימים בכל הריפו — ⚠️ ההשוואה היא ביניהם,
  *  ⭐ ושער פרטי לאפליקציה אחת אין לו מול מה להישוות. */
@@ -294,7 +295,6 @@ function keyNoReader(st) {
     if (APP.readerExempt[f]) continue;
     const after = noCmt(src).slice(src.indexOf('/* ── סוף APP'));
     for (const k of topKeys(b)) {
-      if (APP.idKeys.includes(k)) continue;
       if (!new RegExp('APP\\.' + k + '\\b|APP\\[[\'"]' + k + '[\'"]\\]').test(after))
         out.push(`${r}/${f}::${k}`);
     }
@@ -379,7 +379,97 @@ function whyIsPresence(st) {
   return out;
 }
 
+/*  ⛔ העובדות שנגזרות מהעץ של כל אחות — ⚠️ **מה נכנס**: שם הריפו, השם
+ *  למשתמש, קובץ הכניסה, ה-`scope` וקידומת המטמון; ⛔ **ומה מפיל**: כלום.
+ *  ⭐ **ולמה המבנה קיים**: ערך בבלוק הקלט שזהה לאחת מהן הוא מקור אמת שני,
+ *  ⚠️ והגזירה היא של המודול המשותף ⛔ ולא של השער הזה. */
+const FACT_KEYS = ['slug', 'title', 'entry', 'scope', 'cachePrefix'];
+const SIB_FACTS = Object.fromEntries(REPOS.filter((r) => !missing.includes(r))
+  .map((r) => [r, appFacts(path.join(SIBS, r), false)]));
+const litOf = (v) => {
+  const m = /^(['"`])([^'"`$\\]*)\1$/.exec(String(v == null ? '' : v).trim());
+  return m ? m[2] : null;
+};
+/*  ⛔ כל מפתח בבלוק שערכו ליטרל, ⚠️ **גם בתוך אובייקט מקונן** — `app` שקונן
+ *  הוא אותה הצהרה: ⭐ ⛔ **אבל לא בתוך מערך** — ⚠️ פריט במערך הוא שורת נתון
+ *  ברשימה, ⛔ ולא שדה שמצהיר על האפליקציה. */
+function litPairs(block) {
+  const out = [];
+  const at = block.indexOf(MARK);
+  if (at < 0) return out;
+  const body = block.slice(at + MARK.length);
+  const stack = ['{'];
+  for (const { i, c, prev } of toks(body)) {
+    if ('{[('.includes(c)) { stack.push(c); continue; }
+    if ('}])'.includes(c)) { stack.pop(); if (!stack.length) break; continue; }
+    if (stack.includes('[') || stack.includes('(')) continue;
+    if (prev !== '' && prev !== ',' && prev !== '{') continue;
+    const m = /^([A-Za-z_$][\w$]*)\s*:\s*(['"`][^'"`\n]*['"`])/.exec(body.slice(i));
+    const v = m ? litOf(m[2]) : null;
+    if (v !== null) out.push([m[1], v]);
+  }
+  return out;
+}
+
+/*  ו · ערך שניתן לגזור אינו מוצהר — ⛔ **והגזירה אחידה**: ⚠️ מפתח שערכו
+ *  בכל ריפו שנושא אותו שווה לאותה עובדה נגזרת הוא הצהרה של מה שהעץ כבר
+ *  אומר, ⭐ ושדה שמקורו בעץ אך צורתו נבדלת בין הריפו אינו נגזר בכלל אחד
+ *  ⛔ ואינו נמדד כאן. */
+function derivable(st) {
+  const out = [];
+  const repos = Object.keys(st).filter((r) => SIB_FACTS[r]);
+  for (const f of FILES) {
+    const per = {};
+    for (const r of repos) {
+      const b = appBlock(st[r][f]); if (!b) continue;
+      for (const [k, v] of litPairs(b)) ((per[k] ??= {})[r] ??= []).push(v);
+    }
+    for (const [k, byRepo] of Object.entries(per)) {
+      const rs = Object.keys(byRepo);
+      const fk = FACT_KEYS.find((x) => rs.every((r) =>
+        byRepo[r].some((v) => v !== '' && v === SIB_FACTS[r][x])));
+      if (fk) out.push(`${f}::${k}=${fk}`);
+    }
+  }
+  return out;
+}
+
+/*  ז · שדה שנשאר מוצהר נושא את נימוקו בשדה עצמו — ⚠️ ההערה שמעליו,
+ *  ⭐ או שמעל הקבוצה הרצופה שהוא בה, ⛔ ולא הערה שמעבר לשורה ריקה. */
+function declNoWhy(st) {
+  const out = [];
+  for (const r of Object.keys(st)) for (const f of FILES) {
+    const b = appBlock(st[r][f]); if (!b) continue;
+    for (const k of topKeys(b)) if (!isFunctional(reasonOf(b, k))) out.push(`${r}/${f}::${k}`);
+  }
+  return out;
+}
+
+/*  ח · הגזירה במקום אחד — ⛔ שם הריפו נגזר מהתיקייה או מהסביבה, ⚠️ והקוד
+ *  שעושה זאת חי במודול המשותף בלבד: ⭐ גזירה שנייה בשער היא תשובה שנייה
+ *  לאותה שאלה, ⛔ ונבדלת ביום הראשון שבו אחת מהן תיערך. */
+const DERIVE = /\bfunction\s+appFacts\b|\bbasename\(\s*(?:ROOT|root)\b|\bAPP_FACTS_SLUG\b|\bSLUG_ENV\b/g;
+const FACTS_HOME = 'app-facts.mjs';
+/*  ⛔ ההלבנה נשמרת לכל מקור — ⚠️ המוטציות משכפלות את המפה ומחליפות קובץ
+ *  אחד, ⭐ ושאר המקורות הם אותה מחרוזת: ⛔ הלבנה חוזרת עליהם הייתה
+ *  מכפילה את זמן השער במספר המוטציות. */
+const WHITE = new Map();
+const white = (src) => { if (!WHITE.has(src)) WHITE.set(src, whitenJs(src)); return WHITE.get(src); };
+function deriveTwice(st) {
+  const out = [];
+  for (const r of Object.keys(st)) for (const f of FILES) {
+    if (f === FACTS_HOME) continue;
+    const n = (white(st[r][f]).match(DERIVE) || []).length;
+    if (n) out.push(`${r}/${f} (${n})`);
+  }
+  return out;
+}
+
 const ST = snapshot();
+/*  ⛔ המדידה על העץ האמיתי נשמרת — ⚠️ כל מוטציה משווה מולה, ⭐ וחישוב
+ *  חוזר שלה בכל אחת הוא אותה עבודה פעמיים. */
+const BASE = new Map();
+const base = (fn) => { if (!BASE.has(fn)) BASE.set(fn, fn(ST).length); return BASE.get(fn); };
 /*  ⛔ **אפס אחיות אינו «אחות חסרה»** — ⚠️ הוא עותק בודד של הריפו: ⭐ שער
  *  הקריאה-בלבד מריץ את הסט על עותק בתיקייה זמנית, ⛔ ואין שם ולא אמורות
  *  להיות אחיות. ⚠️ **וחלקן על הדיסק הוא המקרה המסוכן** — ⛔ שם ההשוואה
@@ -388,7 +478,7 @@ const ST = snapshot();
  *  זמנית בשם אחר, ⭐ ואז חסר גם הריפו עצמו: ⛔ ולכן «לכל היותר אחת». */
 const LONE = missing.length >= REPOS.length - 1;
 if (LONE) console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${missing.join(' · ')} ` +
-                      `אינם על הדיסק לצד ${APP.app}; מריצים את הסבב עם כל הריפו זה לצד זה`);
+                      `אינם על הדיסק לצד ${FACTS.slug}; מריצים את הסבב עם כל הריפו זה לצד זה`);
 t(LONE || (missing.length === 0 && FILES.length > 0),
   `הריפו האחיות — נמדדו ${REPOS.length - missing.length} מתוך ${REPOS.length} ` +
   `ו-${FILES.length} קובצי \`tools/\` משותפים` +
@@ -410,23 +500,35 @@ t(LONE || (missing.length === 0 && FILES.length > 0),
   t(g.length === 0, `ה · הנימוק תפקידי — נמדדו ${g.length} שנוקבים בנוכחות בלבד והצפוי אפס` +
     (g.length ? `: ${g.slice(0, 8).join(' · ')}. אומרים מה התפקיד, ⛔ ולא איפה הוא אינו` : '')); }
 
+{ const g = derivable(ST);
+  t(LONE || g.length === 0, `[decl-derivable] ו · ערך שניתן לגזור אינו מוצהר — נמדדו ${g.length} והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. קוראים אותו מ-\`app-facts.mjs\` ⛔ ומסירים את ההצהרה` : '')); }
+{ const g = declNoWhy(ST);
+  t(g.length === 0, `[decl-why] ז · שדה מוצהר נושא את נימוקו — נמדדו ${g.length} בלעדיו והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. כותבים מעליו מה חסר כדי לגזור אותו` : '')); }
+{ const g = deriveTwice(ST);
+  const home = Object.keys(ST).filter((r) => ST[r][FACTS_HOME] &&
+    (white(ST[r][FACTS_HOME]).match(DERIVE) || []).length > 0);
+  t(LONE || (g.length === 0 && home.length === Object.keys(ST).length),
+    `[decl-once] ח · הגזירה במקום אחד — נמדדו ${g.length} גזירות מחוץ ל-\`${FACTS_HOME}\` ` +
+    `ו-${home.length} ריפו שהגזירה חיה בהם מתוך ${Object.keys(ST).length}; והצפוי אפס וכולם` +
+    (g.length ? `: ${g.join(' · ')}. מייבאים את \`FACTS\` ⛔ ואין גוזרים שוב` : '')); }
+
 /* ⛔ ורשימות ההחרגה נמדדות משני צדדיהן — ⚠️ הצהרה שאין לה מקרה היא היתר שלא נסגר */
 {
   const ghostRd = Object.keys(APP.readerExempt).filter((f) => !FILES.includes(f));
   const bareRd = Object.entries(APP.readerExempt).filter(([, w]) => !isFunctional(w)).map(([f]) => f);
-  const ghostId = APP.idKeys.filter((k) => !FILES.some((f) => {
-    const b = appBlock(ST[REPOS[0]][f]); return b && topKeys(b).includes(k); }));
-  t(LONE || (ghostRd.length === 0 && bareRd.length === 0 && ghostId.length === 0),
-    `ההחרגות נמדדות משני צדדיהן — נמדדו ${ghostRd.length + ghostId.length} בלי מקרה ` +
+  t(LONE || (ghostRd.length === 0 && bareRd.length === 0),
+    `ההחרגות נמדדות משני צדדיהן — נמדדו ${ghostRd.length} בלי מקרה ` +
     `ו-${bareRd.length} בלי נימוק תפקידי; והצפוי אפס` +
-    (ghostRd.length + ghostId.length + bareRd.length
-      ? `: ${[...ghostRd, ...ghostId, ...bareRd].join(' · ')}. מסירים מהרשימה` : ''));
+    (ghostRd.length + bareRd.length
+      ? `: ${[...ghostRd, ...bareRd].join(' · ')}. מסירים מהרשימה` : ''));
 }
 
 /* ⛔ וההצהרות שהסבב הוסיף נסרקות כאן — ⚠️ רשימה ריקה הופכת את ארבעת הכיוונים שמעליה לבדיקה שאינה יכולה להיכשל */
 {
   const found = APP.newDecls.filter(([f, k]) => {
-    const b = ST[APP.app] && ST[APP.app][f] ? appBlock(ST[APP.app][f]) : null;
+    const b = ST[FACTS.slug] && ST[FACTS.slug][f] ? appBlock(ST[FACTS.slug][f]) : null;
     return b && topKeys(b).includes(k);
   });
   t(LONE || (APP.newDecls.length > 0 && found.length === APP.newDecls.length),
@@ -465,19 +567,25 @@ if (RUN_MUT) {
   const MUT = [
     { m: 'מ1', claim: 'א', lbl: 'מפתח שאין לו קורא',
       run: () => keyNoReader(clone((c) => put(c, HOST,
-        inject(ST[R0][HOST], "  zzNoReader: 'x',")))).length > keyNoReader(ST).length },
+        inject(ST[R0][HOST], "  zzNoReader: 'x',")))).length > base(keyNoReader) },
     { m: 'מ2', claim: 'ב', lbl: 'קורא שאין לו הצהרה',
       run: () => readerNoKey(clone((c) => put(c, HOST,
         after(ST[R0][HOST], 'const _zz = ' + REF('zzNoDecl') + ';')))).length >
-        readerNoKey(ST).length },
+        base(readerNoKey) },
     { m: 'מ3', claim: 'ג', lbl: 'מפתח פרטי בלי נימוק תפקידי',
       run: () => privateNoWhy(clone((c) => {
         const b = appBlock(c[R0][HOST]);
-        const k = topKeys(b).find((x) => !APP.idKeys.includes(x));
+        const k = topKeys(b)[0];
         for (const r of Object.keys(c)) if (r !== R0)
           c[r][HOST] = c[r][HOST].replace(new RegExp('(^|\\n)(\\s*)' + k + '\\s*:', 'm'), '$1$2zzGone:');
-        c[R0][HOST] = c[R0][HOST].replace(new RegExp('\\/\\*[^*]*\\*\\/\\s*(\\n\\s*' + k + '\\s*:)'), '$1');
-      })).length > privateNoWhy(ST).length },
+        /*  ⛔ ההערה שמעל המפתח נחתכת לפי מיקום ⛔ ולא בתבנית — ⚠️ נימוק שיש
+         *  בו `**` שובר תבנית של «כל תו שאינו כוכבית», ⭐ והמוטציה לא הסירה דבר. */
+        const src = c[R0][HOST];
+        const ki = src.search(new RegExp('\\n\\s*' + k + '\\s*:'));
+        const ce = src.lastIndexOf('*/', ki);
+        const cs = src.lastIndexOf('/*', ce);
+        if (ki > 0 && ce > 0 && !src.slice(ce + 2, ki).trim()) c[R0][HOST] = src.slice(0, cs) + src.slice(ce + 2);
+      })).length > base(privateNoWhy) },
     { m: 'מ4', claim: 'ד', lbl: 'ערך ריק בלי נימוק',
       /*  ⛔ ריק **שנבדל** — ⚠️ ריק בכולן אינו הבדל ואינו דורש נימוק,
        *  ⭐ ולכן המוטציה מציבה ריק כאן ומלא באחות. */
@@ -485,11 +593,28 @@ if (RUN_MUT) {
         put(c, HOST, inject(ST[R0][HOST], "  zzEmpty: [],"));
         for (const r of Object.keys(c)) if (r !== R0)
           c[r][HOST] = inject(c[r][HOST], "  zzEmpty: ['x'],");
-      })).length > emptyNoWhy(ST).length },
+      })).length > base(emptyNoWhy) },
     { m: 'מ5', claim: 'ה', lbl: 'נימוק שנוקב בנוכחות בלבד',
       run: () => whyIsPresence(clone((c) => put(c, HOST,
         inject(ST[R0][HOST], "  /* אינו בכולן */\n  zzWhy: 'x',")))).length >
-        whyIsPresence(ST).length },
+        base(whyIsPresence) },
+    { m: 'מ6', claim: 'ו', lbl: '[decl-derivable] שם הריפו שמוצהר בשער',
+      /*  ⛔ בכל ריפו בשמו שלו — ⚠️ זו ההצהרה שהגזירה החליפה, ⭐ והערך
+       *  שונה בכל אחד ⛔ ושווה בכולם לאותה עובדה. */
+      run: () => derivable(clone((c) => {
+        for (const r of Object.keys(c)) if (SIB_FACTS[r])
+          c[r][HOST] = inject(c[r][HOST], "  /*  ⭐ שם הריפו — מוטציה */\n  app: '" + SIB_FACTS[r].slug + "',");
+      })).length > base(derivable) },
+    { m: 'מ7', claim: 'ז', lbl: '[decl-why] שדה בלי נימוק',
+      run: () => declNoWhy(clone((c) => put(c, HOST,
+        inject(ST[R0][HOST], "  zzNoWhy: 'x',")))).length > base(declNoWhy) },
+    { m: 'מ8', claim: 'ח', lbl: '[decl-once] הגזירה משוכפלת בשני שערים',
+      run: () => {
+        const dup = '\nfunction appFacts(root) { return basename(root); }\n';
+        const two = FILES.filter((f) => f !== FACTS_HOME && f !== HOST).slice(0, 1).concat(HOST);
+        return deriveTwice(clone((c) => { for (const f of two) c[R0][f] = c[R0][f] + dup; })).length >
+          base(deriveTwice) + 1;
+      } },
   ];
   for (const r of MUT) {
     const got = r.run();
@@ -501,11 +626,21 @@ if (RUN_MUT) {
     after(inject(ST[R0][HOST],
       "  /*  ⛔ מפתח בדיקה — ⚠️ תפקידו לאמת שהצהרה תקינה ונקראת אינה מפילה */\n  zzOk: 'x',"),
       'const _z4 = ' + REF('zzOk') + ';')));
-  t(keyNoReader(anti).length === keyNoReader(ST).length &&
-    readerNoKey(anti).length === readerNoKey(ST).length &&
-    emptyNoWhy(anti).length === emptyNoWhy(ST).length &&
-    whyIsPresence(anti).length === whyIsPresence(ST).length,
+  t(keyNoReader(anti).length === base(keyNoReader) &&
+    readerNoKey(anti).length === base(readerNoKey) &&
+    emptyNoWhy(anti).length === base(emptyNoWhy) &&
+    whyIsPresence(anti).length === base(whyIsPresence),
     'נ1 · מפתח שמוצהר כהלכה ונקרא — ⛔ אינו מפיל');
+
+  /*  ⭐ מוטציית-נגד שנייה: `sortFn` **עם נימוקו** ⛔ אינו מפיל — ⚠️ שם
+   *  פונקציה ב-`index.html` אינו נגזר, ⭐ והשדה נושא את מה שחסר כדי לגזור אותו. */
+  const anti2 = clone((c) => put(c, HOST, after(inject(ST[R0][HOST],
+    "  /*  ⭐ שם פונקציית המיון האחת — ⛔ **אינו נגזר**: שם פונקציה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */\n  sortFn: 'zzSort',"),
+    'const _z5 = ' + REF('sortFn') + ';')));
+  t(derivable(anti2).length === base(derivable) &&
+    declNoWhy(anti2).length === base(declNoWhy) &&
+    deriveTwice(anti2).length === base(deriveTwice),
+    'נ2 · `sortFn` עם נימוקו — ⛔ אינו מפיל את «ו» · «ז» · «ח»');
 }
 
 if (fail) {

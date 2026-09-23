@@ -34,6 +34,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { appSrc } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ החריגות הפרטיות — ⚠️ **מה נכנס**: בורר או שם קובץ שהסריקה מדלגת
@@ -41,7 +42,6 @@ import { appSrc } from './appsrc.mjs';
  *  ⭐ **ולמה המבנה קיים**: היתר בלי מקרה הוא היתר שלא נסגר.
  *  ⚠️ **וריק הוא «נמדד ואין»** ⛔ ואינו נשמט. */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ המשטחים שכל האפליקציות מציגות — ⚠️ **מה נכנס**: מזהה המיכל ⟵ מה
    *  המשטח עושה למשתמש; ⛔ **ומה מפיל**: הצהרה שאין לה מיכל, מיכל שגופו
    *  נבדל מאחות, והצהרה בלי נימוק. ⭐ **ולמה המבנה קיים**: משטח שנכתב
@@ -618,20 +618,20 @@ function classStateGaps(me, srcByApp) {
  *  **מדווח בשמו**: ⭐ ההשוואה שלא רצה נראית, ⛔ ואינה נספרת כטענה שעברה.
  *  ⚠️ **והמוטציות בונות לעצמן אחות סינתטית** ⭐ ולכן רצות תמיד. */
 const SIBS = path.join(ROOT, '..');
-const CLS_OTHERS = PEERS.filter((p) => p !== APP.app);
+const CLS_OTHERS = PEERS.filter((p) => p !== FACTS.slug);
 const CLS_HAVE = CLS_OTHERS.filter((p) => fs.existsSync(path.join(SIBS, p, 'index.html')));
 const CLS_AWAY = CLS_OTHERS.filter((p) => CLS_HAVE.indexOf(p) < 0);
-const CLS_SRC = { [APP.app]: IDX };
+const CLS_SRC = { [FACTS.slug]: IDX };
 for (const p of CLS_HAVE) CLS_SRC[p] = fs.readFileSync(path.join(SIBS, p, 'index.html'), 'utf8');
 /*  ⛔ ריפו שאינו על הדיסק **מדווח בשמו** — ⚠️ ההצלבה שלא רצה נראית,
  *  ⭐ והתוצאה נספרת ככל תוצאה: ⛔ מונה שמדלג עליה מדווח חוסר שאינו קיים. */
 {
-  const g = CLS_AWAY.length ? null : classStateGaps(APP.app, CLS_SRC);
+  const g = CLS_AWAY.length ? null : classStateGaps(FACTS.slug, CLS_SRC);
   const ST = stateTally(CLS_SRC);
   t(g === null ? true : g.length === 0,
     g === null
       ? 'מחלקה משותפת שמצביה נבדלים — ⏭ ההצלבה בין הריפו לא רצה: ' +
-        `${CLS_AWAY.join(' · ')} אינם על הדיסק לצד ${APP.app} ` +
+        `${CLS_AWAY.join(' · ')} אינם על הדיסק לצד ${FACTS.slug} ` +
         `(${CLS_HAVE.length} מתוך ${CLS_OTHERS.length}). ` +
         'מריצים את הסבב עם כל הריפו זה לצד זה'
       : `מחלקה משותפת שמצביה נבדלים — נמדדו ${g.length} והצפוי אפס ` +

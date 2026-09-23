@@ -34,10 +34,10 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { inflateSync, deflateSync } from 'node:zlib';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /* ⚠️ קובץ mipmap כבד מ-`MAX_KB` מפיל (טענה ד). ⛔ הרשימה מוצהרת
      ואינה מושמטת — והכבד ביותר נמדד ומודפס,
      ולכן חריגה כאן פירושה נכס שנכנס בטעות ולא צורך אמיתי. */
@@ -547,7 +547,7 @@ const SELF = process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (SELF) {
 
-console.log(`\n── סבב 66 — שכבת האייקונים (${APP.name}) ──────────────────────────────`);
+console.log(`\n── סבב 66 — שכבת האייקונים (${FACTS.slug}) ──────────────────────────────`);
 const base = audit(ROOT);
 let n = 1;
 
@@ -825,7 +825,7 @@ t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
    שנדרש מהם הוא נימוק כתוב ולא זהות.
    ──────────────────────────────────────────────────────────────────────── */
 {
-  const GEN_KEYS = ['name', 'art', 'master', 'ink', 'bg', 'mark', 'bgKey', 'keyTol'];
+  const GEN_KEYS = ['art', 'master', 'ink', 'bg', 'mark', 'bgKey', 'keyTol'];
   const src = readFileSync(join(ROOT, 'tools/gen-icons.mjs'), 'utf8');
   const blk = /^const APP = \{$([\s\S]*?)^\};$/m.exec(src);
   t(n++, !!blk, 'ט. בלוק `APP` של המחולל נמצא');

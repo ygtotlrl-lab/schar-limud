@@ -1,0 +1,40 @@
+name: deep-check
+
+# הבדיקה העמוקה — זרימה שרצה מחוץ לסט, ומורצת ביד לפני המיזוג.
+# משכפלת את כל הריפו האחיות זו לצד זו, מריצה כל שער שזהה בית-לבית בכולן,
+# ומשווה את זמנו בין הריפו: פער של פי שניים ומעלה בלי נימוק מפיל.
+# אין לה לוח זמנים: בדיקה שרצה כשאיש אינו מסתכל אינה נקראת.
+# שמות הריפו נגזרים מהמרשם שבעץ, והבעלים מהריפו שמריץ — ואינם כתובים כאן.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.event.repository.name }}
+
+      - name: Clone sisters
+        run: |
+          set -eu
+          owner="${GITHUB_REPOSITORY%%/*}"
+          self="${GITHUB_REPOSITORY#*/}"
+          peers=$(node --input-type=module -e "import('./$self/tools/peers.mjs').then((m) => console.log(m.PEERS.join(' ')))")
+          for r in $peers; do
+            [ -d "$r" ] && continue
+            git clone --quiet --depth 1 --branch "$GITHUB_REF_NAME" "https://github.com/$owner/$r" "$r" \
+              || git clone --quiet --depth 1 "https://github.com/$owner/$r" "$r"
+          done
+
+      - name: Deep check
+        run: |
+          self="${GITHUB_REPOSITORY#*/}"
+          cd "$self"
+          node --input-type=module -e "import('./tools/deep-check.mjs').then((m) => process.exit(m.deepCheck('..') ? 1 : 0))"

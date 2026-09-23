@@ -36,13 +36,12 @@ import crypto from 'node:crypto';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ כתובת האירוח — ⛔ **אינה נגזרת**: אין קובץ בעץ שנוקב בה, ⚠️ והיא נקבעת בהגדרות ה-Pages */
   origin: 'https://ygtotlrl-lab.github.io',
-  scope: '/schar-limud/',
-  prefix: 'schar-limud-',
   /* ⚠️ הנכס הראשון ב-CDN_ASSETS — משותף לכולן, ולכן התרחיש משווה כמו מול כמו. */
   cdn: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   /*  ⚠️ הטבלה **נמדדה** מהקוד ב-SW_RECORD ולא הוצהרה (סבב 42).
@@ -65,10 +64,9 @@ const APP = {
   },
   defectCount: 0,
   /*  ⚠️ ידיות המדיניות **נמדדו** ברתמת קו-הבסיס — ⛔ אינן ברירת מחדל
-   *  שנפלה מאליה, ⭐ **ושבע מהן זהות בכולן**: ⚠️ מה שנבדל הוא
-   *  `prefix` ו-`cdnHosts` בלבד, ⛔ וכל סטייה נוספת מוצהרת בשמה. */
+   *  שנפלה מאליה, ⭐ **והן זהות בכולן**: ⚠️ הקידומת נגזרת משם הריפו
+   *  ⛔ ואינה כאן, ⚠️ וכל סטייה נוספת מוצהרת בשמה. */
   cfg: {
-    prefix: "'schar-limud-'",
     scoped: 'true',
     navFallback: "'shell'",
     navIgnoreSearch: 'true',
@@ -118,7 +116,7 @@ const SW_PATH = join(ROOT, 'sw.js');
 const SRC = fs.readFileSync(SW_PATH, 'utf8');
 const RECORD = !!process.env.SW_RECORD;
 
-const SW_URL = APP.origin + APP.scope + 'sw.js';
+const SW_URL = APP.origin + FACTS.scope + 'sw.js';
 const CACHE_NAME = (SRC.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/) || [])[1];
 
 let n = 0, bad = 0;
@@ -350,10 +348,10 @@ function describe(res) {
 
 /*  פיקסטורה — מטמון מלא בשמות מזוהים, כדי שכל תשובה תספר מאיפה באה. */
 const F = {
-  root:   APP.origin + APP.scope,
-  index:  APP.origin + APP.scope + 'index.html',
-  asset:  APP.origin + APP.scope + 'manifest.json',
-  absent: APP.origin + APP.scope + 'icons/never-cached.png',
+  root:   APP.origin + FACTS.scope,
+  index:  APP.origin + FACTS.scope + 'index.html',
+  asset:  APP.origin + FACTS.scope + 'manifest.json',
+  absent: APP.origin + FACTS.scope + 'icons/never-cached.png',
   cdn:    APP.cdn,
   sb:     'https://kxbtskqobynewvnckaaz.supabase.co/rest/v1/kv?select=*',
   raw:    'https://raw.githubusercontent.com/ygtotlrl-lab/x/main/index.html',
@@ -427,7 +425,7 @@ const SCENARIOS = [
   ['sweep-scope',        '⛔ activate מוחק אך ורק מטמונים של האפליקציה הזו',
     async () => {
       FULL();
-      store.set(APP.prefix + 'v0', new FakeCache());
+      store.set(FACTS.cachePrefix + 'v0', new FakeCache());
       store.set('sister-app-v9', new FakeCache());
       netHandler = offline;
       await fireLifecycle('activate'); await flush();
@@ -439,7 +437,7 @@ const SCENARIOS = [
 /* ══════════════════════════════════════════════════════════════════════════
    הרצה
    ══════════════════════════════════════════════════════════════════════════ */
-console.log(`\n──────── ${APP.app}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
+console.log(`\n──────── ${FACTS.slug}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
 
 is(!!CACHE_NAME, `CACHE_NAME נקרא מהמקור — '${CACHE_NAME}'`);
 is(listeners.fetch.length === 1, 'מאזין fetch יחיד נרשם');
@@ -475,7 +473,7 @@ is(defects.length === APP.defectCount,
 /*  ⛔ בריצה מתוך מוטציה — עוצרים כאן (סבב 72) — ⚠️ המוטציה מודדת את קו
  *  הבסיס בלבד, וסעיפים ב–ה שמתחת היו מריצים אותה שוב על עצמה. */
 if (process.env.SW_HARNESS_ONLY) {
-  console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
+  console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
                   : `\n✓ קו הבסיס ההתנהגותי של sw.js — ${n} טענות עברו`);
   process.exit(bad ? 1 : 0);
 }
@@ -511,7 +509,9 @@ is(cfgAt >= 0, 'SW_CFG מוגדר ב-sw.js');
 is(cfgAt >= 0 && CORE ? cfgAt < SRC.indexOf(START) : false,
    '⛔ SW_CFG יושב **מעל** הליבה — ליבה בלי פרמטרים אינה מודול');
 const cfgBlock = cfgAt >= 0 ? SRC.slice(cfgAt, SRC.indexOf('};', cfgAt) + 2) : '';
-for (const [k, v] of Object.entries(APP.cfg)) {
+/*  ⛔ הקידומת נגזרת משם הריפו ⛔ ואינה מוצהרת בידיות — ⚠️ היא הידית היחידה
+ *  שיש לה מקור בעץ, ⭐ והיא נמדדת לצד שאר הידיות באותה לולאה. */
+for (const [k, v] of Object.entries({ prefix: "'" + FACTS.cachePrefix + "'", ...APP.cfg })) {
   const m = new RegExp(`\\b${k}\\s*:\\s*([^,\\n]+)`).exec(cfgBlock);
   const got = m ? m[1].trim() : '—';
   is(got === v, `SW_CFG.${k} = ${v} (נמדד ${got})`);
@@ -543,6 +543,10 @@ function harnessFails(label, from, to) {
     fs.mkdirSync(join(dir, 'tools'));
     fs.writeFileSync(join(dir, 'sw.js'), SRC.replace(from, to));
     fs.copyFileSync(SELF, join(dir, 'tools', SELF_NAME));
+    /*  ⛔ עובדות האפליקציה נוסעות עם השער — ⚠️ הוא מייבא אותן, ⭐ ובלעדיהן
+     *  הרתמה נופלת על ייבוא ⛔ ולא על מה שהיא באה למדוד. */
+    for (const m of ['app-facts.mjs', 'peers.mjs'])
+      fs.copyFileSync(join(ROOT, 'tools', m), join(dir, 'tools', m));
     /*  ⛔ המרשם נוסע עם השער (סבב 96ד) — ⚠️ החתימה נקראת ממנו, ⭐ ובלעדיו
      *  הרתמה מודדת «אין חתימה» במקום את מה שהיא באה למדוד. */
     fs.copyFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'),
@@ -590,6 +594,10 @@ harnessFails(
       SRC.replace(/CACHE_NAME\s*=\s*'([a-z-]+)-v(\d+)'/,
                   (_, p, v) => `CACHE_NAME = '${p}-v${Number(v) + 1}'`));
     fs.copyFileSync(SELF, join(dir, 'tools', SELF_NAME));
+    /*  ⛔ עובדות האפליקציה נוסעות עם השער — ⚠️ הוא מייבא אותן, ⭐ ובלעדיהן
+     *  הרתמה נופלת על ייבוא ⛔ ולא על מה שהיא באה למדוד. */
+    for (const m of ['app-facts.mjs', 'peers.mjs'])
+      fs.copyFileSync(join(ROOT, 'tools', m), join(dir, 'tools', m));
     /*  ⛔ המרשם נוסע עם השער (סבב 96ד) — ⚠️ החתימה נקראת ממנו, ⭐ ובלעדיו
      *  הרתמה מודדת «אין חתימה» במקום את מה שהיא באה למדוד. */
     fs.copyFileSync(join(ROOT, 'tools', 'check-capabilities.mjs'),

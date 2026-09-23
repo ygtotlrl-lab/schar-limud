@@ -25,10 +25,10 @@
 import fs from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /* חריגות מנומקות — קובץ/תיקייה שקיימים כאן ולא באחיות, עם הסיבה. */
   rootExtra: {},
   toolsExtra: {
@@ -83,7 +83,7 @@ const GENERATORS = ['gen-icons.mjs'];
  *  ומוצהרת, ⛔ ולא הרחבה של `CHECKERS` שהטבלה מונה בה שישה. */
 /*  ⛔ המשותפים לכולן (סבב 139) — ⚠️ מודול שנקרא משערים בכל הריפו,
  *  ⭐ ומקומו מחוץ לאזור הפר-אפליקציה: ⛔ שם משותף שיושב בו נראה פרטי. */
-const SHARED_MODULES = ['appsrc.mjs', 'db-schema.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
+const SHARED_MODULES = ['app-facts.mjs', 'appsrc.mjs', 'db-schema.mjs', 'deep-check.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
 /* ⚠️ פר-אפליקציה — רתמת מודל ההרשאות קיימת בשלוש שיש בהן כניסה, וביומן אין כניסה */
 const MODULES = SHARED_MODULES.concat(['roles-harness.mjs']);
 /* ⚠️ סוף פר-אפליקציה */
@@ -306,7 +306,7 @@ else pass('⛔ אף קובץ מוגש אינו מפנה ל-design/');
    ⛔ **הסט נאכף, לא התוכן** — מה שיושב בתוך כל קובץ נאכף בשערים הייעודיים
    (`test_android` · `test_build`).
    ══════════════════════════════════════════════════════════════════════ */
-const WORKFLOWS = ['build-apk.yml', 'cleanup-merged-branches.yml'];
+const WORKFLOWS = ['build-apk.yml', 'cleanup-merged-branches.yml', 'deep-check.yml'];
 /*  ⚠️ `<pkg>` — נתיב חבילת ה-Java נבדל לפי מזהה החבילה, וזה הדבר היחיד
  *  שמותר לו להיבדל בעץ הזה. */
 const ANDROID = [
@@ -345,7 +345,7 @@ function walk(dir, base) {
   if (extra.length) fail(`קבצים לא-רשומים תחת .github/: ${extra.join(', ')} — נמדדו ` +
                          `${extra.length} מעבר ל-${WORKFLOWS.length} הקנוניים והצפוי אפס. ` +
                          `מוסיפים אותם לרשימה הקנונית בכל עותקי הבדיקה, או מסירים אותם`);
-  if (!miss.length && !extra.length) pass('.github/ — שני ה-workflows הקנוניים בלבד');
+  if (!miss.length && !extra.length) pass(`.github/ — ${WORKFLOWS.length} ה-workflows הקנוניים בלבד`);
 }
 
 /* ה2 — `signing/` */

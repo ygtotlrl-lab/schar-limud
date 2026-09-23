@@ -29,10 +29,10 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { appSrc } from './appsrc.mjs';
 import { whitenJs } from './whiten.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ עידן הנתונים — ⚠️ **מה נכנס**: הבסיס שזהה בכל הריפו, העידן
    *  שבמקור, והנימוק להפרש; ⛔ **ומה מפיל**: עידן שאינו מה שבמקור,
    *  הפרש בלי נימוק, ⛔ ונימוק בלי הפרש. ⭐ **ולמה המבנה קיים**:
@@ -61,7 +61,6 @@ const APP = {
   /*  ⭐ שכבת ליבת המיזוג (סבב 72) — ⚠️ השמות, המעטפת והרשומה נבדלים
    *  מאלה שמעליהם, ⛔ ולכן הם יושבים בקבוצה משלהם ואינם מתמזגים בהם. */
   core: {
-    app: 'schar-limud',
     names: ['slTs', 'slKey', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'slMerge'],
     vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
     globals: {},
@@ -230,7 +229,7 @@ function scenario(src, marked) {
   return { out, one: byKey['1'], two: byKey['2'] };
 }
 
-console.log('· ' + APP.app + ' — סבב 37: הגנת ⏳ במנוע המיזוג');
+console.log('· ' + FACTS.slug + ' — סבב 37: הגנת ⏳ במנוע המיזוג');
 
 /* ── 1 · ההגנה כתובה בקוד ──────────────────────────────────────────────── */
 const FN = cut(APP.mutFn, SRC);
@@ -341,7 +340,7 @@ function eraDeclGaps(src) {
   return out;
 }
 
-console.log('\n· ' + APP.app + ' — סבב 148: עידן הנתונים');
+console.log('\n· ' + FACTS.slug + ' — סבב 148: עידן הנתונים');
 {
   const g = eraDeclGaps(SRC);
   assert(g.length === 0,
@@ -487,7 +486,7 @@ function coreBuild(src) {
 const sb = coreBuild(SRC);
 const T = (r) => JSON.stringify((r || []).map(C.tag));
 
-console.log('· ליבת המיזוג המשותפת (' + APP.app + ')');
+console.log('· ליבת המיזוג המשותפת (' + FACTS.slug + ')');
 
 /* ── 4 · הבלוק המשותף ──────────────────────────────────────────────────── */
 assert(SRC.indexOf('/* ═══ מיזוג רשומות — מודול משותף (סבב 38)') !== -1,

@@ -33,10 +33,11 @@ import { join, dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdtempSync, rmSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
+  /*  ⭐ מזהה החבילה באנדרואיד — ⛔ **אינו נגזר**: הוא נקבע בקובץ הבנייה ⚠️ שהשער מודד מולו, ⭐ וגזירה ממנו הייתה משווה אותו לעצמו */
   applicationId: 'com.schar.limud',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -248,8 +249,8 @@ if (!fs.existsSync(rPath)) {
 /*  ⛔ בריצה בתוך הרתמה — עוצרים כאן (סבב 72) — ⚠️ הרתמה מריצה את הקובץ
  *  הזה בריפו סינתטי, ובלי הדגל היא הייתה בונה שם רתמה משלה. */
 if (process.env.BUMP_GATE_ONLY) {
-  console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`
-                       : `\n✅ ${APP.app}: שער ה-versionCode עבר`);
+  console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער ה-versionCode`
+                       : `\n✅ ${FACTS.slug}: שער ה-versionCode עבר`);
   process.exit(failures ? 1 : 0);
 }
 
@@ -277,7 +278,7 @@ if (/log[^\n]*'-S/.test(gateSrc)) {
 
 /* ── ז. ריפו סינתטי בתיקייה זמנית ──────────────────────────────────────── */
 /*  ⛔ כותב על עותק — ⚠️ השער מודד היסטוריית `git`, ⛔ ואין לה ייצוג בטקסט שאפשר למסור. */
-const WORK = mkdtempSync(join(tmpdir(), APP.app + '-r57-'));
+const WORK = mkdtempSync(join(tmpdir(), FACTS.slug + '-r57-'));
 const ENV = {
   ...process.env,
   BUMP_GATE_ONLY: '1',
@@ -323,6 +324,10 @@ try {
   g('init', '-q', '-b', 'main');
   fs.mkdirSync(join(WORK, 'tools'), { recursive: true });
   fs.copyFileSync(SELF, join(WORK, 'tools', SELF_NAME));
+  /*  ⛔ עובדות האפליקציה נוסעות עם השער — ⚠️ הוא מייבא אותן, ⭐ ובלעדיהן
+   *  הריפו הסינתטי נופל על ייבוא ⛔ ולא על מה שהוא בא למדוד. */
+  for (const m of ['app-facts.mjs', 'peers.mjs'])
+    fs.copyFileSync(join(dirname(SELF), m), join(WORK, 'tools', m));
 
   /* קומיט 1 — בסיס: versionCode 1 */
   W('android/app/build.gradle', gradleOf(1));
@@ -421,6 +426,6 @@ if (RUN_MUT) {
 
 }
 
-console.log(failures ? `\n❌ ${APP.app}: ${failures} כשלים בשער ה-versionCode`
-                     : `\n✅ ${APP.app}: שער ה-versionCode עבר`);
+console.log(failures ? `\n❌ ${FACTS.slug}: ${failures} כשלים בשער ה-versionCode`
+                     : `\n✅ ${FACTS.slug}: שער ה-versionCode עבר`);
 process.exit(failures ? 1 : 0);

@@ -25,10 +25,10 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
 };
 
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
@@ -248,7 +248,7 @@ export { audit };
 const SELF = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (SELF) {
 
-console.log(`\n── סבב 71 — אין סתירה בין שערים (${APP.name}) ─────────────────────────`);
+console.log(`\n── סבב 71 — אין סתירה בין שערים (${FACTS.slug}) ─────────────────────────`);
 const base = audit(ROOT);
 let n = 1;
 const of = (k) => base.filter((x) => x.kind === k).map((x) => x.msg).join(' · ');

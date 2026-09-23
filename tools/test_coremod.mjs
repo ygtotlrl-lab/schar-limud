@@ -35,10 +35,10 @@ import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
 import { whiten } from './whiten.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  name: 'schar-limud',
   /*  ⛔ מודול ליבה שאינו כאן ⛔ ונעדר בכוונה — ⚠️ **מה נכנס**: הקובץ ⟵
    *  היכולת שאין כאן; ⛔ **ומה מפיל**: מודול חסר שאינו מוכרז, ⛔ והכרזה
    *  שיש לה קובץ. ⭐ **ולמה המבנה קיים**: מודול שנטען באפליקציה שאין לה
@@ -239,7 +239,7 @@ const SW = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 const HERE = CORE_FILES.filter((f) => existsSync(join(ROOT, f)));
 const MODS = HERE.map((f) => readFileSync(join(ROOT, f), 'utf8'));
 
-console.log(`\n· ${APP.name} — סבב 148: הליבה המשותפת היא מודול`);
+console.log(`\n· ${FACTS.slug} — סבב 148: הליבה המשותפת היא מודול`);
 let n = 1;
 
 /* ── 1. כל מודול קיים נטען ומוטמן ──────────────────────────────────────── */
@@ -294,12 +294,12 @@ let n = 1;
 
 /* ── 6. והמודול זהה בית-לבית בין הריפו ─────────────────────────────────── */
 {
-  const others = PEERS.filter((p) => p !== APP.name);
+  const others = PEERS.filter((p) => p !== FACTS.slug);
   const have = others.filter((p) => existsSync(join(SIBS, p, 'index.html')));
   const away = others.filter((p) => have.indexOf(p) < 0);
   if (away.length) {
     console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
-                `לצד ${APP.name}; נמדדו ${have.length} מתוך ${others.length}. ` +
+                `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}. ` +
                 'מריצים את הסבב עם כל הריפו זה לצד זה');
     t(n++, true, '[core-twin] ⭕ ההשוואה בין הריפו דווחה ולא רצה — הריפו האחיות אינן על הדיסק');
   } else {

@@ -26,10 +26,10 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 import fs from 'node:fs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /*  ⛔ ההכרזות — ⚠️ **מה נכנס**: `file` · `anchor` — מחרוזת שחיה בשורה
    *  עצמה — ו-`why`, מה הערך **הוא** ולמה אינו סוד; ⛔ **ומה מפיל**:
    *  אתר חשוד שאינו כאן, ⛔ והכרזה שאין לה אתר. ⭐ **ולמה עוגן ולא
@@ -321,7 +321,7 @@ if (RUN_MUT) {
   }
 }
 
-console.log(`\n${fail ? '✗' : '✓'} ${APP.app} — אין סוד בקובץ שנדחף: ` +
+console.log(`\n${fail ? '✗' : '✓'} ${FACTS.slug} — אין סוד בקובץ שנדחף: ` +
             `${pass} טענות עברו, ${fail} נכשלו · ` +
             `${FILES.length} קבצים במעקב · ${TEXT.size} נסרקו כטקסט · ` +
             `${SITES.length} אתרים · ${APP.secretAllow.length} הכרזות`);

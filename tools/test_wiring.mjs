@@ -27,11 +27,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CORE_FILES } from './appsrc.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
-  file: 'index.html',
   /*  ⛔ שם מפת הפעולות — ⚠️ הוא הדבר היחיד שנבדל בין הריפו בשער הזה,
    *  ⛔ ומפה שלא נמצאה מפילה את טענה 1 ואינה מדלגת בשתיקה. */
   map: 'DOM_ACTIONS',
@@ -167,10 +166,10 @@ const SELF = process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (SELF) {
 
-console.log(`── שער החיווט (${APP.app}) ────────────────────────────────────────────`);
+console.log(`── שער החיווט (${FACTS.slug}) ────────────────────────────────────────────`);
 /*  ⛔ המקור הוא הקובץ **ומודולי הליבה** — ⚠️ הליבה המשותפת יצאה למודול,
  *  ⭐ ושער שקורא את הקובץ בלבד מדווח «קריאה בלי הגדרה» על קוד שרץ. */
-const SRC = [APP.file].concat(CORE_FILES)
+const SRC = [FACTS.entry].concat(CORE_FILES)
   .filter((f) => fs.existsSync(path.join(ROOT, f)))
   .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 const W = wiring(SRC, APP.map, APP.domGlobals);

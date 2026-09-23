@@ -22,10 +22,10 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'schar-limud',
   /* ⛔ המפתח ההיסטורי — אינו משתנה לעולם (סבב 40). */
   deviceKey: 'sl_device_id',
 };
@@ -131,7 +131,7 @@ function run(block, cfgKey, store) {
   return ctx;
 }
 
-console.log(`\n────────────────── ${APP.app}: מודול מזהה המכשיר (סבב 40) ──`);
+console.log(`\n────────────────── ${FACTS.slug}: מודול מזהה המכשיר (סבב 40) ──`);
 
 const block = grab(src);
 is(!!block, 'בלוק המודול המשותף נמצא בין שני הסמנים');
@@ -219,6 +219,6 @@ is(run(anti, APP.deviceKey, aKeep).__get() === 'zzzz9999'
 
 }
 
-console.log(bad ? `\n❌ ${APP.app}: ${n} טענות, ${bad} נכשלו`
+console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
                 : `\n✓ סבב 40 (מזהה מכשיר) — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);

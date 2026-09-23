@@ -24,9 +24,10 @@
  */
 
 import fs from 'node:fs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
-const APP = { app: 'schar-limud' };
+const APP = {};
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
@@ -159,7 +160,7 @@ function cmtEnds(src) {
   return out;
 }
 
-console.log('\n🔎 שקילות רשימות המודולים המשותפים — ' + APP.app + '\n');
+console.log('\n🔎 שקילות רשימות המודולים המשותפים — ' + FACTS.slug + '\n');
 
 const capsSrc = fs.readFileSync(CAPS_FILE, 'utf8');
 const cmtSrc  = fs.readFileSync(CMT_FILE,  'utf8');
