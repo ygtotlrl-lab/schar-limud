@@ -110,6 +110,7 @@ const SHARED = [
   'tools/gen-icons.mjs',
   'tools/app-facts.mjs',
   'tools/appsrc.mjs',
+  'tools/decl-cases.mjs',
   'tools/deep-check.mjs',
   'tools/db-schema.mjs',
   'tools/peers.mjs',

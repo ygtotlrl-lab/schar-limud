@@ -269,6 +269,9 @@ export const MUTS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
  *  ⭐ ושער פרטי לאפליקציה אחת אין לו מול מה להישוות. */
 const present = REPOS.map((r) => fs.existsSync(path.join(SIBS, r, 'tools')));
 const missing = REPOS.filter((r, i) => !present[i]);
+/*  ⚠️ עץ שחסרה בו אחות אינו מודד את הקוראים — ⛔ ההשוואה היא בין כל
+ *  הריפו, ⭐ ורשימת הפטור מוצהרת «לא נמדדה» ⛔ ולא «מתה». */
+if (missing.length) CASE.unmeasured('readerExempt', `אחיות שאינן על הדיסק: ${missing.join(', ')} — ⛔ הקוראים נמדדים מול כל הריפו יחד`);
 const FILES = present[0]
   ? fs.readdirSync(path.join(SIBS, REPOS[0], 'tools'))
       .filter((x) => x.endsWith('.mjs'))
