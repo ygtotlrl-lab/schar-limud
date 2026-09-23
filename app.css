@@ -1,4 +1,4 @@
-/* ═══ גיליון הסגנון — בלוק גיליון סגנון (סבב 155) ═══════════════════════════
+/* ═══ גיליון הסגנון — בלוק גיליון סגנון ═════════════════════════════════════
    ⛔ CSS של האפליקציה יושב בקובץ ⛔ ולא ב-`index.html` — ⚠️ בלוק שאינו
    נושא את סוגו נקרא כסוג אחר: ⭐ מחרוזת CSS בתוך JS נראית כ-CSS של
    האפליקציה, ⛔ ואינה.
@@ -166,7 +166,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .st-name{font-size:var(--fs-4);color:var(--text)}
 .st-paid{font-size:var(--fs-3);font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:var(--fs-2);color:var(--text-3);min-width:80px;text-align:center}
-/* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
+/* ══ שכבת המודאל — מיכל אחד ════════════════════════════════════════════ */
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;background:var(--veil);z-index:var(--z-4);display:none;align-items:center;justify-content:center;padding:var(--sp-6)}
 .veil.open{display:flex}
@@ -229,7 +229,7 @@ body.locked{overflow:hidden}
 .st-row{grid-template-columns:1fr auto}
 .st-total{display:none}
 @media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:var(--sp-4) var(--sp-5);font-size:inherit}.tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
-/* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
+/* ═══ שכבת הטוסט — מודול משותף ══════════════════════════════════════════════
    זהה בית-לבית בכל האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
    המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
@@ -243,7 +243,7 @@ body.locked{overflow:hidden}
 .toast.good{background:var(--ok);color:var(--ok-soft)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
-/* ═══ CSS גרף העמודות — מודול משותף (סבב 137) ═══════════════════════════════
+/* ═══ CSS גרף העמודות — מודול משותף ═════════════════════════════════════════
    ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
       כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.
    ⛔ הצבעים מהאסימונים ⛔ ואין כאן ליטרל — ⚠️ `--brand` למה שנגבה,
@@ -278,7 +278,7 @@ body.locked{overflow:hidden}
 }
 #updater button.x{
   margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
-/* ═══ סולמות הערך החזותי — מודול משותף (סבב 141) ═════════════════════════
+/* ═══ סולמות הערך החזותי — מודול משותף ═══════════════════════════════════
    ⛔ שמונה סולמות, ⛔ ואותן דרגות בכל האפליקציות — ⚠️ כל ערך חזותי
       נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
       הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע

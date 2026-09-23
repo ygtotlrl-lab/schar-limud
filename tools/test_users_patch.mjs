@@ -73,7 +73,7 @@ const APP = {
  *  רשימה שנייה בבודק. */
 export const ROWS = [197];
 
-/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+/*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -102,7 +102,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -373,7 +373,7 @@ async function run() {
   secE();
   secF();
 
-  /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
+  /*  ⛔ מכאן ולמטה מוטציות — ⚠️ הן רצות ברמה המלאה בלבד. */
   mutStage();
   if (!RUN_MUT) {
     console.log('\n⏭ test_users_patch: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');

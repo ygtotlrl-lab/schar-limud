@@ -80,7 +80,7 @@ const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
@@ -248,7 +248,7 @@ const MSG_BLOCK_END = '/* ═══════════════ סוף �
 const PROMISE = /יסונכרנו|יסונכרן|יישלחו|תסתנכרן|יעלה כשה/;
 
 /* ── המדידות ───────────────────────────────────────────────────────────── */
-console.log(`\n────────────────── ${FACTS.slug}: משטח הכשל ונוסחו (סבב 148) ──`);
+console.log(`\n────────────────── ${FACTS.slug}: משטח הכשל ונוסחו ──`);
 
 const IDS = inlineErrIds(CAPS);
 const WRITERS = [...surfaceWriters(RAW, IDS)];
@@ -452,5 +452,5 @@ is(surfMut("mutSurface('שגיאה כלשהי');").heb === SURF_BASE.heb + 1,
 }
 
 console.log(bad ? `\n❌ ${FACTS.slug}: ${n} טענות, ${bad} נכשלו`
-                : `\n✓ סבב 148 (משטח הכשל ונוסחו) — ${n} טענות עברו, 0 נכשלו`);
+                : `\n✓ משטח הכשל ונוסחו — ${n} טענות עברו, 0 נכשלו`);
 process.exit(bad ? 1 : 0);

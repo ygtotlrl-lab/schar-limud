@@ -10,13 +10,11 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
-        // ⛔ versionCode לעולם אינו יורד (סבב 46ב) — מספר נמוך ממה
+        // ⛔ versionCode לעולם אינו יורד — מספר נמוך ממה
         // שמותקן במכשיר חוסם את העדכון.
-        // ⛔ קדם בכל שינוי ב-`android/` (סבב 68) — ⚠️ ר' טבלת הגרסאות
-        // ב-`android/README.md`, ⛔ שהיא מקור האמת היחיד להיסטוריה
-        // (כלל ברזל 21); `tools/test_gradle.mjs` אוכף את הקידום מול
-        // קומיט הקידום האחרון.
-        versionCode 17
+        // ⛔ קדם בכל שינוי ב-`android/` — ⚠️ השער אוכף את הקידום מול
+        // קומיט הקידום האחרון, ⭐ וההיסטוריה ב-git ⛔ ולא כאן.
+        versionCode 18
         versionName "14.0"
     }
 

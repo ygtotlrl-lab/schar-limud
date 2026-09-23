@@ -8,7 +8,7 @@ name: Build APK
 #
 # Signing runs through signing/sign-apk.sh — the same script used by hand — so
 # the fingerprint gate exists in exactly one place.
-# ⛔ אין לשכפל כאן את לוגיקת החתימה (סבב 41) — מסלול חתימה שני הוא מסלול
+# ⛔ אין לשכפל כאן את לוגיקת החתימה — מסלול חתימה שני הוא מסלול
 # בלי שער, וטעות בו אינה ניתנת לתיקון אצל אף משתמש מותקן.
 
 on:

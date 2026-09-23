@@ -42,7 +42,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 const FLOOR = { shared: 16, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
-/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך
  *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
  *  שמבדיל ריצה חלקית מדילוג מוצהר. */
 let PRE_MUT = null;
@@ -53,12 +53,12 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
-/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
+/*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
- *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
- *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד**
+ *  — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
  *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
  *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
@@ -72,7 +72,7 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר —
    *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
    *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -97,19 +97,19 @@ process.on('exit', () => {
 process.env.GATE_SUBRUN = '1';
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
-/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
 export const ROWS = [33];
 
-/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+/*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-/*  ⛔ כל גופו של השער הזה הוא השוואת שער מול שער (סבב 92) — ⚠️ בדיקת
+/*  ⛔ כל גופו של השער הזה הוא השוואת שער מול שער — ⚠️ בדיקת
  *  שלמות ולא בדיקת נכונות של האפליקציה: ⛔ ולכן הוא כולו רץ ברמה המלאה
  *  בלבד, ⭐ כמו המוטציות. */
 mutStage();
@@ -140,7 +140,7 @@ function audit(root) {
   const docs   = rd(root, 'tools/check-docs.mjs');
   const budget = rd(root, 'tools/test_budget.mjs');
   const caps   = rd(root, 'tools/check-capabilities.mjs');
-  const matrix = rd(root, 'tools/test_matrix.mjs');
+  const matrix = rd(root, 'tools/test_matrix_doc.mjs');
   const cmts   = rd(root, 'tools/check-comments.mjs');
   const md     = rd(root, 'CLAUDE.md');
 
@@ -172,7 +172,7 @@ function audit(root) {
   }
 
   /* ג. רשימת השורות שהיפוך התא שלהן אינו נמדד — ⚠️ שורות חיות בלבד, ⛔ ובלי כפל.
-   *  ⭐ הרשימה אינה נגזרת מ-`GATES` (סבב 168): ⛔ שורה ב-`GATES` יכולה להיתפס
+   *  ⭐ הרשימה אינה נגזרת מ-`GATES`: ⛔ שורה ב-`GATES` יכולה להיתפס
    *  בהיפוך, ⚠️ והחרגתה הייתה מסתירה בדיוק את המדידה. */
   const tbl = rd(root, 'CLAUDE.md').split('\n');
   const hd = tbl.findIndex((l) => /^\|\s*#\s*\|\s*שם\s*\|/.test(l));
@@ -211,7 +211,7 @@ function audit(root) {
   /* ה. רוחב המפרידים — check-comments מול הכלל הכתוב */
   const ruleW = num(cmts, /const RULE_W\s*=\s*(\d+)/);
   const bannerW = num(cmts, /const BANNER_W\s*=\s*(\d+)/);
-  /*  ⛔ שני הרוחבים נקראים מ**שורות הטבלה** (סבב 96) — ⚠️ עד כאן הם נקראו
+  /*  ⛔ שני הרוחבים נקראים מ**שורות הטבלה** — ⚠️ עד כאן הם נקראו
       מפרוזת הכללים, ⛔ והיא ירדה: ⭐ הטבלה היא ההוראה, ⛔ ומספר שאין לו
       צד שני בקובץ הוא מספר שאיש אינו משווה. */
   const docRuleW = num(md, /מפרידי\s+`═`\s+ברוחב\s+(\d+)/);
@@ -219,7 +219,7 @@ function audit(root) {
   if (ruleW !== docRuleW) v.push({ kind: 'width-gap', msg: `מפריד הבלוק — check-comments ${ruleW} ≠ הכלל ${docRuleW}` });
   if (bannerW !== docBannerW) v.push({ kind: 'width-gap', msg: `באנר ה-tools — check-comments ${bannerW} ≠ הכלל ${docBannerW}` });
 
-  /*  ⛔ **חתימת בלוק מוצהרת במקום אחד** (סבב 96ד) — ⚠️ הנימוק המדוד:
+  /*  ⛔ **חתימת בלוק מוצהרת במקום אחד** — ⚠️ הנימוק המדוד:
       תשע חתימות היו כתובות פעמיים — ב-`check-capabilities` **וגם** בשער
       שמודד אותו בלוק: ⭐ סבב שקידם את האחת ולא את השנייה מקבל אישור
       מהשער שלא עודכן, ⛔ והבלוק נמדד מול ערך שכבר אינו. ⚠️ מה שנמדד הוא
@@ -248,14 +248,14 @@ export { audit };
 const SELF = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (SELF) {
 
-console.log(`\n── סבב 71 — אין סתירה בין שערים (${FACTS.slug}) ─────────────────────────`);
+console.log(`\n── אין סתירה בין שערים (${FACTS.slug}) ─────────────────────────`);
 const base = audit(ROOT);
 let n = 1;
 const of = (k) => base.filter((x) => x.kind === k).map((x) => x.msg).join(' · ');
 
 t(n++, !base.some((x) => x.kind.startsWith('const')), `א. ארבע תקרות התיעוד זהות בשני השערים ${of('const-gap')}${of('const-missing')}`);
 t(n++, !base.some((x) => x.kind.startsWith('measure')), `ב. וארבעת המספרים שנמדדו בפועל זהים ${of('measure-gap')}${of('measure-missing')}`);
-t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix נוקב בשורות חיות בלבד ${of('rows-gap')}${of('rows-missing')}`);
+t(n++, !base.some((x) => x.kind.startsWith('rows')), `ג. EXEMPT שב-test_matrix_doc נוקב בשורות חיות בלבד ${of('rows-gap')}${of('rows-missing')}`);
 t(n++, !base.some((x) => x.kind === 'probe-gap'), `ד. כל שורת \`app: true\` נושאת מפתח ב-tableProbe ${of('probe-gap')}`);
 t(n++, !base.some((x) => x.kind === 'width-gap'), `ה. רוחבי המפרידים זהים בשער ובכלל הכתוב ${of('width-gap')}`);
 t(n++, !base.some((x) => x.kind === 'sha-dup'), `ו. אין חתימת בלוק שמוצהרת בשני קובצי שערים ${of('sha-dup')}`);
@@ -286,15 +286,15 @@ mutate('תקרה פרטית שונה בין שני השערים',
   [['tools/test_budget.mjs', (s) => s.replace(/const MAX_PRIVATE = \d+;/, 'const MAX_PRIVATE = 250;')]],
   ['const-gap']);
 
-/*  ⭐⭐ המוטציה שמשחזרת את התקלה שנמדדה (סבב 70) — ⛔ הפרדת פרקי הסבבים
+/*  ⭐⭐ המוטציה שמשחזרת את התקלה שנמדדה — ⛔ הפרדת פרקי הסבבים
     מהחלק הפרטי ב-test_budget בלבד. ⚠️ שני השערים ממשיכים לעבור כל אחד
     לעצמו, ⛔ והמספר שהם מדווחים על אותו קובץ נבדל. */
 mutate('פרקי הסבבים מוחרגים מהחלק הפרטי בשער אחד בלבד',
   [['tools/test_budget.mjs', (s) => s.replace('return kind.filter(k => k !== 1).length;',
                    'return kind.filter(k => k === 0).length;')]], ['measure-gap']);
 
-mutate('שורה שהוחרגה ב-test_matrix ואינה בטבלה',
-  [['tools/test_matrix.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
+mutate('שורה שהוחרגה ב-test_matrix_doc ואינה בטבלה',
+  [['tools/test_matrix_doc.mjs', (s) => s.replace('const EXEMPT = [', 'const EXEMPT = [7780, ')]], ['rows-gap']);
 
 mutate('מפתח tableProbe שנמחק בזמן ששורת app:true נשארה',
   [['tools/check-capabilities.mjs', (s) => s.replace(/(tableProbe: \{[\s\S]*?\n {4})\d+:/, '$19999:')]], ['probe-gap']);
@@ -306,7 +306,7 @@ mutate('רוחב הבאנר בשער נבדל מהכלל הכתוב',
     בת 16 תווים בשני קובצי שערים. */
 mutate('חתימת בלוק שהוחזרה כליטרל לשער שני',
   [['tools/test_session.mjs', (s) => s.replace('}, capsBlock(START));',
-      "}, { sha: 'b971f6e36c456b11', lines: 51 });")]], ['sha-dup']);
+      "}, { sha: 'b6c4fb61a854a452', lines: 51 });")]], ['sha-dup']);
 /*  ⭐ מוטציית-נגד: אותה חתימה שנקראת מהמרשם ⛔ אינה מפילה — ⚠️ קוד שנוסף
     ולא הערה, ⭐ והערך ממשיך לבוא ממקום אחד. */
 mutate('⭐ מוטציית-נגד: קריאה שנייה מהמרשם ⛔ אינה מפילה',
@@ -322,7 +322,7 @@ mutate('⭐ מוטציית-נגד: ניסוח הערה ב-test_budget ⛔ אינ
 /*  ⭐ ומוטציית-נגד שנייה — ⛔ הוספת שורה **לשני** השערים יחד אינה סתירה:
     ⚠️ הסתירה היא הפרש בין שניים, ⛔ ולא שינוי. */
 mutate('⭐ מוטציית-נגד: אותה תקרה משתנה בשני השערים יחד ⛔ אינה מפילה',
-  /*  ⛔ התקרה **מורמת** ולא מונמכת (סבב 71) — ⚠️ הנמכה עוברת באפליקציה
+  /*  ⛔ התקרה **מורמת** ולא מונמכת — ⚠️ הנמכה עוברת באפליקציה
       אחת ומפילה באחרת שהחלק הפרטי שלה גבוה יותר, ⛔ ואז מוטציית-הנגד
       מודדת את גודל הקובץ ולא את ההפרש שהיא באה לבדוק. */
   [['tools/check-docs.mjs', (s) => s.replace(/const DOC_MAX_PRIVATE = (\d+);/,
@@ -335,5 +335,5 @@ rmSync(tmp, { recursive: true, force: true });
 
 }
 
-console.log(`\n${fail ? '❌' : '✅'} סבב 71 (אין סתירה בין שערים) — ${pass} טענות עברו, ${fail} נכשלו`);
+console.log(`\n${fail ? '❌' : '✅'} אין סתירה בין שערים — ${pass} טענות עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

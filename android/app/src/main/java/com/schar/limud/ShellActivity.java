@@ -15,7 +15,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-/*  ⛔ ה-javadoc כאן נשאר באנגלית — חריגה מנומקת (סבב 67, כלל ברזל 11):
+/*  ⛔ ה-javadoc כאן נשאר באנגלית — חריגה מנומקת:
  *  זהו תקן Java, הכלים שקוראים אותו מצפים לאנגלית, והוא זהה בארבע
  *  המעטפות. ⛔ שאר ההערות בארגון בעברית. */
 /**
@@ -158,7 +158,7 @@ public abstract class ShellActivity extends Activity {
             if (scheme.equals("http") || scheme.equals("https")) return false;
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                // ⛔ אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי (סבב 58) — ר' share-bridge-rule ב-CLAUDE.md
+                // ⛔ אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי — ר' share-bridge-rule ב-CLAUDE.md
                 startActivity(intent);
             } catch (ActivityNotFoundException e) {
                 Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();

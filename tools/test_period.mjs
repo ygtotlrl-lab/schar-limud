@@ -44,12 +44,6 @@ const APP = {
    *  נימוק, ⛔ והוא מה שהשאיר שלוש קבוצות בלי הצהרה. */
   calendar: { kind: 'gregorian',
     why: 'החיוב הוא חודש לועזי — ⚠️ שנת הלימודים היא ספטמבר עד אוגוסט, ⭐ וההורה משלם לפי החודש שבלוח שלו' },
-  /*  ⛔ ההגירה המקומית שנוקבת בתחילית הישנה — ⚠️ **מה נכנס**: התחילית
-   *  שירדה ⟵ שם ההגירה שמעבירה ממנה, והסבב שבו רצה; ⛔ **ומה מפיל**:
-   *  אתר שנוקב בה מחוץ לגוף ההגירה, הכרזה שאין לה פונקציה, והכרזה בלי
-   *  סבב. ⭐ **ולמה ריק**: נמדד ואין — התחילית כאן נגזרת משם הריפו
-   *  מלכתחילה, ⛔ ואין תחילית שירדה. */
-  prefixLegacy: {},
   /*  ⛔ הקבוע שנושא את שם טבלת ההגדרות — ⚠️ **מה נכנס**: כל ערך שהקבוע
    *  מקבל ⟵ התפקיד שמחייב אותו; ⛔ **ומה מפיל**: ערך שבמקור ואינו כאן,
    *  הצהרה שאין לה ערך במקור, ושם שאינו טבלה חיה. ⭐ **ולמה המבנה
@@ -94,7 +88,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ המרשם מונה את אותם ארבעה פעלים בכולן,
  *  ⭐ ופועל שאין לו מימוש כאן נמדד בהצהרתו ⛔ ולא בהיעדרו. */
-const FLOOR = { shared: 20, app: 0, appWhy: '' };
+const FLOOR = { shared: 18, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -107,7 +101,7 @@ const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
  *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
  *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
  *  על עץ אמיתי ⛔ ולא שם. */
-const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.GATE_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ פחות מהמוצהר הוא ריצה חלקית,
  *  ⛔ ויותר ממנו הוא ריצפה מיושנת. */
 const FLOOR_MAX = (() => {
@@ -306,15 +300,16 @@ export function movingRound(root) {
     return m ? Number(m[1]) : 0;
   } catch { return 0; }
 }
-/*  ⛔ הכרזת מעבר בלי סבב, או שסבבה חלף — ⚠️ **מה מפיל**: נימוק בלי
- *  `(סבב N)`, ⛔ ו-`N` שאינו הסבב הנוכחי: ⭐ הכרזה שנשארת אחרי שהסעיף
- *  רץ היא היתר שלא נסגר. */
+/*  ⛔ הכרזת מעבר בלי סבב, או שסבבה חלף — ⚠️ **מה מפיל**: הכרזה בלי
+ *  שדה `round` מספרי, ⛔ ו-`round` שאינו הסבב הנוכחי: ⭐ הכרזה שנשארת
+ *  אחרי שהסעיף רץ היא היתר שלא נסגר. ⚠️ **והסבב בשדה ולא בנימוק** —
+ *  ⛔ מספר סבב בטקסט הוא זמן ולא נימוק, ⭐ ושדה מספרי נמדד ואינו נקרא. */
 export function movingStale(allow, now) {
   const out = [];
   for (const [slug, v] of Object.entries(allow || {})) {
-    const m = /\(סבב (\d+)\)/.exec(String((v || {}).why || ''));
-    if (!m) { out.push('[בלי סבב] ' + slug); continue; }
-    if (Number(m[1]) !== now) out.push('[סבב שחלף] ' + slug + ' (' + m[1] + '≠' + now + ')');
+    const r = (v || {}).round;
+    if (!Number.isInteger(r)) { out.push('[בלי סבב] ' + slug); continue; }
+    if (r !== now) out.push('[סבב שחלף] ' + slug + ' (' + r + '≠' + now + ')');
   }
   return out;
 }
@@ -383,50 +378,6 @@ export function prefixDoubles(peers, schema, allow) {
   }
   return [...per.entries()].filter((e) => e[1] > 1).map((e) => e[0] + '×' + e[1]);
 }
-/*  ⛔ התחילית הישנה חיה במקום אחד בלבד בקוד החי — ⚠️ גוף ההגירה המקומית:
- *  ⭐ והיא מוצהרת עם סבבה, ⛔ ו-`migrations/` מוחרג בהיקף עצמו — ⚠️ מיגרציה
- *  שכבר רצה מתארת את המסד כפי שהיה בשעה שהיא רצה. */
-export function legacyPfxHits(src, legacy) {
-  const out = [];
-  for (const [pfx, v] of Object.entries(legacy || {})) {
-    const fn = (v || {}).fn || '';
-    const body = fn ? (extractFnBody(src, fn) || '') : '';
-    let i = -1;
-    while ((i = src.indexOf(pfx, i + 1)) >= 0) {
-      if (body && body.indexOf(pfx) >= 0 && inBody(src, fn, i)) continue;
-      out.push(pfx + '@' + i);
-    }
-  }
-  return out;
-}
-/*  ⛔ ההכרזה נמדדת משני צדדיה — ⚠️ הכרזה שאין לה גוף בשמה, ⛔ והכרזה בלי
- *  הסבב שבו רצה: ⭐ נימוק בלי סבב נקרא כקבוע, ⛔ והוא מדידה שחלפה. */
-export function legacyPfxGhosts(src, legacy) {
-  const out = [];
-  for (const [pfx, v] of Object.entries(legacy || {})) {
-    if (!v || !v.fn) { out.push('[בלי גוף] ' + pfx); continue; }
-    if (!extractFnBody(src, v.fn)) { out.push('[בלי פונקציה] ' + pfx); continue; }
-    if (!v.why || !/\(סבב \d+\)/.test(String(v.why))) out.push('[בלי סבב] ' + pfx);
-  }
-  return out;
-}
-/*  ⛔ גוף פונקציה בהתאמת סוגריים — ⚠️ חלון תווים קבוע חותך גוף ארוך ממנו,
- *  ⭐ ומסווג את המדידה להיקף שאינו שלה. */
-function fnRange(src, name) {
-  const m = new RegExp('function\\s+' + name + '\\s*\\(').exec(src);
-  if (!m) return null;
-  let i = src.indexOf('{', m.index);
-  if (i < 0) return null;
-  let d = 0;
-  for (let j = i; j < src.length; j++) {
-    if (src[j] === '{') d++;
-    else if (src[j] === '}') { d--; if (!d) return [m.index, j + 1]; }
-  }
-  return null;
-}
-function extractFnBody(src, name) { const r = fnRange(src, name); return r ? src.slice(r[0], r[1]) : ''; }
-function inBody(src, name, i) { const r = fnRange(src, name); return !!r && i >= r[0] && i < r[1]; }
-
 /*  ⛔ ההערות נחתכות לפני המדידה — ⚠️ הערה שנוקבת בשם אינה אתר קריאה,
  *  ⭐ ו-`//` שאחרי נקודתיים הוא כתובת ⛔ ולא הערה. */
 function codeOf(src) {
@@ -559,22 +510,6 @@ const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).ma
     `[prefix-derived] תחילית אחת לבעלים — נמדדו ${dbl.length} בעלים עם יותר מאחת והצפוי אפס` +
     `${dbl.length ? ' (' + dbl.join(', ') + ')' : ''}. ` +
     'מאחדים את שתי המשפחות לתחילית אחת');
-}
-{
-  const hits = legacyPfxHits(SRC, APP.prefixLegacy);
-  t(n++, hits.length === 0,
-    `[prefix-legacy] תחילית ישנה מחוץ להגירה המקומית — נמדדו ${hits.length} אתרים מתוך ` +
-    `${Object.keys(APP.prefixLegacy || {}).length} הכרזות והצפוי אפס` +
-    `${hits.length ? ' (' + hits.slice(0, 6).join(', ') + ')' : ''}. ` +
-    'מעבירים את השם לתחילית החדשה, או מכריזים ב-`APP.prefixLegacy` עם סבבה');
-}
-{
-  const ghosts = legacyPfxGhosts(SRC, APP.prefixLegacy);
-  t(n++, ghosts.length === 0,
-    `[prefix-legacy] הכרזת תחילית ישנה נמדדת משני צדדיה — נמדדו ${ghosts.length} מתוך ` +
-    `${Object.keys(APP.prefixLegacy || {}).length} הכרזות והצפוי אפס` +
-    `${ghosts.length ? ' (' + ghosts.join(' · ') + ')' : ''}. ` +
-    'מצהירים ב-`APP.prefixLegacy` את שם ההגירה ואת הסבב שבו רצה');
 }
 
 /* ── ג · ואוצר מילים אחד ───────────────────────────────────────────────── */
@@ -733,7 +668,7 @@ if (RUN_MUT) {
     /*  ⛔ והכיוון ההפוך על אותו קלט — ⚠️ ההכרזה היא מה שמשתיק את הפער:
      *  ⭐ בלעדיה `zz_` נופל, ⛔ ואיתה הוא אינו — ⚠️ וזו הראיה שהמרשם נקרא. */
     const rogue = DB_SCHEMA.concat([{ p: 'kupa', t: 'zz_prefs', c: 'key,value' }]);
-    const decl = { 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } };
+    const decl = { 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה', round: 148 } };
     const off = prefixGaps(PEERS, rogue, {});
     const on = prefixGaps(PEERS, rogue, decl);
     t(n++, off.length === 1 && off[0] === 'zz_' && on.length === 0,
@@ -742,7 +677,7 @@ if (RUN_MUT) {
   }
   {
     const got = prefixGhosts(PEERS, DB_SCHEMA,
-      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה (סבב 148)' } }));
+      Object.assign({}, PREFIX_MOVING, { 'no-such-repo': { pfx: 'zz_', why: 'הכרזה מסונתזת למדידה', round: 148 } }));
     t(n++, got.length === 1,
       'מ12 · ⛔ מוטציה: הכרזה שאין לה ריפו מפילה את «[prefix-derived]» — ' +
       `נמדדו ${got.length} פערים והצפוי 1`);
@@ -752,27 +687,13 @@ if (RUN_MUT) {
      *  רצה על מרשם ריק ⛔ ואינה יכולה להיכשל: ⭐ והכרזה שנשארה בשקט
      *  הייתה חיה לנצח — ⚠️ וזה בדיוק «probe שאינו יכול להיכשל». */
     const now = movingRound(ROOT);
-    const stale = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + (now - 1) + ')' } }, now);
-    const none = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת (סבב ' + now + ')' } }, now);
+    const stale = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת', round: now - 1 } }, now);
+    const none = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה מסונתזת', round: now } }, now);
     const noRound = movingStale({ 'ha-kupa': { pfx: 'zz_', why: 'הכרזה בלי סבב נקוב' } }, now);
     t(n++, stale.length === 1 && noRound.length === 1 && none.length === 0,
       'מ12ב · ⛔ מוטציה: הכרזת מעבר שסבבה חלף מפילה את «[prefix-derived]» — ' +
       `נמדדו ${stale.length} לסבב שחלף · ${noRound.length} בלי סבב · ${none.length} לסבב הנוכחי, ` +
       'והצפוי 1 · 1 · 0');
-  }
-  {
-    const pfx = Object.keys(APP.prefixLegacy || {})[0];
-    const fake = pfx ? "var x = '" + pfx + "entries';\n" : '';
-    const got = pfx ? legacyPfxHits(fake, APP.prefixLegacy) : ['—'];
-    t(n++, got.length >= 1,
-      'מ13 · ⛔ מוטציה: תחילית ישנה מחוץ להגירה מפילה את «[prefix-legacy]» — ' +
-      `נמדדו ${got.length} אתרים והצפוי לפחות 1`);
-  }
-  {
-    const got = legacyPfxGhosts(SRC, { 'zz_': { fn: 'noSuchFn', why: 'נימוק (סבב 148)' } });
-    t(n++, got.length === 1,
-      'מ14 · ⛔ מוטציה: הכרזת הגירה שאין לה פונקציה מפילה את «[prefix-legacy]» — ' +
-      `נמדדו ${got.length} פערים והצפוי 1`);
   }
 
   /*  ⛔ מוטציית-נגד היא שינוי חי שאסור לו להפיל — ⚠️ שם שעושה עבודה

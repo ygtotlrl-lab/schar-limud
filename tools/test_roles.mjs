@@ -25,7 +25,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { webcrypto } from 'node:crypto';
-/*  ⛔ ארבע האינווריאנטות והרתמה יושבות במודול הטהור המשותף (סבב 114) —
+/*  ⛔ ארבע האינווריאנטות והרתמה יושבות במודול הטהור המשותף —
  *  ⚠️ שלוש אפליקציות ⛔ ולא שלוש רתמות: ⭐ מה שנשאר כאן הוא **הפרטי** —
  *  שמות הפונקציות, ה-DOM שהמסך נשען עליו, ושרידי המעבר. */
 import { reporter, extract, adminGaps, messageGaps,
@@ -36,7 +36,7 @@ import { reporter, extract, adminGaps, messageGaps,
  *  רשימה שנייה בבודק. */
 export const ROWS = [195];
 
-/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+/*  ⛔ המוטציות אינן ברירת המחדל — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
  *  ⟵ שחזור, ⭐ ושני שערים לבדם היו רוב זמן הסט: ⛔ הן רצות ברמה המלאה
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
@@ -57,16 +57,16 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
 const FLOOR = { shared: 0, app: 83, appWhy: 'מודל ההרשאות — קיים בשלוש שיש בהן כניסה, ובשכר גם רתמת ההרשאות המלאה' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
-/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך
  *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
  *  שמבדיל ריצה חלקית מדילוג מוצהר. */
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
-/*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
+/*  ⛔ הריצפה נמדדת בשני הכיוונים — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
- *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
- *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד**
+ *  — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
  *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
  *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
@@ -76,7 +76,7 @@ const FLOOR_MAX = (() => {
 })();
 process.on('exit', () => {
   RAN += REP.st.pass + REP.st.fail;
-  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר —
    *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
    *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -100,7 +100,7 @@ const { ok, eq, sect } = REP;
 /* ── חילוץ מהקוד האמיתי — מהמודול הטהור המשותף ─────────────────────────── */
 const { fn, decl, body, hasFn } = extract(SRC);
 
-/*  ⛔ מראת המשתמשים היא טבלה בשכבת המראה (סבב 118) — ⚠️ השורות חיות
+/*  ⛔ מראת המשתמשים היא טבלה בשכבת המראה — ⚠️ השורות חיות
  *  ב-`MIRROR` בשם הטבלה, ⛔ ואין מבנה שני לצידו. */
 const UROWS = (h) => h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] || [];
 const setU  = (h, arr) => { h.ctx.MIRROR[h.ctx.SL_USERS_TABLE] = arr; };
@@ -114,22 +114,22 @@ const NAMES_VAR = [
   'SL_NEVER_MIRROR_SETTINGS',
   '_sessUser', '_sessBooted', 'MSG_SET_DENIED', 'MSG_SET_NO_ROLE',
   'MSG_OFF_UNKNOWN', 'MSG_OFF_NO_FP', 'MSG_OFF_NO_CRYPTO', 'MSG_NO_USERS',
-  /*  ⭐ סבב 113 — שם התפקיד המורשה, ⛔ במקום אחד. */
+  /*  ⭐ שם התפקיד המורשה, ⛔ במקום אחד — שני ליטרלים לאותו תפקיד נסחפים. */
   'ROLE_ADMIN',
   'MIRROR_CFG', 'PUSH_TABLES', 'SL_STAMP_KEY', 'SL_NEVER_MIRROR_SETTINGS',
 ];
 const NAMES_FN = [
   'slUserPub', 'slRandSalt', 'slPassFp', 'slMakePassFp',
   'slUsersLoad', 'slUsersSave', 'slUsersSaveAll', 'slUserByName', 'slPullUsers', 'slVerifyOffline',
-  /*  ⛔ שכבת המראה (סבב 118) — ⚠️ מראת המשתמשים היא טבלה בתוכה, ⭐ ורתמה
+  /*  ⛔ שכבת המראה — ⚠️ מראת המשתמשים היא טבלה בתוכה, ⭐ ורתמה
    *  שאינה מחלצת את השכבה מקבלת `ReferenceError` שנבלע ב-`catch`. */
   'mirrorKey', 'mirrorTables', 'mirrorLoadOne', 'mirrorSave',
   'slSanitizeRows', 'slStripMeta', 'slTs',
   'slSettingsAccess', 'slIsAdmin',
-  /*  ⭐ סבב 113 — ההשוואה לתפקיד עברה לבלוק המשותף. ⛔ הרתמה מחלצת
+  /*  ⭐ ההשוואה לתפקיד עברה לבלוק המשותף — ⛔ הרתמה מחלצת
    *  אותו, ⚠️ ובלעדיו `slSettingsAccess` נופלת ב-ReferenceError. */
   'isAdminOf', 'isAdmin',
-  /*  ⭐ סבב 53 — המשתמש המחובר חי במודול הסשן המשותף. */
+  /*  ⭐ המשתמש המחובר חי במודול הסשן המשותף. */
   'sessSet', 'sessGet', 'sessClear', 'sessActive', 'slResolveUser',
   'showPanel', 'renderSettingsPanel', 'refreshUI',
   'doLogin', 'doLoginOffline',
@@ -184,7 +184,7 @@ function makeCtx(opts = {}) {
     MSG_BAD_LOGIN: '❌ שם משתמש או סיסמה שגויים',
     lsSet(k, v) { store[k] = String(v); return true; },
     lsSetArray(k, arr) { store[k] = JSON.stringify(arr); return true; },
-    // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות המראה — כאן שקוף
+    // ⭐ שער הדיסק של החלון החם עוטף את כתיבות המראה — כאן שקוף
     //    בכוונה; בדיקות החלון עצמו יושבות ב-test_hotwin.
     hwDiskFilter(k, rows) { return rows; },
     hwNoteCloud() {},
@@ -363,7 +363,7 @@ async function main() {
   /* ── ג. התפקיד — מהמראה, ⛔ ולא מסשן ששרד על הדיסק ────────────────────── */
   sect('ג. התפקיד זמין גם בכניסה בלי רשת');
   {
-    /*  ⭐ סבב 53 — `sl_session` הוסר, ולכן «התפקיד שורד עלייה מחדש» כבר
+    /*  ⭐ `sl_session` הוסר, ולכן «התפקיד שורד עלייה מחדש» כבר
      *  אינו השער. מה שנבדק כאן הוא מה שנשאר נכון: התפקיד מגיע **מהמראה**,
      *  שיורדת לדיסק בלי סיסמאות, ולכן הוא זמין גם בכניסה אופליין. */
     const h = makeCtx({ online: false });
@@ -394,7 +394,7 @@ async function main() {
     await waitFor(() => h.ctx.sessGet() && h.ctx.sessGet().role === 'user',
       'רענון התפקיד אחרי משיכת המשתמשים');
     eq('⭐ תפקיד שהורד בלוח הבקרה מגיע למכשיר', h.ctx.sessGet().role, 'user');
-    ok('⛔ ואין מפתח סשן על הדיסק (סבב 53)', !('sl_session' in h.store));
+    ok('⛔ ואין מפתח סשן על הדיסק', !('sl_session' in h.store));
     eq('⛔ ולא נשמרה סיסמה במראת המשתמשים',
       String(h.store['sl_mirror_users']).indexOf('password'), -1);
   }
@@ -405,7 +405,7 @@ async function main() {
     eq('slUserPub שומר role', h.ctx.slUserPub({ id: 1, username: 'a', role: 'admin' }).role, 'admin');
     ok('⛔ slUserPub מפיל password',
       !('password' in h.ctx.slUserPub({ id: 1, username: 'a', password: 'סוד', role: 'admin' })));
-    // ⭐ סבב 38 — הסולם נמחק; `role` יורד למכשיר ברשימת ההיתר הישירה,
+    // ⭐ הסולם נמחק; `role` יורד למכשיר ברשימת ההיתר הישירה,
     //    ואין יותר מסלול שמסיר עמודות בזמן ריצה.
     ok('⛔ slMissingCol אינה קיימת עוד', typeof h.ctx.slMissingCol === 'undefined');
     ok('⛔ slSelectUsers אינה קיימת עוד', typeof h.ctx.slSelectUsers === 'undefined');
@@ -453,7 +453,7 @@ async function main() {
       !/INSERT INTO public\.sl_users[^;]*VALUES\s*\(\s*'[^']*'\s*,\s*'\d{6}'\s*,\s*'admin'\s*\)/i
         .test(code000));
     ok('000 מגדיר role על sl_users', /role\s+TEXT NOT NULL,/.test(SQL000));
-    // ⭐ **ההשלמה של סבב 26.** הניסוח הראשון היה `DEFAULT 'admin'` — ברירת
+    // ⭐ **ההשלמה.** הניסוח הראשון היה `DEFAULT 'admin'` — ברירת
     // מחדל ש**מעניקה** הרשאה, כלומר בדיוק משפחת הכשל שהסבב בא לסגור, וגם
     // החריגה היחידה בארגון (`hr_users` בלי DEFAULT; `g_users` עם DEFAULT
     // אבל של התפקיד הנמוך). הטענה הפוכה עכשיו: אין DEFAULT כלל.
@@ -506,13 +506,13 @@ async function main() {
     eq('⭐ כניסה אופליין עדיין עובדת', h2.calls.enter, 1);
     eq('ובלי שגיאה', h2.calls.authErr.length, 0);
     eq('⭐ והתפקיד ירד עם המשתמש', h2.ctx.sessGet().role, 'admin');
-    /*  ⭐ סבב 53 — אין סשן שנשמר; הטענה הופכת ל«אין סיסמה באף מפתח». */
+    /*  ⭐ אין סשן שנשמר; הטענה הופכת ל«אין סיסמה באף מפתח». */
     ok('⛔ ואין את הסיסמה באף מפתח על הדיסק',
       Object.keys(h2.store).every((k) => String(h2.store[k]).indexOf('135790') === -1));
 
     ok('⛔ אין אכיפת פורמט שש ספרות בגוף doLogin', body('doLogin').indexOf('PASS_SIX_RE') === -1);
     ok('⛔ ולא ב-doLoginOffline', body('doLoginOffline').indexOf('PASS_SIX_RE') === -1);
-    /*  ⭐ סבב 132 — `PASS_SIX_RE` חזר עם מסך שינוי הסיסמה, ⛔ והטענה
+    /*  ⭐ `PASS_SIX_RE` חזר עם מסך שינוי הסיסמה — ⛔ והטענה
      *  מודדת את מה שהיא מדדה מלכתחילה: ⚠️ **האכיפה במסלול השינוי בלבד**,
      *  ⛔ ולא במסלול הכניסה. */
     ok('⛔ PASS_SIX_RE נאכף במסלול שינוי הסיסמה',
@@ -534,18 +534,18 @@ async function main() {
   process.exit(REP.summary('מודל ההרשאות') ? 1 : 0);
 }
 
-/*  ⛔ **`await` ולא קריאה חופשית** (סבב 114) — ⚠️ הסוגר שמתחת קורא
+/*  ⛔ **`await` ולא קריאה חופשית** — ⚠️ הסוגר שמתחת קורא
  *  ל-`process.exit` באופן סינכרוני: ⭐ בלעדיו התהליך נסגר אחרי ה-`await`
  *  הראשון שבתוך הרתמה, ⛔ ורוב הטענות אינן רצות כלל. */
 await main().catch((e) => { console.error('💥 ' + ((e && e.stack) || e)); process.exit(1); });
 
 /* ───────────────────────────────────────────────────────────────────────────
-   ⛔ מוטציה ומוטציית-נגד — סבב 67
+   ⛔ מוטציה ומוטציית-נגד
    ───────────────────────────────────────────────────────────────────────────
    ⛔ שער נכנס עם מוטציה, או עם נימוק כתוב מדוע אינו ניתן למוטציה.
    ⚠️ בלעדיה אין שום ראיה שהשער **מסוגל** ליפול: 97 טענות שעוברות על עץ
    תקין נראות כרשת ביטחון ופועלות כאישור. ⛔ והמוטציה רצה על **עותק
-   בתיקייה זמנית** ולא על העץ (הלקח של סבב 42ג).
+   בתיקייה זמנית** ולא על העץ.
    ⚠️ הרצת-המשנה מסומנת ב-`RD67_MUT` — ⛔ בלעדיו המוטציה הייתה מריצה את
    עצמה שוב בתוך העותק, לאין סוף.
    ──────────────────────────────────────────────────────────────────────── */
@@ -570,19 +570,19 @@ if (!process.env.RD67_MUT) {
     const st = _run(d);
     const fell = st !== 0;
     console.log((fell === expectFail ? '  ok   ' : '  FAIL ') + label);
-    /*  ⛔ יציאה מיידית ולא `exitCode` (סבב 67) — סיכום השער קורא
+    /*  ⛔ יציאה מיידית ולא `exitCode` — סיכום השער קורא
      *  ל-`process.exit` בסופו, והוא היה דורס כשל מוטציה בשקט. */
     if (fell !== expectFail) process.exit(1);
     _m.rmSync(d, { recursive: true, force: true });
   };
 
-  /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
+  /*  ⛔ מכאן ולמטה מוטציות — ⚠️ הן רצות ברמה המלאה בלבד. */
   mutStage();
   if (!RUN_MUT) {
     console.log('\n⏭ test_roles: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
     process.exit(REP.st.fail ? 1 : 0);
   }
-  console.log('\n— מוטציות (סבב 67) —');
+  console.log('\n— מוטציות —');
   _mut('⛔ שינוי ערכי ה-role מפיל את שער ההרשאות', 'index.html',
        (s) => s.replace(/'admin'/g, "'administrator'"), true);
   _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
