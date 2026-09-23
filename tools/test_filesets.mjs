@@ -55,7 +55,7 @@ import { execFileSync } from 'node:child_process';
 import { builtinModules } from 'node:module';
 import { reasonGaps } from './scope.mjs';
 import { PEERS } from './peers.mjs';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, iconCanon } from './app-facts.mjs';
 import { declCases, dumpCases } from './decl-cases.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בכל העותקים. ⚠️ קובץ שיורד
@@ -135,6 +135,7 @@ const SHARED = [
   'tools/test_failsurface.mjs',
   'tools/test_filesets.mjs',
   'tools/test_hotwin.mjs',
+  'tools/test_origin.mjs',
   'tools/test_iconlayer.mjs',
   'tools/test_icons.mjs',
   'tools/test_idarg.mjs',
@@ -404,6 +405,8 @@ export function audit(root) {
    *  קורא את האינדקס, ⚠️ ולכן קובץ שנמחק מהעץ עדיין מופיע בו; בלי
    *  ההצלבה השער היה עיוור בדיוק למקרה שהוא בא לתפוס. */
   files = files.filter((f) => fs.existsSync(path.join(root, f)));
+  /*  ⛔ נכס אייקון נמדד לפי הבסיס — ⚠️ חתימת התוכן בשמו נבדלת בין הריפו, ⭐ והסט המשותף אחד. */
+  files = files.map(iconCanon);
   const shared = new Set(SHARED);
   const v = [];
   for (const f of files) {

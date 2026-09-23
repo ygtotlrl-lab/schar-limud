@@ -245,6 +245,7 @@ const APP = {
     'test_devid': 'raw — מריץ את מודול מזהה המכשיר בארגז חול',
     'test_failsurface': 'raw — מזהה המשטח והליטרל העברי חיים כמחרוזות, וההלבנה מוחקת בדיוק את מה שהוא סורק',
     'test_hotwin': 'raw — מריץ את החלון החם בארגז חול',
+    'test_origin': 'raw — קורא את מדיניות האחסון ואת הערותיה, ⛔ וההלבנה הייתה מוחקת את השמות שהוא סורק',
     'test_idarg': 'raw — מודד מזהי DOM ומאפיינים שחיים בתגיות ובמחרוזות',
     'test_inputlayer': 'raw — מודד מאפייני שדות קלט בתגיות',
     'test_lock': 'raw — מריץ את מודול הנעילה בארגז חול',
@@ -484,6 +485,7 @@ const APP = {
     'test_failsurface':   'text',
     'test_filesets':      'behavior — קורא את סט הקבצים המנוהל מ-`git ls-files`',
     'test_hotwin':        'text',
+    'test_origin':        'text',
     'test_iconlayer':     'behavior — מריץ את המחולל ומשווה את הבייטים שהוא יצר',
     'test_icons':         'behavior — המוטציה משנה את סט הקבצים, ו-`check-structure` קורא אותו מהדיסק',
     'test_idarg':         'text',
@@ -841,7 +843,7 @@ const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
     docRows: ['אחסון מקומי', 'אסטרטגיית `localStorage`'],
-    block: { sha: 'f79a69afc038ead5', lines: 591,
+    block: { sha: 'cd8b860dcd8a8289', lines: 674,
              start: '/* ═══ עמידות אחסון מקומי — מודול משותף',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -1147,7 +1149,7 @@ const CAPS = {
   swcore: {
     name: 'מודול ה-service worker',
     docRows: ['ליבת `sw.js`'],
-    block: { file: 'sw.js', sha: '521400ad859c25bc', lines: 250,
+    block: { file: 'sw.js', sha: 'b585572249d21038', lines: 298,
              start: '/* ═══ מודול ה-service worker — מודול משותף',
              end:   '/* ═══════════════ סוף מודול ה-service worker' },
   },
@@ -2246,19 +2248,19 @@ function modalGaps() {
 /*  ⚠️ קריאה מהמקור **הגולמי** — כולל הערות ומחרוזות. ⛔ שמור
  *  לשמות אירועים ולערכים שחיים בתוך מחרוזת, שאותם `code` מרוקן. */
 const hasSrc = (re) => re.test(src);
-/*  מדיניות הפינוי — `LS_CFG` **וגם** `lsRebuildPolicy()`. ⚠️ ביומן `tier2`
+/*  מדיניות הפינוי — `LS_CFG` **וגם** `lsRebuildPolicy()`. ⚠️ ביומן `oldRecords`
  *  נבנית בזמן ריצה (המפתחות נושאים סיומת מוסד), ולכן היא אינה ליטרל בתוך
  *  `LS_CFG`; probe שקרא את האובייקט בלבד היה מדווח «אין פינוי» על אפליקציה
  *  שמפנה. הפונקציה פשוט אינה קיימת בשלוש האחרות והצירוף שקוף. */
 const policyBlock = () => cfgBlock('LS_CFG') + fnBody('lsRebuildPolicy');
-/*  ⛔ **מבנה ה-`tier` נמדד, ולא רק שהוא מפנה** — ⚠️ `tier` הוא
+/*  ⛔ **מבנה הרשימות נמדד, ולא רק שהוא מפנה** — ⚠️ כל רשימה היא
  *  מערך של פריטים, ⛔ וכל פריט נושא `key` ו-`syncedThrough` משלו: ⭐ העֵד
- *  נבדק **פר-פריט** ⛔ ולא בכניסה לרשימה. ⚠️ הנימוק המדוד: `tier1` בשכר
+ *  נבדק **פר-פריט** ⛔ ולא בכניסה לרשימה. ⚠️ הנימוק המדוד: `wholeKeys` בשכר
  *  היה `getter` שבדק את העֵד בכניסה, ⛔ והתקן אישר אותו — ⭐ ש«פר-מפתח»
  *  התקיים בשני המימושים, ⚠️ ואיש לא ידע ששניים הם. ⛔ ומערך ריק הוא
  *  הצהרה תקפה שאין מה לפנות, ⚠️ ואינו נספר כפריט. */
 const tierArrays = (pb) => {
-  const out = []; const re = /tier[12]\s*[:=]\s*\[/g; let m;
+  const out = []; const re = /(?:wholeKeys|oldRecords)\s*[:=]\s*\[/g; let m;
   while ((m = re.exec(pb)) !== null) {
     let i = m.index + m[0].length - 1, d = 0, j = i;
     for (; j < pb.length; j++) {
@@ -2281,7 +2283,7 @@ const tierItems = (body) => {
 };
 const tierShape = () => {
   const pb = policyBlock();
-  if (/get\s+tier[12]\s*\(/.test(pb)) return { ok: false, items: 0 };
+  if (/get\s+(?:wholeKeys|oldRecords)\s*\(/.test(pb)) return { ok: false, items: 0 };
   let items = 0, bad = 0;
   for (const body of tierArrays(pb)) {
     if (!body.trim()) continue;
@@ -6773,10 +6775,10 @@ const MATRIX = [
   /*  ⛔ הערך ולא הצורה — ⚠️ `LS_SWEEP_PCT` חי ב-`index.html`
    *  ⛔ ואף שער לא הזכיר אותו: ⭐ סף הפינוי הוא מספר שהטבלה מצהירה,
    *  ⚠️ והוא נקרא כמספר ⛔ ולא כמחרוזת — 0.6 ו-0.60 הם אותו סף. */
-  /*  ⛔ **שני השלבים נמדדים, ⛔ ולא שלב ב לבדו** — ⚠️ התקן אומר
-   *  «`tier1`/`tier2`», ⭐ ואפליקציה שמפנה בשלב א בלבד מפנה: ⛔ probe
-   *  שדרש `tier2` הכריז «אין פינוי» על מדיניות חיה. ⚠️ ומערך ריק אינו
-   *  מדיניות — ⛔ `tier1: []` נמדד כריק, ⭐ ו-getter נמדד לפי מה שהוא
+  /*  ⛔ **שתי הרשימות נמדדות, ⛔ ולא הרשומות הישנות לבדן** — ⚠️ התקן אומר
+   *  «`wholeKeys`/`oldRecords`», ⭐ ואפליקציה שמפנה מפתחות שלמים בלבד מפנה: ⛔ probe
+   *  שדרש `oldRecords` הכריז «אין פינוי» על מדיניות חיה. ⚠️ ומערך ריק אינו
+   *  מדיניות — ⛔ `wholeKeys: []` נמדד כריק, ⭐ ו-getter נמדד לפי מה שהוא
    *  שואל: ⛔ getter שאינו נשען על עֵד הדחיפה אינו פינוי מול ראיה. */
   { row: 100, name: 'פינוי אוטומטי',
     probe: () => { const t = tierShape();
@@ -7346,6 +7348,10 @@ const CLAIM_NO_MUT = {
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
   '147|CANON_MANIFEST':
     'המוטציה מריצה את הבודק על עותק ברתמה — ⛔ והתווית נוקבת בשם הבודק שנפל, ⚠️ ולא בשם הטענה',
+  '147|[mf-install-only]':
+    'המוטציה ב-test_md מריצה את הבודק על עותק ברתמה — ⛔ ומאמתת בפלט שהטענה הזו היא שנפלה',
+  '147|[icon-links]':
+    'המוטציה ב-test_md מריצה את הבודק על עותק ברתמה — ⛔ ומאמתת בפלט שהטענה הזו היא שנפלה',
   '159|ג. כל מפתח שהקוד מבקש':
     'הטענה נמדדת מול המסד החי — ⛔ ומוטציה הייתה כותבת לייצור',
   '163|migrations':
@@ -7448,7 +7454,13 @@ const GATES = {
    *  ⛔ ומפריד השם במודול רב-מילי. */
   124: { claims: { test_names: ['[name-policy]', '[name-policy-why]', '[fn-sister-prefix]',
                                 '[name-retired-prefix]', '[fn-allow]', '[gate-name]', '[module-name]',
-                                '[module-sep]', '[class-case]'] } },
+                                '[module-sep]', '[class-case]'],
+                   test_origin: '[ls-role-names]' } },
+  /*  ⛔ מדיניות האחסון המקומי — ⚠️ המכסה שנמדדה בדפדפן והספים שנגזרים ממנה,
+   *  ⭐ האפליקציות שחולקות את ה-origin, ⛔ וכל טבלת מראה בפינוי או קבועה בגודלה. */
+  100: { claims: { test_origin: ['[ls-quota-derived]', '[ls-quota-measured]', '[ls-apps-peers]',
+                                 '[mirror-evict]', '[mirror-screen-whole]', '[child-with-parent]',
+                                 '[old-records-ts]'] } },
   /*  ⛔ שם מיגרציה נגזר, ומותאם לרשומה שרצה — ⚠️ הדפוס והרצף
    *  מ-`000`, ⭐ המרשם שמגשר לטבלת המעקב, ⛔ וההצלבה של כל הפניה חוצת-ריפו
    *  מול העץ של הריפו שהיא נוקבת בו. */
@@ -7513,7 +7525,7 @@ const GATES = {
   /*  ⛔ התקנה טרייה עובדת: ⚠️ «האפליקציה נפתחת ושמישה מול מסד ריק»
    *  ו«המסך הראשון נושא תוכן» אינם נגזרים מהטקסט — ⭐ הם נמדדים
    *  במבחן הקבלה שהמנהל מריץ, ⛔ ושער אינו מריץ דפדפן. */
-  231: { manual: 'המסך הראשון מול מסד ריק אינו נגזר מהטקסט — ⛔ הוא נמדד במבחן הקבלה, ⚠️ ושער אינו מריץ דפדפן' },
+  232: { manual: 'המסך הראשון מול מסד ריק אינו נגזר מהטקסט — ⛔ הוא נמדד במבחן הקבלה, ⚠️ ושער אינו מריץ דפדפן' },
   /*  ⛔ שם אפליקציה אחות בקוד — ⚠️ אפס אזכור לשם של ריפו
    *  אחר בקבצי המוצר והמעטפת, ⭐ ואפס נכס אייקון שזהה בית-לבית לאחות. */
   224: { claims: { test_sistername: ['[sister-name]', '[sister-asset]', '[sister-orphan]'] } },
@@ -7548,7 +7560,7 @@ const GATES = {
   58: { claim: 'א · אין שתי שורות על אותו probe' },
   40: { claim: 'א · כל דפוס מוכרז נושא מוטציה' },
   35: { claim: 'א · כל מפתח נקרא' },
-  36: { claims: { test_declscan: ['[decl-cases-probe]', '[decl-cases-bare]', '[decl-cases-dead]', '[decl-cases-gone]'] } },
+  36: { claims: { test_declscan: ['[decl-cases-probe]', '[decl-cases-bare]', '[decl-cases-dead]', '[decl-cases-gone]', '[decl-lists-content]'] } },
   /*  ⛔ שם פונקציה חלקי: ⚠️ השער מודד את שני הצדדים,
    *  ⭐ ואת טיב הנימוק — ⛔ הצהרה שהיא נוכחות בלבד נופלת בו. */
   62: { claim: 'fn-undeclared' },
@@ -7635,7 +7647,7 @@ const GATES = {
   50: { claim: ['מספור רציף ובלי כפילויות', 'nameSignGaps', 'catOrderGaps'] },
   51: { claims: { 'check-capabilities': ['הערה ריקה', 'COUNT_NOTE'],
                   'check-comments': 'פתיחת ההערה בטבלה' } },
-  230: { claim: 'CACHE_NAME' },
+  231: { claim: 'CACHE_NAME' },
   44: { manual: 'הסט רץ בתוך עצמו — ⛔ שער אינו רואה מה רץ לצידו, ⚠️ ונאכף בתוצאתו: הזמן שמודפס בכל הרצה' },
   47: { manual: 'הדיווח אינו בעץ — ⛔ אין קובץ שאפשר למדוד בו מספר שהוקלד, ⚠️ ונאכף בתוצאתו בלבד' },
   27: { claims: { test_readonly: 'drift', 'check-capabilities': 'writeGateGaps' } },
@@ -7686,7 +7698,7 @@ const GATES = {
   117: { claim: ['הפניה לקובץ', '[round-num]'] },
   138: { claim: 'android/app/src/main' },
   146: { claim: 'fgDriftMax' },
-  147: { claim: 'CANON_MANIFEST' },
+  147: { claims: { 'check-docs': ['CANON_MANIFEST', '[mf-install-only]', '[icon-links]'], test_swcore: '[sw-img-dims]' } },
   148: { claim: 'שדות זהים' },
   151: { claim: 'BUILD_SHA' },
   152: { claims: { test_build: '[uses-supported]' } },
@@ -7752,6 +7764,7 @@ const GATES = {
   197: { claims: { test_users_patch: 'partialLeak' } },
   200: { claims: { test_offline_login: 'pass_fp' } },
   229: { claims: { test_swcore: 'respondWith' } },
+  230: { claims: { test_swcore: ['[sw-own-match]', '[sw-own-sweep]', '[icon-hash-name]'] } },
 };
 
 /*  ⛔ מדידה מוכרת בפתיחת ההערה ⛔ ולא בספרה — ⚠️ «נמדד: אפס

@@ -160,7 +160,8 @@ const baseDir = temp('md-skel-');
 // ⚠️ manifest.json נוסף לרשימה — מסעיף ח של check-docs ואילך
 //    הבודק אוכף גם את **ערכי** המפתחות המשותפים שבו, ורתמה שלא העתיקה
 //    אותו הייתה מפילה את check-docs על קובץ חסר במקום על סחיפה במד.
-for (const f of ['CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json']) cpSync(join(ROOT, f), join(baseDir, f));
+/*  ⚠️ ו-index.html — ⛔ check-docs מודד שהאייקונים שיצאו מה-manifest יושבים ב-`<link>`. */
+for (const f of ['CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json', 'index.html']) cpSync(join(ROOT, f), join(baseDir, f));
 /*  ⚠️ ו-`icons/` נוספה — מאותו נימוק בדיוק: check-docs אוכף
  *  מעכשיו שכל `src` במניפסט מצביע על קובץ **שקיים**, ורתמה בלי
  *  התיקייה הייתה מפילה אותו על 404 מדומה במקום על סחיפה במד. */
@@ -186,7 +187,7 @@ const NEW_SHARED = [
  *  להשתחזר, ⛔ ושם שנשמט ממנה משאיר מוטציה קודמת בעץ: ⭐ המוטציה הבאה
  *  נמדדת אז על עותק מלוכלך, ⚠️ והיא «עוברת» מסיבה שאינה שלה. */
 const MUT_FILES = [...new Set([...CASES.map(([f]) => f), ...NEW_SHARED.map(([f]) => f),
-                               'CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json'])];
+                               'CLAUDE.md', 'README.md', 'CONTEXT.md', 'manifest.json', 'index.html'])];
 const mutDir = () => {
   for (const f of MUT_FILES) cpSync(join(ROOT, f), join(baseDir, f));
   return baseDir;
@@ -310,14 +311,21 @@ const mfEdit = async (fn) => {
   fs.writeFileSync(p, JSON.stringify(mf, null, 2), 'utf8');
   return run(d);
 };
-/*  ⚠️ לפי `src` ולא לפי אינדקס — ב-schar המניפסט מצהיר גם על
- *  favicons, ו-`icons[0]` שם אינו אחד משלושת הקנוניים. */
-t((await mfEdit((mf) => { mf.icons.find((i) => i.src === 'icons/icon-192.png').purpose = 'any maskable'; })).status !== 0,
+/*  ⚠️ לפי `src` ולא לפי אינדקס — ⛔ סדר הרשימה אינו חלק מההצהרה. */
+t((await mfEdit((mf) => { mf.icons.find((i) => i.src.startsWith('icons/icon-192.')).purpose = 'any maskable'; })).status !== 0,
   '⛔ `"any maskable"` על האייקון המלא מפיל את check-docs');
 t((await mfEdit((mf) => { mf.icons = mf.icons.filter((i) => i.src.indexOf('maskable') < 0); })).status !== 0,
   '⛔ הסרת האייקון ה-maskable מפילה את check-docs');
 t((await mfEdit((mf) => { mf.icons.push({ src: 'icons/does-not-exist.png', sizes: '64x64', type: 'image/png' }); })).status !== 0,
   '⛔ `src` שאינו קיים בריפו מפיל את check-docs — 404 שקט');
+{ const r = await mfEdit((mf) => { mf.icons.push({ src: 'icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }); });
+  t(r.status !== 0 && /\[mf-install-only\] נמדדו 1 /.test(r.stdout || ''),
+    '⛔ מוטציה: apple-touch חזר ל-manifest **מפיל** את [mf-install-only]'); }
+{ const d = mutDir(), p = join(d, 'index.html');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/<link rel="apple-touch-icon"[^>]*>/, ''), 'utf8');
+  const r = await run(d);
+  t(r.status !== 0 && /\[icon-links\] נמדדו 1 /.test(r.stdout || ''),
+    '⛔ מוטציה: תג האייקון של אייפון הוסר **מפיל** את [icon-links]'); }
 /*  ⭐ מוטציית-נגד — ⛔ בלעדיה הטענות שלמעלה אינן מבחינות בין «מודד את
  *  ההצהרה» ל«נופל על כל שינוי במניפסט». */
 t((await mfEdit((mf) => { mf.name = mf.name + ' '; })).status === 0,

@@ -2,7 +2,7 @@
 /*  test_matrix_src.mjs — המטריצה נאכפת על קלט המקור: ⛔ קוד האפליקציה.
  *
  *  **מה נאכף:** ⛔ probe שמודד **ערך** ⛔ ולא שם — ⚠️ אופק ה-tombstone,
- *  סף הפינוי היזום ומבנה ה-`tier`, שם החודש בצורה אחת, ⭐ וכיסוי סולם
+ *  סף הפינוי היזום ומבנה הרשימות, שם החודש בצורה אחת, ⭐ וכיסוי סולם
  *  נקודות השבירה: ⛔ כל אחד ממוטט במקור, ⚠️ והבודק האמיתי רץ עליו בסינון
  *  «src» כשהמוטציה כולה במקור.
  *
@@ -312,18 +312,18 @@ const rows = [];
     [[IDX, CLEAN_IDX, CLEAN_IDX.replace(MODULE_TAG, MODULE_TAG + '\nvar LS_SWEEP_PCT_DOC = 0.90;')]], false,
     null, partOf(ROW_SWEEP));
 
-  /*  ⛔ מבנה ה-`tier` — ⚠️ פריט בלי `syncedThrough` משלו מחזיר
+  /*  ⛔ מבנה הרשימות — ⚠️ פריט בלי `syncedThrough` משלו מחזיר
    *  את העֵד לכניסה לרשימה, ⭐ וזה בדיוק המימוש השני שהתקן אישר בשקט. */
-  await run('פריט ב-tier1 בלי עֵד משלו',
+  await run('פריט ב-wholeKeys בלי עֵד משלו',
     cellOf(ROW_SWEEP).indexOf('✅') >= 0
-      ? [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [', "tier1: [{ key: 'x_mut' },")]]
+      ? [[IDX, CLEAN_IDX, CLEAN_IDX.replace('wholeKeys: [', "wholeKeys: [{ key: 'x_mut' },")]]
       : [[CAP2, CLEAN_CAP, dropGap(CLEAN_CAP, ROW_SWEEP)]],
     true, ROW_SWEEP);
   /*  ⭐ מוטציית-נגד חיה: ⛔ פריט **תקין** שנוסף לאותה רשימה — ⚠️ קוד שנוסף
    *  ⛔ ולא הערה, ⭐ והמבנה נשמר. */
-  await run('פריט תקין שנוסף ל-tier1',
-    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('tier1: [',
-      "tier1: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false,
+  await run('פריט תקין שנוסף ל-wholeKeys',
+    [[IDX, CLEAN_IDX, CLEAN_IDX.replace('wholeKeys: [',
+      "wholeKeys: [{ key: 'x_mut', syncedThrough: function () { return 0; } },")]], false,
     null, partOf(ROW_SWEEP));
 }
 

@@ -5,7 +5,7 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v157';
+var CACHE_NAME = 'schar-limud-v161';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -15,8 +15,8 @@ var CORE = [
   './core/util.js',
   './core/sync.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-192.af5952e2.png',
+  './icons/icon-512.6e7eb2aa.png'
 ];
 
 // ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף —
@@ -126,19 +126,67 @@ function swSubMiss() {
   catch (e) { return new Response('', { status: 504, statusText: 'Offline' }); }
 }
 
+/*  ⛔ ממדי ההצהרה נקראים משם הקובץ — ⚠️ המספר שבשם הוא הצלע,
+ *  ⭐ ואייקון אייפון בצלע הקבועה של אפל; ⛔ ושם בלי טביעה אינו נבדק. */
+function swImgSize(url) {
+  var m = /\/([a-z-]+?)(?:-(\d+))?\.[0-9a-f]{8}\.png$/.exec(new URL(url, self.location.href).pathname);
+  if (!m) return 0;
+  return m[2] ? Number(m[2]) : (m[1] === 'apple-touch-icon' ? 180 : 0);
+}
+
+/*  ⛔ כל כתיבה למטמון עוברת כאן — ⚠️ מסנן שהחליף אייקון בתמונה
+ *  אחרת היה ננעל במטמון לנצח: ⭐ תמונה שאינה בממדי ההצהרה אינה נכנסת. */
+function swPut(cache, key, res) {
+  var want = swImgSize(typeof key === 'string' ? key : key.url);
+  if (!want || typeof createImageBitmap !== 'function') return cache.put(key, res);
+  return res.clone().blob().then(createImageBitmap).then(function (bmp) {
+    var ok = bmp.width === want && bmp.height === want;
+    if (bmp.close) bmp.close();
+    if (!ok) throw new Error('image ' + bmp.width + 'x' + bmp.height + ' != ' + want);
+    return cache.put(key, res);
+  });
+}
+
 /*  ⛔ רק תשובה שאומתה נשמרת — ר' כותרת המודול. */
 function swStore(key, res) {
   if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
   var clone = res.clone();
   caches.open(CACHE_NAME).then(function (cache) {
-    return cache.put(key, clone);
+    return swPut(cache, key, clone);
   }).catch(function () {});
+}
+
+/*  ⛔ חיפוש במטמון של האפליקציה בלבד — ⚠️ ה-origin משותף לכל
+ *  האפליקציות, ⭐ ו-`caches.match()` הגלובלי סורק את כולם והישן ראשון:
+ *  ⛔ מטמון בשם שננטש הגיש אייקון של אחות. */
+function swMatch(request, opts) {
+  return caches.open(CACHE_NAME).then(function (cache) {
+    return cache.match(request, opts);
+  });
+}
+
+/*  ⛔ המטמון שלנו לפי תוכנו ⛔ ולא לפי שמו — ⚠️ כל מפתח בתוך ה-scope או
+ *  נכס CDN, ⭐ ולפחות אחד בתוך ה-scope: ⛔ קידומת שהשתנתה השאירה מטמון
+ *  שאיש אינו מוחק, ⚠️ ומטמון של אחות נושא מפתח מחוץ ל-scope ונשאר. */
+function swOwnsCache(name) {
+  if (name === CACHE_NAME) return Promise.resolve(false);
+  return caches.open(name).then(function (cache) {
+    return cache.keys();
+  }).then(function (reqs) {
+    var mine = 0, u;
+    for (var i = 0; i < reqs.length; i++) {
+      try { u = new URL(reqs[i].url); } catch (e) { return false; }
+      if (swInScope(u)) mine++;
+      else if (!swIsCdn(u)) return false;
+    }
+    return mine > 0;
+  });
 }
 
 /*  הקליפה שבמטמון — index.html, ובהיעדרו שורש ה-scope. */
 function swShell() {
-  return caches.match(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
-    return hit || caches.match(SW_ROOT, SW_NAV_OPTS);
+  return swMatch(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
+    return hit || swMatch(SW_ROOT, SW_NAV_OPTS);
   });
 }
 
@@ -171,7 +219,7 @@ function swCachePut(cache, url, opts) {
   return fetch(url, opts).then(function (res) {
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '?'));
     if (res.type === 'opaque') throw new Error('opaque response');
-    return cache.put(url, res);
+    return swPut(cache, url, res);
   });
 }
 
@@ -185,7 +233,7 @@ function ensureCdnCached() {
       return cache.match(url, SW_SUB_OPTS).then(function (hit) {
         if (hit) return;
         return swFetchCors(url).then(function (res) {
-          if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
+          if (res && res.ok && res.type !== 'opaque') return swPut(cache, url, res);
         });
       }).catch(function () {});
     }));
@@ -215,7 +263,7 @@ function swNavigate(request, u) {
 function swNavOffline(request) {
   var first = SW_CFG.navFallback === 'shell'
     ? swShell()
-    : caches.match(request, SW_CFG.navIgnoreSearch ? SW_NAV_OPTS : SW_SUB_OPTS)
+    : swMatch(request, SW_CFG.navIgnoreSearch ? SW_NAV_OPTS : SW_SUB_OPTS)
         .then(function (hit) { return hit || swShell(); });
   return first.then(function (hit) { return hit || swOfflinePage(); });
 }
@@ -225,7 +273,7 @@ function swNetworkFirst(request) {
     swStore(request, res);
     return res;
   }).catch(function () {
-    return caches.match(request, SW_SUB_OPTS).then(function (hit) {
+    return swMatch(request, SW_SUB_OPTS).then(function (hit) {
       return hit || swSubMiss();
     });
   });
@@ -262,7 +310,7 @@ self.addEventListener('install', function (event) {
         .catch(function () {});
     }).concat(CDN_ASSETS.map(function (url) {
       return swFetchCors(url).then(function (res) {
-        if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
+        if (res && res.ok && res.type !== 'opaque') return swPut(cache, url, res);
       }).catch(function () {});
     }));
     return Promise.all(jobs);
@@ -282,10 +330,10 @@ self.addEventListener('activate', function (event) {
        *  ר' כותרת המודול. */
       if (!hit) return;
       return caches.keys().then(function (names) {
-        return Promise.all(names.filter(function (name) {
-          return name.indexOf(SW_CFG.prefix) === 0 && name !== CACHE_NAME;
-        }).map(function (name) {
-          return caches.delete(name);
+        return Promise.all(names.map(function (name) {
+          return swOwnsCache(name).then(function (own) {
+            if (own) return caches.delete(name);
+          });
         }));
       });
     }).catch(function () {})

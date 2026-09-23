@@ -34,7 +34,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { inflateSync, deflateSync } from 'node:zlib';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, iconCanon, iconFiles } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -752,8 +752,16 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
           }
         return x0 + '/' + (im2.w - 1 - x1) + '/' + y0 + '/' + (im2.h - 1 - y1);
       };
+      /*  ⚠️ שם נכס ב-`icons/` נושא את בתיו — ⛔ ואחרי הגזירה הוא שם אחר:
+       *  ⭐ העותק נמצא לפי הבסיס הקנוני ⛔ ולא לפי השם שבעץ. */
+      const sIcons = iconFiles(s);
+      const inS = (rel) => {
+        if (!rel.startsWith('icons/')) return join(s, rel);
+        const f = sIcons[iconCanon(rel).slice('icons/'.length, -'.png'.length)];
+        return join(s, f ? 'icons/' + f : rel);
+      };
       const moved = assets.filter((rel) => {
-        const A = join(ROOT, rel), B = join(s, rel);
+        const A = join(ROOT, rel), B = inS(rel);
         if (!existsSync(B)) return true;
         return boxOf(A) !== boxOf(B);
       });
@@ -767,10 +775,10 @@ t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת
           הייתה טענה שנמדדה כשגויה. */
       const cropOnly = assets.filter((rel) => rel.endsWith('ic_launcher_foreground.png'));
       const cropDiff = cropOnly.filter((rel) =>
-        !readFileSync(join(ROOT, rel)).equals(readFileSync(join(s, rel))));
+        !readFileSync(join(ROOT, rel)).equals(readFileSync(inS(rel))));
       const tileDiff = assets.length - cropOnly.length - assets
         .filter((rel) => !cropOnly.includes(rel))
-        .filter((rel) => readFileSync(join(ROOT, rel)).equals(readFileSync(join(s, rel)))).length;
+        .filter((rel) => readFileSync(join(ROOT, rel)).equals(readFileSync(inS(rel)))).length;
       t(n++, cropOnly.length > 0 && cropDiff.length === 0,
         `ו. ⛔ ו-${cropOnly.length} נכסי החזית — שהמסכה החתוכה היא כל מקורם — זהים ` +
         `בית-לבית אחרי ההזזה; נמדדו ${cropDiff.length} שנבדלו והצפוי אפס ` +

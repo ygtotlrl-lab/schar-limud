@@ -19,10 +19,10 @@
  * ⛔ הקובץ זהה בית-לבית בכל הריפו פרט לבלוק `APP` שבראשו.
  */
 import { deflateSync, inflateSync } from 'node:zlib';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, ICON_RE, iconName } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -702,13 +702,31 @@ mkdirSync(OUT, { recursive: true });
 let wrote = 0;
 const put = (p, buf) => { writeFileSync(p, buf); wrote++; };
 
-for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512],
-                            ['apple-touch-icon.png', 180], ['favicon-32.png', 32],
-                            ['favicon-16.png', 16]])
-  put(join(OUT, name), encodePng(size, size, tile(size, null)));
+/*  ⛔ נכס האפליקציה נכתב בשם שנושא את תוכנו — ⚠️ והעותק בשם הקודם יורד:
+ *  ⭐ שני שמות לאותו בסיס הם שני נכסים בעיני כל סורק. */
+const web = {};
+const putWeb = (base, buf) => {
+  const name = iconName(base, buf);
+  for (const f of readdirSync(OUT)) if ((ICON_RE.exec(f) || [])[1] === base && f !== name || f === base + '.png') rmSync(join(OUT, f));
+  put(join(OUT, name), buf);
+  web[base] = name;
+};
+for (const [base, size] of [['icon-192', 192], ['icon-512', 512],
+                            ['apple-touch-icon', 180], ['favicon-32', 32],
+                            ['favicon-16', 16]])
+  putWeb(base, encodePng(size, size, tile(size, null)));
 /*  ⛔ ה-maskable נבדל באחד בלבד — הסמל בתוך אזור הבטחה, ⚠️ ולכן הוא נכס
     נפרד ולא אותו קובץ עם `purpose` אחר. */
-put(join(OUT, 'icon-maskable-512.png'), encodePng(512, 512, tile(512, FG_FRAC)));
+putWeb('icon-maskable-512', encodePng(512, 512, tile(512, FG_FRAC)));
+/*  ⛔ ההפניות נגזרות מהשם שנכתב — ⚠️ `manifest.json`, ה-`<link>` וה-`CORE`
+ *  שב-`sw.js`: ⭐ שם שמוקלד ביד בשלושתם הוא שלושה מקומות להתיישן. */
+for (const f of ['index.html', 'manifest.json', 'sw.js']) {
+  const p = join(ROOT, f);
+  if (!existsSync(p)) continue;
+  const src = readFileSync(p, 'utf8');
+  const out = src.replace(/icons\/([a-z0-9-]+?)(?:\.[0-9a-f]{8})?\.png/g, (m, b) => web[b] ? 'icons/' + web[b] : m);
+  if (out !== src) writeFileSync(p, out);
+}
 
 for (const [d, scale] of DENS) {
   const dir = join(RES, 'mipmap-' + d);

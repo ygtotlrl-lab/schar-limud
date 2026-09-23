@@ -25,7 +25,7 @@
 import fs from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, iconCanon } from './app-facts.mjs';
 import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
@@ -268,8 +268,9 @@ const ICONS = ['apple-touch-icon.png', 'favicon-16.png', 'favicon-32.png',
                'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 const MASTER_RE = /^icon-master\.(svg|png)$/;
 
+/*  ⛔ הסט נמדד לפי הבסיס — ⚠️ השם נושא את חתימת התוכן, ⭐ והחתימה נמדדת בשורה שלה. */
 const iFiles = fs.readdirSync(join(ROOT, 'icons'), { withFileTypes: true })
-  .filter((e) => e.isFile()).map((e) => e.name).sort();
+  .filter((e) => e.isFile()).map((e) => iconCanon(e.name)).sort();
 const iMissing = ICONS.filter((f) => !iFiles.includes(f));
 const iExtra   = iFiles.filter((f) => !ICONS.includes(f));
 if (iMissing.length) fail(`נכסים חסרים ב-icons/: ${iMissing.join(', ')} — נמדדו ` +

@@ -41,7 +41,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { APP_SCOPES } from './peers.mjs';
-import { FACTS } from './app-facts.mjs';
+import { FACTS, iconCanon } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -53,11 +53,11 @@ const APP = {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 147, 230];
+export const ROWS = [2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 147, 231];
 
 /* הרשימה הקנונית — מזהה ← חתימת sha256 (16 תווים) של תוכן הבלוק, מקוצץ. */
 const CANON = [
-  ['table', '9cbc6bb4ee2ad160'],
+  ['table', 'd6179a5cc085a5ad'],
 ];
 
 /* פרקים שהם פרטיים בהגדרה — אסור שיישבו בתוך בלוק משותף. */
@@ -86,7 +86,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 38, app: 0, appWhy: '' };
+const FLOOR = { shared: 40, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך
@@ -616,21 +616,34 @@ const CANON_APP_ID = APP_SCOPES;
        *  שם כלל. ⛔ ו-`src` שאינו מצביע על קובץ קיים הוא 404 שקט:
        *  ההתקנה מצליחה, והאייקון פשוט אינו מופיע. */
       const icons = Array.isArray(mf.icons) ? mf.icons : [];
-      /*  ⛔ שישה ולא שלושה — ⚠️ נמדד: שלושת החסרים הוצהרו
-       *  באפליקציה אחת בלבד, ⭐ והם מה שהדפדפן מציג בלשונית ומה שאייפון
-       *  משתמש בו במסך הבית. ⛔ והרשימה **שמית** ולא מנייה: ⚠️ «שישה
-       *  אייקונים» היה מאושר גם על שישה עותקים של אותו נכס. */
+      /*  ⛔ אייקוני התקנה בלבד — ⚠️ כרום בוחר מהרשימה אייקון ראשי אחד,
+       *  ⭐ וכל אייקון נוסף הוא עוד דרך לבחור אחד שאינו נטען: ⛔ favicon
+       *  ואייקון אייפון יושבים ב-`<link>`. ⚠️ **ומה מפיל**: אייקון חסר,
+       *  ⛔ ואייקון שאינו ברשימה. והרשימה **שמית** ולא מנייה. */
       const CANON_ICONS = [
-        ['icons/favicon-16.png',        '16x16',   null],
-        ['icons/favicon-32.png',        '32x32',   null],
         ['icons/icon-192.png',          '192x192', 'any'],
         ['icons/icon-512.png',          '512x512', 'any'],
         ['icons/icon-maskable-512.png', '512x512', 'maskable'],
-        ['icons/apple-touch-icon.png',  '180x180', null],
       ];
+      const extra = icons.filter((i) => i && !CANON_ICONS.some(([s]) => iconCanon(i.src) === s));
+      if (extra.length) fail(`manifest.json: [mf-install-only] נמדדו ${extra.length} אייקונים שאינם אייקוני התקנה ` +
+        `(${extra.map((i) => i.src).join(' · ')}) והצפוי אפס — מעבירים אותם ל-\`<link>\` ומסירים מהרשימה`);
+      else pass(`manifest.json: [mf-install-only] ה-manifest נושא ${icons.length} אייקוני התקנה בלבד`);
+      /*  ⭐ מה שיצא מה-manifest יושב ב-`<link>` — ⚠️ **מה מפיל**: favicon או
+       *  אייקון אייפון בלי תג בראש הדף, ⛔ או תג שמצביע על קובץ שאינו קיים. */
+      {
+        const html = fs.existsSync('index.html') ? fs.readFileSync('index.html', 'utf8') : '';
+        const head = (/<head[\s\S]*?<\/head>/i.exec(html) || [''])[0];
+        const links = [...head.matchAll(/<link\b[^>]*\bhref="(icons\/[^"]+)"/gi)].map((m) => m[1]);
+        const miss = ['favicon-16', 'favicon-32', 'apple-touch-icon'].filter((b) =>
+          !links.some((h) => iconCanon(h) === `icons/${b}.png` && fs.existsSync(h)));
+        if (miss.length) fail(`index.html: [icon-links] נמדדו ${miss.length} אייקונים בלי \`<link>\` בראש הדף ` +
+          `(${miss.join(' · ')}) והצפוי אפס — מוסיפים את התג, ⛔ והם אינם חוזרים ל-manifest`);
+        else pass('index.html: [icon-links] favicon ואייקון אייפון יושבים ב-`<link>` שבראש הדף');
+      }
       let iok = true;
       for (const [src, sizes, purpose] of CANON_ICONS) {
-        const e = icons.find((i) => i && i.src === src);
+        const e = icons.find((i) => i && iconCanon(i.src) === src);
         if (!e) { iok = false; fail(`manifest.json: האייקון "${src}" אינו מוצהר — נמדד היעדר ` +
         `והצפוי הצהרה. מוסיפים אותו לרשימה`); continue; }
         if (e.sizes !== sizes) {
@@ -638,10 +651,7 @@ const CANON_APP_ID = APP_SCOPES;
           fail(`manifest.json: "${src}" מוצהר ${e.sizes} במקום ${sizes} — ` +
         `מעדכנים את השדה`);
         }
-        /*  ⚠️ `null` בטבלה = «אין `purpose`» — ⛔ ולא «any»:
-            favicon ואייקון אייפון אינם נכסי PWA, ⭐ והצהרת `purpose`
-            עליהם הייתה מכריזה אותם כמועמדים למסך הבית. */
-        if (purpose === null ? 'purpose' in e : (e.purpose || 'any') !== purpose) {
+        if ((e.purpose || 'any') !== purpose) {
           iok = false;
           fail(`manifest.json: "${src}" מוצהר purpose="${e.purpose}" במקום "${purpose}" — ` +
                'אייקון מלא אינו maskable; "any maskable" הוא מה שגרם ' +
