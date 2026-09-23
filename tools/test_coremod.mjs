@@ -36,6 +36,7 @@ import { PEERS } from './peers.mjs';
 import { CORE_FILES } from './appsrc.mjs';
 import { whiten } from './whiten.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -68,6 +69,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -114,6 +116,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -266,6 +269,7 @@ let n = 1;
 {
   const missing = CORE_FILES.filter((f) => HERE.indexOf(f) < 0);
   const undeclared = missing.filter((f) => !APP.moduleAbsent[f]);
+  for (const f of missing) if (APP.moduleAbsent[f]) CASE('moduleAbsent', f);
   const stale = Object.keys(APP.moduleAbsent).filter((f) => HERE.indexOf(f) >= 0);
   t(n++, !undeclared.length && !stale.length,
     `[core-absent] מודול שאינו כאן מוכרז — נמדדו ${undeclared.length} בלי הכרזה ` +
@@ -352,6 +356,7 @@ export function hiddenModuleClasses(idx, blocks) {
 /* ── 7. וקוד תשתיתי נכתב במודול ────────────────────────────────────────── */
 {
   const gaps = prefixGaps(IDX, CAPS, APP.coreAllow);
+  for (const k of prefixGaps(IDX, CAPS, {})) if (APP.coreAllow[k]) CASE('coreAllow', k);
   t(n++, !gaps.length,
     `[core-prefix] הגדרה תשתיתית ב-\`index.html\` מחוץ לבלוק חתום — נמדדו ${gaps.length} ` +
     `והצפוי 0` + (gaps.length ? ` (${gaps.join(', ')})` : '') +

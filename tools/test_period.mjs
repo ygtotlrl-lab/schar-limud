@@ -2,8 +2,8 @@
    test_period.mjs — התקופה נגזרת, ואוצר המילים אחד
    ───────────────────────────────────────────────────────────────────────────
    **מה נאכף:** ⛔ אין טבלה ואין מפתח אחסון ששמם נושא תקופה — ⚠️ החודש
-   והשנה מחושבים מתאריך הרשומה, ⭐ וטבלה שנושאת **ערך** לתקופה מוכרזת
-   ב-`APP.periodAllow` עם נימוקה. ⛔ **והלוח מוצהר ב-`APP.calendar`** —
+   והשנה מחושבים מתאריך הרשומה, ⭐ וטבלה שנושאת **ערך** לתקופה נושאת את
+   שם הערך ⛔ ואין לה חריגה. ⛔ **והלוח מוצהר ב-`APP.calendar`** —
    ⚠️ עם נימוק תפקידי, ⭐ ומוצלב למנוע שבמקור: ⛔ ואין מנוע עברי שני.
    ⛔ **ומרשם `APP.coreVerbs` מלא בארבעת הפעלים** — ⚠️ וכל פועל שיש לו
    מימוש כאן נושא את שמו הקנוני, ⭐ וכל פועל שאין לו נושא נימוק:
@@ -44,10 +44,6 @@ const APP = {
    *  נימוק, ⛔ והוא מה שהשאיר שלוש קבוצות בלי הצהרה. */
   calendar: { kind: 'gregorian',
     why: 'החיוב הוא חודש לועזי — ⚠️ שנת הלימודים היא ספטמבר עד אוגוסט, ⭐ וההורה משלם לפי החודש שבלוח שלו' },
-  /*  ⛔ טבלה או מפתח ששמם נושא תקופה ונשארים בכוונה — ⚠️ **מה נכנס**:
-   *  השם ⟵ הערך שהוא נושא ולמה הוא אינו טבלת תקופה; ⛔ **ומה מפיל**: שם
-   *  שאין לו טבלה ואין לו מפתח. ⭐ **ולמה ריק**: נמדד ואין. */
-  periodAllow: {},
   /*  ⛔ ההגירה המקומית שנוקבת בתחילית הישנה — ⚠️ **מה נכנס**: התחילית
    *  שירדה ⟵ שם ההגירה שמעבירה ממנה, והסבב שבו רצה; ⛔ **ומה מפיל**:
    *  אתר שנוקב בה מחוץ לגוף ההגירה, הכרזה שאין לה פונקציה, והכרזה בלי
@@ -98,7 +94,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ המרשם מונה את אותם ארבעה פעלים בכולן,
  *  ⭐ ופועל שאין לו מימוש כאן נמדד בהצהרתו ⛔ ולא בהיעדרו. */
-const FLOOR = { shared: 21, app: 0, appWhy: '' };
+const FLOOR = { shared: 20, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -173,24 +169,22 @@ const PERIOD_WORDS = ['month', 'year', 'period', 'חודש', 'שנה', 'תקופ
 
 /*  ⛔ הליבה מקבלת את מה שהיא מודדת כארגומנט ⛔ ואינה קוראת מהדיסק —
  *  ⚠️ ולכן המוטציה מזינה לה קלט אחר, ⭐ בלי לגעת בעץ. */
-export function periodTableHits(tables, prefix, allow) {
+export function periodTableHits(tables, prefix) {
   return tables.filter((n) => n.indexOf(prefix) === 0)
-    .filter((n) => PERIOD_WORDS.some((w) => n.indexOf(w) >= 0))
-    .filter((n) => !Object.prototype.hasOwnProperty.call(allow || {}, n));
+    .filter((n) => PERIOD_WORDS.some((w) => n.indexOf(w) >= 0));
 }
 /*  ⛔ מפתח אחסון ששמו נושא תקופה — ⚠️ הוא נמדד על ליטרלי המחרוזת שבמקור,
  *  ⭐ **ובתחילית הטבלאות של האפליקציה בלבד**: ⛔ `start_month` הוא עמודה
  *  שנושאת **ערך** לתקופה, ⚠️ ואינו טבלת תקופה ואינו מפתח אחסון שלה.
  *  ⛔ **וההערות נחתכות לפני המדידה** — ⚠️ הערה שמסבירה **למה** מפתח אינו
  *  נמשך עוד נוקבת בשמו, ⭐ והיא עדות שהמפתח ירד ⛔ ולא שהוא חי. */
-export function periodKeyHits(src, prefix, allow) {
+export function periodKeyHits(src, prefix) {
   const out = [];
   const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
   for (const m of code.matchAll(/['"]([a-z][a-z0-9]*(?:_[a-z0-9]+)+)['"]/g)) {
     const k = m[1];
     if (k.indexOf(prefix) !== 0) continue;
     if (!/_(months?|years?|periods?)$/.test(k)) continue;
-    if (Object.prototype.hasOwnProperty.call(allow || {}, k)) continue;
     out.push(k);
   }
   return [...new Set(out)];
@@ -484,27 +478,18 @@ let n = 1;
 /* ── א · התקופה אינה מאוחסנת ───────────────────────────────────────────── */
 const MY_TABLES = DB_SCHEMA.filter((r) => r.t.indexOf(APP.tablePrefix) === 0).map((r) => r.t);
 {
-  const hits = periodTableHits(MY_TABLES, APP.tablePrefix, APP.periodAllow);
+  const hits = periodTableHits(MY_TABLES, APP.tablePrefix);
   t(n++, hits.length === 0,
     `[period-store] טבלה ששמה נושא תקופה — נמדדו ${hits.length} מתוך ${MY_TABLES.length} ` +
     `טבלאות והצפוי אפס${hits.length ? ' (' + hits.join(', ') + ')' : ''}. ` +
-    'גוזרים את התקופה מתאריך הרשומה, או מכריזים ב-`APP.periodAllow` עם נימוקה');
+    'גוזרים את התקופה מתאריך הרשומה, ⛔ ואין חריגה');
 }
 {
-  const hits = periodKeyHits(SRC, APP.tablePrefix, APP.periodAllow);
+  const hits = periodKeyHits(SRC, APP.tablePrefix);
   t(n++, hits.length === 0,
     `[period-store] מפתח אחסון ששמו נושא תקופה — נמדדו ${hits.length} והצפוי אפס` +
     `${hits.length ? ' (' + hits.join(', ') + ')' : ''}. ` +
-    'גוזרים את התקופה מתאריך הרשומה, או מכריזים ב-`APP.periodAllow` עם נימוקה');
-}
-{
-  const live = new Set([...MY_TABLES, ...periodKeyHits(SRC, APP.tablePrefix, {})]);
-  const ghost = Object.keys(APP.periodAllow).filter((k) => !live.has(k));
-  t(n++, ghost.length === 0,
-    `[period-store] הכרזה שאין לה אתר — נמדדו ${ghost.length} מתוך ` +
-    `${Object.keys(APP.periodAllow).length} הכרזות והצפוי אפס` +
-    `${ghost.length ? ' (' + ghost.join(', ') + ')' : ''}. ` +
-    'מסירים מ-`APP.periodAllow` שם שאין לו טבלה ואין לו מפתח');
+    'גוזרים את התקופה מתאריך הרשומה, ⛔ ואין חריגה');
 }
 
 /* ── ב · והלוח מוצהר ───────────────────────────────────────────────────── */
@@ -674,7 +659,7 @@ if (RUN_MUT) {
    *  בזיכרון, ⭐ ואינה נכתבת לעץ. */
   {
     const got = periodTableHits([...MY_TABLES, APP.tablePrefix + 'periods'],
-                                APP.tablePrefix, APP.periodAllow);
+                                APP.tablePrefix);
     t(n++, got.length === 1,
       'מ1 · ⛔ מוטציה: טבלת `' + APP.tablePrefix + 'periods` מפילה את «[period-store]» — ' +
       `נמדדו ${got.length} אתרים והצפוי 1`);
@@ -800,14 +785,14 @@ if (RUN_MUT) {
   }
   {
     const got = periodTableHits([APP.tablePrefix + 'pledges', APP.tablePrefix + 'entries'],
-                                APP.tablePrefix, APP.periodAllow);
+                                APP.tablePrefix);
     t(n++, got.length === 0,
       'נ2 · ⭐ מוטציית-נגד: טבלה ששמה אומר **ערך** ⛔ אינה מפילה — ' +
       `נמדדו ${got.length} אתרים והצפוי 0`);
   }
   {
     const got = periodKeyHits("var a = 'start_month'; var b = '" + APP.tablePrefix + "entries';\n",
-                              APP.tablePrefix, {});
+                              APP.tablePrefix);
     t(n++, got.length === 0,
       'נ3 · ⭐ מוטציית-נגד: עמודה שנושאת ערך לתקופה ⛔ אינה מפילה — ' +
       `נמדדו ${got.length} מפתחות והצפוי 0`);

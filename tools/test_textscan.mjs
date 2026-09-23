@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { whiten } from './whiten.mjs';
 import { PEERS } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ אתר תצוגה שליטרל עברי בו מוצהר — ⚠️ **מה נכנס**: גוף המחרוזת ⟵
@@ -40,8 +41,6 @@ import { FACTS } from './app-facts.mjs';
  *  המבנה קיים**: יש נוסח שנבדל בהחלטת מנהל, ⚠️ והרשימה היא המקום
  *  שבו אומרים למה ⛔ ולא שקט. */
 const APP = {
-  /*  ⭐ נוסחים שנבדלים בהחלטת מנהל — ⛔ **אינו נגזר**: ההחלטה אינה בעץ, ⚠️ ואין קובץ שמצהיר עליה */
-  textAllow: {},
   /*  ⭐ הודעות משותפות שנוסחן נבדל כאן — ⛔ **אינו נגזר**: ההחלטה אינה בעץ, ⚠️ ואין קובץ שמצהיר עליה */
   sharedExempt: {
     MSG_BAD_LOGIN: 'נוסחו נבדל בגיוס בהחלטת מנהל — ⚠️ שם הוא נושא סימן ' +
@@ -49,6 +48,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -83,7 +83,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ המדידה זהה בכולן: ⭐ אותם אתרי
  *  תצוגה, אותו בלוק חתום, ואותן שתי טענות על הריפו האחיות. */
-const FLOOR = { shared: 11, app: 0, appWhy: '' };
+const FLOOR = { shared: 10, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -102,6 +102,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -288,27 +289,16 @@ const MARKS = msgsBlockMarks(CAPS);
 
 /* ── 1. אפס ליטרל עברי בשלושת אתרי ההודעה ──────────────────────────────── */
 const R = routeLiterals(SRC, CAPS);
-const allowed = Object.keys(APP.textAllow);
-const bad = R.msg.filter((s) => allowed.indexOf(s.body) < 0);
+/*  ⛔ ליטרל עברי באתר הודעה מפיל ⛔ ואין לו חריגה — ⚠️ רשימת ההחרגה נותרה
+ *  ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה. */
+const bad = R.msg;
 t(R.spans > 0,
   `אתרי ההודעה — נמדדו ${R.spans} קריאות toast/ask/openModal והצפוי לפחות אחת. ` +
   'מה עושים: אם המסלול הוסר, מסירים גם את השורה מהטבלה');
 t(bad.length === 0,
   `ליטרל עברי באתר הודעה — נמדדו ${bad.length} והצפוי אפס` +
   (bad.length ? ' (' + bad.slice(0, 3).map((s) => JSON.stringify(s.body.slice(0, 30))).join(' · ') + ')' : '') +
-  '. מה עושים: מגדירים קבוע MSG_ ומעבירים אליו את הליטרל, או מצהירים ' +
-  'ב-APP.textAllow עם נימוקו');
-
-/* ── 2. ההחרגה נמדדת משני צדדיה ────────────────────────────────────────── */
-{
-  const live = new Set(R.msg.map((s) => s.body));
-  const dead = allowed.filter((k) => !live.has(k));
-  const noWhy = allowed.filter((k) => String(APP.textAllow[k] || '').trim().split(/\s+/).length < 3);
-  t(dead.length === 0 && noWhy.length === 0,
-    `APP.textAllow — נמדדו ${allowed.length} הצהרות, מהן ${dead.length} בלי אתר ` +
-    `ו-${noWhy.length} בלי נימוק, והצפוי אפס בשתיהן. ` +
-    'מה עושים: מסירים הצהרה שאין לה אתר, ומוסיפים נימוק להצהרה שאין לה');
-}
+  '. מה עושים: מגדירים קבוע MSG_ ומעבירים אליו את הליטרל — ⛔ ואין חריגה');
 
 /* ── 3. הבלוק החתום קיים, וההודעות המשותפות בתוכו ──────────────────────── */
 t(blockOk(SRC, MARKS),
@@ -391,6 +381,8 @@ function peerTextSet() {
    *  ⭐ שני נוסחים לאותו מצב, ⛔ ומי שמתקן אחד אינו רואה את השני. */
   const exempt = APP.sharedExempt || {};
   const drift = PRIVATE.filter((d) => peerTexts.has(d.body) && !exempt[d.name]);
+  for (const d of PRIVATE) if (peerTexts.has(d.body) && exempt[d.name]) CASE('sharedExempt', d.name);
+  if (missing.length) CASE.unmeasured('sharedExempt', 'אחות אינה על הדיסק — ⛔ ונוסח משותף נמדד מולה');
   const names = Object.keys(exempt);
   const dead = names.filter((n) => !PRIVATE.some((d) => d.name === n && peerTexts.has(d.body)));
   const thin = names.filter((n) => String(exempt[n] || '').trim().split(/\s+/).length < 3);

@@ -38,10 +38,6 @@ import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /* ⚠️ קובץ mipmap כבד מ-`MAX_KB` מפיל (טענה ד). ⛔ הרשימה מוצהרת
-     ואינה מושמטת — והכבד ביותר נמדד ומודפס,
-     ולכן חריגה כאן פירושה נכס שנכנס בטעות ולא צורך אמיתי. */
-  heavyMipmapAllow: {},
   /*  ⛔ פלטת החזית — הצהרה ולא גזירה (סבב 68): ⚠️ ממוצע שנגזר מהתמונה
       עצמה היה מאשר כל סטייה בדיעבד. ⛔ **והיא רשימה ולא צבע יחיד
       (סבב 148)** — ⚠️ מאסטר גיאומטרי נושא כמה צבעים, ⭐ ונעילת דיו אחד
@@ -113,7 +109,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 27, app: 0, appWhy: '' };
+const FLOOR = { shared: 26, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -330,7 +326,9 @@ function audit(root) {
       const rel = `${RES}/mipmap-${DENS[i]}/${asset}.png`, p = join(root, rel);
       if (!existsSync(p)) { v.push({ kind: 'missing', rel }); continue; }
       const kb = statSync(p).size / 1024;
-      if (kb > MAX_KB && !APP.heavyMipmapAllow[rel])
+      /*  ⛔ קובץ mipmap כבד מ-`MAX_KB` מפיל ⛔ ואין לו חריגה — ⚠️ הכבד
+       *  ביותר נמדד ומודפס, ⭐ וחריגה כאן היא נכס שנכנס בטעות ⛔ ולא צורך. */
+      if (kb > MAX_KB)
         v.push({ kind: 'heavy', rel, msg: `${kb.toFixed(1)}KB > ${MAX_KB}KB` });
       let img;
       try { img = decodePNG(readFileSync(p)); }
@@ -588,11 +586,6 @@ t(n++, genAlpha(ROOT) === ALPHA_MIN,
   `והצפוי ${ALPHA_MIN}; מיישרים את שני הקבועים`);
 t(n++, !base.some(x => x.kind === 'heavy'), `ד. אין קובץ mipmap מעל ${MAX_KB}KB ${of('heavy')}`);
 t(n++, !base.some(x => x.kind === 'extra'), `א. אין קובץ עודף תחת mipmap-* ${of('extra')}`);
-
-/* ⚠️ הרשימה מוצהרת גם כשהיא ריקה — ⛔ שדה חסר נקרא
-   כ«לא נשאל», ושדה ריק נקרא כ«נמדד ואין». */
-t(n++, APP.heavyMipmapAllow && typeof APP.heavyMipmapAllow === 'object',
-  `ד. רשימת-ההיתר לקבצים כבדים מוצהרת (${Object.keys(APP.heavyMipmapAllow).length} רשומות)`);
 
 /* ────── ⛔ ח. המאסטר שב-`design/` הוא המקור (סבב 148) ───────────────────────
    ⛔ **מה נאכף:** המאסטר מוצהר ב-`APP.master` וקיים בעץ · ⛔ `APP.art` תואם

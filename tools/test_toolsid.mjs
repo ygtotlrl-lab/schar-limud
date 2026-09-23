@@ -34,6 +34,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -45,7 +46,7 @@ const APP = {
     'test_caps_guard.mjs', 'test_caps_ui.mjs', 'test_icons.mjs',
     'test_manifest.mjs', 'test_md.mjs', 'test_orphans.mjs',
     'test_readonly.mjs', 'scope.mjs', 'whiten.mjs', 'db-schema.mjs',
-    'peers.mjs', 'appsrc.mjs', 'app-facts.mjs', 'deep-check.mjs',
+    'peers.mjs', 'appsrc.mjs', 'app-facts.mjs', 'deep-check.mjs', 'decl-cases.mjs',
   ],
   /*  ⛔ קובץ שאין בו `APP` ובכל זאת נבדל — ⚠️ כל שם נושא את הסיבה, ⭐ ושם
    *  שתוכנו זהה בכולן **מפיל**: ⛔ הכרזה שאין לה מקרה בפועל היא בעצמה
@@ -68,6 +69,8 @@ const APP = {
       'מחולל האייקונים — ⛔ הוא כותב נכסים ואינו מודד, ⚠️ ושער נפרד מודד שהרצתו אינה משנה נכס',
     'app-facts.mjs':
       'עובדות האפליקציה מהעץ — מודול שגוזר את זהות האפליקציה לשערים, ⛔ ואין בו טענה',
+    'decl-cases.mjs':
+      'רושם המקרים של רשימות הפטור — מודול שהשערים רושמים בו מה פטר אותם, והמריץ מצליב: ⛔ ואין בו טענה משלו',
     'deep-check.mjs':
       'הבדיקה העמוקה — מודול שהזרימה קוראת לו בשמו לפני המיזוג, ⛔ ואינו מריץ את עצמו: ⚠️ שלוש הרצות לכל שער משותף בכל הריפו ארוכות מהסט',
     'appsrc.mjs':
@@ -95,6 +98,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 112) — ⚠️ המיפוי נגזר מכאן
  *  ⛔ ואינו רשימה שנייה בבודק. */
@@ -150,6 +154,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -377,6 +382,8 @@ if (!away.length) {
   });
   const subset = APP.subsetTools || {};
   const uncovered = uncoveredTools(allNoApp, declPure, declPerApp, subset);
+  for (const f of Object.keys(subset))
+    if (allNoApp.includes(f) && uncoveredTools([f], declPure, declPerApp, {}).length) CASE('subsetTools', f);
   t(n++, uncovered.length === 0,
     `[tool-uncovered] קובץ בלי APP שאינו מוכרז באף מרשם — נמדדו ${uncovered.length} ` +
     `מתוך ${allNoApp.length} והצפוי 0${uncovered.length ? ` (${uncovered.join(', ')})` : ''}. ` +
@@ -408,6 +415,7 @@ if (!away.length) {
     `רשימת הריצה נקראה מהמריץ — נמדדו ${runList.length} שערים והצפוי לפחות אחד. ` +
     'מריצים את השער משורש הריפו');
   const notRun = gateRunGaps(mjs, runList, notGates);
+  for (const f of Object.keys(notGates)) if (mjs.includes(f) && runList.indexOf(f) < 0) CASE('notGates', f);
   t(n++, notRun.length === 0,
     `[gate-run] קובץ tools/ שאינו רץ בסט ואינו מוכרז — נמדדו ${notRun.length} מתוך ` +
     `${mjs.length} והצפוי 0${notRun.length ? ` (${notRun.join(', ')})` : ''}. ` +

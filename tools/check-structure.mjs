@@ -26,11 +26,11 @@ import fs from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   /* חריגות מנומקות — קובץ/תיקייה שקיימים כאן ולא באחיות, עם הסיבה. */
-  rootExtra: {},
   toolsExtra: {
     /* ⭐ נימוקי מטריצת היכולות — עברו לכאן מ-CLAUDE.md בסבב 49 (תקציב
        התיעוד). ⛔ מעבר ולא גיזום: אף שורה לא נמחקה, ואף שער אינו
@@ -55,6 +55,7 @@ const APP = {
   toolsDirs: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -83,7 +84,7 @@ const GENERATORS = ['gen-icons.mjs'];
  *  ומוצהרת, ⛔ ולא הרחבה של `CHECKERS` שהטבלה מונה בה שישה. */
 /*  ⛔ המשותפים לכולן (סבב 139) — ⚠️ מודול שנקרא משערים בכל הריפו,
  *  ⭐ ומקומו מחוץ לאזור הפר-אפליקציה: ⛔ שם משותף שיושב בו נראה פרטי. */
-const SHARED_MODULES = ['app-facts.mjs', 'appsrc.mjs', 'db-schema.mjs', 'deep-check.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
+const SHARED_MODULES = ['app-facts.mjs', 'appsrc.mjs', 'db-schema.mjs', 'decl-cases.mjs', 'deep-check.mjs', 'peers.mjs', 'scope.mjs', 'whiten.mjs'];
 /* ⚠️ פר-אפליקציה — רתמת מודל ההרשאות קיימת בשלוש שיש בהן כניסה, וביומן אין כניסה */
 const MODULES = SHARED_MODULES.concat(['roles-harness.mjs']);
 /* ⚠️ סוף פר-אפליקציה */
@@ -136,6 +137,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -176,6 +178,7 @@ const dirExtra = APP.dirExtra || {};
 const missingD = DIRS.filter((d) => !dirs.includes(d));
 const extraD   = dirs.filter((d) => !DIRS.includes(d) && !(d in dirExtra));
 const ghostD   = Object.keys(dirExtra).filter((d) => !dirs.includes(d));
+for (const d of Object.keys(dirExtra)) if (dirs.includes(d) && !DIRS.includes(d)) CASE('dirExtra', d);
 if (ghostD.length) fail(`תיקיות מוכרזות שאינן קיימות: ${ghostD.join(', ')} — נמדדו ` +
                         `${ghostD.length} מתוך ${Object.keys(dirExtra).length} הכרזות והצפוי אפס. ` +
                         `מסירים אותן מ-APP.dirExtra`);
@@ -189,20 +192,17 @@ if (!missingD.length && !extraD.length) {
 }
 
 /* ── ב. קובצי השורש ────────────────────────────────────────────────────── */
-const allowed  = new Set([...ROOT_FILES, ...Object.keys(APP.rootExtra)]);
+/*  ⛔ השורש סגור ⛔ ואין לו חריגה — ⚠️ רשימת ההחרגה נותרה ריקה בכל
+ *  הריפו, ⭐ וירדה עם מי שקרא אותה: ⛔ קובץ שורש שקיים באחת בלבד מפיל. */
+const allowed  = new Set(ROOT_FILES);
 const badF     = files.filter((f) => !allowed.has(f));
 const missingF = ROOT_FILES.filter((f) => !files.includes(f));
 if (badF.length)     fail(`קבצים בשורש שאינם ברשימה הסגורה: ${badF.join(', ')} — נמדדו ${badF.length} ` +
-                          `מעבר לרשימה. מוסיפים לכל אחד שורה מנומקת ברשימת-ההיתר, ` +
-                          `בכל עותקי הבדיקה, או מסירים אותו`);
+                          `מעבר לרשימה. מסירים אותו, או מוסיפים אותו לרשימה הסגורה ` +
+                          `בכל עותקי הבדיקה`);
 if (missingF.length) fail(`קבצים חסרים מהרשימה הסגורה: ${missingF.join(', ')} — נמדדו ` +
                           `${missingF.length} חסרים והצפוי אפס. מוסיפים אותם, או גוזמים ` +
                           `אותם מהרשימה בכל עותקי הבדיקה`);
-for (const [f, why] of Object.entries(APP.rootExtra)) {
-  if (!files.includes(f)) fail(`חריגת שורש רשומה שאינה קיימת בפועל: ${f} — נמדד שהקובץ אינו בעץ ` +
-        `והצפוי שיהיה. יש להסיר את השורה מרשימת-ההיתר`);
-  else pass(`חריגת שורש מנומקת: ${f} — ${why}`);
-}
 if (!badF.length && !missingF.length) pass('קובצי השורש בתוך הרשימה הסגורה');
 
 /* ── ג. tools/ ─────────────────────────────────────────────────────────── */
@@ -237,7 +237,11 @@ if (badT.length) fail(`קבצים לא-רשומים ב-tools/: ${badT.join(', ')
 for (const [f, why] of Object.entries(APP.toolsExtra)) {
   if (!tFiles.includes(f)) fail(`חריגת tools רשומה שאינה קיימת בפועל: ${f} — נמדד שהקובץ אינו ` +
         `בעץ והצפוי שיהיה. מסירים את השורה מרשימת-ההיתר`);
-  else pass(`חריגת tools מנומקת: ${f} — ${why}`);
+  else {
+    if (!(CHECKERS.includes(f) || GENERATORS.includes(f) || MODULES.includes(f) ||
+          (TEST_RE.test(f) && !OLD_TEST_RE.test(f)))) CASE('toolsExtra', f);
+    pass(`חריגת tools מנומקת: ${f} — ${why}`);
+  }
 }
 const badTD = tDirs.filter((d) => !(d in APP.toolsDirs));
 if (badTD.length) fail(`תת-תיקיות לא-רשומות ב-tools/: ${badTD.join(', ')} — נמדדו ` +
@@ -400,7 +404,7 @@ function walk(dir, base) {
   for (const [f, why] of Object.entries(APP.androidExtra || {})) {
     if (!got.includes(f)) fail(`חריגת android רשומה שאינה קיימת בפועל: ${f} — נמדד שהקובץ ` +
         `אינו בעץ והצפוי שיהיה. מסירים את השורה מ-APP.androidExtra`);
-    else pass(`חריגת android מנומקת: ${f} — ${why}`);
+    else { if (!ANDROID.includes(f)) CASE('androidExtra', f); pass(`חריגת android מנומקת: ${f} — ${why}`); }
   }
   if (!miss.length && !extra.length) pass(`android/ — ${ANDROID.length} קבצים קנוניים`);
 }

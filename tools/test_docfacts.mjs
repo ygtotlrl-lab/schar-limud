@@ -4,8 +4,7 @@
    **מה נאכף:** ⛔ כל ערך מדיד בארבעת קובצי התיאור נושא מקור אמת מוצהר
    ב-`APP.docFacts`, ⚠️ ונמדד מולו — `build.gradle` או העץ · ⛔ **ותאריך
    נכתב בפורמט אחד**, `YYYY-MM-DD` · ⛔ **ושם קובץ בגרשיים אחוריים קיים
-   בעץ**, ⚠️ או מוכרז ב-`APP.retired` עם סבבו, ⭐ והשורה שנוקבת בו נושאת
-   את הסבב · ⛔ **ואזכור סבב שקדם ללידת האפליקציה מפיל**, ⚠️ והלידה נגזרת
+   בעץ**, ⚠️ ואין לו חריגה: ⭐ שם שירד — יורד מהתיעוד איתו · ⛔ **ואזכור סבב שקדם ללידת האפליקציה מפיל**, ⚠️ והלידה נגזרת
    מהקומיט השורשי.
 
    **הנימוק המדוד:** ⛔ 58 ערכים מדידים נסרקו בארבעת הקבצים, ⚠️ ו-13 סטו —
@@ -51,11 +50,6 @@ const APP = {
     master:      { file: 'android/README.md', from: 'tree-master',
       doc: '\\*\\*המאסטר הוא `(design/[\\w.-]+)`\\*\\*' },
   },
-  /*  ⛔ שם קובץ שאינו קיים עוד ונשאר בתיעוד — ⚠️ **מה נכנס**: השם ⟵ הסבב
-   *  שבו ירד ולמה יש מי שיחפש אותו; ⛔ **ומה מפיל**: הכרזה שאין לה אתר,
-   *  הכרזה בלי סבב, ושורה שנוקבת בשם בלי לנקוב בסבב. ⭐ **ולמה ריק**:
-   *  נמדד ואין — כל שם שנותר בתיעוד יש לו קובץ בעץ. */
-  retired: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
@@ -80,7 +74,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ ארבעת קובצי התיאור קיימים בכולן,
  *  ⭐ והמרשם מונה את אותן ארבע עובדות: ⚠️ מה שנבדל הוא הערך ⛔ ולא מספר
  *  הטענות. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+const FLOOR = { shared: 5, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -170,33 +164,16 @@ export function docNames(lines, peers) {
 /*  ⛔ הקובץ קיים כשהוא במעקב, ⛔ או כשדפוס ב-`.gitignore` תופס אותו —
  *  ⚠️ המפתח חי בסודות ואינו נדחף, ⭐ ושמו בכל זאת נכתב בתיעוד:
  *  ⛔ דרישת מעקב לבדה הייתה מפילה אותו. */
-export function nameGaps(names, tracked, ignored, retired) {
+export function nameGaps(names, tracked, ignored) {
   const base = new Set([...tracked].map((f) => f.split('/').pop()));
   const out = [];
   for (const n of names) {
     if (tracked.has(n.tok) || base.has(n.tok.split('/').pop())) continue;
     if (ignored.some((re) => re.test(n.tok))) continue;
-    if (Object.prototype.hasOwnProperty.call(retired || {}, n.tok)) continue;
     out.push(n.tok + ' (' + n.line + ')');
   }
   return out;
 }
-/*  ⛔ ההכרזה נמדדת משני צדדיה — ⚠️ הכרזה שאין לה אתר חי, ⛔ הכרזה בלי
- *  סבב נקוב, ⛔ ואתר שההכרזה שלו אינו נושא את סבבה בשורה: ⭐ «נושא את
- *  סבבו» מודד את השורה ⛔ ולא את כותרת הפרק — ⚠️ probe שמסתפק בכותרת
- *  מאשר גם שם שאיש אינו יודע מתי ירד. */
-export function retiredGaps(names, retired) {
-  const out = [];
-  const seen = new Set(names.map((n) => n.tok));
-  for (const [k, v] of Object.entries(retired || {})) {
-    if (!seen.has(k)) { out.push('[בלי אתר] ' + k); continue; }
-    if (!v || !/^\d+$/.test(String(v.round || ''))) { out.push('[בלי סבב] ' + k); continue; }
-    if (!v.why || String(v.why).trim().length < 12) { out.push('[בלי נימוק] ' + k); continue; }
-    for (const n of names) if (n.tok === k && !n.hasRound) out.push('[שורה בלי סבב] ' + k + ':' + n.line);
-  }
-  return out;
-}
-
 /*  ⛔ פרוזה שנוקבת בנתיב אינה סותרת את מצבו — ⚠️ **מה נכנס**: שם שאינו
  *  במעקב `git` וחסום ב-`.gitignore`; ⛔ **ומה מפיל**: משפט שנוקב בו בלי
  *  הצהרת ההיעדר. ⭐ **ולמה**: ⛔ הקורא מאמין לפרוזה — ⚠️ היא מסבירה,
@@ -205,12 +182,11 @@ export function retiredGaps(names, retired) {
  *  ⛔ **וההצהרה נמדדת בשלוש השורות שסביב השם** ⛔ ולא בשורה שלו בלבד —
  *  ⚠️ פרוזה נגללת, ⭐ והמשפט אינו נגמר בסוף השורה. */
 const ABSENT_RE = /אינו בריפו|אינם בריפו|אינו בעץ|אינם בעץ|אינו במעקב/;
-export function absentGaps(names, tracked, ignored, retired, lines) {
+export function absentGaps(names, tracked, ignored, lines) {
   const base = new Set([...tracked].map((f) => f.split('/').pop()));
   const out = [];
   for (const nm of names) {
     if (tracked.has(nm.tok) || base.has(nm.tok.split('/').pop())) continue;
-    if (Object.prototype.hasOwnProperty.call(retired || {}, nm.tok)) continue;
     /*  ⛔ מה שאינו חסום ב-`.gitignore` נמדד בטענה שמעל — ⚠️ שם שאין לו
      *  קובץ כלל: ⭐ ושתי מדידות על אותו שם הן שתי הכרעות על אותה ראיה. */
     if (!ignored.some((re) => re.test(nm.tok))) continue;
@@ -308,29 +284,21 @@ const NAMES = docNames(ALL, PEERS.filter((p) => p !== FACTS.slug));
 const GRADLE = has('android/app/build.gradle') ? rd('android/app/build.gradle') : '';
 const TREE = has('design') ? readdirSync(join(ROOT, 'design')).map((f) => 'design/' + f) : [];
 
-/* ── א · שם קובץ בתיעוד — קיים, או מוכרז ───────────────────────────────── */
+/* ── א · שם קובץ בתיעוד — קיים ─────────────────────────────────────────── */
 {
   /*  ⛔ בלי סט מעקב אין מול מה למדוד — ⚠️ הדילוג מדווח **מה אינו נמדד
    *  בגללו**, ⭐ ונספר ככל תוצאה: ⛔ מונה שמדלג עליו מדווח חוסר שאינו קיים. */
-  const g = GIT_OK ? nameGaps(NAMES, TRACKED, IGNORED, APP.retired) : [];
+  const g = GIT_OK ? nameGaps(NAMES, TRACKED, IGNORED) : [];
   t(n++, g.length === 0,
     GIT_OK
-      ? `[doc-name] שם קובץ שאין לו קובץ ואינו מוכרז — נמדדו ${g.length} מתוך ${NAMES.length} ` +
+      ? `[doc-name] שם קובץ שאין לו קובץ — נמדדו ${g.length} מתוך ${NAMES.length} ` +
         `שמות והצפוי אפס${g.length ? ' (' + g.slice(0, 6).join(' · ') + ')' : ''}. ` +
-        'מתקנים את השם, או מכריזים ב-`APP.retired` עם סבבו ונימוקו'
+        'מתקנים את השם, או מסירים אותו מהתיעוד — ⛔ ואין חריגה'
       : `[doc-name] לא נמדד — אין סט מעקב ב-\`git\`: ⛔ ואף אחד מ-${NAMES.length} ` +
         'השמות שבתיעוד אינו מוצלב לקובץ. מריצים בתוך עותק עבודה של git');
 }
 {
-  const g = retiredGaps(NAMES, APP.retired);
-  t(n++, g.length === 0,
-    `[doc-name] הכרזת «אינו קיים» נמדדת משני צדדיה — נמדדו ${g.length} פערים מתוך ` +
-    `${Object.keys(APP.retired || {}).length} הכרזות והצפוי אפס` +
-    `${g.length ? ' (' + g.join(' · ') + ')' : ''}. ` +
-    'מסירים הכרזה שאין לה אתר, ומוסיפים את הסבב לשורה שנוקבת בשם');
-}
-{
-  const g = GIT_OK ? absentGaps(NAMES, TRACKED, IGNORED, APP.retired, ALL) : [];
+  const g = GIT_OK ? absentGaps(NAMES, TRACKED, IGNORED, ALL) : [];
   t(n++, g.length === 0,
     GIT_OK
       ? `[doc-absent] פרוזה שנוקבת בנתיב שאינו בריפו בלי לומר זאת — נמדדו ${g.length} מתוך ` +
@@ -404,7 +372,7 @@ if (RUN_MUT) {
   }
   {
     const got = nameGaps([{ tok: 'zz-no-such-file.sql', line: 1, hasRound: false }],
-                         TRACKED, IGNORED, APP.retired);
+                         TRACKED, IGNORED);
     t(n++, got.length === 1,
       'מ2 · ⛔ מוטציה: שם קובץ שאינו קיים מפיל את «[doc-name]» — ' +
       `נמדדו ${got.length} והצפוי 1`);
@@ -428,13 +396,6 @@ if (RUN_MUT) {
       'מ4 · ⛔ מוטציה: אזכור סבב שקדם ללידה מפיל את «[doc-round]» — ' +
       `נמדדו ${got.length} והצפוי 1`);
   }
-  {
-    const got = retiredGaps([{ tok: 'zz.sh', line: 3, hasRound: true }],
-                            { 'zz.sh': { why: 'נימוק מספיק אורך כאן', round: '' } });
-    t(n++, got.length === 1 && got[0].indexOf('[בלי סבב]') === 0,
-      'מ5 · ⛔ מוטציה: הכרזה בלי סבב נקוב מפילה את «[doc-name]» — ' +
-      `נמדדו ${got.length} והצפוי 1`);
-  }
   /*  ⛔ ושורת ערך מפתח נמדדת ככל שורה — ⚠️ הפורמט שלה אחד, ⭐ וגם היא
    *  נופלת על תאריך שאינו `YYYY-MM-DD`: ⛔ ושורה שאינה נמדדת היא
    *  הצהרה ⛔ ולא בדיקה. */
@@ -442,13 +403,6 @@ if (RUN_MUT) {
     const got = dateGaps(['| **תוקף** | 10,000 יום — 15/09/2026 עד 2054-01-31 |']);
     t(n++, got.length === 1,
       'מ6 · ⛔ מוטציה: תאריך שאינו ISO **בשורת ערך מפתח** מפיל את «[doc-date]» — ' +
-      `נמדדו ${got.length} והצפוי 1`);
-  }
-  {
-    const got = retiredGaps([{ tok: 'zz.sh', line: 3, hasRound: false }],
-                            { 'zz.sh': { why: 'נימוק מספיק אורך כאן', round: 148 } });
-    t(n++, got.length === 1 && got[0].indexOf('[שורה בלי סבב]') === 0,
-      'מ7 · ⛔ מוטציה: שורה שנוקבת בשם מוכרז בלי סבב מפילה את «[doc-name]» — ' +
       `נמדדו ${got.length} והצפוי 1`);
   }
 
@@ -462,14 +416,14 @@ if (RUN_MUT) {
   }
   {
     const live = [...TRACKED].find((f) => /\.mjs$/.test(f)) || 'tools/peers.mjs';
-    const got = nameGaps([{ tok: live, line: 1, hasRound: false }], TRACKED, IGNORED, APP.retired);
+    const got = nameGaps([{ tok: live, line: 1, hasRound: false }], TRACKED, IGNORED);
     t(n++, got.length === 0,
       'נ2 · ⭐ מוטציית-נגד: שם של קובץ שבמעקב ⛔ אינו מפיל — ' +
       `נמדדו ${got.length} והצפוי 0 (${live})`);
   }
   {
     const got = absentGaps([{ tok: 'signing/zz.keystore', line: 1, hasRound: false }],
-                           new Set(), [/^signing\/[^/]*\.keystore$/], {},
+                           new Set(), [/^signing\/[^/]*\.keystore$/],
                            ['⭐ **וכל חתימה היא ב-`signing/zz.keystore`**.']);
     t(n++, got.length === 1,
       'מ8 · ⛔ מוטציה: פרוזה שנוקבת בנתיב שאינו בריפו בלי הצהרת היעדר מפילה את «[doc-absent]» — ' +
@@ -477,17 +431,10 @@ if (RUN_MUT) {
   }
   {
     const got = absentGaps([{ tok: 'signing/zz.keystore', line: 1, hasRound: false }],
-                           new Set(), [/^signing\/[^/]*\.keystore$/], {},
+                           new Set(), [/^signing\/[^/]*\.keystore$/],
                            ['⭐ **וכל חתימה היא ב-`signing/zz.keystore`** — ⛔ הקובץ אינו בריפו.']);
     t(n++, got.length === 0,
       'נ4 · ⭐ מוטציית-נגד: אותה פרוזה עם הצהרת ההיעדר ⛔ אינה מפילה — ' +
-      `נמדדו ${got.length} והצפוי 0`);
-  }
-  {
-    const got = retiredGaps([{ tok: 'zz.sh', line: 3, hasRound: true }],
-                            { 'zz.sh': { why: 'ירד בסבב שסגר את הכתיבה הכפולה', round: 148 } });
-    t(n++, got.length === 0,
-      'נ3 · ⭐ מוטציית-נגד: הכרזה עם סבב ושורה שנושאת אותו ⛔ אינה מפילה — ' +
       `נמדדו ${got.length} והצפוי 0`);
   }
   {

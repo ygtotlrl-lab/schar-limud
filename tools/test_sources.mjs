@@ -43,7 +43,6 @@ const APP = {
   /* דגלים שמותר להם לשער מקור — ⛔ מקור מאחורי דגל אינו נדרש להיות
      ב-`tables`, מפני שהוא אינו נשלף עד שהדגל יידלק. ⛔ **והרשימה אינה
      נשמטת** — ⚠️ שדה חסר נקרא «לא נשאלתי». */
-  gates: []
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -59,7 +58,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 6, app: 0, appWhy: '' };
+const FLOOR = { shared: 5, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -215,11 +214,13 @@ ok(missing.length === 0,
    '2 · כל מקור `kind:\'table\'` פעיל מוכרז ב-APP.tables' +
    (missing.length ? ' — חסרים: ' + missing.join(', ') : ''));
 
-/* ⛔ ב. דגל שמשער מקור חייב להיות מוכרז — אחרת «מגודר» הופך לדרך לעקוף. */
-const badGate = gated.map((s) => s.gate).filter((g) => APP.gates.indexOf(g) === -1);
+/* ⛔ ב. מקור מגודר מפיל ⛔ ואין לו חריגה — ⚠️ «מגודר» הוא דרך לעקוף את
+   רשימת הטבלאות, ⭐ ורשימת הדגלים המותרים נותרה ריקה בכל הריפו: ⛔ וירדה
+   עם מי שקרא אותה. */
+const badGate = gated.map((s) => s.gate);
 ok(badGate.length === 0,
-   '3 · כל דגל שמשער מקור מוכרז ב-APP.gates' +
-   (badGate.length ? ' — לא מוכרזים: ' + badGate.join(', ') : ''));
+   '3 · אין מקור מגודר בדגל' +
+   (badGate.length ? ' — מגודרים: ' + badGate.join(', ') : ''));
 
 /* ⚠️ ג. רשימה שהתיישנה מפילה גם היא — טבלה מוכרזת שאיש אינו מגבה היא
    בדיוק השריד שאסור ברשימות-היתר. */
@@ -229,11 +230,6 @@ ok(stale.length === 0,
    '4 · אין ב-APP.tables טבלה שאינה מקור גיבוי' +
    (stale.length ? ' — שרידים: ' + stale.join(', ') : ''));
 
-/* ⚠️ ד. הדגלים המוכרזים קיימים בקוד — דגל שנמחק משאיר שער שאינו משער דבר. */
-const deadGate = APP.gates.filter((g) => !new RegExp('var\\s+' + g + '\\s*=').test(SRC));
-ok(deadGate.length === 0,
-   '5 · כל דגל ב-APP.gates מוגדר ב-index.html' +
-   (deadGate.length ? ' — חסרים: ' + deadGate.join(', ') : ''));
 
 console.log('  ⓘ פעילים: ' + (live.map((s) => s.name).join(', ') || '—') +
             ' · מגודרים: ' + (gated.map((s) => s.name + '@' + s.gate).join(', ') || '—'));
@@ -272,12 +268,12 @@ const activeMissing = (text) => {
      '7 · ⛔ מוטציה: מקור מגודר אינו פעיל — והסרת הדגל מפילה את טענה 2');
 }
 
-/* מוטציה 3 — דגל שאינו מוכרז ב-APP.gates. */
+/* מוטציה 3 — מקור מגודר בדגל. */
 {
   const f = tableSources(inject('if (ZZ_GATE) { var _zz = ' + GHOST + '; }')) || [];
-  const bad = f.filter((s) => s.gate).map((s) => s.gate).filter((g) => APP.gates.indexOf(g) === -1);
+  const bad = f.filter((s) => s.gate).map((s) => s.gate);
   ok(bad.indexOf('ZZ_GATE') !== -1,
-     '8 · מוטציה: דגל שאינו ב-APP.gates — טענה 3 נופלת');
+     '8 · מוטציה: מקור מגודר בדגל — טענה 3 נופלת');
 }
 
 /* ⭐ מוטציית-נגד — מקור `kv` אינו נוגע לשער הזה כלל.

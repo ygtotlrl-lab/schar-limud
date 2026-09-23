@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS, appFacts } from './app-facts.mjs';
 import { whitenJs } from './whiten.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -39,7 +40,6 @@ const APP = {
     ['test_dbscan.mjs', 'dbSchema'],
     ['test_dbscan.mjs', 'dbTables'],
     ['test_dbscan.mjs', 'dbPager'],
-    ['test_dbscan.mjs', 'dbTableGone'],
     ['test_dbscan.mjs', 'dbDyn'],
     ['test_dbscan.mjs', 'dbOrderDyn'],
     ['check-capabilities.mjs', 'kvMeta'],
@@ -49,6 +49,7 @@ const APP = {
   ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -88,6 +89,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -292,11 +294,13 @@ function keyNoReader(st) {
   const out = [];
   for (const r of Object.keys(st)) for (const f of FILES) {
     const src = st[r][f]; const b = appBlock(src); if (!b) continue;
-    if (APP.readerExempt[f]) continue;
+    const exempt = !!APP.readerExempt[f];
     const after = noCmt(src).slice(src.indexOf('/* ── סוף APP'));
     for (const k of topKeys(b)) {
-      if (!new RegExp('APP\\.' + k + '\\b|APP\\[[\'"]' + k + '[\'"]\\]').test(after))
-        out.push(`${r}/${f}::${k}`);
+      if (!new RegExp('APP\\.' + k + '\\b|APP\\[[\'"]' + k + '[\'"]\\]').test(after)) {
+        if (exempt) CASE('readerExempt', f);
+        else out.push(`${r}/${f}::${k}`);
+      }
     }
   }
   return out;
@@ -306,7 +310,6 @@ function keyNoReader(st) {
 function readerNoKey(st) {
   const out = new Set();
   for (const r of Object.keys(st)) for (const f of FILES) {
-    if (APP.readerExempt[f]) continue;
     const src = st[r][f]; const b = appBlock(src); if (!b) continue;
     const keys = topKeys(b);
     const after = noCmt(src).slice(src.indexOf('/* ── סוף APP'));
@@ -315,7 +318,9 @@ function readerNoKey(st) {
      *  הסדר הוא בדיוק ההבדל. */
     for (const m of after.matchAll(/APP\.([A-Za-z_$][\w$]*)/g)) {
       if (m[1] === '$' || after[m.index + 4] === '$') continue;
-      if (!keys.includes(m[1])) out.add(`${r}/${f}::${m[1]}`);
+      if (keys.includes(m[1])) continue;
+      if (APP.readerExempt[f]) CASE('readerExempt', f);
+      else out.add(`${r}/${f}::${m[1]}`);
     }
   }
   return [...out];

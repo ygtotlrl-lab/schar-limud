@@ -27,18 +27,6 @@ import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⭐ שורות שחולקות `probe` בהכרעה — ⛔ **אינו נגזר**: ההחרגה היא החלטה, ⚠️ ואין קובץ שמצהיר עליה */
-  sameProbeOk: [],
-  /*  ⛔ `probe` של שורה ✅ שאינו נוגע במקור — ⚠️ **מה נכנס**: `<מספר>|<שם>` ⟵ למה
-   *  נוכחות מספיקה שם; ⛔ **ומה מפיל**: probe כזה שאינו כאן, ⛔ והכרזה שאין לה מקרה.
-   *  ⭐ **ולמה ריק**: נמדד ואין. */
-  probeDeclOnly: {},
-  sharedDecl: [],
-  /*  ⛔ מרשם חישוב שאין בו מקרה ריק ⛔ והוא אינו אפשרי בו — ⚠️ **מה נכנס**:
-   *  `<קובץ>::<שם>` ⟵ למה אפס רשומות אינן קלט אפשרי; ⛔ **ומה מפיל**: מרשם
-   *  כזה שאינו כאן, הכרזה שאין לה מרשם, והכרזה בלי נימוק. ⭐ **ולמה ריק**:
-   *  נמדד ואין — ⚠️ המקרה הריק אפשרי בכל מרשם חישוב שבעץ. */
-  noEmpty: {},
   /*  ⛔ הסעיפים שאינם נאכפים בשורה ⭕ — ⚠️ **מה נכנס**: מספר השורה ⟵ ציטוט
    *  כל סעיף שאינו נאכף, כפי שהוא בתקן של אותה שורה; ⛔ **ומה מפיל**: ציטוט
    *  שאינו בהערה, ציטוט שאינו בתקן, שורה «בחלקו» בלי הכרזה, והכרזה בלי שורה.
@@ -51,21 +39,6 @@ const APP = {
     124: ['סטייה מדפוס'],
     227: ['והניסיון החוזר נעצר'],
   },
-  /*  ⛔ מפקד שאינו מפקד — ⚠️ **מה נכנס**: קטע טקסט שהמספר בו הוא
-   *  שם של מבנה או תיאורו, והנימוק למה; ⛔ **ומה מפיל**: הכרזה שאין לה
-   *  אתר בהיקף של מרשם. ⭐ **ולמה המבנה קיים**: הסריקה הפוכה
-   *  תופסת גם מספר שהוא **שם**, ⚠️ והוא אינו מתיישן עם המרשם. */
-  censusAllow: {},
-  /*  ⛔ שער שרץ ואינו מצהיר שורה — ⚠️ **מה נכנס**: שם השער ⟵ הנושא
-   *  שהוא מודד ולמה אינו מצהיר אותו; ⛔ **ומה מפיל**: שער בלי שורה
-   *  ובלי הכרזה, והכרזה שאין לה שער. ⭐ **ולמה המבנה קיים**: אכיפה
-   *  שאין לה שורה מפילה על טענה שאינה בתקן, ⚠️ ומי שנפל עליה אינו
-   *  יודע איזו הוראה נשברה.
-   *  ⛔ **והנימוק הוא היכולת** — ⚠️ מה השער מכסה, ⛔ ולא היכן השורה
-   *  נאכפת: ⭐ מיקום אומר איפה הוא יושב, ⛔ ואינו אומר למה אין לו שורה.
-   *  ⛔ **והיכולת חיה ביותר מאפליקציה אחת** — ⚠️ שער בלי שורה שחי באחת
-   *  בלבד הוא שער מוצר ⛔ ויורד, ⭐ והקיום נמדד על הדיסק של האחיות. */
-  gateNoRows: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -77,7 +50,6 @@ export const ROWS = [56, 50, 52, 51, 53, 55];
  *  ⭐ והן רצות ברמה המלאה (`--full`) בסוף הסבב ולפני מיזוג. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SIBS = path.join(ROOT, '..');
 let pass = 0, fail = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
@@ -89,7 +61,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ כל טענה שאין לה מה למדוד בריפו הזה
  *  נושאת שורת נימוק ⛔ ואינה מדולגת: ⭐ המספר זהה בכולן. */
-const FLOOR = { shared: 13, app: 0, appWhy: '' };
+const FLOOR = { shared: 12, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -267,7 +239,6 @@ function registryGaps(c) {
 /* ח · מפקד מוקלד בהיקף של מרשם */
 function censusGaps(c) {
   const out = [];
-  const allow = Object.keys(APP.censusAllow || {});
   for (const r of REGISTRIES) {
     const txt = declSpan(c[r.src] || '', r.id);
     if (!txt) continue;
@@ -277,13 +248,11 @@ function censusGaps(c) {
       const rest = txt.slice(m.index + m[0].length).replace(/^[\s־-]+/, '');
       if (!r.nouns.some((n) => new RegExp('^(?:ה|ב|ל|מ|ו)?' + n + HEB_TAIL).test(rest))) continue;
       const hit = txt.slice(m.index, m.index + 40).split('\n')[0];
-      if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
       out.push(`${r.id}: «${hit.trim()}»`);
     }
     const bnd = BOUND_RE();
     while ((m = bnd.exec(txt)) !== null) {
       const hit = txt.slice(Math.max(0, m.index - 14), m.index + m[0].length);
-      if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
       out.push(`${r.id}: «${hit.trim().split('\n').pop()}»`);
     }
   }
@@ -311,15 +280,12 @@ const MEASURED_NOTE = /^⚠️\s*\*\*נמדד\*\*/;
 /* ח · מפקד מוקלד בניסוח — עמודת התקן ועמודת ההערות */
 function censusTableGaps(c) {
   const out = [];
-  const allow = Object.keys(APP.censusAllow || {});
   for (const r of tableRows(c.md) || []) {
     for (const [where, txt] of [['תקן', dropQuotes(r.std)],
                                 ['הערה', MEASURED_NOTE.test(r.note.trim()) ? '' : dropQuotes(r.note)]]) {
       const re = TBL_CENSUS_RE();
       let m;
       while ((m = re.exec(txt)) !== null) {
-        const hit = txt.slice(Math.max(0, m.index - 14), m.index + m[0].length).trim();
-        if (allow.some((a) => hit.indexOf(a) >= 0)) continue;
         out.push(`${r.n} (${where}): «${m[0]}»`);
       }
     }
@@ -327,12 +293,9 @@ function censusTableGaps(c) {
   return out;
 }
 
-/* ח · והצד השני — הכרזה בהיתר שאין לה אתר חי */
-function censusAllowGaps(c) {
-  const body = REGISTRIES.map((r) => declSpan(c[r.src] || '', r.id)).join('\n') + '\n' +
-               (tableRows(c.md) || []).map((r) => r.std + ' ' + r.note).join('\n');
-  return Object.keys(APP.censusAllow || {}).filter((a) => body.indexOf(a) < 0);
-}
+/*  ⛔ מפקד מוקלד מפיל ⛔ ואין לו חריגה — ⚠️ רשימת ההיתר נותרה ריקה בכל
+ *  הריפו, ⭐ וירדה עם מי שקרא אותה: ⛔ מספר שהוא שם של מבנה נכתב במילים
+ *  שאינן ישות של מרשם. */
 
 export const PATTERNS = ['א', 'ב+ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
 export const MUTS = ['א', 'ב+ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
@@ -366,8 +329,7 @@ function dupProbe(c) {
     (by[k] = by[k] || new Set()).add(e.row);
   }
   return Object.entries(by).filter(([, v]) => v.size > 1)
-    .map(([k, v]) => `${[...v].sort((x, y) => x - y).join('+')} → ${k.slice(0, 40)}`)
-    .filter((s) => !APP.sameProbeOk.includes(s.split(' → ')[0]));
+    .map(([k, v]) => `${[...v].sort((x, y) => x - y).join('+')} → ${k.slice(0, 40)}`);
 }
 
 /* ב+ג · הצהרה אחת ⟵ שורה אחת */
@@ -378,7 +340,7 @@ function clashDecl(c) {
     for (const m of r.std.matchAll(/`APP\.([A-Za-z_$][\w$]*)`/g))
       (owner[m[1]] = owner[m[1]] || new Set()).add(r.n);
   return Object.entries(owner)
-    .filter(([k, v]) => v.size > 1 && !APP.sharedDecl.includes(k))
+    .filter(([, v]) => v.size > 1)
     .map(([k, v]) => `APP.${k} → ${[...v].sort((x, y) => x - y).join('+')}`);
 }
 
@@ -396,13 +358,6 @@ function falseGreen(c) {
              .map((r) => `${r.n} «${r.name}»`);
 }
 
-/*  ⛔ סימני מיקום — ⚠️ **מה נכנס**: הניסוחים שאומרים **היכן** השורה
- *  נאכפת; ⛔ **ומה מפיל**: הכרזה ב-`gateNoRows` שאחד מהם בגופה.
- *  ⭐ **ולמה המבנה קיים**: מיקום עונה על «איפה», ⛔ והשאלה היא «למה
- *  אין לו שורה» — ⚠️ והתשובה לה היא היכולת. */
-const LOC_MARK = ['`MATRIX`', '`GATES`', '`ROWS`', 'השורה עצמה', 'השורות עצמן',
-  'השורה נאכפת', 'השורות נאכפות', 'השורות שהוא מודד', 'בבודק המרוכז'];
-
 /*  ⛔ שער סינתטי לשתי המוטציות של ה — ⚠️ השער הראשון ברשימת הריצה
  *  שמצהיר שורות, ⭐ ו-`ROWS` שלו מרוקן בזיכרון בלבד. */
 function syntheticSilent() {
@@ -412,32 +367,14 @@ function syntheticSilent() {
 }
 
 /* ה · אכיפה שאין לה שורה */
+/*  ⛔ שער שרץ ואינו מצהיר שורה מפיל ⛔ ואין לו חריגה — ⚠️ רשימת ההכרזה
+ *  נותרה ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה: ⛔ אכיפה שאין לה שורה
+ *  מפילה על טענה שאינה בתקן, ⚠️ ומי שנפל עליה אינו יודע איזו הוראה נשברה. */
 function silentGates(c) {
   const wired = [...((/gates: \[([\s\S]*?)\],/.exec(c.js) || ['', ''])[1])
     .matchAll(/'([a-z_-]+)\.mjs'/g)].map((m) => m[1] + '.mjs');
-  const silent = wired.filter((g) => g in c.rows &&
+  return wired.filter((g) => g in c.rows &&
     String(c.rows[g]).split(',').map((x) => x.trim()).filter(Boolean).length === 0);
-  /*  ⛔ הקיום נמדד על הדיסק ⛔ ואינו רשימה מוקלדת — ⚠️ ואחות שאינה שם
-   *  מדווחת בשמה ⛔ ואינה נספרת כטענה שעברה. */
-  const seen = [], away = [];
-  for (const p of PEERS) {
-    if (fs.existsSync(path.join(SIBS, p, 'tools'))) seen.push(p); else away.push(p);
-  }
-  const lives = (g) => seen.filter((p) => fs.existsSync(path.join(SIBS, p, 'tools', g))).length;
-  /*  ⛔ פחות משתי אחיות על הדיסק — ⚠️ אין מול מה למדוד «חי ביותר
-   *  מאחת»: ⭐ הן מדווחות בשמן, ⛔ והטענה אינה נספרת כטענה שעברה. */
-  const cmp = seen.length > 1;
-  return {
-    cmp,
-    silent,
-    undeclared: silent.filter((g) => !APP.gateNoRows[g]),
-    ghost: Object.keys(APP.gateNoRows).filter((g) => !silent.includes(g)),
-    bare: Object.entries(APP.gateNoRows).filter(([, w]) => !w || String(w).trim().length < 12).map(([g]) => g),
-    located: Object.entries(APP.gateNoRows)
-      .filter(([, w]) => LOC_MARK.some((k) => String(w || '').includes(k))).map(([g]) => g),
-    lone: cmp ? silent.filter((g) => APP.gateNoRows[g] && lives(g) < 2) : [],
-    away,
-  };
 }
 
 
@@ -618,7 +555,7 @@ export function regKind(w) {
 export function emptyCase(w) {
   return regItems(w).some((it) => /[\s{,][A-Za-z_$][\w$]*\s*:\s*(?:\[\s*\]|0)\s*[,}]/.test(it));
 }
-export function emptyGaps(srcs, allow) {
+export function emptyGaps(srcs) {
   const kinds = { calc: 0, names: 0, mut: 0, assert: 0 };
   const bad = [], noEmpty = [];
   for (const [f, W] of Object.entries(srcs)) {
@@ -627,17 +564,12 @@ export function emptyGaps(srcs, allow) {
       if (!k) { bad.push(f + '::' + g.name); continue; }
       kinds[k]++;
       if (k !== 'calc') continue;
-      if (emptyCase(g.w)) continue;
-      const key = f + '::' + g.name;
-      if (!Object.prototype.hasOwnProperty.call(allow || {}, key)) noEmpty.push(key);
+      /*  ⛔ מרשם חישוב בלי מקרה ריק מפיל ⛔ ואין לו חריגה — ⚠️ רשימת
+       *  ההכרזה נותרה ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה. */
+      if (!emptyCase(g.w)) noEmpty.push(f + '::' + g.name);
     }
   }
-  const live = new Set();
-  for (const [f, W] of Object.entries(srcs))
-    for (const g of topRegistries(W)) if (regKind(g.w) === 'calc') live.add(f + '::' + g.name);
-  const ghost = Object.keys(allow || {}).filter((k) => !live.has(k));
-  const bare = Object.entries(allow || {}).filter(([, v]) => !v || String(v).trim().length < 15).map(([k]) => k);
-  return { kinds, bad, noEmpty, ghost, bare };
+  return { kinds, bad, noEmpty };
 }
 
 /* ── יא · נימוק ⭕ מונה את מה שאינו נאכף (סבב 148) ──────────────────────── */
@@ -700,20 +632,8 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
 }
 {
   const s = silentGates(C0);
-  const bad = s.undeclared.length + s.ghost.length + s.bare.length;
-  t(bad === 0, `ה · אכיפה שאין לה שורה — נמדדו ${s.undeclared.length} בלי הכרזה, ` +
-    `${s.ghost.length} הכרזות בלי מקרה, ${s.bare.length} בלי נימוק; והצפוי אפס` +
-    (bad ? `: ${[...s.undeclared, ...s.ghost, ...s.bare].slice(0, 10).join(' · ')}. ` +
-           'מצהירים ב-`ROWS` את השורה שהשער אוכף, או מכריזים עם נימוקו'
-         : ` (${s.silent.length} שערים מוכרזים)`));
-  /*  ⛔ ה2 · הנימוק הוא היכולת ⛔ ולא המיקום — ⚠️ והיכולת חיה ביותר
-   *  מאפליקציה אחת: ⭐ שער בלי שורה שחי באחת בלבד הוא שער מוצר. */
-  const bad2 = s.located.length + s.lone.length;
-  t(bad2 === 0, `ה2 · הנימוק הוא היכולת — נמדדו ${s.located.length} נימוקי מיקום ` +
-    `ו-${s.lone.length} שערים שחיים באפליקציה אחת; והצפוי אפס` +
-    (bad2 ? `: ${[...s.located, ...s.lone].slice(0, 10).join(' · ')}. ` +
-            'מנסחים את היכולת שהשער מכסה, או מורידים שער מוצר'
-          : (s.cmp ? '' : ` — ⏭ הקיום בין האחיות לא נמדד: ${s.away.join(' · ')} אינן על הדיסק`)));
+  t(s.length === 0, `ה · אכיפה שאין לה שורה — נמדדו ${s.length} שערים שרצים בלי \`ROWS\`, והצפוי אפס` +
+    (s.length ? `: ${s.slice(0, 10).join(' · ')}. מצהירים ב-\`ROWS\` את השורה שהשער אוכף — ⛔ ואין חריגה` : ''));
 }
 
 /*  ⛔ טענה ו — אות הקטגוריה נגזרת: ⚠️ היא הצד השני של «שער אינו מקליד
@@ -737,36 +657,29 @@ t(!!tableRows(C0.md) && tableRows(C0.md).length > 0,
  *  מתיישן ביום שהמרשם משתנה, ⭐ ואיש אינו חוזר לעדכן אותו: ⛔ והסריקה
  *  הפוכה — היא נבנית מהמרשמים ⛔ ולא מרשימת ניסוחים ידועים. */
 {
-  const g = censusGaps(C0).concat(censusTableGaps(C0)), a = censusAllowGaps(C0);
-  t(g.length + a.length === 0,
-    `ח · מפקד נגזר ואינו מוקלד — נמדדו ${g.length} מפקדים מוקלדים בהיקף המרשמים ובניסוח שבטבלה ו-${a.length} היתרים בלי אתר, והצפוי אפס` +
-    (g.length + a.length ? `: ${[...g, ...a].slice(0, 8).join(' · ')}. גוזרים את המספר מהמרשם, או מכריזים ב-\`APP.censusAllow\` עם נימוקו` : ''));
+  const g = censusGaps(C0).concat(censusTableGaps(C0));
+  t(g.length === 0,
+    `ח · מפקד נגזר ואינו מוקלד — נמדדו ${g.length} מפקדים מוקלדים בהיקף המרשמים ובניסוח שבטבלה, והצפוי אפס` +
+    (g.length ? `: ${g.slice(0, 8).join(' · ')}. גוזרים את המספר מהמרשם — ⛔ ואין חריגה` : ''));
 }
 
 {
   const g = probeDeclOnly(C0);
-  const allow = APP.probeDeclOnly || {};
-  const undeclared = g.filter((x) => !allow[x]);
-  const stale = Object.keys(allow).filter((x) => g.indexOf(x) < 0);
-  t(undeclared.length + stale.length === 0,
-    `ט · probe מודד מימוש ולא הצהרה — נמדדו ${undeclared.length} probe של שורה ✅ ` +
-    `שאינם נוגעים במקור ו-${stale.length} הכרזות בלי מקרה, והצפוי אפס ואפס` +
-    (undeclared.length + stale.length
-      ? `: ${undeclared.concat(stale).join(' · ')}. מעגנים את ה-probe במקור, או מכריזים ב-\`APP.probeDeclOnly\` עם נימוקו`
-      : ` (${g.length} מוכרזים)`));
+  t(g.length === 0,
+    `ט · probe מודד מימוש ולא הצהרה — נמדדו ${g.length} probe של שורה ✅ שאינם נוגעים במקור, והצפוי אפס` +
+    (g.length ? `: ${g.join(' · ')}. מעגנים את ה-probe במקור — ⛔ ואין חריגה` : ''));
 }
 
 
 {
-  const g = emptyGaps(C0.srcs, APP.noEmpty);
-  const bad = g.bad.length + g.noEmpty.length + g.ghost.length + g.bare.length;
+  const g = emptyGaps(C0.srcs);
+  const bad = g.bad.length + g.noEmpty.length;
   t(bad === 0,
     `י · מרשם חישוב נושא את המקרה הריק — נמדדו ${g.kinds.calc} מרשמי חישוב · ` +
     `${g.kinds.names} רשימות שמות · ${g.kinds.mut} מרשמי מוטציות · ${g.kinds.assert} מרשמי טענות; ` +
-    `${g.bad.length} שאינם נופלים לאף סוג, ${g.noEmpty.length} בלי מקרה ריק ובלי הכרזה, ` +
-    `${g.ghost.length} הכרזות בלי מרשם ו-${g.bare.length} בלי נימוק — והצפוי אפס` +
-    (bad ? `: ${[...g.bad, ...g.noEmpty, ...g.ghost, ...g.bare].slice(0, 8).join(' · ')}. ` +
-           'מוסיפים למרשם פריט ריק, או מכריזים ב-`APP.noEmpty` עם נימוקו' : ''));
+    `${g.bad.length} שאינם נופלים לאף סוג ו-${g.noEmpty.length} בלי מקרה ריק — והצפוי אפס` +
+    (bad ? `: ${[...g.bad, ...g.noEmpty].slice(0, 8).join(' · ')}. ` +
+           'מוסיפים למרשם פריט ריק — ⛔ ואין חריגה' : ''));
 }
 {
   const g = gapNoteGaps(tableRows(C0.md) || [], APP.gapClauses);
@@ -899,22 +812,7 @@ if (RUN_MUT) {
          *  היום שער שקט, ⭐ ומוטציה שתלויה בקיומו הייתה מדלגת לנצח. */
         const g = syntheticSilent();
         if (!g) return null;
-        const saved = APP.gateNoRows[g]; delete APP.gateNoRows[g];
-        const bad = silentGates({ ...C0, rows: { ...C0.rows, [g]: '' } }).undeclared.includes(g);
-        if (saved !== undefined) APP.gateNoRows[g] = saved;
-        return bad;
-      } },
-    /*  ⛔ מ4ב — נימוק שהוא מיקום. ⚠️ המוטציה מכריזה על שער סינתטי בניסוח
-     *  שאומר היכן השורה נאכפת, ⭐ והטענה ה2 חייבת ליפול עליו. */
-    { m: 'מ4ב', lbl: 'נימוק שהוא מיקום', claim: 'ה2',
-      run: () => {
-        const g = syntheticSilent();
-        if (!g) return null;
-        const saved = APP.gateNoRows[g];
-        APP.gateNoRows[g] = 'אותה יכולת בדיוק — ⛔ והשורה עצמה במרשם המרוכז';
-        const bad = silentGates({ ...C0, rows: { ...C0.rows, [g]: '' } }).located.includes(g);
-        if (saved === undefined) delete APP.gateNoRows[g]; else APP.gateNoRows[g] = saved;
-        return bad;
+        return silentGates({ ...C0, rows: { ...C0.rows, [g]: '' } }).includes(g);
       } },
   ];
   for (const r of MUT) {
@@ -1022,7 +920,7 @@ if (RUN_MUT) {
    *  לאותה פונקציה מרשם שפריטיו נושאים שדה מספרי ⛔ ואין בו פריט ריק. */
   {
     const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n];\n" };
-    const got = emptyGaps(one, {});
+    const got = emptyGaps(one);
     t(got.noEmpty.length === 1 && got.kinds.calc === 1,
       'מ11 · מרשם חישוב בלי מקרה ריק **מפיל** את «י» — ' +
       `נמדדו ${got.kinds.calc} מרשמי חישוב ו-${got.noEmpty.length} בלי מקרה ריק, והצפוי 1 ו-1`);
@@ -1031,23 +929,15 @@ if (RUN_MUT) {
    *  ⭐ ואין דרך לדעת מה נכנס אליו. */
   {
     const one = { 'zz.mjs': "\nconst ZZ = [\n  { a: b },\n  c,\n];\n" };
-    const got = emptyGaps(one, {});
+    const got = emptyGaps(one);
     t(got.bad.length === 1,
       'מ12 · מרשם שאינו נופל לאף סוג **מפיל** את «י» — ' +
       `נמדדו ${got.bad.length} והצפוי 1`);
   }
-  /*  ⛔ מ13 — הכרזה ב-`noEmpty` בלי נימוק. */
-  {
-    const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n];\n" };
-    const got = emptyGaps(one, { 'zz.mjs::ZZ': 'קצר' });
-    t(got.bare.length === 1 && got.noEmpty.length === 0,
-      'מ13 · הכרזה ב-`noEmpty` בלי נימוק **מפילה** את «י» — ' +
-      `נמדדו ${got.bare.length} בלי נימוק והצפוי 1`);
-  }
   /*  ⭐ נ5 · מוטציית-נגד: אותו מרשם עם פריט ריק ⛔ אינו מפיל — הריק הוא בדיוק מה שנדרש. */
   {
     const one = { 'zz.mjs': "\nconst ZZ = [\n  { key: 'a', year: 5787, rows: [1] },\n  { key: 'b', year: 0, rows: [] },\n];\n" };
-    const got = emptyGaps(one, {});
+    const got = emptyGaps(one);
     t(got.noEmpty.length === 0 && got.kinds.calc === 1,
       'נ5 · ⭐ מרשם חישוב עם מקרה ריק ⛔ **אינו** מפיל — ' +
       `נמדדו ${got.noEmpty.length} והצפוי 0`);
@@ -1056,7 +946,7 @@ if (RUN_MUT) {
    *  הריק אינו מוגדר בה, ⭐ ודרישה ממנה הייתה רשימה שאיש לא יקרא. */
   {
     const one = { 'zz.mjs': "\nconst ZZ = ['a', 'b', 'c'];\n" };
-    const got = emptyGaps(one, {});
+    const got = emptyGaps(one);
     t(got.noEmpty.length === 0 && got.kinds.names === 1,
       'נ6 · ⭐ רשימת שמות בלי ערך ריק ⛔ **אינה** מפילה — ' +
       `נמדדו ${got.kinds.names} רשימות שמות והצפוי 1`);

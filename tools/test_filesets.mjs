@@ -36,6 +36,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
@@ -55,6 +56,7 @@ import { builtinModules } from 'node:module';
 import { reasonGaps } from './scope.mjs';
 import { PEERS } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /*  ⛔ הסט המשותף — זהה בית-לבית בכל העותקים (סבב 67). ⚠️ קובץ שיורד
  *  מכאן יורד מכולם באותו סבב, בדיוק כמו חתימת בלוק SHARED. */
@@ -224,6 +226,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -401,7 +404,7 @@ export function audit(root) {
   for (const f of files) {
     if (shared.has(f)) continue;
     if (EXEMPT.some(([re]) => re.test(f))) continue;
-    if (f in APP.only) continue;
+    if (f in APP.only && CASE('only', f)) continue;
     /*  ⛔ שער שאינו בסט המשותף חייב שורה מוצהרת (סבב 68) — ⚠️ הפטור
      *  הגורף הקודם על `tools/test_` הפך «קיים רק כאן» למצב שקט. */
     if (/^tools\/test_(.+)\.mjs$/.test(f) &&

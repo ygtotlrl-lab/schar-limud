@@ -42,6 +42,7 @@ import { bodyOf, scopeOf } from './scope.mjs';
 import { PEERS, APP_COLS, COL_NOTE, ROW_CELLS } from './peers.mjs';
 import crypto from 'node:crypto';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /*  ⭐ שורת שכבת האייקונים נמדדת ע"י `audit` של שער סבב 66 — ⛔ ולא ע"י probe משלה
  *  (סבב 66): מדידת פיקסלים היא מאות שורות, ומימוש שני היה נסחף מהראשון
@@ -60,12 +61,6 @@ const { wiringHere } = await import('./test_wiring.mjs');
 const APP = {
   /*  ⚠️ שער שרץ בתוך תהליך של שער אחר — ⛔ מאזין `exit` שלו היה נרשם
    *  עשרות פעמים, ⭐ ולכן הסגירה שלו בסוף `run` והיא מוצהרת כאן. */
-  /*  ⛔ בדיקות נוכחות מוכרזות — ⚠️ **מה נכנס**: probe שהכרעתו היא מבחן
-   *  חברות על המקור כולו **ואינו טענת היעדר**; ⛔ **ומה מפיל**: רשומה
-   *  שאינה כאן, הכרזה שאין לה probe, ונימוק קצר משש מילים. ⭐ **ולמה
-   *  המבנה ריק**: סבב 139 עיגן את כולן להיקף שלהן — ⚠️ גוף פונקציה או
-   *  אזור DOM — ⛔ ומה שנשאר היעדר עבר לרשימה שלידה. */
-  presenceOnly: {},
   /*  ⛔ תוויות שדה שהתקן אינו חל עליהן (סבב 167) — ⚠️ **מה נכנס**: מפתח
    *  `<מזהה השדה>|<מה שנדרש>` ⛔ והנימוק למה השדה **אינו** יכול לקבל
    *  אותו; ⛔ **ומה מפיל**: תווית חורגת שאינה כאן, ⚠️ והכרזה שאין לה
@@ -74,10 +69,9 @@ const APP = {
   labelAllow: {},
   /*  ⛔ טענות היעדר — ⚠️ **מה נכנס**: probe שהטענה שלו היא «אין מסלול
    *  כזה» ⟵ למה המקור כולו הוא ההיקף הנכון לה; ⛔ **ומה מפיל**: רשומה
-   *  שאינה כאן, הכרזה שאין לה probe, ⛔ ושם שיושב גם ב-`presenceOnly`.
-   *  ⭐ **ולמה המבנה קיים**: טענת היעדר אינה בדיקת נוכחות — ⚠️ היא
-   *  נמדדת על המקור כולו מפני שזה ההיקף שלה, ⛔ ולא מפני שאין לה מיקום:
-   *  ⭐ ושתי הרשימות יחד הן מה שמבדיל ביניהן. */
+   *  שאינה כאן, והכרזה שאין לה probe. ⭐ **ולמה המבנה קיים**: טענת היעדר
+   *  אינה בדיקת נוכחות — ⚠️ היא נמדדת על המקור כולו מפני שזה ההיקף שלה,
+   *  ⛔ ולא מפני שאין לה מיקום: ⭐ ובדיקת נוכחות אחרת אין לה חריגה. */
   absenceClaims: {
     '180|מחיקה רכה בלבד — אין `DELETE` פיזי':
       'לאיסור אין מיקום נכון, שהוא טענת היעדר — ' +
@@ -137,7 +131,9 @@ const APP = {
     '--credit': 'דיו יתרת הזכות — היא שדה נפרד בצבע נפרד, ויכולת של שכר בלבד',
     '--creditl': 'המילוי שמתחת לדיו יתרת הזכות — משטח ולא דיו, ויכולת של שכר בלבד',
   },
-  skipCaps: ['hebdate'],
+  skipCaps: {
+    hebdate: 'מנוע התאריך העברי — אפס צרכני תאריך עברי, ואין מה לחווט',
+  },
   /*  ⛔ קבועי מסך הצפייה (סבב 90ג) — ⚠️ מסך «טבלת התשתית» קיים ביומן
    *  בלבד. ⛔ **והרשימה אינה נשמטת** — ⭐ שדה חסר נקרא «לא נשאל». */
   viewOnlyConsts: [],
@@ -408,6 +404,7 @@ const APP = {
           const owner = own ? (own[1] || own[2] || '').replace(/^window\./, '') : '';
           if (!owner || !allow[owner]) return false;        // קורא בלי חלון שאינו מוכרז
           seen.add(owner);
+          CASE('fullPullAllow', owner);
         }
       }
       for (const k of Object.keys(allow)) if (!seen.has(k)) return false;  // החרגה שהתיישנה
@@ -599,7 +596,6 @@ const APP = {
   docListeners: [
     { arg: 'LK_EVENTS[i]', why: 'מדידת חוסר-פעילות לנעילה — היא מודדת שהמשתמש כאן, ואינה מסלול פעולה' },
   ],
-  actExempt: [],
   keydownExempt: [
     { site: "['pointerdown', 'keydown']", why: 'שומר המגע לעדכון הגרסה — אינו מסלול שמירה' },
     { site: "LK_EVENTS  = ['touchstart', 'click', 'keydown', 'scroll']",
@@ -714,6 +710,10 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+/*  ⛔ רושם המקרים נפתח בריצה נקייה בלבד — ⚠️ הבודק רץ עשרות פעמים בתוך
+ *  שערים אחרים על מקור שעבר מוטציה, ⭐ ומקרה שנמצא שם אינו ראיה לעץ. */
+let _CASE_ON = false;
+const CASE = declCases(import.meta.url, APP, () => _CASE_ON);
 
 /*  נקודת הפעלה חיה לפונקציה — ⛔ בשתי הצורות (סבב 79): `onclick` מוטבע,
  *  ⛔ **או** `data-act` שמחווט אליה ב-`DOM_ACTIONS`. ⚠️ הנימוק המדוד:
@@ -1579,6 +1579,7 @@ if (PART_NAMES.indexOf(PART) < 0)
   throw new Error(`part חייב להיות אחד מ-${PART_NAMES.join('/')} — נמדד «${part}»`);
 const CORE = PART === CORE_PART;
 const _CLEAN_RUN = !changed && (!over || Object.keys(over).length === 0);
+_CASE_ON = _CLEAN_RUN;
 /*  ⛔ מקור האפליקציה הוא הקובץ **ומודולי הליבה שב-`core/`** — ⚠️ הליבה
  *  המשותפת יצאה מ-`index.html` למודול, ⭐ ו-probe שסורק את הקובץ בלבד
  *  מדווח «אינו מוצא» על קוד שרץ: ⛔ והקובץ נשאר **ראשון**, ⚠️ שכל
@@ -1666,7 +1667,10 @@ for (const key of Object.keys(CAPS)) {
   /*  ⛔ יכולת שהוכרזה «לא רלוונטית» כאן (סבב 52) — הנימוק יושב ב-`APP`,
    *  והרישום התואם יושב במטריצה. ⚠️ הדילוג מסמן `present=false`, ולכן גם
    *  בדיקת החיווט שלמטה מדלגת: חיווט למודול שאינו קיים אינו פער.        */
-  if ((APP.skipCaps || []).indexOf(key) >= 0) { present[key] = false; continue; }
+  if (key in (APP.skipCaps || {})) {
+    if (!cap.block || !grab(cap.block)) CASE('skipCaps', key);
+    present[key] = false; continue;
+  }
   if (!cap.block) continue;
   const got = grab(cap.block);
   if (!got) { present[key] = false; cfail(`${cap.name}: הבלוק לא נמצא — נמדדו 0 סמנים מתוך שניים ` +
@@ -2347,6 +2351,7 @@ function errPatternSites() {
   const found = (src.match(/id="([^"]*err[^"]*)"/gi) || [])
     .map((m) => m.replace(/^id="|"$/g, ''));
   const allow = Object.keys(APP.inlineErrAllow || {});
+  for (const i of allow) if (found.indexOf(i) >= 0) CASE('inlineErrAllow', i);
   const undeclared = found.filter((i) => allow.indexOf(i) < 0);
   const ghost = allow.filter((i) => found.indexOf(i) < 0);
   return undeclared.length + ghost.length + (code.match(/\balert\s*\(/g) || []).length;
@@ -2876,6 +2881,7 @@ function gateSealGaps() {
     const sealed = /process\.on\(/.test(txt);
     const why = exempt[name];
     if (why && sealed) out.push(name + ': מוכרז חריג ובכל זאת נושא מאזין');
+    if (why && !sealed) CASE('sealExempt', name);
     if (!why && !sealed) out.push(f + ': אין מאזין `exit` — יציאה מוקדמת אינה נספרת');
     if (why && String(why).trim().split(/\s+/).length < 4)
       out.push(name + ': חריגה בלי נימוק');
@@ -3027,8 +3033,8 @@ function anchorGaps() {
  *  ב-`MATRIX` שגוף ה-probe שלה, ואיתו עוזרי ה-`Gaps`/`Sites` שהוא קורא,
  *  מכריעים במבחן חברות בוליאני שהשׂחת שלו הוא **המקור כולו** — `.test(src)`
  *  · `code.includes(` · ו-`indexOf` שמושווה מיד; ⛔ **ומה מפיל**: רשומה
- *  כזו שאינה מוכרזת ב-`APP.presenceOnly`, הכרזה שאין לה רשומה, והכרזה
- *  שנימוקה קצר משש מילים.
+ *  כזו שאינה טענת היעדר מוכרזת, ⛔ ואין לה חריגה אחרת: ⭐ הרשימה שהחזיקה
+ *  בדיקות נוכחות מוכרזות נותרה ריקה בכל הריפו, ⚠️ וירדה עם מי שקרא אותה.
  *  ⭐ **והנימוק המדוד**: «המחרוזת קיימת» מאשר גם גוף שבו היא במקום הלא
  *  נכון — ⚠️ שלושה באגים חיים עברו כך: מיכל הבאנר שנבנה ב-JS, סמל ספרייה
  *  שנמדד בכתובת ה-CDN ולא באתר הקריאה, ⛔ ומאזין שנספר בתוך מחרוזת.
@@ -3053,7 +3059,6 @@ function presenceGaps() {
    *  על תבנית `regex` נמתח מעל סוף הגוף: ⭐ `/\.toast\{/` נושא סוגר פותח
    *  בלבד, ⛔ והגוף רץ עד סוף הקובץ — ⚠️ ואז שורות של עוזר אחר נספרות
    *  כשלו, ⭐ והרשומה מסווגת לקלט שאינו שלה. */
-  const decl = APP.presenceOnly || {};
   const abs = APP.absenceClaims || {};
   const seen = [];
   const ent = /\{\s*row:\s*(\d+),\s*name:\s*'((?:[^'\\]|\\.)*)',\s*(?:app:\s*true|probe:\s*([\s\S]*?))\s*\},?\n/g;
@@ -3070,10 +3075,8 @@ function presenceGaps() {
     seen.push(key);
     /*  ⛔ טענת היעדר אינה בדיקת נוכחות (סבב 139) — ⚠️ «אין מסלול כזה»
      *  נמדדת על המקור כולו מפני שזה ההיקף הנכון לה, ⭐ ולא מפני שאין לה
-     *  מיקום: ⛔ ולכן היא מוצהרת ברשימה משלה, ⚠️ ושם בשתי הרשימות מפיל. */
-    const why = decl[key] || abs[key];
-    if (decl[key] && abs[key])
-      out.push(`רשומה בשתי הרשימות: ${key} ⛔ — מסירים אותה מאחת מהן`);
+     *  מיקום: ⛔ ולכן היא מוצהרת ברשימה משלה, ⚠️ וכל נוכחות אחרת מפילה. */
+    const why = abs[key];
     if (!why)
       out.push(`probe שבודק נוכחות ואינו מוכרז: ${key} ⛔ — מעגנים אותו ` +
                `למיקום, או מכריזים ב-APP.absenceClaims כשהוא טענת היעדר`);
@@ -3082,10 +3085,6 @@ function presenceGaps() {
                `${String(why).trim().split(/\s+/).length} מילים מול ` +
                `${PRESENCE_MIN_WORDS} ⛔ — כותבים מה ההיקף הנכון ולמה הוא המקור כולו`);
   }
-  for (const k of Object.keys(decl))
-    if (seen.indexOf(k) < 0)
-      out.push(`הכרזת נוכחות שאין לה probe: ${k} ⛔ — מסירים אותה ` +
-               `מ-APP.presenceOnly, שהיא מתארת מצב שחלף`);
   for (const k of Object.keys(abs))
     if (seen.indexOf(k) < 0)
       out.push(`הכרזת היעדר שאין לה probe: ${k} ⛔ — מסירים אותה ` +
@@ -3181,6 +3180,7 @@ function inlineColorGaps() {
     const body = src.slice(r[0], r[1]);
     const hits = body.match(/#[0-9a-fA-F]{3,8}(?![0-9a-fA-F])/g) || [];
     if (!hits.length) { out.push(`אזור מוכרז שאין בו ליטרל: ${n} ⛔ — מסירים אותו מ-APP.inlineColorAllow`); continue; }
+    CASE('inlineColorAllow', n);
     for (const lit of hits) {
       if (!/^#[0-9a-fA-F]{6}$/.test(lit))
         out.push(`ליטרל מקוצר באזור ${n}: ${lit} ⛔ — כותבים אותו בשש ספרות, שההצלבה משווה טקסט`);
@@ -3462,6 +3462,7 @@ function orphanGaps() {
                                    w.missing.map((x) => 'קורא בלי הגדרה: window.' + x),
                                    w.noProducer.map((x) => 'מטפל בלי כפתור: ' + x));
   const allow = Object.keys(APP.orphanAllow || {});
+  for (const n of allow) if (found.indexOf(n) >= 0) CASE('orphanAllow', n);
   return found.filter((n) => allow.indexOf(n) < 0).map((n) => 'בלי קורא ואינו מוכרז: ' + n)
     .concat(allow.filter((n) => found.indexOf(n) < 0).map((n) => 'מוכרז ואינו בלי-קורא: ' + n));
 }
@@ -4267,6 +4268,11 @@ function bpGaps() {
   if (vp !== 1) out.push(`תגי viewport: ${vp} והצפוי 1`);
   for (const q of widthQueries())
     if (q.dir === 'max') out.push(`max-width בשאילתת פריסה: ${q.px}px`);
+  /*  ⛔ מקרה של נקודה מוצהרת — ⚠️ נקודה בסולם שאין לה כלל חי: ⭐ היא בדיוק
+   *  מה שההצהרה פוטרת, ⛔ ונקודה שיש לה כלל אינה מקרה. */
+  const _live = new Set([...sheetCss().matchAll(/@media[^{]*?\(min-width\s*:\s*(\d+)px\)/g)].map((m) => m[1]));
+  for (const k of Object.keys(APP.bpNoRule || {}))
+    if (bpScale().indexOf(Number(k)) >= 0 && !_live.has(k)) CASE('bpNoRule', k);
   return out.concat(bpOutOfScale(), bpAudit(sheetCss(), bpScale(), APP.bpNoRule || {}));
 }
 /*  ⛔ שאילתה שאין בגופה כלל שחל (סבב 97) — ⚠️ הגוף נחתך בהתאמת סוגריים
@@ -4836,6 +4842,7 @@ function listDupGaps() {
   for (const s of sites) {
     seen.add(s.name);
     if (s.name in ex) {
+      CASE('listAddExempt', s.name);
       if (!String(ex[s.name] || '').trim())
         out.push(`חריגת כתיבה לרשימה בלי נימוק: ${s.name}`);
       continue;
@@ -4994,6 +5001,7 @@ function dualRoleGaps() {
   }
   const dual = [...roles].filter((e) => e[1].size > 1).map((e) => e[0]).sort();
   const allow = Object.keys(APP.dualRoleAllow || {});
+  for (const t of allow) if (dual.indexOf(t) >= 0) CASE('dualRoleAllow', t);
   return dual.filter((t) => allow.indexOf(t) < 0).map((t) => 'אסימון בשני התפקידים ואינו מוכרז: ' + t)
     .concat(allow.filter((t) => dual.indexOf(t) < 0).map((t) => 'מוכרז ואינו בשני התפקידים: ' + t));
 }
@@ -5019,6 +5027,7 @@ function contrastGaps() {
     }
   }
   const allow = Object.keys(APP.contrastAllow || {});
+  for (const k of allow) if (found.indexOf(k) >= 0) CASE('contrastAllow', k);
   for (const k of found) if (allow.indexOf(k) < 0) out.push('צמד מתחת ל-4.5 ואינו מוכרז: ' + k);
   for (const k of allow) if (found.indexOf(k) < 0) out.push('מוכרז ואינו מתחת ל-4.5: ' + k);
   return out;
@@ -5313,7 +5322,8 @@ function pollTouchGaps() {
       if (m.index >= s.a && m.index < s.b && (!host || s.a > host.a)) host = s;
     if (!host) continue;
     if (seen.indexOf(host.name) < 0) seen.push(host.name);
-    if (allow[host.name] || (list || []).indexOf(host.name) < 0) continue;
+    if (allow[host.name] && CASE('cloudWriteAllow', host.name)) continue;
+    if ((list || []).indexOf(host.name) < 0) continue;
     if (!POLL_TOUCH.test(code.slice(host.a, host.b)))
       out.push('כותב ענן שאינו מקדם את אות הפולינג: ' + host.name +
                ' ⛔ — נמדדו 0 קריאות מול אחת נדרשת: מוסיפים קידום אחרי כתיבה שהצליחה');
@@ -5570,7 +5580,7 @@ function labelGaps() {
     for (const r of LABEL_RULES) {
       if (!r.word.test(f.text) || r.ok(f)) continue;
       const key = `${f.id}|${r.need}`;
-      if (allow[key] && String(allow[key]).trim()) { used.add(key); continue; }
+      if (allow[key] && String(allow[key]).trim()) { used.add(key); CASE('labelAllow', key); continue; }
       out.push(`${f.id}: התווית «${f.text}» ואין ${r.why} — נמדד ` +
         `type=${f.type || '-'} inputmode=${f.im || '-'}: ` +
         'מה עושים — מתקנים את **התווית** למה שהשדה מקבל, ⛔ ולא את השדה');
@@ -5661,7 +5671,7 @@ function ctxGuardGaps() {
        *  עשויה לקרוא למסלול יציאה שמקדם בענף שגיאה, ⭐ וזיכוי על כך היה
        *  מסמן את ההחרגה כמיותרת ומפיל אותה: ⛔ ההצהרה קודמת לנגזרת. */
       const f = Object.keys(exempt).find((x) => exemptBody[x] && exemptBody[x] === body);
-      if (f) { exemptSeen[f] = 1; continue; }
+      if (f) { exemptSeen[f] = 1; CASE('ctxSwitchExempt', f); continue; }
       if (bumps(body)) continue;
       out.push(`${k} נכתב בשורה ${lineOf(at)} ⛔ ובלי ctxSwitch()`);
     }
@@ -5913,7 +5923,8 @@ function roleModelGaps() {
   let m, inEx = 0;
   while ((m = re.exec(src)) !== null) {
     if (inShared(m.index)) continue;
-    if (exRanges.some(([, r]) => r && m.index >= r[0] && m.index < r[1])) { inEx++; continue; }
+    const _ex = exRanges.find(([, r]) => r && m.index >= r[0] && m.index < r[1]);
+    if (_ex) { inEx++; CASE('roleCmpExempt', _ex[0]); continue; }
     out.push('השוואת תפקיד מחוץ לבלוק המשותף, שורה ' + lineOf(m.index));
   }
   if (inEx !== Object.keys(ex).length)
@@ -6050,6 +6061,7 @@ function localMigrationGaps() {
     if (seen.has(s.name)) continue;
     seen.add(s.name);
     if (Object.prototype.hasOwnProperty.call(keep, s.name)) {
+      CASE('migrateKeep', s.name);
       if (!String(keep[s.name]).trim()) out.push('הגירה מוכרזת בלי נימוק: ' + s.name);
       /*  ⛔ וההכרזה נושאת את הסבב שבו רצה (סבב 130) — ⚠️ נימוק בלי סבב
        *  אינו אומר מתי נמדד שהמכשירים עברו, ⭐ ואי אפשר לדעת אם הוא
@@ -6389,7 +6401,6 @@ function windowBridgeGaps() {
   return out;
 }
 const KS_GROUPS = ['no-save', 'native-enter'];
-const KS_PLACE_WORDS = ['בתוך', 'במודול', 'בבלוק', 'בקובץ', 'יושב', 'נמצא', 'מחווט ב'];
 function keySaveGaps() {
   const out = [];
   const seen = new Set(ksInputKeys(src));
@@ -6401,6 +6412,7 @@ function keySaveGaps() {
   }
   for (const f of cover) if (!seen.has(f)) out.push('שדה מכוסה שאין לו אתר במקור: ' + f);
   for (const [f, why] of exempt) {
+    if (seen.has(f) && !cover.has(f)) CASE('enterExempt', f);
     if (!seen.has(f)) out.push('שדה מוחרג שאין לו אתר במקור: ' + f);
     if (!why || !String(why).trim()) out.push('שדה מוחרג בלי נימוק: ' + f);
   }
@@ -6415,21 +6427,11 @@ function keySaveGaps() {
     if (e.group === 'native-enter' && scopeOf(src, 'form').indexOf(e.field) < 0)
       out.push('החרגה שמצהירה טופס מקורי והשדה אינו בתוך `<form>`: ' + e.field);
   }
-  const actless = ksActlessButtons(src), aex = APP.actExempt || [];
-  for (const t of actless)
-    if (!aex.some((e) => e.btn && t.indexOf(e.btn) >= 0))
-      out.push('כפתור שאינו במפת הפעולות: ' + t);
-  for (const e of aex) {
-    if (!e.why || !String(e.why).trim()) out.push('כפתור מוכרז בלי נימוק: ' + e.btn);
-    /*  ⛔ נימוק שהוא מיקום מפיל — ⚠️ «הוא במודול המשותף» אומר איפה הכפתור
-     *  יושב ⛔ ולא מה הוא עושה שהמפה אינה יכולה: ⭐ **ומה שנמדד הוא הצד
-     *  השלילי** — ⚠️ רשימת סימני מיקום סגורה, ⛔ והצד החיובי הוא מה
-     *  שהקורא כותב. */
-    else if (KS_PLACE_WORDS.some((w) => String(e.why).indexOf(w) >= 0))
-      out.push('נימוק שהוא מיקום ולא התנהגות: ' + e.btn);
-    if (!actless.some((t) => t.indexOf(e.btn) >= 0))
-      out.push('כפתור מוכרז שאין לו אתר: ' + e.btn);
-  }
+  /*  ⛔ כפתור בלי `data-act` מפיל ⛔ ואין לו חריגה — ⚠️ רשימת ההחרגה
+   *  נותרה ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה: ⛔ כפתור שהמפה אינה
+   *  יכולה לנתב הוא היקף שיצא מהמנגנון, ⚠️ ומחווט בחזרה. */
+  for (const t of ksActlessButtons(src))
+    out.push('כפתור שאינו במפת הפעולות: ' + t);
   /*  ⛔ המנגנון עצמו — ⚠️ מאזין אחד שקורא את ההיקף, את שני הסימונים ואת
    *  מפת הפעולות: ⭐ מאזין שאיבד אחד מהם אינו מנתב דבר. */
   /*  ⛔ ההיקף הוא גוף `ksFire` (סבב 139) — ⚠️ חלון תווים קבוע נחתך
@@ -6480,7 +6482,9 @@ function keySaveGaps() {
     /*  ⛔ המאזין האחד של האפליקציה מזוהה בכך שהוא קורא ל-`ksKey` — ⚠️ הוא
      *  אינו מסלול שמירה שני, ⭐ אלא זה שדרכו המודול נקרא. */
     if (/ksKey\(e\)/.test(win)) continue;
-    if (!sites.some((s) => s.site && win.indexOf(s.site) >= 0))
+    const _kd = sites.find((s) => s.site && win.indexOf(s.site) >= 0);
+    if (_kd) CASE('keydownExempt', _kd.site);
+    else
       out.push('מאזין מקלדת שאינו מוכרז, בשורה ' + src.slice(0, m.index).split('\n').length);
   }
   for (const s of sites) {
@@ -7872,7 +7876,7 @@ if (CORE) {
   /*  ⛔ ושם החודש בצורה אחת (סבב 108) — ⚠️ ובאפליקציה שאין בה מנוע תאריך
    *  עברי אין שם חודש למדוד: ⛔ ההיעדר מוצהר ב-`APP.skipCaps` ומנומק שם,
    *  ⚠️ והדילוג נאמר ⛔ ואינו שקט. */
-  if ((APP.skipCaps || []).indexOf('hebdate') >= 0) {
+  if ('hebdate' in (APP.skipCaps || {})) {
     pass(`monthFormGaps — אין כאן מנוע תאריך עברי, וההיעדר מוצהר ב-APP.skipCaps`);
   } else {
     const mfg = memoSrc('monthFormGaps', monthFormGaps);
@@ -7886,7 +7890,7 @@ if (CORE) {
   /*  ⛔ ותווית אחת לכל ערך (סבב 148) — ⚠️ ובאפליקציה שאין בה מנוע
    *  תאריך עברי אין תווית למדוד: ⛔ ההיעדר מוצהר ב-`APP.skipCaps`
    *  ומנומק שם, ⚠️ והדילוג נאמר ⛔ ואינו שקט. */
-  if ((APP.skipCaps || []).indexOf('hebdate') >= 0) {
+  if ('hebdate' in (APP.skipCaps || {})) {
     pass(`hebFormGaps — אין כאן מנוע תאריך עברי, וההיעדר מוצהר ב-APP.skipCaps`);
   } else {
     let _toolsCode = '';
@@ -7951,10 +7955,10 @@ if (CORE) {
   const prg = memoSrc('presenceGaps', presenceGaps);
   if (prg.length)
     fail(`presenceGaps: ${prg.slice(0, 6).join(' · ')} — נמדדו ${prg.length} ` +
-         `והצפוי אפס. מצהירים את ה-probe ב-APP.presenceOnly עם המיקום והנימוק, או מעגנים אותו`);
+         `והצפוי אפס. מיישרים את ה-probe להיקף שלו, או מכריזים אותו ב-APP.absenceClaims כשהוא טענת היעדר`);
   else
-    pass(`presenceGaps — ${Object.keys(APP.presenceOnly || {}).length} בדיקות נוכחות מוכרזות ` +
-         `ו-${Object.keys(APP.absenceClaims || {}).length} טענות היעדר, וכל אחת נושאת את נימוקה`);
+    pass(`presenceGaps — אפס בדיקות נוכחות, ו-${Object.keys(APP.absenceClaims || {}).length} ` +
+         `טענות היעדר, וכל אחת נושאת את נימוקה`);
 
   /*  ⛔ ודפוס שמתאים תמיד (סבב 137) — ⚠️ גבול שאחת מחלופותיו עוגן לבדו
    *  אינו גבול, ⭐ והבדיקה שנשענת עליו מאשרת כל גוף. */
@@ -8461,6 +8465,7 @@ if (!changed) {
 console.log(failures ? `\n❌ בדיקת היכולות המשותפות נכשלה (${failures})`
                      : '\n✅ בדיקת היכולות המשותפות עברה');
 _OVER = null;
+_CASE_ON = false;
 /*  ⛔ הסגירה על ריצה נקייה בלבד — ⚠️ ריצה מסוננת מריצה את מי שהקלט שלו
  *  השתנה, ⭐ והרצפה נמדדה על הריצה המלאה. */
 const N = PRE_MUT || RAN;
@@ -8483,4 +8488,4 @@ return failures;
 /*  ⛔ יציאה רק בתהליך משלו (סבב 72) — ⚠️ שער שמריץ את הבודק עשרות פעמים
  *  מייבא אותו לתהליך אחד, ו-`process.exit` היה עוצר את השער עצמו באמצע.
  *  ⭐ מונה הכשלים מוחזר מ-`run`, וזה מה שהמייבא בודק. */
-if (!process.env.CAP_INPROC) process.exit(run() ? 1 : 0);
+if (!process.env.CAP_INPROC) { const bad = run(); dumpCases(); process.exit(bad ? 1 : 0); }

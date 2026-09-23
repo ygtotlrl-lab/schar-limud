@@ -32,6 +32,7 @@ import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { PEERS, COL_NOTE } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -51,6 +52,7 @@ const APP = {
   dynamicClasses: [],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
@@ -108,6 +110,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -444,6 +447,8 @@ const ACTIVE = activeLines.join('\n');
     `15ה · אין מחלקה שנוספת ל-DOM בלי כלל CSS ובלי קורא — ההיקף: גיליון הסגנון ` +
     `וכל מחרוזת CSS שנכתבת מ-JS, מול ${applied.size} מחלקות בשימוש ומול הקוראים שב-JS; ` +
     `נמדדו ${noRule.length} והצפוי אפס${noRule.length ? ' — ' + noRule.join(' ') : ''}`);
+  for (const c of Object.keys(APP.classNoRule))
+    if (applied.has(c) && !styled.has(c) && !reads(c)) CASE('classNoRule', c);
   for (const c of Object.keys(APP.classNoRule))
     t(applied.has(c) && !styled.has(c) && !reads(c),
       `15ו · חריגה מוצהרת \`${c}\` — באמת מוחלת, ובאמת בלי כלל ובלי קורא`);
@@ -1499,19 +1504,17 @@ t(!capsFails((doc) => {
                  'test_caps_ui.mjs', () => ({})),
       'נ45 · ⭐ מחלקה חדשה שערכיה מהסולם ⛔ **אינה** מפילה');
   }
-  /*  ⛔⛔ מ74 — הכרזת נוכחות שנשמטה (סבב 138): ⚠️ **מה נכנס**: רשומה
-   *  ב-`APP.presenceOnly`; ⛔ **ומה מפיל**: `probe` שהכרעתו נוכחות ואין לו
-   *  הכרזה — ⭐ «המחרוזת קיימת» מאשר גם גוף שבו היא במקום הלא נכון. */
+  /*  ⛔⛔ מ74 — טענת היעדר שנשמטה (סבב 172): ⚠️ **מה נכנס**: רשומה
+   *  ב-`APP.absenceClaims`; ⛔ **ומה מפיל**: `probe` שהכרעתו נוכחות על
+   *  המקור כולו ואינו טענת היעדר מוכרזת — ⭐ ואין לו חריגה אחרת. */
   {
     const caps = rd(CAPS);
-    const decl = "    '77|שכבת המודאל':\n" +
-      "      'המיקום הוא הגדרת `openModal`, ולהגדרת פונקציה יש אתר אחד — ' +\n";
-    if (caps.indexOf(decl) < 0)
-      t(true, 'מ74 · ⭕ אין כאן הכרזת נוכחות למודאל — ⛔ ואין מה למוטט');
-    else
-      t(runGateOn({ [CAPS]: caps.replace(decl, '') },
-                  'check-capabilities.mjs', () => ({})),
-        'מ74 · הכרזת נוכחות שנשמטה **מפילה** את «probe שבודק נוכחות ולא מיקום»');
+    const decl = "    '180|מחיקה רכה בלבד — אין `DELETE` פיזי':\n";
+    const at = caps.indexOf(decl);
+    const end = at < 0 ? -1 : caps.indexOf("',\n", caps.indexOf("\n", at + decl.length));
+    t(at >= 0 && end > at && runGateOn({ [CAPS]: caps.slice(0, at) + caps.slice(end + 3) },
+                'check-capabilities.mjs', () => ({})),
+      'מ74 · טענת היעדר שנשמטה **מפילה** את «probe שבודק נוכחות ולא מיקום»');
   }
   /*  ⭐ מוטציית-נגד: ניסוח אחר לאותו נימוק ⛔ אינו מפיל — ⚠️ הנמדד הוא
    *  שההכרזה קיימת ונושאת נימוק, ⭐ ולא המילים עצמן. */

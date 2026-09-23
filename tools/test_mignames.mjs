@@ -25,6 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -88,6 +89,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -129,6 +131,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -252,6 +255,8 @@ function t1() {
 
 function t2() {
   const g = regGaps(FILES, APP.migrations, APP.migNoRecord, APP.migRanNoFile);
+  for (const k of Object.keys(APP.migNoRecord)) if (APP.migrations[k] === null && FILES.includes(k)) CASE('migNoRecord', k);
+  CASE.unmeasured('migRanNoFile', 'הרשומה שרצה חיה בטבלת המעקב שבמסד — ⛔ והשער אינו יוצא לרשת');
   ok(g.fileNoEntry.length === 0, `[mig-file-no-entry] APP.migrations: ${g.fileNoEntry.join(', ')} — ` +
     `נמדדו ${g.fileNoEntry.length} קבצים בלי רשומה במרשם והצפוי אפס. מוסיפים להם שורה`);
   ok(g.entryNoFile.length === 0, `[mig-entry-no-file] APP.migrations: ${g.entryNoFile.join(', ')} — ` +

@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { whiten, whitenJs } from './whiten.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -37,12 +38,9 @@ const APP = {
   signedDeadAllow: {
     rtyReady: 'השער שמונע לולאת ניסיון חוזר על סכימה מיושנת — ⛔ הוא נמדד בשורת באנר העדכון כמנגנון שקיים, ⚠️ ואין לו קורא חי: החיווט אל `rtyArm` הוא חוב פתוח ⛔ ואינו שינוי שנעשה בסבב שמדד אותו',
   },
-  /*  ⛔ הודעת דילוג שאינה אומרת מה אינו נמדד — ⚠️ **מה נכנס**: `<קובץ>:<שורה>`
-   *  ⟵ למה אין מה לומר; ⛔ **ומה מפיל**: הודעה כזו שאינה כאן, והכרזה שאין
-   *  לה הודעה. ⭐ **ולמה ריק**: נמדד ואין. */
-  skipAllow: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -84,6 +82,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -187,7 +186,9 @@ export function deadGaps(mineW, names, sibW, allow) {
 const SKIP_MARK = /⏭|מדלג/;
 const SKIP_WHY = /לא נמדד|אינו נמדד|אינה נמדד|אינם נמדד|אינן נמדד/;
 const HEB = /[\u0590-\u05FF]/g;
-export function skipGaps(files, allow) {
+/*  ⛔ הודעת דילוג שאינה אומרת מה אינו נמדד מפילה ⛔ ואין לה חריגה —
+ *  ⚠️ רשימת ההחרגה נותרה ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה. */
+export function skipGaps(files) {
   const out = [];
   for (const [f, src] of Object.entries(files)) {
     /*  ⛔ הקריאה נמדדת על המקור המולבן ⛔ והטקסט נחתך מהגולמי — ⚠️ `console.log`
@@ -210,9 +211,7 @@ export function skipGaps(files, allow) {
       out.push(f + ':' + src.slice(0, m.index).split('\n').length);
     }
   }
-  const undeclared = out.filter((x) => !Object.prototype.hasOwnProperty.call(allow || {}, x));
-  const ghost = Object.keys(allow || {}).filter((x) => out.indexOf(x) < 0);
-  return { sites: out, undeclared, ghost };
+  return { sites: out };
 }
 
 console.log(`· ${FACTS.slug} — בלוק חתום נמדד כמו כל קוד`);
@@ -243,8 +242,10 @@ if (away.length) {
    *  שעברה**: ⭐ הטווח מוצהר ב-`APP.floorRange` שב-`check-js`. */
   console.log(`  ⚠️  ההצלבה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
               `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}`);
+  CASE.unmeasured('signedDeadAllow', 'אחות אינה על הדיסק — ⛔ ושם מת נמדד מול כולן');
 } else {
   const g = deadGaps(W, NAMES, SIB_W, APP.signedDeadAllow);
+  for (const k of Object.keys(APP.signedDeadAllow || {})) if (g.noSis.includes(k)) CASE('signedDeadAllow', k);
   const bad = g.undeclared.length + g.ghost.length + g.bare.length;
   t(n++, bad === 0,
     `[signed-dead] שם מת בבלוק חתום — נמדדו ${g.dead.length} מתים כאן מתוך ${NAMES.length}, ` +
@@ -257,17 +258,16 @@ if (away.length) {
   const files = {};
   for (const f of readdirSync(join(ROOT, 'tools')).filter((x) => x.endsWith('.mjs')))
     files['tools/' + f] = readFileSync(join(ROOT, 'tools', f), 'utf8');
-  const g = skipGaps(files, APP.skipAllow);
-  t(n++, g.undeclared.length + g.ghost.length === 0,
+  const g = skipGaps(files);
+  t(n++, g.sites.length === 0,
     `[skip-why] הודעת דילוג אומרת מה אינו נמדד — נמדדו ${g.sites.length} הודעות בלי ` +
-    `«לא נמדד», ${g.undeclared.length} בלי הכרזה ו-${g.ghost.length} הכרזות בלי הודעה; ` +
-    `והצפוי אפס${g.undeclared.length + g.ghost.length ? ': ' + [...g.undeclared, ...g.ghost].slice(0, 8).join(' · ') : ''}. ` +
-    'כותבים בהודעה מה אינו נמדד בגלל הדילוג');
+    `«לא נמדד», והצפוי אפס${g.sites.length ? ': ' + g.sites.slice(0, 8).join(' · ') : ''}. ` +
+    'כותבים בהודעה מה אינו נמדד בגלל הדילוג — ⛔ ואין חריגה');
 }
-t(n++, Object.values(APP.signedDeadAllow || {}).concat(Object.values(APP.skipAllow || {}))
+t(n++, Object.values(APP.signedDeadAllow || {})
   .every((v) => typeof v === 'string' && v.trim().length >= 15),
   `[signed-dead] נימוק לכל הכרזה — נמדדו ${Object.keys(APP.signedDeadAllow || {}).length} ` +
-  `הכרזות שם ו-${Object.keys(APP.skipAllow || {}).length} הכרזות דילוג, והצפוי שכולן נושאות נימוק. ` +
+  `הכרזות שם, והצפוי שכולן נושאות נימוק. ` +
   'כותבים בכל אחת מה נדרש כדי להוציא אותה');
 
 /* ── מוטציות ───────────────────────────────────────────────────────────── */
@@ -289,10 +289,10 @@ if (RUN_MUT) {
       `נמדדו ${got.bare.length} והצפוי 1`);
   }
   {
-    const got = skipGaps({ 'zz.mjs': "console.log('⏭ zz: המוטציות רצות ברמה המלאה');" }, {});
-    t(n++, got.undeclared.length === 1,
+    const got = skipGaps({ 'zz.mjs': "console.log('⏭ zz: המוטציות רצות ברמה המלאה');" });
+    t(n++, got.sites.length === 1,
       'מ3 · ⛔ מוטציה: הודעת דילוג בלי «לא נמדד» מפילה את «[skip-why]» — ' +
-      `נמדדו ${got.undeclared.length} והצפוי 1`);
+      `נמדדו ${got.sites.length} והצפוי 1`);
   }
   /*  ⭐ מוטציות-נגד — ⛔ שינוי חי שאסור לו להפיל. */
   {
@@ -303,20 +303,20 @@ if (RUN_MUT) {
       `נמדדו ${got.dead.length} מתים ו-${got.undeclared.length} פערים, והצפוי 1 ו-0`);
   }
   {
-    const got = skipGaps({ 'zz.mjs': "console.log('⏭ zz: המוטציות רצות ברמה המלאה — ⛔ ואינן נמדדות כאן');" }, {});
-    t(n++, got.undeclared.length === 0,
+    const got = skipGaps({ 'zz.mjs': "console.log('⏭ zz: המוטציות רצות ברמה המלאה — ⛔ ואינן נמדדות כאן');" });
+    t(n++, got.sites.length === 0,
       'נ2 · ⭐ מוטציית-נגד: הודעת דילוג שאומרת מה אינו נמדד ⛔ אינה מפילה — ' +
-      `נמדדו ${got.undeclared.length} והצפוי 0`);
+      `נמדדו ${got.sites.length} והצפוי 0`);
   }
   {
-    const got = skipGaps({ 'zz.mjs': "const skip = (m) => console.log('⏭️  ' + m);" }, {});
+    const got = skipGaps({ 'zz.mjs': "const skip = (m) => console.log('⏭️  ' + m);" });
     t(n++, got.sites.length === 0,
       'נ3 · ⭐ מוטציית-נגד: עוזר שמדפיס בלבד ⛔ אינו הודעה — ' +
       `נמדדו ${got.sites.length} והצפוי 0`);
   }
   {
     const got = skipGaps(
-      { 'zz.mjs': 'const sample = "console.log(\'⏭ zz: המוטציות רצות ברמה המלאה\')";' }, {});
+      { 'zz.mjs': 'const sample = "console.log(\'⏭ zz: המוטציות רצות ברמה המלאה\')";' });
     t(n++, got.sites.length === 0,
       'נ4 · ⭐ מוטציית-נגד: קריאה שיושבת בתוך מחרוזת ⛔ אינה אתר דילוג — ' +
       `נמדדו ${got.sites.length} והצפוי 0`);

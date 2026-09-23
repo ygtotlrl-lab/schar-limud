@@ -59,7 +59,10 @@ const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
   return r ? Number(r[2]) : EXPECTED;
 })();
+/*  ⚠️ רושם המקרים נטען אחרי המאזין — ⛔ יציאה שקדמה לו אינה מדווחת דבר. */
+let DUMP = null;
 process.on('exit', () => {
+  if (DUMP) DUMP();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -86,6 +89,7 @@ process.on('exit', () => {
  *  התהליך בעצמו על חלק הליבה, ⭐ וחלק זה לא היה רץ כלל. */
 process.env.CAP_INPROC = '1';
 const { run, ranOf } = await import('./check-capabilities.mjs');
+DUMP = (await import('./decl-cases.mjs')).dumpCases;
 const failures = run(null, null, 'test_caps_ui');
 RAN += ranOf();
 process.exit(failures ? 1 : 0);

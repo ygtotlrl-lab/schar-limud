@@ -2,8 +2,9 @@
    הבדיקה העמוקה — מודול משותף לזרימה שרצה מחוץ לסט (סבב 171)
 
    ⛔ מה נאכף: כל שער שזהה בית-לבית בחמשת הריפו רץ בכל אחד מהם, ⚠️ וזמנו
-      מושווה בין הריפו: ⭐ פער של פי שניים ומעלה באותו שער נושא נימוק מוכרז
-      ב-`GAP_WHY`, ⛔ ושער שנכשל באחד מהם מפיל אף הוא.
+      מושווה בין הריפו **בשני יחסים תמיד** — ⭐ הגולמי, ⛔ והזמן לבית של
+      המקור המחובר: ⚠️ שער עובר אם אחד מהם מתחת לסף, ⭐ והפלט אומר איזה ·
+      ⛔ ושער שנכשל באחד מהם מפיל אף הוא.
    ⚠️ הנימוק המדוד: שלוש הרצות לכל שער משותף בכל הריפו ארוכות מהסט כולו —
       ⛔ ולכן ההשוואה אינה בסט, ⭐ והיא רצה בזרימה שמופעלת ביד לפני המיזוג.
    ⛔ מה יישבר בלעדיו: שער שזמנו תלוי בנתוני האפליקציה נראה תקין בכל ריפו
@@ -19,18 +20,11 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { PEERS } from './peers.mjs';
 
-/*  ⛔ פער מוכרז — ⚠️ **מה נכנס**: שם שער ⟵ הגודל שזמנו לינארי בו
- *  ⟵ ונימוקו; ⛔ **ומה מפיל**: פער בלי הכרזה, ⚠️ הכרזה לשער שאינו זהה,
- *  ⭐ ופער שנשאר גם אחרי החלוקה בגודל המוצהר — ⛔ **ההכרזה נמדדת**:
- *  זמן לבית שנבדל פי שניים הוא פער שהגודל אינו מסביר. */
-export const GAP_WHY = {
-  'test_caps_ui.mjs': { scale: 'src', why: 'סורק כל אתר ממשק במקור המחובר — ⛔ זמנו לינארי בגודל המקור, ⚠️ והמקור הגדול כפול מהקטן' },
-  'test_caps_build.mjs': { scale: 'src', why: 'מחלץ כל גוף פונקציה מהמקור המחובר — ⛔ זמנו לינארי בגודל המקור, ⚠️ והמקור הגדול כפול מהקטן' },
-  'test_sistername.mjs': { scale: 'src', why: 'סורק את המקור הגולמי מול כל שמות האחיות — ⛔ זמנו לינארי בגודל המקור, ⚠️ והמקור הגדול כפול מהקטן' },
-};
-
-/*  ⛔ הגדלים שזמן שער יכול להיות לינארי בהם — ⚠️ **המקור המחובר**:
- *  `index.html`, גיליון הסגנון ומודולי הליבה, ⭐ שהם מה שהסורקים קוראים. */
+/*  ⛔ הגודל שזמן שער לינארי בו — ⚠️ **המקור המחובר**: `index.html`,
+ *  גיליון הסגנון ומודולי הליבה, ⭐ שהם מה שהסורקים קוראים. ⛔ **ואין בסיס
+ *  שני** — ⚠️ שער שאינו לינארי במקור נמדד ביחס הגולמי, ⭐ ושני היחסים
+ *  נמדדים לכל שער: ⛔ ואין רשימה שמכריזה איזה חל על מי — ⚠️ הכרזה כזו
+ *  היא מקור אמת שני לשאלה שהמדידה עונה עליה. */
 const SIZES = {
   src: (repo) => ['index.html', 'app.css']
     .concat(fs.existsSync(path.join(repo, 'core'))
@@ -93,27 +87,28 @@ export function deepCheck(sibs) {
   }
   const gates = identicalGates(sibs);
   console.log(`[deep-check] ${gates.length} שערים זהים בית-לבית ב-${PEERS.length} הריפו: ${gates.join(' · ')}`);
-  const gaps = new Set();
+  const ratios = [];
   for (const g of gates) {
     const row = PEERS.map((r) => ({ r, ...timeGate(path.join(sibs, r), g) }));
     for (const x of row.filter((x) => x.status !== 0))
       bad(`[deep-run] ${x.r}/${g} — יצא ${x.status} והצפוי 0. מריצים אותו שם ומתקנים:\n` +
         x.out.split('\n').filter((l) => /FAIL|❌/.test(l)).slice(0, 8).join('\n'));
     const spread = (v) => Math.max(...v) / Math.max(1e-9, Math.min(...v));
-    const ratio = spread(row.map((x) => Math.max(1, x.ms)));
-    const decl = GAP_WHY[g];
-    /*  ⛔ שער מוכרז נמדד בזמן לבית של הגודל שהוא לינארי בו — ⚠️ ולא
-     *  בזמן הגולמי: ⭐ הפער שנשאר הוא הפער שהגודל אינו מסביר. */
-    const norm = decl && SIZES[decl.scale] ? spread(row.map((x) => Math.max(1, x.ms) / SIZES[decl.scale](path.join(sibs, x.r)))) : ratio;
-    console.log(`  ${norm >= GAP ? '⚠️' : 'ok'}   ${g} — ${row.map((x) => `${x.r} ${x.ms}`).join(' · ')} מ״ש · פי ${ratio.toFixed(2)}` +
-      (decl ? ` · לבית ${decl.scale} פי ${norm.toFixed(2)}` : ''));
-    if (norm >= GAP) bad(`[deep-gap] ${g} — פער של פי ${norm.toFixed(2)} והתקרה פי ${GAP}` +
-      (decl ? `, ⛔ גם אחרי החלוקה ב-${decl.scale}` : ', ⛔ בלי נימוק') +
-      '. מאתרים את מה שזמנו תלוי בנתוני האפליקציה, או מכריזים ב-`GAP_WHY` את הגודל שהוא לינארי בו');
-    gaps.add(g);
+    /*  ⛔ שני היחסים נמדדים תמיד — ⚠️ הגולמי, ⭐ והזמן לבית של המקור
+     *  המחובר: ⛔ שער עובר אם אחד מהם מתחת לסף, ⚠️ והפלט אומר איזה —
+     *  ⭐ פער שנשאר בשניהם הוא פער שהגודל אינו מסביר. */
+    const raw = spread(row.map((x) => Math.max(1, x.ms)));
+    const norm = spread(row.map((x) => Math.max(1, x.ms) / Math.max(1, SIZES.src(path.join(sibs, x.r)))));
+    const by = raw < GAP ? 'גולמי' : norm < GAP ? 'לבית' : '';
+    ratios.push({ g, raw, norm, by });
+    console.log(`  ${by ? 'ok' : '⚠️'}   ${g} — ${row.map((x) => `${x.r} ${x.ms}`).join(' · ')} מ״ש · ` +
+      `גולמי פי ${raw.toFixed(2)} · לבית פי ${norm.toFixed(2)}${by ? ` · עבר ב${by}` : ''}`);
+    if (!by) bad(`[deep-gap] ${g} — גולמי פי ${raw.toFixed(2)} ולבית פי ${norm.toFixed(2)}, והתקרה פי ${GAP} ` +
+      'בשניהם. מאתרים את מה שזמנו תלוי בנתוני האפליקציה ואינו גודל המקור');
   }
-  const ghost = Object.keys(GAP_WHY).filter((g) => !gaps.has(g) || !SIZES[GAP_WHY[g].scale] || !GAP_WHY[g].why);
-  if (ghost.length) bad(`[deep-gap] הכרזה שאין לה שער זהה, גודל או נימוק — ${ghost.join(' · ')}: נמדדו ${ghost.length} והצפוי אפס. מתקנים או מסירים מ-\`GAP_WHY\``);
-  console.log(fail ? `\n❌ deep-check: ${fail} כשלים` : `\n✅ deep-check: ${gates.length} שערים × ${PEERS.length} ריפו, אפס פער בלי נימוק`);
+  const cnt = (k) => ratios.filter((x) => x.by === k).length;
+  console.log(fail ? `\n❌ deep-check: ${fail} כשלים`
+    : `\n✅ deep-check: ${gates.length} שערים × ${PEERS.length} ריפו — ${cnt('גולמי')} עברו ביחס הגולמי ` +
+      `ו-${cnt('לבית')} ביחס לבית, ואפס בלי אחד מהם`);
   return fail;
 }

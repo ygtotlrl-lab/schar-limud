@@ -28,6 +28,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -40,6 +41,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
@@ -96,6 +98,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -197,6 +200,7 @@ if (!away.length) {
   const PSRC = have.map((p) => readFileSync(join(SIBS, p, 'index.html'), 'utf8'));
   found = unsignedTwins(SRC, R.ranges, PSRC);
   const undeclared = found.filter((f) => !allow[f.name]);
+  for (const f of found) if (allow[f.name]) CASE('unsignedAllow', f.name);
   const stale = Object.keys(allow).filter((x) => !found.some((f) => f.name === x));
   t(n++, undeclared.length === 0,
     `תאומים בלי חתימה ובלי הכרזה — נמדדו ${undeclared.length} והצפוי 0` +
@@ -210,6 +214,7 @@ if (!away.length) {
   console.log(`  ⚠️  ההשוואה בין הריפו לא רצה — ${away.join(' · ')} אינם על הדיסק ` +
               `לצד ${FACTS.slug}; נמדדו ${have.length} מתוך ${others.length}. ` +
               `מריצים את הסבב עם כל הריפו זה לצד זה`);
+  CASE.unmeasured('unsignedAllow', 'אחות אינה על הדיסק — ⛔ ותאום נמדד מול כולן');
 }
 /* ── 3. רשימת החרגה משותפת — גוף זהה בין הריפו ─────────────────────────── */
 /*  ⛔ רשימה שגופה זהה בין הריפו נחתמת כמו כל רכיב משותף (סבב 121) —

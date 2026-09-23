@@ -31,6 +31,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -40,16 +41,18 @@ const APP = {
   drainFns: ['syncAll'],
   /*  משפך הכתיבה המקומית שדורך את הניסיון החוזר. */
   noteFn: 'schedulePush',
-  /*  ⛔ משפך דריכה שני, מוכרז ומנומק — ⚠️ הכתיבה למראה רצה גם במסלול
-   *  הזריעה שממתין לסנכרון מלא ⛔ ואינו מתזמן דחיפה: ⭐ בלי הדריכה שם
-   *  לא היה לו ניסיון חוזר. */
-  noteExtra: ['slLocalWrite'],
+  /*  ⛔ משפך דריכה שני — ⚠️ **מה נכנס**: הפונקציה ⟵ המקרה שבו היא דורכת;
+   *  ⛔ **ומה מפיל**: משפך שאינו דורך, ⭐ ודריכה שאינה כאן. */
+  noteExtra: {
+    slLocalWrite: 'הכתיבה למראה במסלול הזריעה — ממתינה לסנכרון מלא ⛔ ואינה מתזמנת דחיפה, ⚠️ ובלי הדריכה אין לה ניסיון חוזר',
+  },
   bootFn: 'slBoot',
   /*  האם לאפליקציה הזו יש פולינג שדוחף, ולכן `rtyGate()` מחווט בו.
    *  ⚠️ פולינג שמושך בלבד אינו זקוק לשער: אין מה לדחות. */
   gated: false,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -121,6 +124,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -355,6 +359,7 @@ for (const r of base) { if (r.ok) pass('4. ' + r.name); else fail('4. ' + r.name
  *  שכבר רצו, ⭐ והכיסוי שלהן אינו יורד. */
 mutStage();
 if (!RUN_MUT) {
+  CASE.unmeasured('noteExtra', 'הדריכה נמדדת ברמה המלאה בלבד');
   console.log('\n⏭ test_pendflush: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failures ? 1 : 0);
 }
@@ -531,7 +536,8 @@ for (const mu of MUTATIONS) {
   if (calls('rtyBoot') === 1) pass('5. `rtyBoot()` נקראת פעם אחת בלבד מקוד האפליקציה');
   else fail(`5. \`rtyBoot()\` נקראת ${calls('rtyBoot')} פעמים — נקודת ההפעלה חייבת להיות אחת`);
 
-  const extra = APP.noteExtra || [];
+  const extra = Object.keys(APP.noteExtra || {});
+  for (const f of extra) if (/\brtyNote\s*\(/.test(fnBody(codeOutside, f))) CASE('noteExtra', f);
   /*  ⛔ הדריכה ממשפך מוצהר אחד, ⛔ ומכל משפך שני שמוכרז בשמו ובנימוקו —
    *  ⚠️ והכרזה שאין לה אתר בפועל מפילה אף היא: ⭐ רשימה שהתיישנה היא
    *  בעצמה השארית שהשורה באה לסלק. */

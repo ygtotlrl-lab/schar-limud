@@ -38,6 +38,7 @@ import { tmpdir, cpus } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FACTS } from './app-facts.mjs';
+import { caseGaps } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -143,7 +144,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי מה שכל ריפו נושא, והנימוק בשדה עצמו */
-const FLOOR = { shared: 17, app: 1, appWhy: 'supabase-js נעוץ גם ברשימת ה-CDN שב-`sw.js` — טענה שיש רק למי שמטמן אותו מראש' };
+const FLOOR = { shared: 18, app: 1, appWhy: 'supabase-js נעוץ גם ברשימת ה-CDN שב-`sw.js` — טענה שיש רק למי שמטמן אותו מראש' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -493,15 +494,44 @@ const MUT_SCANNER = {
 }
 
 const timed = [];
+const CASE_LINES = [];
 {
   const res = await runPool(wanted, JOBS);
   for (let i = 0; i < wanted.length; i++) {
     const r = res[i];
-    if (r.out) process.stdout.write(r.out);
+    /*  ⛔ שורות רושם המקרים נאספות ⛔ ואינן מודפסות — ⚠️ הן קלט להצלבה,
+     *  ⭐ והפסק הוא מה שהיא מוצאת. */
+    const _o = (r.out || '').split('\n');
+    CASE_LINES.push(..._o.filter((l) => l.includes('[decl-cases] ')));
+    const out = _o.filter((l) => !l.includes('[decl-cases] ')).join('\n');
+    if (out) process.stdout.write(out);
     if (r.err) process.stderr.write(r.err);
     if (r.code !== 0) failures++;
     timed.push({ gate: wanted[i], ms: r.ms });
   }
+}
+
+/*  ⛔ הצהרה נמדדת מול מקריה (סבב 172) — ⚠️ **מה נכנס**: כל רשימת פטור
+ *  בבלוקי ה-`APP` של `tools/`, ⭐ ומה שכל שער רשם שפטר בריצה הזו;
+ *  ⛔ **ומה מפיל**: ערך שלא פטר דבר · ערך בלי נימוק · רשימה בלי אתר
+ *  רישום · ושער שלא דיווח. ⚠️ **ורשימה שמדידתה אינה ברמה הזו** מודפסת
+ *  «לא נמדד» ⛔ ואינה נשפטת. */
+{
+  const dir = join(ROOT, 'tools');
+  const files = {};
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.mjs') && wanted.includes(x)))
+    files[f] = readFileSync(join(dir, f), 'utf8');
+  const g = caseGaps(CASE_LINES, files, ROOT);
+  const bad = [...g.dead.map((x) => 'בלי מקרה: ' + x), ...g.bare.map((x) => 'בלי נימוק: ' + x),
+               ...g.unprobed.map((x) => 'בלי אתר רישום: ' + x), ...g.unwired.map((x) => 'לא דיווח: ' + x)];
+  for (const u of g.unmeasured) console.log(`  ⚠️ הצהרה מול מקריה — לא נמדד: ${u}`);
+  if (bad.length)
+    fail(`הצהרה נמדדת מול מקריה — נמדדו ${bad.length} פערים מתוך ${g.vals} ערכים ב-${g.lists} ` +
+         `רשימות והצפוי 0: ${bad.slice(0, 8).join(' · ')}. מסירים ערך שאין לו מקרה, ` +
+         'כותבים בערך את המקרה שהוא פוטר, ורושמים `CASE` באתר שבו הוא פוטר');
+  else
+    pass(`הצהרה נמדדת מול מקריה — ${g.vals} ערכים ב-${g.lists} רשימות, וכל ערך פטר מקרה ` +
+         `בריצה הזו (${LEVEL}); ${g.unmeasured.length} רשימות לא נמדדו ברמה הזו`);
 }
 
 /*  ⛔ הזמן נמדד ומודפס (סבב 74ב) — ⚠️ תקרה שאיש אינו רואה את המדידה שלה

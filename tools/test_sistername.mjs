@@ -41,19 +41,6 @@ import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⛔ אזכור שנשאר בכוונה — ⚠️ **מה נכנס**: הקובץ והשם ⟵ מה שהאזכור
-   *  עושה שאי-אפשר בלעדיו; ⛔ **ומה מפיל**: הכרזה שאין לה אזכור בפועל,
-   *  ⛔ ואזכור שאינו כאן. ⭐ **ולמה ריק**: נמדד ואין. */
-  nameAllow: {},
-  /*  ⛔ מנגנון שאין לו צרכן כאן ⛔ ונשאר בכוונה — ⚠️ **מה נכנס**: תחילית
-   *  הקבוצה ⟵ מה המנגנון עושה ולמה הוא נשאר; ⛔ **ומה מפיל**: קבוצה בלי
-   *  צרכן שאינה כאן, ⛔ והכרזה שיש לקבוצה שלה צרכן. ⭐ **ולמה המבנה
-   *  קיים**: קוד נגזר מביא מנגנונים שלמים, ⚠️ והשם אינו הסימן — הצרכן
-   *  הוא: ⛔ ומנגנון שיושב בבלוק חתום אינו נמדד בשער היתומים כלל. */
-  /*  ⛔ **וההיעדר מוצהר ריק** ⛔ ואינו נשמט — ⚠️ שדה חסר נקרא «לא נשאל»,
-   *  ⭐ וריק נקרא «נמדד ואין»: ⛔ ואין כאן קבוצת מנגנון בלי צרכן.
-   *  ⚠️ **ומה שיצא למודול המשותף אינו כאן** — ⭐ זהותו נמדדת ב-`sha256`. */
-  mechNoConsumer: {},
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -79,7 +66,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ סט הקבצים הנסרק זהה בכולן, ⭐ ומספר
  *  הטענות אינו תלוי במה שיש באפליקציה. */
-const FLOOR = { shared: 9, app: 0, appWhy: '' };
+const FLOOR = { shared: 7, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך שלא הגיע
@@ -394,21 +381,16 @@ t(n++, TARGETS.length >= FIXED.length,
   'מריצים את השער משורש הריפו');
 
 /* ── 2. אפס אזכור לשם של ריפו אחר ──────────────────────────────────────── */
-const allow = APP.nameAllow || {};
+/*  ⛔ אזכור לאחות מפיל ⛔ ואין לו חריגה — ⚠️ רשימת ההיתר נותרה ריקה בכל
+ *  הריפו, ⭐ וירדה עם מי שקרא אותה. */
 const hits = [];
 for (const f of TARGETS)
   for (const h of sisterHits(f.text, f.ranges, SISTERS))
     hits.push(`${f.rel}:${h.line}:${h.name}`);
-const undeclared = hits.filter((h) => !allow[h]);
-const stale = Object.keys(allow).filter((k) => hits.indexOf(k) < 0);
-t(n++, undeclared.length === 0,
-  `[sister-name] אזכור לשם של ריפו אחר — נמדדו ${undeclared.length} והצפוי 0` +
-  (undeclared.length ? ` (${undeclared.slice(0, 6).join(' · ')})` : '') +
-  '. מסירים את השם, או מכריזים ב-APP.nameAllow עם מה שהאזכור עושה');
-t(n++, stale.length === 0,
-  `[sister-stale] הכרזה שאין לה אזכור — נמדדו ${stale.length} והצפוי 0` +
-  (stale.length ? ` (${stale.join(' · ')})` : '') +
-  '. מסירים מ-APP.nameAllow שם שכבר אינו בעץ');
+t(n++, hits.length === 0,
+  `[sister-name] אזכור לשם של ריפו אחר — נמדדו ${hits.length} והצפוי 0` +
+  (hits.length ? ` (${hits.slice(0, 6).join(' · ')})` : '') +
+  '. מסירים את השם — ⛔ ואין חריגה');
 
 /* ── 2ב. אפס אזכור לאחות **בהערה** ─────────────────────────────────────── */
 /*  ⛔ ההערה מתארת את הריפו שהיא חיה בו — ⚠️ ולא את מצבו של ריפו אחר:
@@ -457,26 +439,14 @@ t(n++, cmtHits.length === 0,
  *  שם האחות, ⭐ ומנגנון שלם שהועתק ואין לו כאן צרכן אינו נושא אותו:
  *  ⛔ והוא שרד גם את שער היתומים, ⚠️ שמדלג על מה שיושב בבלוק חתום. */
 {
-  const MECH = APP.mechNoConsumer || {};
+  /*  ⛔ קבוצה בלי צרכן מפילה ⛔ ואין לה חריגה — ⚠️ רשימת ההכרזה נותרה
+   *  ריקה בכל הריפו, ⭐ וירדה עם מי שקרא אותה. */
   const dead = mechNoConsumer(SRC, true);
-  const names = Object.keys(MECH);
-  const undecl = dead.filter((p) => names.indexOf(p) < 0);
-  const staleM = names.filter((p) => dead.indexOf(p) < 0);
-  const reasons = Object.entries(MECH).filter(([, w]) => {
-    const s = String(w || '').trim(), i = s.indexOf(' — ');
-    return i < 15 || s.length - i < 18;
-  }).map(([k]) => k);
-  t(n++, undecl.length === 0 && reasons.length === 0,
-    `[sister-orphan] קבוצת מנגנון שאין לה צרכן כאן — נמדדו ${undecl.length} ` +
+  t(n++, dead.length === 0,
+    `[sister-orphan] קבוצת מנגנון שאין לה צרכן כאן — נמדדו ${dead.length} ` +
     `מתוך ${mechGroups(SRC, true).groups.size} קבוצות והצפוי 0` +
-    (undecl.length ? ` (${undecl.join(' · ')})` : '') +
-    (reasons.length ? ` · נימוק חסר: ${reasons.join(' · ')}` : '') +
-    '. מסירים את המנגנון, או מכריזים ב-APP.mechNoConsumer עם מה שהוא עושה ולמה נשאר');
-  t(n++, staleM.length === 0,
-    `[sister-orphan-stale] הכרזה שיש לקבוצה שלה צרכן — נמדדו ${staleM.length} ` +
-    `מתוך ${names.length} והצפוי 0` +
-    (staleM.length ? ` (${staleM.join(' · ')})` : '') +
-    '. מסירים מ-APP.mechNoConsumer קבוצה שכבר נקראת מקוד חי');
+    (dead.length ? ` (${dead.join(' · ')})` : '') +
+    '. מסירים את המנגנון — ⛔ ואין חריגה');
 }
 
 /* ── 3. אפס נכס `icons/` שזהה בית-לבית לאחות ───────────────────────────── */

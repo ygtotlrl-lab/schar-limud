@@ -29,6 +29,7 @@ import { dirname, join } from 'node:path';
 import { whiten } from './whiten.mjs';
 import { DB_SCHEMA } from './db-schema.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -69,10 +70,6 @@ const APP = {
    *  היא כאן**: היא נקודת הקריאה האחת, ⛔ וענף הכשל שבה חל על כל הקוראים. */
   pagerFn: '_rowsPaged',
   dbPager: '_rowsPaged',
-  /*  ⛔ טבלה שנגרעה מהמסד ושמה נשאר בקוד — ⚠️ **מה נכנס**: השם, הדגל
-   *  שמכבה את המסלול, והנימוק; ⛔ **ומה מפיל**: דגל שאינו כבוי, והכרזה
-   *  בלי אתר. ⭐ **ולמה ריק**: נמדד ואין. */
-  dbTableGone: {},
   /*  ⛔ שם טבלה שאינו ליטרל ואינו נפתר מקבוע — ⚠️ **מה נכנס**: נוסח
    *  הביטוי, הטבלאות שהוא יכול לקבל, והנימוק; ⛔ **ומה מפיל**: ביטוי
    *  בלי הצהרה, הצהרה בלי אתר, והצהרה שנוקבת בטבלה שאינה מוצהרת.
@@ -101,6 +98,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -149,6 +147,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -237,9 +236,9 @@ function dbChain(W, SRC, from) {
 function dbScan(SRC) {
   const W = whiten(SRC, { markup: 'blank' });
   const line = (i) => SRC.slice(0, i).split('\n').length;
-  const dynFrom = APP.dbDyn || {}, dynOrder = APP.dbOrderDyn || {}, gone = APP.dbTableGone || {};
+  const dynFrom = APP.dbDyn || {}, dynOrder = APP.dbOrderDyn || {};
   const declared = new Set(APP.dbTables || []);
-  const usedDyn = new Set(), usedOrd = new Set(), usedGone = new Set();
+  const usedDyn = new Set(), usedOrd = new Set();
   const gaps = [], tables = new Set(), colsBy = new Map(), ordLits = [];
   const addCol = (t, c) => { if (!colsBy.has(t)) colsBy.set(t, new Set()); colsBy.get(t).add(c); };
 
@@ -438,9 +437,11 @@ function dbScan(SRC) {
     }
   }
 
+  /*  ⛔ טבלה שנשאלת ואינה מוצהרת מפילה ⛔ ואין לה חריגה — ⚠️ טבלה שנגרעה
+   *  מהמסד יורדת מהקוד איתה: ⭐ רשימת «נגרעה ועדיין בקוד» נותרה ריקה בכל
+   *  הריפו, ⛔ וירדה עם מי שקרא אותה. */
   for (const t of tables) {
     if (declared.has(t)) continue;
-    if (gone[t]) { usedGone.add(t); continue; }
     gaps.push('הטבלה `' + t + '` נשאלת בקוד ואינה מוצהרת');
   }
   for (const t of declared) if (!tables.has(t)) gaps.push('הטבלה `' + t + '` מוצהרת ואין לה אתר שאילתה');
@@ -448,21 +449,11 @@ function dbScan(SRC) {
     if (!usedDyn.has(e)) { gaps.push('`' + e + '` מוצהר ואין לו אתר `from`'); continue; }
     if (!(dynFrom[e].why || '').trim()) gaps.push('`' + e + '` מוצהר בלי נימוק');
     for (const t of dynFrom[e].tables || [])
-      if (!declared.has(t) && !gone[t]) gaps.push('`' + e + '` מצהיר את `' + t + '` שאינה מוצהרת');
+      if (!declared.has(t)) gaps.push('`' + e + '` מצהיר את `' + t + '` שאינה מוצהרת');
   }
   for (const e of Object.keys(dynOrder)) {
     if (!usedOrd.has(e)) { gaps.push('`' + e + '` מוצהר ואין לו אתר מיון'); continue; }
     if (!(dynOrder[e].why || '').trim()) gaps.push('`' + e + '` מוצהר בלי נימוק');
-  }
-  /*  ⛔ טבלה שנגרעה מהמסד ⛔ ושם שלה עדיין בקוד — ⚠️ ההכרזה נושאת את
-   *  **הדגל שמכבה את המסלול**, ⭐ והשער מודד שהוא כבוי: ⛔ מי שמדליק
-   *  אותו מפיל את השער ⛔ ולא את המשתמש. */
-  for (const t of Object.keys(gone)) {
-    if (!usedGone.has(t)) { gaps.push('`' + t + '` מוכרזת כטבלה שנגרעה ואין לה אתר שאילתה'); continue; }
-    if (!(gone[t].why || '').trim()) gaps.push('`' + t + '` מוכרזת בלי נימוק');
-    const g = gone[t].guard;
-    if (!g || !new RegExp('\\b' + g + '\\s*=\\s*false\\s*;').test(W))
-      gaps.push('`' + t + '` מוכרזת כטבלה שנגרעה והדגל `' + g + '` אינו כבוי');
   }
 
   return { sites, gaps, tables, colsBy, ordLits, nOrder, nCols, nDyn, nOpen };
@@ -492,10 +483,8 @@ function schemaMap(rows, project) {
  *  ⭐ **ולמה היא פונקציה נפרדת**: המוטציות מריצות אותה על סריקה מוטטת
  *  ⛔ ועל אותה סכימה בדיוק. */
 function schemaGaps(scan, map) {
-  const gone = APP.dbTableGone || {};
   const out = [];
   for (const t of [...scan.tables].sort()) {
-    if (gone[t]) continue;
     const cols = map.get(t);
     if (!cols) { out.push('הטבלה `' + t + '` נשאלת בקוד ואינה בסכימה המוצהרת'); continue; }
     for (const c of [...(scan.colsBy.get(t) || [])].sort())
@@ -620,7 +609,7 @@ const SYNC_COLS = ['client_id', 'updated_at', 'deleted', 'deleted_at', 'deleted_
   for (const e of APP.dbSchema) {
     const cols = String(e.c).split(',');
     const miss = SYNC_COLS.filter((c) => !cols.includes(c));
-    if (miss.length) { if (!(e.t in ex)) short.push(`${e.t}[${e.p}] חסר ${miss.join('+')}`); overDecl.delete(e.t); }
+    if (miss.length) { if (e.t in ex) CASE('syncColsExempt', e.t); else short.push(`${e.t}[${e.p}] חסר ${miss.join('+')}`); overDecl.delete(e.t); }
   }
   const declNoCase = [...overDecl];
   (short.length === 0 && declNoCase.length === 0 ? ok : bad)(

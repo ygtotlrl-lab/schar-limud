@@ -40,6 +40,7 @@ import { DB_SCHEMA } from './db-schema.mjs';
 import { dirname, join } from 'node:path';
 import { appSrc } from './appsrc.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
@@ -76,13 +77,13 @@ const APP = {
    *  ⛔ **ומה מפיל**: שם שאין לו הצהרה ב-`migrations/`. ⭐ **ולמה היא
    *  קיימת**: טבלה שמוצהרת ואינה קיימת היא סחיפה — ⛔ **וכאן כל טבלה
    *  מוצהרת קיימת במסד**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
-  schemaSkip: [],
   /*  ⛔ דפוסי קריאת מפתח ההגדרה — ⚠️ **מה נכנס**: `re` ביטוי עם קבוצת
    *  לכידה אחת לשם המפתח, ⛔ ו-`why` המסלול שהוא מכסה; ⛔ **ומה מפיל**:
    *  דפוס שאין לו אף אתר במקור. ⭐ **ולמה אינדקס ולא עוטף**: ההגדרות
    *  נטענות למפה אחת בסנכרון, ⚠️ ואתרי הקריאה מאנדקסים אותה בשם. */
   cfgReads: [
     { re: "SETTINGS\\[\\s*'([a-z_0-9]+)'\\s*\\]", why: 'אינדקס במפת ההגדרות שנטענה בסנכרון' },
+    { re: "ERA_CLOUD_KEY\\s*=\\s*'([a-z_0-9]+)'", why: 'עידן הנתונים — המפתח שכל עלייה קוראת ומשווה לעידן המקומי' },
   ],
   /*  ⛔ מפתח חי שאין לו קורא — ⚠️ **מה נכנס**: השם ⟵ הנימוק; ⛔ **ומה
    *  מפיל**: מפתח חי שאינו כאן ואין לו קורא, ⛔ והכרזה שאין לה מפתח חי.
@@ -141,6 +142,7 @@ const APP = {
   },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP, () => !process.env.DBFACTS_SELFTEST);
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(here, '..');
@@ -185,6 +187,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -431,11 +434,10 @@ async function claimSchema() {
   for (const x of addedCols) if (byTable.has(x.t)) byTable.get(x.t).add(x.c);
   let miss = 0, checked = 0;
   for (const [t, cols] of byTable) {
-    if (APP.schemaSkip.includes(t)) continue;
     const sel = cols.size ? [...cols].join(',') : '*';
     const r = await q(`/${t}?select=${sel}&limit=0`);
     if (r.status === 200) { checked++; continue; }
-    if (r.status === 404 || /42P01/.test(r.text)) { miss++; bad(`ב. חתימת סכימה — הטבלה \`${t}\` מוצהרת ב-\`migrations/\` ואינה קיימת במסד. נמדד ${r.status} מול הצפוי 200. מריצים את המיגרציה שיוצרת אותה, או מצהירים אותה ב-\`APP.schemaSkip\` עם נימוק`); continue; }
+    if (r.status === 404 || /42P01/.test(r.text)) { miss++; bad(`ב. חתימת סכימה — הטבלה \`${t}\` מוצהרת ב-\`migrations/\` ואינה קיימת במסד. נמדד ${r.status} מול הצפוי 200. מריצים את המיגרציה שיוצרת אותה, ⛔ ואין חריגה`); continue; }
     if (/42703/.test(r.text)) { miss++; bad(`ב. חתימת סכימה — עמודה שמוצהרת ל-\`${t}\` אינה קיימת במסד: ${r.text.slice(0, 160)}. נמדד 400 מול הצפוי 200. מריצים את המיגרציה שמוסיפה אותה`); continue; }
     throw new Error(`${t} → ${r.status} ${r.text.slice(0, 120)}`);
   }
@@ -478,6 +480,7 @@ async function claimCfgKeys() {
   const known = APP.cfgOrphans || {};
   const orphan = [...live].filter((k) => !want.has(k) && !known[k]).sort();
   const ghost = Object.keys(known).filter((k) => !live.has(k)).sort();
+  for (const k of Object.keys(known)) if (live.has(k) && !want.has(k)) CASE('cfgOrphans', k);
   if (orphan.length)
     bad('ג. כל מפתח שהקוד מבקש — מפתחות חיים ב-`' + APP.cfgTable + '` שאין להם קורא: ' +
         orphan.join(', ') + '. נמדד ' + orphan.length + ' מול הצפוי 0. ' +
@@ -643,7 +646,7 @@ async function claimColReaders() {
     if (!rows.length) { empty.push(t); continue; }
     for (const c of Object.keys(rows[0])) {
       if (new RegExp('\\b' + c + '\\b').test(codeOnly)) continue;
-      if (Object.prototype.hasOwnProperty.call(declared, c)) { used.add(c); continue; }
+      if (Object.prototype.hasOwnProperty.call(declared, c)) { used.add(c); CASE('colNoReader', c); continue; }
       orphans.push(`${t}.${c}`);
     }
   }
@@ -655,6 +658,7 @@ async function claimColReaders() {
    *  «פיקטיבי» על מדידה חלקית מפיל על סביבה ⛔ ולא על העץ. */
   const complete = empty.length === 0 && tabs.length === (APP.ownTables || []).length;
   const fake = complete ? Object.keys(declared).filter((c) => !used.has(c)) : [];
+  if (!complete) CASE.unmeasured('colNoReader', 'המדידה חלקית — ' + empty.length + ' טבלאות ריקות');
   if (fake.length)
     bad(`ז. עמודה בלי קורא — הצהרה בלי מקרה חי: ${fake.join(', ')}. נמדדו ${fake.length} מול הצפוי 0. ` +
         'מסירים את ההצהרה — ⛔ חריגה שאין לה מקרה בפועל היא רשימה שאיש אינו מתחזק');
@@ -863,6 +867,8 @@ console.log(`── סבב 93 — עובדות המסד החי (${FACTS.slug}) $
 mutStage();
 if (!RUN_MUT) {
   console.log('\n⏭ test_dbfacts: השער רץ ברמה המלאה (--full) — ⛔ ואינו נמדד כאן');
+  CASE.unmeasured('cfgOrphans', 'המפתחות החיים נמדדים מול המסד ברמה המלאה בלבד');
+  CASE.unmeasured('colNoReader', 'העמודות החיות נמדדות מול המסד ברמה המלאה בלבד');
   process.exit(0);
 }
 if (!CONN && !SELFTEST) {
@@ -892,6 +898,8 @@ if (!CONN && !SELFTEST) {
      *  לרעש שמכבים. ⚠️ **וזה אינו ✅ שקט** — ⛔ השורה שלמטה נכתבת בכל
      *  הרצה שלא מדדה, ⭐ ומי שקורא את הפלט רואה שלא נמדד. */
     notMeasured = String(e && e.message || e);
+    CASE.unmeasured('cfgOrphans', 'המסד אינו בהישג יד מהסביבה הזו');
+    CASE.unmeasured('colNoReader', 'המסד אינו בהישג יד מהסביבה הזו');
     console.log(`  ⚠️ לא נמדד — המסד אינו בהישג יד מהסביבה הזו: ${notMeasured.slice(0, 160)}`);
   }
 }
