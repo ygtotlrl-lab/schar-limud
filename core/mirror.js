@@ -53,8 +53,8 @@ function mirrorSave(t) {
 function mirrorWrite(t, rows) {
   return lsSetArray(mirrorKey(t), app.MIRROR_CFG.clean(t, rows || []), app.MIRROR_CFG.ts);
 }
-/*  ⛔ נקודת ההפעלה האחת — ⚠️ ההגירה ירדה, ⭐ אחרי
- *  שהמפתחות הישנים כבר אינם על אף מכשיר שנטען מאז. */
+/*  ⛔ נקודת ההפעלה האחת — ⚠️ ואין בה הגירה: ⭐ מפתחות המראה נקראים
+ *  בשמם הנוכחי בלבד. */
 function mirrorBoot() { mirrorLoad(); }
 /* ═══════════════ סוף מודול שכבת המראה ═══════════════════════════════════ */
 
