@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* ═══ tools/gen-app.mjs — קובצי הפלטפורמה מהתצורה ═══════════════════════
-   ⭐ יוצר מ-`app.config.js` את `manifest.json`, את קובצי האנדרואיד ואת
-      האייקונים — ⛔ ואיש אינו עורך אותם ביד: ⚠️ עריכה ידנית נדרסת בהרצה הבאה.
+   ⭐ יוצר מ-`app.config.js` את `manifest.json`, את קובצי האנדרואיד — ⚠️ כולל
+      שני קובצי ה-Java, מהתבניות שב-`tools/java/` — ואת האייקונים:
+      ⛔ ואיש אינו עורך אותם ביד — ⚠️ עריכה ידנית נדרסת בהרצה הבאה.
    ⛔ **והרצה שנייה אינה משנה אף קובץ** — ⚠️ מה שנוצר זהה למה שבעץ,
       ⭐ ו-`--check` מפיל כשאינו זהה.
    ⭐ ו-`--get <שדה>` מדפיס ערך אחד — ⚠️ החתימה והבנייה קוראות ממנו,
@@ -188,8 +189,33 @@ ${body}
 `;
 }
 
+/*  ⛔ שני קובצי ה-Java נוצרים מתבנית אחת — ⚠️ שורת ה-`package`, הכתובת,
+ *  משפט האופליין והצבע מהתצורה, ⭐ וגשר השיתוף רק כש-`android.share` מוצהר:
+ *  ⛔ קטע `//@@share … //@@end` יורד כולו כשאינו. */
+function javaFile(name) {
+  return A => {
+    const share = A.android.share;
+    const jstr = v => JSON.stringify(String(v)).slice(1, -1);
+    const u = new URL(A.android.url);
+    const vals = {
+      PACKAGE: A.android.package, URL: jstr(A.android.url), OFFLINE: jstr(A.android.offlineLine),
+      ACCENT: jstr(A.android.accent), ORIGIN: jstr(u.origin), HOST: jstr(u.host),
+      FILEPREFIX: jstr(A.prefix), CHOOSER: jstr(share ? share.chooser : '')
+    };
+    const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
+    const body = tmpl.replace(/^\/\/@@share\n([\s\S]*?)^\/\/@@end\n/gm, (m, inner) => share ? inner : '');
+    return body.replace(/@@([A-Z]+)@@/g, (m, k) => {
+      if (!(k in vals)) throw new Error(`${name}.java.in — אין ערך ל-${k}`);
+      return vals[k];
+    });
+  };
+}
+const JAVA = `android/app/src/main/java/${APP.android.package.replace(/\./g, '/')}`;
+
 const RES = 'android/app/src/main/res';
 export const TARGETS = {
+  [`${JAVA}/ShellActivity.java`]: javaFile('ShellActivity'),
+  [`${JAVA}/MainActivity.java`]: javaFile('MainActivity'),
   'manifest.json': manifest,
   'android/app/src/main/AndroidManifest.xml': androidManifest,
   'android/app/build.gradle': appGradle,

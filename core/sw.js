@@ -1,4 +1,4 @@
-/* ═══ core/sw.js — ליבת ה-service worker ═════════════════════════════════
+/* ═══ core/sw.js — ליבת ה-service worker ════════════════════════════════
    ⭐ ההתקנה, הניקוי, הניווט והמטמון — ⛔ ו-`sw.js` של האפליקציה נושא רק את
       `CACHE_NAME`, `CORE` ו-`CDN_ASSETS`, ⚠️ וטוען קודם את `app.config.js`.
    ⛔ סדר המאזינים install → activate → fetch → message.
@@ -20,15 +20,19 @@ var SW_CFG = {
 };
 
 /*  ⛔ דף האופליין — HTML אמיתי ⛔ ולא מחרוזת 'Offline' — ⚠️ והצבעים, הסמל
- *  והשם מהתצורה. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
+ *  והשם מהתצורה, ⭐ בבהיר ובכהה: ⛔ דף בהיר במכשיר כהה מסנוור ברגע שבו
+ *  המשתמש כבר מתוסכל. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
 var SW_OFFLINE_HTML =
   '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+  '<meta name="color-scheme" content="light dark">' +
   '<title>אין חיבור — ' + self.APP.name + '</title><style>' +
   'html,body{margin:0;height:100%}' +
   'body{display:flex;align-items:center;justify-content:center;padding:24px;' +
   'font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-  'background:' + self.APP.offline.bg + ';color:' + self.APP.offline.ink + '}' +
+  'background:' + self.APP.offline.light.bg + ';color:' + self.APP.offline.light.ink + '}' +
+  '@media (prefers-color-scheme:dark){body{background:' + self.APP.offline.dark.bg +
+  ';color:' + self.APP.offline.dark.ink + '}}' +
   '.box{max-width:340px;text-align:center}' +
   '.mark{font-size:2.4rem;margin-bottom:10px}' +
   'h1{font-size:1.15rem;margin:0 0 10px}' +
@@ -70,6 +74,12 @@ function swIsCdn(u) {
 
 function swInScope(u) {
   return u.origin === SW_SCOPE.origin && u.pathname.indexOf(SW_SCOPE.pathname) === 0;
+}
+
+/*  ⛔ קובצי הקליפה — `CORE` — נגזרים מהרשימה ⛔ ואינם מוקלדים שוב. */
+var SW_CORE_URLS = CORE.map(function (x) { return new URL(x, self.location).href; });
+function swInCore(u) {
+  return SW_CORE_URLS.indexOf(u.origin + u.pathname) !== -1;
 }
 
 function swIsShellPath(u) {
@@ -210,17 +220,21 @@ function ensureCdnCached() {
 }
 ensureCdnCached(); // קוד עליון = רץ פעם אחת בכל עליית SW
 
-/*  ניווט — רשת קודם. תשובה תקינה מנתיב הקליפה מרעננת את הקליפה; תשובה
- *  שאינה תקינה (404 של נתיב עמוק) מקבלת את הקליפה שבמטמון. */
+/*  ⛔ ניווט — מאותו מטמון כמו הקוד: ⚠️ דף מהרשת וקוד מהמטמון הם שתי גרסאות
+ *  במסך אחד, ⭐ ו-`import` של שם שעוד אינו קיים עוצר את הדף כולו. ⛔ כשיש
+ *  קליפה במטמון של ה-worker הזה — היא התשובה, ⛔ ואינה מתרעננת כאן: ⚠️ גרסה
+ *  חדשה נכנסת רק בהתקנת worker חדש, ⭐ שמשתלט ומרענן — דף וקוד יחד.
+ *  ⭐ בלי קליפה (כניסה ראשונה) — מהרשת; ⚠️ ותשובה שאינה תקינה (404 של נתיב
+ *  עמוק) נשארת כפי שהיא, ⛔ שאין קליפה ליפול אליה. */
 function swNavigate(request, u) {
-  return fetch(request).then(function (net) {
-    if (net && net.ok) {
-      if (swIsShellPath(u)) swStore(SW_SHELL, net);
+  return swShell().then(function (shell) {
+    if (shell) return shell;
+    return fetch(request).then(function (net) {
+      if (net && net.ok && swIsShellPath(u)) swStore(SW_SHELL, net);
       return net;
-    }
-    return swShell().then(function (shell) { return shell || net; });
-  }).catch(function () {
-    return swNavOffline(request);
+    }).catch(function () {
+      return swNavOffline(request);
+    });
   });
 }
 
@@ -250,11 +264,13 @@ function swNetworkFirst(request) {
 
 /*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ונשמרה.
  *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
- *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה. */
+ *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה.
+ *  ⛔ **וקובץ מהקליפה אינו מתרענן ברקע** — ⚠️ קוד חדש שנכתב למטמון הישן
+ *  פוגש בטעינה הבאה את הדף הישן: ⭐ הקליפה נכנסת כולה בהתקנה, ורק שם. */
 function swCacheFirst(request, u) {
   return caches.open(CACHE_NAME).then(function (cache) {
     return cache.match(request, SW_SUB_OPTS).then(function (hit) {
-      if (hit) { swRevalidate(request, u); return hit; }
+      if (hit) { if (!swInCore(u)) swRevalidate(request, u); return hit; }
       return swFetchAsset(request, u).then(function (res) {
         swStore(request, res);
         return res;

@@ -1,4 +1,4 @@
-package com.schar.limud;
+package @@PACKAGE@@;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;

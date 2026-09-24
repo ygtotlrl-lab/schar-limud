@@ -14,8 +14,9 @@ self.APP = Object.freeze({
   /*  ⛔ תחילית הטבלאות והאחסון — ⚠️ כל אות בה פותחת מילה בשם הריפו, בסדר. */
   prefix: 'sl_',
   colors: { theme: '#307535', background: '#ffffff' },
-  /*  ⚠️ דף האופליין של ה-service worker — ⭐ צבע הרקע והדיו שלו, והסמל. */
-  offline: { bg: '#1d4a34', ink: '#FFFFFF', mark: '📴' },
+  /*  ⚠️ דף האופליין של ה-service worker — ⭐ רקע ודיו לכל מצב, והסמל:
+      ⛔ הכהה הוא אסימוני הערכה הכהה של האפליקציה. */
+  offline: { light: { bg: '#1d4a34', ink: '#FFFFFF' }, dark: { bg: '#18242f', ink: '#e8eef5' }, mark: '📴' },
   /*  ⚠️ המפתח הוא מפתח `anon` ציבורי — ⛔ ולא מפתח שירות: ההרשאות במסד. */
   supabase: {
     url: 'https://kxbtskqobynewvnckaaz.supabase.co',
@@ -23,9 +24,15 @@ self.APP = Object.freeze({
   },
   android: {
     package: 'com.schar.limud',
+    /*  ⛔ הכתובת שהמעטפת טוענת — ⚠️ וממנה נגזר המקור היחיד שגשר השיתוף מקבל. */
+    url: 'https://ygtotlrl-lab.github.io/schar-limud/',
+    /*  ⚠️ המשפט שלם ⛔ ולא שם בלבד — ⭐ הפועל מתאים למין השם. */
+    offlineLine: 'שכר לימוד לא הצליח להתחבר.',
+    /*  ⚠️ צבע כפתור הניסיון החוזר בדף האופליין של המעטפת. */
+    accent: '#c9a84c',
     /*  ⛔ `versionCode` לעולם אינו יורד, ⚠️ ומקודם בכל שינוי תחת `android/` —
         ⭐ בלי קידום המכשיר המותקן אינו מקבל את ה-APK החדש. */
-    versionCode: 20,
+    versionCode: 21,
     versionName: '15.0',
     launcherBg: { kind: 'solid', color: '#FFFFFF' },
     /*  ⚠️ גשר השיתוף — ⭐ `FileProvider` ו-`androidx`, רק באפליקציה שמייצאת קובץ. */
