@@ -1,0 +1,18 @@
+/* ═══ core/chart.css — גרף העמודות ══════════════════════════════════════
+   ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
+      כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.
+   ⛔ הצבעים מהאסימונים ⛔ ואין כאן ליטרל — ⚠️ `--brand` למה שנגבה,
+      ⭐ ו-`--card-2` למסלול שמאחוריו: ⛔ ליטרל מוטבע כאן היה נשאר בהיר
+      במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
+   ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
+      לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
+.bchart{display:grid;gap:var(--sp-4);padding:var(--sp-2) 0}
+.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:var(--sp-4);font-size:var(--fs-3)}
+.blab{color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbars{display:grid;gap:var(--sp-2)}
+.btrack{display:block;height:8px;border-radius:var(--r-6);background:var(--card-2);overflow:hidden}
+.btrack i{--bar-w:0%;display:block;height:100%;width:var(--bar-w);border-radius:var(--r-6);background:var(--brand)}
+.btrack.tgt{height:4px}
+.btrack.tgt i{opacity:var(--op-2)}
+.bval{color:var(--text-2);text-align:end;white-space:nowrap}
+/* ═══ סוף core/chart.css ═════════════════════════════════════════════════ */

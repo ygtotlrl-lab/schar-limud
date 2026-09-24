@@ -8,9 +8,6 @@
  *  כחול שאינו מערכת הצבעים שלנו, ⭐ והיא מופיעה במגע בלבד: ⛔ ומי שבודק
  *  בעכבר אינו רואה אותה. */
 body{-webkit-tap-highlight-color:transparent}
-/*  ⛔ לחיצה ארוכה על משטח לחיץ אינה בחירת טקסט — ⚠️ והכלל חל על הלחיצים
- *  בלבד, ⭐ ולא על טקסט שהמשתמש מעתיק. */
-button,[data-act]{-webkit-user-select:none;user-select:none}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 :root{
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
@@ -84,7 +81,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   .tbl tr:hover td{background:var(--card-2)}
   .tbl.pivot tfoot tr:hover td{background:var(--card-2)}
   .st-row:hover{background:var(--card-2)}
-  .sheet-hd .x:hover{background:var(--card-2)}
   #ask .sheet-ft button:hover{background:var(--card-2)}
   #ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
   .acc-hdr:hover{background:var(--card-2)}
@@ -178,15 +174,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .st-paid{font-size:var(--fs-3);font-weight:700;min-width:65px;text-align:center}
 .st-total{font-size:var(--fs-2);color:var(--text-3);min-width:80px;text-align:center}
 /* ══ שכבת המודאל — מיכל אחד ════════════════════════════════════════════ */
-body.locked{overflow:hidden}
-.veil{position:fixed;inset:0;background:var(--veil);z-index:var(--z-4);display:none;align-items:center;justify-content:center;padding:var(--sp-6)}
-.veil.open{display:flex}
+.veil{align-items:center;padding:var(--sp-6)}
 .sheet{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7);width:100%;max-width:420px;box-shadow:0 8px 40px var(--sh-1);max-height:90vh;overflow-y:auto}
-.sheet-hd{display:flex;align-items:center;gap:var(--sp-5);margin-bottom:var(--sp-6)}
+.sheet-hd{margin-bottom:var(--sp-6)}
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
-.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:var(--lh-1);color:var(--text-3);cursor:pointer;padding:0 var(--sp-2)}
-.sheet-ft{display:flex;gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
-.sheet-ft:empty{display:none}
+.sheet-hd .x{color:var(--text-3);padding:0 var(--sp-2)}
+.sheet-ft{gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 .sheet-bd:empty{display:none}
 #ask-body{font-size:var(--fs-4);color:var(--text-2)}
 #ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
@@ -235,120 +228,6 @@ body.locked{overflow:hidden}
 .st-row{grid-template-columns:1fr auto}
 .st-total{display:none}
 @media (min-width:640px){.txn-row{grid-template-columns:80px 1fr auto auto auto}.tbl td{padding:var(--sp-4) var(--sp-5);font-size:inherit}.tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}.st-row{grid-template-columns:1fr auto auto}.st-total{display:inline}}
-/* ═══ שכבת הטוסט — מודול משותף ══════════════════════════════════════════════
-   זהה בית-לבית בכל האפליקציות. ⛔ שלושה סוגים בלבד, ⚠️ וכולם בגוון
-   האפליקציה: ⭐ הצלחה על `--brand-fill` · מידע על `--brand-soft` · ⛔ ושגיאה
-   נשארת בצבע שגיאה — ⚠️ שגיאה צריכה להיראות כשגיאה.
-   ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
-      אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
-      ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
-   ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
-      תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
-.toast{background:var(--brand-soft);color:var(--brand-ink);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
-.toast.bad{background:var(--bad);color:var(--bad-soft)}
-.toast.good{background:var(--brand-fill);color:var(--on-brand)}
-.toast.out{opacity:0;transition:opacity var(--dur-4)}
-@keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-/* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
-/* ═══ מצבי רכיב — מודול משותף ══════════════════════════════════════════════
-   זהה בית-לבית בכל האפליקציות. ⛔ מצב קבוע של רכיב — מוסתר · עסוק — הוא
-   מחלקה ⛔ ולא `.style` בתגית: ⚠️ סגנון מוטבע גובר על כל כלל, ⭐ ומי שמשנה
-   את הגיליון אינו רואה אותו.
-   ⛔ `!important` ב-`.hidden` בכוונה — ⚠️ המחלקה מסתירה רכיב שכלל אחר
-      נותן לו `display`, ⭐ והיא חייבת לגבור עליו. */
-.hidden{display:none !important}
-.is-busy{opacity:var(--op-4);cursor:wait}
-/* ═══ סוף CSS מצבי רכיב ═════════════════════════════════════════════════ */
-/* ═══ באנר כשל האחסון — מודול משותף ═══════════════════════════════════════
-   זהה בית-לבית בכל האפליקציות. ⛔ הבאנר נבנה במודול האחסון ⚠️ והסגנון
-   כאן — ⭐ מחלקה אחת במקום אחד, ⛔ ולא מחרוזת בתגית שנבנתה.
-   ⛔ ודרגת השכבה «נעילה» — ⚠️ כשל כתיבה נשאר גלוי מעל כל מסך. */
-#ls-alert{position:fixed;z-index:var(--z-7);left:0;right:0;top:0;background:var(--alert);color:var(--on-alert);
-  direction:rtl;text-align:center;font-weight:700;font-size:var(--fs-3);line-height:var(--lh-4);
-  padding:var(--sp-5) calc(var(--sp-7) * 2);box-shadow:0 2px 14px var(--sh-3)}
-#ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
-  font-weight:700;font-size:var(--fs-5);line-height:var(--lh-1);cursor:pointer;padding:var(--sp-2) var(--sp-4)}
-/* ═══ סוף CSS באנר כשל האחסון ═══════════════════════════════════════════ */
-/* ═══ CSS גרף העמודות — מודול משותף ═════════════════════════════════════════
-   ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
-      כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.
-   ⛔ הצבעים מהאסימונים ⛔ ואין כאן ליטרל — ⚠️ `--brand` למה שנגבה,
-      ⭐ ו-`--card-2` למסלול שמאחוריו: ⛔ ליטרל מוטבע כאן היה נשאר בהיר
-      במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
-   ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
-      לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
-.bchart{display:grid;gap:var(--sp-4);padding:var(--sp-2) 0}
-.brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:var(--sp-4);font-size:var(--fs-3)}
-.blab{color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bbars{display:grid;gap:var(--sp-2)}
-.btrack{display:block;height:8px;border-radius:var(--r-6);background:var(--card-2);overflow:hidden}
-.btrack i{--bar-w:0%;display:block;height:100%;width:var(--bar-w);border-radius:var(--r-6);background:var(--brand)}
-.btrack.tgt{height:4px}
-.btrack.tgt i{opacity:var(--op-2)}
-.bval{color:var(--text-2);text-align:end;white-space:nowrap}
-/* ═══ סוף CSS גרף העמודות ════════════════════════════════════════════════ */
-/* ================================================================= מעדכן */
-#updater{
-  position:fixed;inset-inline:0;z-index:var(--z-6);
-  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
-  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
-#updater.show{display:flex}
-#updater .in{
-  background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
-  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--sh-3);
-  font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
-}
-#updater button{
-  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:var(--r-4);
-  padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
-}
-#updater button.x{
-  margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
-/* ═══ סולמות הערך החזותי — מודול משותף ═══════════════════════════════════
-   ⛔ שמונה סולמות, ⛔ ואותן דרגות בכל האפליקציות — ⚠️ כל ערך חזותי
-      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
-      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
-      ביניהם.
-   ⛔ **ומספר הדרגות נגזר מהערכים שהיו בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
-      משוקלל בסולם לוגריתמי על כל הערכים שבכל הריפו, ⭐ ותקרה של שבע.
-   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
-      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בכולן.
-   ⛔ **והמחלקות שכאן הן אלה שחיות בכולן** — ⚠️ מחלקה שחיה בחלקן יושבת
-      בבלוק הפרטי שמתחת: ⭐ מחלקה בבלוק משותף שאין לה קורא באחת מהן היא
-      סלקטור בלי קורא.
-   ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
-      ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
-      מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
-   ⛔ **ו-`--z-*` הוא סדר ולא גודל** — ⚠️ הדרגה נבחרת לפי **תפקיד**
-      השכבה — תוכן · סרגל · תפריט · מודאל · טוסט · באנר · נעילה — ⭐ ולא
-      לפי המספר שהיה שם: ⛔ מספר שנבחר לכל אתר הוא מרוץ שאיש אינו מכריע בו.
-   ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
-      אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
-      הם שני חיפושים.
-   ⛔ **ותחת הפחתת תנועה כל `--dur-N` הוא אפס** — ⚠️ כל מעבר ואנימציה
-      נגזרים מהסולם, ⭐ ואפס בו מכבה את כולם: ⛔ ו-`0s` ולא `0` — משך בלי
-      יחידה אינו ערך תקף, ⚠️ והמאפיין נזרק בשקט.
-   ⛔ שינוי כאן — כל האפליקציות, באותו סבב.
-   ═══════════════════════════════════════════════════════════════════════ */
-:root{
---fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
---sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
---r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px;
---z-1:1;--z-2:10;--z-3:20;--z-4:30;--z-5:40;--z-6:50;--z-7:60;
---dur-1:.12s;--dur-2:.15s;--dur-3:.2s;--dur-4:.3s;--dur-5:.6s;--dur-6:.7s;--ease:cubic-bezier(.2,.8,.3,1);
---op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
---lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
---ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
---veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
---alert:#B3261E;--on-alert:#FFFFFF;
---sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
---on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
-}
-@media (prefers-reduced-motion:reduce){
-  :root{--dur-1:0s;--dur-2:0s;--dur-3:0s;--dur-4:0s;--dur-5:0s;--dur-6:0s}
-}
-/* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
 /* ══ מחלקות התפקיד — מחלקה אחת לכל תפקיד ═════════════════════════════════
    ⛔ שם המחלקה אומר את תפקיד הרכיב, ⚠️ ואין מחלקת עזר של תכונה אחת:
    ⭐ הבלוק יושב אחרי הגיליון כולו, ולכן הוא גובר על הכלל הכללי של הרכיב. */
