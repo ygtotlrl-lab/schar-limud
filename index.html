@@ -51,9 +51,9 @@
           <h3>לוח שנתי</h3>
           <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
                אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
-          <div class="u-d-flex u-ai-c u-g-4">
+          <div class="year-nav">
             <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת">&#9654;</button>
-            <span id="dash-year-label" class="u-fw-700 u-c-text u-fs-4 u-minw-120 u-ta-c"></span>
+            <span id="dash-year-label" class="year-label"></span>
             <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה">&#9664;</button>
           </div>
         </div>
@@ -86,7 +86,7 @@
           <div class="frm-row">
             <label>תלמיד</label>
             <div class="sd-wrap">
-              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
+              <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="sd-input" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
               <div class="hidden sd-list" id="sd-list-student"></div>
               <input type="hidden" id="sd-val-student">
             </div>
@@ -110,14 +110,14 @@
             <label for="txn-note">הערה</label>
             <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
           </div>
-          <button class="u-w-100p btn" data-act="txn-save" data-ksave>שמור תשלום</button>
+          <button class="txn-save btn" data-act="txn-save" data-ksave>שמור תשלום</button>
         </div>
       </div>
       <div class="card">
         <div class="card-hdr">
           <h3>יומן תשלומים</h3>
-          <div class="u-w-160 sd-wrap">
-            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-3 u-w-100p u-ol-none" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
+          <div class="txn-filter sd-wrap">
+            <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="sd-input-sm" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
             <div class="hidden sd-list" id="sd-list-txnfilter"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
@@ -130,9 +130,9 @@
     <div id="panel-student" class="panel">
       <div class="card">
         <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
-        <div class="u-pb-5 card-body">
+        <div class="sc-body card-body">
           <div class="sd-wrap">
-            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="בחר תלמיד..." autocomplete="off" data-sd="sc">
+            <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="sd-input" placeholder="בחר תלמיד..." autocomplete="off" data-sd="sc">
             <div class="hidden sd-list" id="sd-list-sc"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
@@ -141,7 +141,7 @@
       <div id="sc-main" class="hidden">
         <div class="card">
           <div class="sc-hdr">
-            <div class="u-d-flex u-ai-fs u-jc-sb u-g-5">
+            <div class="sc-head">
               <div>
                 <div class="sc-name" id="sc-name"></div>
                 <div class="sc-meta" id="sc-meta"></div>
@@ -167,11 +167,11 @@
             </div>
             <div class="frm-row">
               <label for="sc-edit-start">חודש הצטרפות</label>
-              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r">
+              <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp">
             </div>
-            <div class="u-mb-3 frm-row">
+            <div class="frm-row-last frm-row">
               <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
-              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r">
+              <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp">
             </div>
             <div class="frm-row">
               <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
@@ -181,15 +181,15 @@
               <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
               <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
             </div>
-            <div class="u-fs-2 u-c-text3 u-mb-6 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
+            <div class="range-hint">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
             <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
           </div>
-          <div class="u-bt-1-solid-border acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
+          <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
             <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
           </div>
           <div class="acc-body" id="acc-sc-annual">
             <div class="year-tabs" id="sc-year-tabs"></div>
-            <div class="u-ovx-a">
+            <div class="table-scroll">
               <table class="tbl">
                 <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
                 <tbody id="sc-annual-tbody"></tbody>
@@ -197,11 +197,11 @@
               </table>
             </div>
             <div id="sc-credit"></div>
-            <div class="u-mt-5">
-              <div class="u-fs-3 u-fw-700 u-c-text2 u-mb-3 u-p-0-2">תשלומים בשנה זו</div>
+            <div class="sc-section">
+              <div class="sc-sub-title">תשלומים בשנה זו</div>
               <div id="sc-txn-list"></div>
             </div>
-            <div class="u-mt-5">
+            <div class="sc-section">
               <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
               <div id="sc-past"></div>
             </div>
@@ -218,14 +218,14 @@
       <div id="settings-denied" class="hidden card">
         <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
-          <div id="set-denied-msg" class="u-fs-4 u-c-text2 u-lh-17"></div>
+          <div id="set-denied-msg" class="denied-msg"></div>
         </div>
       </div>
       <div id="settings-main" class="hidden">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-          <div class="u-d-flex u-g-4 u-ai-c u-fwr-wrap card-body ksave">
-            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-130 u-ol-none" placeholder="לא הוגדר">
+          <div class="tuition-row card-body ksave">
+            <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר">
             <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
           </div>
         </div>
@@ -1167,7 +1167,7 @@ function slMyPassword() {
   var body = ''
     + '<div class="frm-row"><label for="mp-cur">סיסמה נוכחית</label><input id="mp-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>'
     + '<div class="frm-row"><label for="mp-new">סיסמה חדשה (שש ספרות)</label><input id="mp-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>'
-    + '<div class="u-mb-3 frm-row"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+    + '<div class="frm-row-last frm-row"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
   var foot = '<button class="btn out" data-act="modal-close">ביטול</button>'
            + '<button class="btn" data-act="my-pass-save" data-ksave>שמירה</button>';
   openModal(MSG_MY_PASS_TITLE, body, foot);
@@ -1515,7 +1515,7 @@ function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){d
 // onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
 // קוד JS מורכב בתוך HTML.
-function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'">'+esc(x.label)+'</div>';}).join(''):'<div class="u-c-text3 u-cur-def sd-opt">אין תוצאות</div>';}
+function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-k="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt-empty sd-opt">אין תוצאות</div>';}
 // ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
 // ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
@@ -1830,7 +1830,7 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
   h.classList.toggle('hidden',!on);
-  if(on)h.innerHTML='<span class="u-c-credit u-fw-700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="credit-mark">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 // זריעת הסעיף ב-sl_lists (פעם אחת, אחרי סנכרון תקין). מריצים מהאפליקציה
 // ולא רק ממיגרציה, כדי שהסעיף יופיע בהגדרות גם בלי הרצת SQL ידנית.
@@ -1975,8 +1975,8 @@ function showDashMonth(year,month){
     html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span></div>';
   });
   tot=Math.round(tot*100)/100;
-  html+='<div class="u-p-5-6 u-fw-700 u-bt-2-solid-border">נגבה: <span class="u-c-green">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
-    '<div class="u-fw-400 u-c-text3 u-fs-2 u-mt-2">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
+  html+='<div class="dash-total">נגבה: <span class="got-amt">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
+    '<div class="dash-total-sub">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
 function closeDashMonth(){document.getElementById('dash-month-card').classList.add('hidden');}
@@ -2045,13 +2045,13 @@ function renderTxnLog(){
   var fid=document.getElementById('sd-val-txnfilter').value||'';
   var txns=TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span><span class="u-fw-600">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 // סימון ויזואלי של זיכוי מיתרה ביומן התשלומים: הסכום כחול עם ↩ במקום ירוק,
 // והתגית כתובה במלואה. אלה לא תקבולים, ואסור שייקראו ככאלה בסריקה מהירה.
 function txnAmountHtml(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
-  return'<span class="u-fw-700 u-c-green">&#8362;'+fmt(t.amount)+'</span>';
+  return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
@@ -2208,18 +2208,18 @@ function renderScAnnual(){
   // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג מעומעם, בלי דרישה ובלי חוב
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
-    if(i.off){rows+='<tr class="u-op-45"><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="u-ta-c u-fs-2 req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
+    if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(SC_YEAR,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
     var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-ok':i.paid>0?'amt-warn':'amt-bad';
-    rows+='<tr><td class="u-ws-nw">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="u-ta-c '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
+    rows+='<tr><td class="month-cell">'+monthLabel(SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   document.getElementById('sc-annual-tbody').innerHTML=rows;
-  var tb=tP-tR,tf='<tr class="u-bg-bg u-fw-700"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="u-ta-c '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
+  var tb=tP-tR,tf='<tr class="sum-row"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="bal-cell '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   /* ⭐ חוב משנים קודמות — הזנה ידנית בלבד, בלי העברה אוטומטית
      בין שנים בכוונה: המנהל קובע מה נגרר. שורה נפרדת ומסומנת — ⛔ אינו
      מתווסף לשורת סה"כ של השנה — ערבובו היה מסתיר האם החוב
      נולד השנה או נגרר, בדיוק ההבחנה שהשדה בא לתת. */
   var pd=parseInt(cs.prev_debt)||0;
-  if(pd>0)tf+='<tr class="u-bg-bg"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="u-ta-c amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="u-fs-2 u-c-text3">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
+  if(pd>0)tf+='<tr class="debt-row"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="bal-cell amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="debt-note">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
   document.getElementById('sc-annual-tfoot').innerHTML=tf;
   // יתרת זכות: שולם בשנה זו מעבר לסך החיוב בטווח החודשים של התלמיד. מוצגת
   // מתחת לטבלה כשורה נפרדת ובצבע נפרד — **אינה** נכנסת ל"סה"כ שולם" ואינה
@@ -2227,10 +2227,10 @@ function renderScAnnual(){
   var cr=distCredit(dist),applied=distCredApplied(dist),ce=document.getElementById('sc-credit'),ch='';
   if(cr>0)ch+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)ch+='<div class="u-c-credit u-fw-600 credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
+  if(applied>0)ch+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=TRANSACTIONS.filter(function(t){return t.student_client_id===SC_STUDENT_ID&&acadYearOf(t.date)===SC_YEAR;}).sort(function(a,b){return a.date>b.date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="u-c-text3 u-fs-2">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 async function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!SC_STUDENT_ID)return;
@@ -2239,8 +2239,8 @@ async function scPastShow(){
   var r=await hwPastLoad(mirrorKey('sl_transactions'),function(t){return t.student_client_id===sid;});
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
-  box.innerHTML='<div class="u-fs-2 u-c-text3 u-p-2">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span class="u-c-text3 u-fs-2">'+esc(t.date||'')+'</span><span class="u-fx-1">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
+  box.innerHTML='<div class="ro-note">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
+    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
@@ -2356,7 +2356,7 @@ function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(dayToday());
-  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="u-fw-600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
@@ -2409,9 +2409,9 @@ function openAddStudent(){
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
-    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
-    +'<div class="u-mb-3 frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r"></div>'
-    +'<div class="u-fs-2 u-c-text3 u-mb-2 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
+    +'<div class="frm-row-last frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp"></div>'
+    +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal(MSG_ADD_STUDENT, body, foot);
