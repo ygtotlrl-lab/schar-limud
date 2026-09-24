@@ -38,6 +38,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # ⛔ שם האפליקציה נקרא מהתצורה — ⚠️ והקובץ הזה אינו נושא ערך של אפליקציה.
+      - name: Read the app id from the config
+        run: echo "APP_ID=$(node tools/gen-app.mjs --get id)" >> "$GITHUB_ENV"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v6
         with:
@@ -53,7 +57,7 @@ jobs:
           packages: 'platform-tools'
 
       # ⛔ No "copy web assets" step, and it must never be added.
-      # The shell loads https://ygtotlrl-lab.github.io/schar-limud/ over the network,
+      # The shell loads the live Pages site over the network,
       # so a bundled copy would be a SECOND source of truth that only ever goes stale —
       # and worse, it lives in the file:// storage origin, a different localStorage
       # partition from the https site. Anything typed into it offline would be invisible
@@ -105,7 +109,7 @@ jobs:
           export PATH="$BT:$PATH"
           ./signing/sign-apk.sh \
             android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            schar-limud.apk
+            app-signed.apk
 
       # ⛔ המחיקה רצה גם כשהחתימה נפלה — ⚠️ שלב שרץ רק בהצלחה משאיר את
       # המפתח על הרץ בדיוק בריצות שנעצרו באמצע.
@@ -116,6 +120,6 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v7
         with:
-          name: schar-limud-apk
-          path: schar-limud.apk
+          name: ${{ env.APP_ID }}-apk
+          path: app-signed.apk
           if-no-files-found: error

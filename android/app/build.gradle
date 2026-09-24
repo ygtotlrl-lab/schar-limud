@@ -1,3 +1,4 @@
+// ⛔ נוצר מהתצורה — `app.config.js`, ב-`node tools/gen-app.mjs`: אין לערוך ביד
 plugins {
     id 'com.android.application'
 }
@@ -10,12 +11,8 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
-        // ⛔ versionCode לעולם אינו יורד — מספר נמוך ממה
-        // שמותקן במכשיר חוסם את העדכון.
-        // ⛔ קדם בכל שינוי ב-`android/` — ⚠️ בלי קידום המכשיר המותקן
-        // אינו מקבל את ה-APK החדש, ⭐ וההיסטוריה ב-git ⛔ ולא כאן.
-        versionCode 19
-        versionName "14.0"
+        versionCode 20
+        versionName "15.0"
     }
 
     buildTypes {
@@ -29,8 +26,3 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
-
-// No dependencies, on purpose: yoman's shell needs androidx.webkit + androidx.core for
-// its origin-restricted share bridge (navigator.share → FileProvider). schar-limud's
-// page has no navigator.share, the bridge is omitted entirely, and nothing androidx
-// is used. See MainActivity.java.
