@@ -82,7 +82,13 @@ function swVer() {
     return ks.filter(function (n) { return n.indexOf(app.LS_CFG.cachePrefix) === 0; }).sort().join('|');
   }).catch(function () { return ''; });
 }
-function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); }
+/*  ⛔ הטוסטים עולים מעל הבאנר הפתוח — ⚠️ שניהם במקום אחד, ⭐ והגובה נמדד
+ *  מהבאנר עצמו ⛔ ואינו מוקלד: נוסח ארוך נשבר לשתי שורות. */
+function swToastsLift(h) {
+  var t = document.getElementById('toasts');
+  if (t) t.style.setProperty('--toasts-lift', h ? 'calc(' + h + 'px + var(--sp-4))' : '0px');
+}
+function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); swToastsLift(0); }
 /*  ⛔ סימן הדחייה מתמיד ונושא את הגרסה שנדחתה — ⚠️ סימן בזיכרון מתאפס
  *  בטעינה, ⭐ והבאנר חוזר בלי שדבר השתנה: ⛔ ועובד ממתין ששרד היה מציג
  *  אותו בכל טעינה, בלי דרך לצאת. */
@@ -92,6 +98,7 @@ function swShowUpdate() {
   swVer().then(function (v) {
     if (v && v === lsGet(app.LS_CFG.dismissKey, '')) return;
     el.classList.add('show');
+    swToastsLift(el.offsetHeight);
   });
 }
 window.showAppUpdateBanner = swShowUpdate;

@@ -58,11 +58,13 @@ body.locked{overflow:hidden}
 .sheet-ft{display:flex}
 .sheet-ft:empty{display:none}
 /* ══ באנר העדכון ════════════════════════════════════════════════════════
-   ⛔ המיכל `#updater` יושב במקור, ⚠️ והבאנר נפתח ממנו. */
+   ⛔ המיכל `#updater` יושב במקור, ⚠️ והבאנר נפתח ממנו.
+   ⛔ והוא יושב במקום הטוסט — `--toast-bottom` בלי מרווח משלו: ⚠️ באנר וטוסט
+   כמעט אינם יחד, ⭐ וטוסט שמופיע בזמן שהבאנר פתוח עולה מעליו. */
 #updater{
   position:fixed;inset-inline:0;z-index:var(--z-6);
-  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
-  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
+  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));
+  display:none;justify-content:center;padding:0 var(--sp-6)}
 #updater.show{display:flex}
 #updater .in{
   background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
@@ -82,7 +84,9 @@ body.locked{overflow:hidden}
       השנייה, ⭐ ו«נשמר» ו«שגיאת רשת» ברצף היו משאירים על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` נקבע באפליקציה — ⚠️ הוא המרחק ממה שקבוע
       בתחתית המסך שלה. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+/*  ⛔ `--toasts-lift` — גובה הבאנר הפתוח ומרווח אחד, ⚠️ נמדד בפתיחתו
+ *  ונכתב ב-`setProperty`: ⭐ ואפס כשהוא סגור. */
+#toasts{--toasts-lift:0px;position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + var(--toasts-lift));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
 .toast{background:var(--brand-soft);color:var(--brand-ink);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
 .toast.good{background:var(--brand-fill);color:var(--on-brand)}
