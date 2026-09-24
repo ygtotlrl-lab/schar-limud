@@ -1,17 +1,13 @@
 package com.schar.limud;
 
 /**
- * The app shell — identity only.
+ * The app shell — identity.
  *
- * <p>All of the behaviour lives in {@link ShellActivity}, which is byte-for-byte
- * identical in the organisation's four repos; this class supplies the three
- * values that differ. ⛔ אין להוסיף כאן לוגיקה — התנהגות שנוספת
- * לאפליקציה אחת בלבד מחזירה בדיוק את העותקים החופשיים שהחילוץ החליף;
- * מה שנחוץ לכולן נכנס ל-`ShellActivity`, ומה שנחוץ לאחת עובר דרך
- * `installBridge()`/`onShellNavigation()` ונרשם כחריגה מנומקת.
- *
- * <p>אין כאן גשר מקורי: בקוד של האפליקציה הזו אין `navigator.share`.
- */public class MainActivity extends ShellActivity {
+ * <p>⛔ Generated from the app config by {@code tools/gen-app.mjs} and never
+ * edited by hand. All of the shell behaviour lives in {@link ShellActivity};
+ * this class supplies the values that differ, and each one comes from the config.
+ */
+public class MainActivity extends ShellActivity {
 
     @Override
     protected String appUrl() { return "https://ygtotlrl-lab.github.io/schar-limud/"; }
