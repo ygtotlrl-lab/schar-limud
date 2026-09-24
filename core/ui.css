@@ -110,3 +110,19 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 #ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
   font-weight:700;font-size:var(--fs-5);line-height:var(--lh-1);cursor:pointer;padding:var(--sp-2) var(--sp-4)}
 /* ═══ סוף core/ui.css ════════════════════════════════════════════════════ */
+/* ══ שומר העלייה ════════════════════════════════════════════════════════
+   ⛔ המסך שעולה כשקוד הדף לא עלה — ⚠️ מעל הכול, ⭐ ובצבעי `offline` שבתצורה,
+   שהשומר כותב למשתנים: ⛔ והכפתור בצבעים ההפוכים, ⚠️ שהזוג כבר עומד בניגוד. */
+#boot-fail{--boot-bg:#FFFFFF;--boot-ink:#1A1A1A;--boot-bg-dark:#121212;--boot-ink-dark:#F2F2F2;
+  --boot-fg-use:var(--boot-ink);--boot-bg-use:var(--boot-bg);
+  position:fixed;inset:0;z-index:var(--z-7);display:flex;align-items:center;justify-content:center;
+  padding:var(--sp-7);background:var(--boot-bg-use);color:var(--boot-fg-use);
+  font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+@media (prefers-color-scheme:dark){
+  #boot-fail{--boot-fg-use:var(--boot-ink-dark);--boot-bg-use:var(--boot-bg-dark)}
+}
+.boot-fail-box{max-width:340px;text-align:center}
+.boot-fail-msg{margin:0 0 var(--sp-7);font-size:var(--fs-5);font-weight:700}
+.boot-fail-btn{border:0;border-radius:var(--r-5);padding:var(--sp-5) var(--sp-7);font:inherit;font-weight:700;
+  cursor:pointer;user-select:none;background:var(--boot-fg-use);color:var(--boot-bg-use)}
+.boot-fail-btn:focus-visible{outline:3px solid var(--boot-fg-use);outline-offset:3px}

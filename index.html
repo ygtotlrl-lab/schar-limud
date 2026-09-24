@@ -7,6 +7,7 @@
 <title></title>
 <link rel="manifest" href="manifest.json">
 <script src="app.config.js"></script>
+<script src="core/boot.js"></script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.837fbb2e.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.c7721cea.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.aa306d87.png">
@@ -2492,6 +2493,7 @@ async function slBoot(){
   // ⛔ אין בדיקת סכימה מול השרת בעלייה — ⚠️ ולכן אין מה לדלג עליו
   //    כשאין רשת.
   setTimeout(function(){document.getElementById('au-user').focus();},50);
+  bootOk();
 }
 document.addEventListener('DOMContentLoaded', slBoot);
 </script>
