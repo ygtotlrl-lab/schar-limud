@@ -27,13 +27,12 @@
 הכל בקובץ אחד: `index.html`. אין build.
 
 ```bash
-node tools/check-js.mjs          # מהירה — בזמן העבודה
-node tools/check-js.mjs --full   # מלאה — חובה לפני כל push
+node tools/guard.mjs       # שומר הדחיפה — חובה לפני כל push
 ```
 
 <!-- SHARED:start id="readme-gate" -->
-השער מחלץ את ה-JS המוטבע מ-`index.html`, מריץ `node --check` עליו ועל `sw.js`,
-ומריץ את כל שערי האחידות ואת חבילות בדיקות הסבבים.
+השומר בודק את תחביר הסקריפט הראשי, `sw.js` ו-`core/`, ⛔ ושכל קובץ ברשימת
+המטמון קיים — ⚠️ ורץ גם בכל דחיפה ובכל PR.
 <!-- SHARED:end -->
 
 ⚠️ קידום `CACHE_NAME` ב-`sw.js` הוא חובה בכל שינוי קוד — בלי זה המשתמשים

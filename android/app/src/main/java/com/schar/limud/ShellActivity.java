@@ -24,8 +24,7 @@ import android.widget.Toast;
  * ══════════════════════════════════════════════════════════════════════════
  *
  * This file is byte-for-byte identical in all four repos apart from its
- * {@code package} line, and {@code tools/test_round40_shell.mjs} enforces that
- * with a signature. Everything that differs between the apps — the URL, the
+ * {@code package} line, so a fix made here lands in every app at once. Everything that differs between the apps — the URL, the
  * name shown on the offline page, the accent colour, and yoman-avoda's share
  * bridge — lives in the per-app {@link MainActivity} that extends this class.
  *
