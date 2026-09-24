@@ -45,7 +45,8 @@ function actRun(el, fn) {
   if (!out || typeof out.then !== 'function') return;
   el._actBusy = true;
   var isBtn = el.tagName === 'BUTTON';
-  if (isBtn) busy(el, true, '⏳ שומר…');
+  /*  ⚠️ התווית מ-`data-busy` — ⭐ פעולה שבודקת ⛔ אינה «שומרת». */
+  if (isBtn) busy(el, true, el.getAttribute('data-busy') || '⏳ שומר…');
   out.then(function () { }, function (e) {
     console.error('[act] ' + el.getAttribute('data-act'), e);
   }).then(function () {
