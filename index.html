@@ -1209,7 +1209,7 @@ async function slSaveMyPassword() {
   try { slUsersSaveOne(u); } catch (e3) { console.warn('[pass] כתיבה למראה נכשלה', e3); }
   plTouch();
   closeModal();
-  if (body.pass_fp) toast(MSG_PASS_UPDATED);
+  if (body.pass_fp) toast(MSG_PASS_UPDATED, null, 'good');
   else toast(MSG_PASS_UPDATED_NO_FP2, null, 'bad');
 }
 
@@ -1778,7 +1778,7 @@ async function syncAll(){
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
       if(!_syncWarned){_syncWarned=true;toast(MSG_LOAD_FAIL_PRE+errs.join(', ')+MSG_LOAD_FAIL_POST,4000, 'bad');}
-    }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK);}
+    }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK, null, 'good');}
   }catch(e){
     _lastSyncOk=false;
     console.error('[sync]',e);
@@ -2026,7 +2026,7 @@ function calcDistribution(sid,year){
    ══════════════════════════════════════════════════════════════════════════ */
 async function saveTxn(){
   var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
-  if(!sid){toast(MSG_PICK_STUDENT_PLAIN);return;}if(!date){toast(MSG_PICK_DATE);return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT);return;}
+  if(!sid){toast(MSG_PICK_STUDENT_PLAIN, null, 'bad');return;}if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
   // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
   // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
@@ -2168,7 +2168,7 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   refreshUI();
-  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 /*  ⛔ המזהה נשמר כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא טקסט
@@ -2245,7 +2245,7 @@ function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.cli
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));refreshUI();
-  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF);schedulePush();}
+  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
 // ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
 function readMonthRange(startId,endId){
@@ -2258,7 +2258,7 @@ function readMonthRange(startId,endId){
 }
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
-  if(!name){toast(MSG_NAME_REQUIRED);return;}
+  if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
@@ -2337,7 +2337,7 @@ function renderSettingsPanel(){
 // `updated_at` כמו על כל שורה.
 function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
-  if(!v||isNaN(v)){toast(MSG_VALUE_BAD);return;}
+  if(!v||isNaN(v)){toast(MSG_VALUE_BAD, null, 'bad');return;}
   var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
   if(!slLocalWrite(KV_TABLE,row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
@@ -2395,7 +2395,7 @@ function deleteListItem(key){
     if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     pendMark(pendLstKey(row));
     refreshUI();
-    toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000);
+    toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000, 'good');
     schedulePush();
   });}
 function openAddStudent(){
@@ -2415,7 +2415,7 @@ function openAddStudent(){
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal(MSG_ADD_STUDENT, body, foot);
 }
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED);return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
@@ -2434,7 +2434,7 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   pcCascadeDelete('sl_students',row);
   if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
-  toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 /* ══════════════════════════════════════════════════════════════════════════
