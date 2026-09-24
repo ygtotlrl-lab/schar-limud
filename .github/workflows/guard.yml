@@ -1,0 +1,14 @@
+name: guard
+
+# ⛔ שומר הדחיפה — רץ בכל דחיפה ובכל PR, ⚠️ ובודק רק מה ששובר את
+# האפליקציה למשתמש: תחביר וקבצי רשימת המטמון.
+on:
+  push:
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node tools/guard.mjs
