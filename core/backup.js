@@ -6,7 +6,7 @@
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
    ════════════════════════════════════════════════════════════════════ */
 
-import { app, withTimeout } from './util.js';
+import { app, dayToday, withTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
 import { lsGet, lsSet } from './storage.js';
 
@@ -33,8 +33,6 @@ function _bkSecrets() {
   var s = _bkCfg('secrets', []);
   return Array.isArray(s) ? s : [];
 }
-
-function bkToday() { return new Date().toISOString().slice(0, 10); }
 
 // חתימת תוכן לגיבוי הדיפרנציאלי — אורך + FNV-1a. אינה סוד ואינה אימות,
 // רק "האם זה אותו ערך בדיוק".
@@ -189,7 +187,7 @@ async function bkMaybeDaily() {
   if (!c) return false;
   var flag = _bkCfg('flagKey', null);
   if (!flag) return false;
-  var today = bkToday();
+  var today = dayToday();
   if (lsGet(flag, '') === today) return false;
   var src = _bkCfg('sources', []) || [];
   if (!src.length) return false;
