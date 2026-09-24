@@ -1,4 +1,4 @@
-/* ═══ core/sw.js — ליבת ה-service worker ═════════════════════════════════
+/* ═══ core/sw.js — ליבת ה-service worker ════════════════════════════════
    ⭐ ההתקנה, הניקוי, הניווט והמטמון — ⛔ ו-`sw.js` של האפליקציה נושא רק את
       `CACHE_NAME`, `CORE` ו-`CDN_ASSETS`, ⚠️ וטוען קודם את `app.config.js`.
    ⛔ סדר המאזינים install → activate → fetch → message.
