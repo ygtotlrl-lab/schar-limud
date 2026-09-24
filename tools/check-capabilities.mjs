@@ -844,7 +844,7 @@ const CAPS = {
   storage: {
     name: 'מודול עמידות האחסון',
     docRows: ['אחסון מקומי', 'אסטרטגיית `localStorage`'],
-    block: { sha: 'cd8b860dcd8a8289', lines: 674,
+    block: { sha: '6a43bf83b6685194', lines: 688,
              start: '/* ═══ עמידות אחסון מקומי — מודול משותף',
              end:   '/* ═══════════════ סוף המודול המשותף' },
     hooks: [{ fn: 'lsBoot', at: 'boot' }],
@@ -2260,8 +2260,8 @@ const policyBlock = () => cfgBlock('LS_CFG') + fnBody('lsRebuildPolicy');
  *  היה `getter` שבדק את העֵד בכניסה, ⛔ והתקן אישר אותו — ⭐ ש«פר-מפתח»
  *  התקיים בשני המימושים, ⚠️ ואיש לא ידע ששניים הם. ⛔ ומערך ריק הוא
  *  הצהרה תקפה שאין מה לפנות, ⚠️ ואינו נספר כפריט. */
-const tierArrays = (pb) => {
-  const out = []; const re = /(?:wholeKeys|oldRecords)\s*[:=]\s*\[/g; let m;
+const tierArrays = (pb, names = 'wholeKeys|oldRecords') => {
+  const out = []; const re = new RegExp('(?:' + names + ')\\s*[:=]\\s*\\[', 'g'); let m;
   while ((m = re.exec(pb)) !== null) {
     let i = m.index + m[0].length - 1, d = 0, j = i;
     for (; j < pb.length; j++) {
@@ -2293,6 +2293,14 @@ const tierShape = () => {
     for (const it of tierItems(body)) {
       items++;
       if (!/\bkey\s*:/.test(it) || !/\bsyncedThrough\s*:/.test(it)) bad++;
+    }
+  }
+  /*  ⛔ טבלה שנדרשת במלואה היא מדיניות אף היא — ⚠️ פריט נושא `t` ו-`calc`:
+   *  ⭐ אפליקציה שכל טבלה שגדלה בה נדרשת לחישוב אינה מפנה, ⛔ ומצהירה למה. */
+  for (const body of tierArrays(pb, 'fullHistory')) {
+    for (const it of tierItems(body)) {
+      items++;
+      if (!/\bt\s*:/.test(it) || !/\bcalc\s*:/.test(it)) bad++;
     }
   }
   return { ok: bad === 0, items: items };
@@ -7591,7 +7599,8 @@ const GATES = {
    *  ⭐ האפליקציות שחולקות את ה-origin, ⛔ וכל טבלת מראה בפינוי או קבועה בגודלה. */
   99: { claims: { test_origin: ['[ls-quota-derived]', '[ls-quota-measured]', '[ls-apps-peers]',
                                  '[mirror-evict]', '[mirror-screen-whole]', '[child-with-parent]',
-                                 '[old-records-ts]'] } },
+                                 '[old-records-ts]', '[ls-window-derived]', '[ls-app-type]',
+                                 '[ls-app-type-used]', '[full-history-calc]', '[evict-calc-stable]'] } },
   /*  ⛔ שם מיגרציה נגזר, ומותאם לרשומה שרצה — ⚠️ הדפוס והרצף
    *  מ-`000`, ⭐ המרשם שמגשר לטבלת המעקב, ⛔ וההצלבה של כל הפניה חוצת-ריפו
    *  מול העץ של הריפו שהיא נוקבת בו. */
