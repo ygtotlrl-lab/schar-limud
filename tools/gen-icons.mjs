@@ -8,43 +8,29 @@
  *
  * ⚠️ **למה זה יכול להישבר:** שינוי בסמל, בדיו או ברקע שנעשה בקובץ נכס
  * ולא כאן — ⚠️ 11 נכסים שנגזרו ביד נדרסו בהרצה הבאה, בשקט:
- * המחולל אינו יודע על עריכה שלא עברה דרכו. משנים את הבלוק `APP` ומריצים.
+ * המחולל אינו יודע על עריכה שלא עברה דרכו. משנים את `icon` שבתצורה ומריצים.
  *
  * ⛔ **שתי הבחירות שאין להפוך:** ההרכבה היא בהכפלה מוקדמת באלפא וה-RGB
  * מחולק בה בסוף (⚠️ אחרת פיקסל בעל אלפא חלקית נכתב מוכהה — PNG הוא
  * straight alpha), ⛔ וצלע התוכן של החזית היא **מספר שלם על גבול פיקסל**
  * (⚠️ אחרת היא נמדדת 192 בסף `ALPHA_MIN` ו-190 בסף שמעליו).
  *
- * הרצה:  node tools/gen-icons.mjs
- * ⛔ הקובץ זהה בית-לבית בכל הריפו פרט לבלוק `APP` שבראשו.
+ * הרצה:  node tools/gen-app.mjs — ⚠️ שמריץ גם אותו, ⭐ ו-`manifest.json` אחריו.
  */
 import { deflateSync, inflateSync } from 'node:zlib';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { APP as CFG } from './gen-app.mjs';
 
 /*  ⭐ שם הנכס נושא את תוכנו — ⚠️ שינוי בבתים משנה את הכתובת, ⛔ וכרום מושך אותה מחדש. */
 const ICON_RE = /^([a-z0-9-]+)\.([0-9a-f]{8})\.png$/;
 const iconName = (base, buf) => `${base}.${createHash('sha256').update(buf).digest('hex').slice(0, 8)}.png`;
 
-/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
-const APP = {
-  /*  ⛔ המאסטר כאן הוא **ציור** ולא צורות — ⚠️ כל ניסיון לתאר
-      אותו בפרימיטיבים היה מייצר סמל אחר, ⛔ ולא את זה שעל המכשירים.
-      ⛔ **ולכן הצורה המוצהרת רסטרית** — ⚠️ והיא תואמת את סיומת
-      המאסטר: ⭐ הצהרה שאינה תואמת שולחת את המחולל למסלול שאינו של הקובץ. */
-  art: 'master',
-  master: 'design/icon-master.png',
-  bgKey: [252, 253, 252],
-  keyTol: 40,
-  /*  ⛔ הדיו נמדד מהמאסטר ⛔ ואינו מוקלד — ⚠️ [47,116,52] היה הצבע
-      שהחזית צוירה בו בלבד, ⭐ והאריח צויר בצבע הציור עצמו. */
-  ink: [60, 125, 65],
-  bg: { kind: 'solid', color: [255, 255, 255] },
-  mark: { w: 684, h: 612 },
-};
-/* ── סוף APP ───────────────────────────────────────────────────────────── */
+/*  ⛔ נכסי האייקון מהתצורה — ⚠️ `APP.icon` שב-`app.config.js`, ⭐ והקובץ הזה
+ *  אינו מחזיק ערך של אפליקציה. */
+const APP = CFG.icon;
 
 /* ── PNG: מקודד ומפענח, בלי ספריות ─────────────────────────────────────── */
 const CRC_T = (() => { const t = new Uint32Array(256);
@@ -721,9 +707,9 @@ for (const [base, size] of [['icon-192', 192], ['icon-512', 512],
 /*  ⛔ ה-maskable נבדל באחד בלבד — הסמל בתוך אזור הבטחה, ⚠️ ולכן הוא נכס
     נפרד ולא אותו קובץ עם `purpose` אחר. */
 putWeb('icon-maskable-512', encodePng(512, 512, tile(512, FG_FRAC)));
-/*  ⛔ ההפניות נגזרות מהשם שנכתב — ⚠️ `manifest.json`, ה-`<link>` וה-`CORE`
- *  שב-`sw.js`: ⭐ שם שמוקלד ביד בשלושתם הוא שלושה מקומות להתיישן. */
-for (const f of ['index.html', 'manifest.json', 'sw.js']) {
+/*  ⛔ ההפניות נגזרות מהשם שנכתב — ⚠️ ה-`<link>` וה-`CORE` שב-`sw.js`:
+ *  ⭐ ו-`manifest.json` נוצר אחרי האייקונים, מאותם שמות. */
+for (const f of ['index.html', 'sw.js']) {
   const p = join(ROOT, f);
   if (!existsSync(p)) continue;
   const src = readFileSync(p, 'utf8');
