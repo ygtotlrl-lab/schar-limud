@@ -615,7 +615,7 @@ function pendRender() {
   if (typeof document === 'undefined' || !document.body) return;
   pendEnsureStyle();
   var txt = pendCounterText(), bar = document.getElementById('pend-bar');
-  if (!txt) { if (bar) bar.style.display = 'none'; }
+  if (!txt) { if (bar) bar.classList.add('hidden'); }
   else {
     if (!bar) {
       bar = document.createElement('div');
@@ -626,7 +626,6 @@ function pendRender() {
     try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.extra) extra = app.PEND_CFG.extra() || ''; } catch (e) { }
     bar.textContent = txt + (extra ? ' · ' + extra : '');
     bar.className = pendLateCount() ? 'late' : '';
-    bar.style.display = '';
   }
   pendRenderAlert();
 }

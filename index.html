@@ -69,7 +69,7 @@
         <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
         <div class="card-body"><div id="dash-chart"></div></div>
       </div>
-      <div class="u-d-none card" id="dash-month-card">
+      <div class="hidden card" id="dash-month-card">
         <div class="card-hdr">
           <h3 id="dash-month-title">פירוט חודש</h3>
           <button class="btn sm out" data-act="dash-month-close">סגור</button>
@@ -87,7 +87,7 @@
             <label>תלמיד</label>
             <div class="sd-wrap">
               <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
-              <div class="u-d-none sd-list" id="sd-list-student"></div>
+              <div class="hidden sd-list" id="sd-list-student"></div>
               <input type="hidden" id="sd-val-student">
             </div>
           </div>
@@ -104,7 +104,7 @@
             <select id="txn-method" data-chg="txn-method">
               <option value="">-- בחר --</option>
             </select>
-            <div id="txn-method-hint" class="u-d-none credit-sub"></div>
+            <div id="txn-method-hint" class="hidden credit-sub"></div>
           </div>
           <div class="frm-row">
             <label for="txn-note">הערה</label>
@@ -118,7 +118,7 @@
           <h3>יומן תשלומים</h3>
           <div class="u-w-160 sd-wrap">
             <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-3 u-w-100p u-ol-none" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
-            <div class="u-d-none sd-list" id="sd-list-txnfilter"></div>
+            <div class="hidden sd-list" id="sd-list-txnfilter"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
         </div>
@@ -133,12 +133,12 @@
         <div class="u-pb-5 card-body">
           <div class="sd-wrap">
             <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="בחר תלמיד..." autocomplete="off" data-sd="sc">
-            <div class="u-d-none sd-list" id="sd-list-sc"></div>
+            <div class="hidden sd-list" id="sd-list-sc"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
         </div>
       </div>
-      <div id="sc-main" class="u-d-none">
+      <div id="sc-main" class="hidden">
         <div class="card">
           <div class="sc-hdr">
             <div class="u-d-flex u-ai-fs u-jc-sb u-g-5">
@@ -215,13 +215,13 @@
       <!-- ⭐ אין כאן שער סיסמה. ההרשאה נגזרת מ-`sl_users.role`
            של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
            ההודעה שמוצגת למי שאינו admin — לא טופס. -->
-      <div id="settings-denied" class="u-d-none card">
+      <div id="settings-denied" class="hidden card">
         <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
           <div id="set-denied-msg" class="u-fs-4 u-c-text2 u-lh-17"></div>
         </div>
       </div>
-      <div id="settings-main" class="u-d-none">
+      <div id="settings-main" class="hidden">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="u-d-flex u-g-4 u-ai-c u-fwr-wrap card-body ksave">
@@ -1508,8 +1508,8 @@ function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LIST
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
 var _sdData={},_sdSelected={};
 function sdSetOptions(k,o){_sdData[k]=o;}
-function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).style.display='block';}
-function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).style.display='block';}
+function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).classList.remove('hidden');}
+function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).classList.remove('hidden');}
 // ה-label עבר עד היום דרך `replace(/'/g,"\\'")` לתוך מחרוזת JS שבתוך מאפיין
 // onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
@@ -1518,8 +1518,8 @@ function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)ret
 // ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
 // ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
-function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
-function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
+function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).classList.add('hidden');_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
+function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.classList.add('hidden');},160);}
 /*  ⛔ הכפתור אינו מושבת כאן — ⚠️ הניתוב (`actRun`) מנטרל אותו עד שההבטחה
  *  נגמרת, ⭐ ומחזיר אותו בכל מסלול: ⛔ השבתה שנייה כאן היא מסלול שני. */
 function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').classList.remove('on');}
@@ -1828,7 +1828,7 @@ function txnMethodHint(){
   var sel=document.getElementById('txn-method'),h=document.getElementById('txn-method-hint');
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
-  h.style.display=on?'block':'none';
+  h.classList.toggle('hidden',!on);
   if(on)h.innerHTML='<span class="u-c-credit u-fw-700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 // זריעת הסעיף ב-sl_lists (פעם אחת, אחרי סנכרון תקין). מריצים מהאפליקציה
@@ -1960,7 +1960,7 @@ function renderDash(){
 }
 function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=monthLabel(year,month);
-  document.getElementById('dash-month-card').style.display='block';
+  document.getElementById('dash-month-card').classList.remove('hidden');
   var actual=actualByMonth(year);
   // מוצגים תלמידים שהיו פעילים בחודש — ובנוסף כל תלמיד פעיל שנרשמה לו
   // תנועה בחודש הזה גם אם הוא מחוץ לטווח, כדי שהסכום כאן יהיה זהה בדיוק
@@ -1978,7 +1978,7 @@ function showDashMonth(year,month){
     '<div class="u-fw-400 u-c-text3 u-fs-2 u-mt-2">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
-function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
+function closeDashMonth(){document.getElementById('dash-month-card').classList.add('hidden');}
 // הפריסה היא **תור תשלומים לפי תאריך** ⛔ ולא «בריכה» אחת (סכום כל
 // התשלומים): כל שקל שנפרס על חודש יודע מאיזו תנועה בא, ולכן אפשר לפצל
 // את מה ששולם בחודש ל-cash (תקבול אמיתי) מול cred (זיכוי על חשבון יתרת
@@ -2073,7 +2073,7 @@ var DOM_ACTIONS = {
   'sw-dismiss':          function () { swHideUpdate(); },
   /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
    *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
-  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
@@ -2174,7 +2174,7 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
 /*  ⛔ המזהה נשמר כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא טקסט
  *  שנוצר במכשיר: ⭐ `parseInt` עליו מחזיר NaN,
  *  ⛔ והכרטיס נפתח ריק. */
-function selectStudent(id){SC_STUDENT_ID=String(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
+function selectStudent(id){SC_STUDENT_ID=String(id);SC_YEAR=null;document.getElementById('sc-main').classList.remove('hidden');renderStudentCard();}
 /* ══════════════════════════════════════════════════════════════════════════
    כרטיס התלמיד — פריסה שנתית, טווח פעילות ויתרת זכות
    ══════════════════════════════════════════════════════════════════════════ */
@@ -2322,8 +2322,8 @@ function showPanel(key,btn){
 function renderSettingsPanel(){
   var acc=slSettingsAccess(), ok=(acc==='ok');
   var denied=document.getElementById('settings-denied'), main=document.getElementById('settings-main');
-  if(denied)denied.style.display=ok?'none':'block';
-  if(main)main.style.display=ok?'block':'none';
+  if(denied)denied.classList.toggle('hidden',ok);
+  if(main)main.classList.toggle('hidden',!ok);
   if(!ok){
     var m=document.getElementById('set-denied-msg');
     if(m)m.innerHTML=(acc==='no-role')?MSG_SET_NO_ROLE:MSG_SET_DENIED;
@@ -2432,7 +2432,7 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   if(!slLocalWrite('sl_students',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
-  if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
+  if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
   toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000);
   schedulePush();

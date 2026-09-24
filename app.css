@@ -249,8 +249,28 @@ body.locked{overflow:hidden}
 .toast{background:var(--chip);color:var(--on-chip);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
 .toast.good{background:var(--ok);color:var(--ok-soft)}
+.toast.out{opacity:0;transition:opacity var(--dur-4)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
+/* ═══ מצבי רכיב — מודול משותף ══════════════════════════════════════════════
+   זהה בית-לבית בכל האפליקציות. ⛔ מצב קבוע של רכיב — מוסתר · עסוק — הוא
+   מחלקה ⛔ ולא `.style` בתגית: ⚠️ סגנון מוטבע גובר על כל כלל, ⭐ ומי שמשנה
+   את הגיליון אינו רואה אותו.
+   ⛔ `!important` ב-`.hidden` בכוונה — ⚠️ המחלקה מסתירה רכיב שכלל אחר
+      נותן לו `display`, ⭐ והיא חייבת לגבור עליו. */
+.hidden{display:none !important}
+.is-busy{opacity:var(--op-4);cursor:wait}
+/* ═══ סוף CSS מצבי רכיב ═════════════════════════════════════════════════ */
+/* ═══ באנר כשל האחסון — מודול משותף ═══════════════════════════════════════
+   זהה בית-לבית בכל האפליקציות. ⛔ הבאנר נבנה במודול האחסון ⚠️ והסגנון
+   כאן — ⭐ מחלקה אחת במקום אחד, ⛔ ולא מחרוזת בתגית שנבנתה.
+   ⛔ ודרגת השכבה «נעילה» — ⚠️ כשל כתיבה נשאר גלוי מעל כל מסך. */
+#ls-alert{position:fixed;z-index:var(--z-7);left:0;right:0;top:0;background:var(--alert);color:var(--on-alert);
+  direction:rtl;text-align:center;font-weight:700;font-size:var(--fs-3);line-height:var(--lh-4);
+  padding:var(--sp-5) calc(var(--sp-7) * 2);box-shadow:0 2px 14px var(--sh-3)}
+#ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
+  font-weight:700;font-size:var(--fs-5);line-height:var(--lh-1);cursor:pointer;padding:var(--sp-2) var(--sp-4)}
+/* ═══ סוף CSS באנר כשל האחסון ═══════════════════════════════════════════ */
 /* ═══ CSS גרף העמודות — מודול משותף ═════════════════════════════════════════
    ⛔ הצגה חזותית של סדרה נבנית מרוחב יחסי ⛔ ולא מספריית גרפים — ⚠️ ספרייה
       כזו היא מאות קילובייטים בכל עלייה, ⭐ והנתון עצמו הוא שתי מנות לשורה.

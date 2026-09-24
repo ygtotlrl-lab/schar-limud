@@ -28,10 +28,10 @@ function busy(btn, on, label) {
   if (!btn) return;
   if (on) {
     if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
-    btn.disabled = true; btn.style.opacity = 'var(--op-4)'; btn.style.cursor = 'wait';
+    btn.disabled = true; btn.classList.add('is-busy');
     btn.innerHTML = label || '⏳ שומר…';
   } else {
-    btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
+    btn.disabled = false; btn.classList.remove('is-busy');
     if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
   }
 }
@@ -259,7 +259,7 @@ function toast(msg, dur, kind) {
   el.textContent = msg;
   box.appendChild(el);
   setTimeout(function () {
-    el.style.transition = 'opacity var(--dur-4)'; el.style.opacity = '0';
+    el.classList.add('out');
     setTimeout(function () { el.remove(); }, 260);
   }, dur || app.TOAST_DEFAULT_MS);
 }
