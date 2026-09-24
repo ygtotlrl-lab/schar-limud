@@ -39,7 +39,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה. */
 /*  ⚠️ **ואין כאן ריצפה פרטית** — ⛔ מספר התאים נגזר מהטבלה, ⭐ והטבלה
  *  משותפת בית-לבית: כל תא מוסיף טענה אחת בכל אחת מהן. */
-const FLOOR = { shared: 184, app: 0, appWhy: '' };
+const FLOOR = { shared: 186, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות — ⚠️ `null` הוא תהליך
@@ -356,6 +356,21 @@ const FILTER_SAMPLE = 2;
     return L.join('\n');
   })();
   runClaim('החלפת מקום בין שתי שורות באותו שלב', swapped, false);
+  /*  ⛔ פסקית התנאי יורדת משורת ערכת הנושא — ⚠️ השורה נמצאת **בשמה**
+   *  ⛔ ולא במספרה: ⭐ התנאי הוא מה שמתיר את השאילתה, ⛔ ובלעדיו
+   *  `prefers-color-scheme` הוא תנאי שאין לו שורה. */
+  const THEME = 'ערכת נושא — בהיר וכהה';
+  const noClause = CLEAN_TXT.split('\n').map((l) => ((l.split('|')[2] || '').trim() === THEME
+    ? l.replace(/ · ⛔ \*\*ותנאי ה-`@media` שלה — [^*]*\*\*/, '') : l)).join('\n');
+  /*  ⚠️ הריצה בחלק שבו השורה נמדדת — ⛔ ריצה בלי חלק מריצה את הליבה בלבד,
+   *  ⭐ ורשומת ה-MATRIX של השורה אינה בה. */
+  const themeRow = +(CLEAN_TXT.split('\n').find((l) => (l.split('|')[2] || '').trim() === THEME) || '|0|').split('|')[1];
+  ok('המוטציה «פסקית התנאי יורדת משורת ערכת הנושא» שינתה את הקוד שנמסר לריצה', noClause !== CLEAN_TXT);
+  {
+    const { held, out } = callRun(capRun, docOver(noClause), undefined, partOf(themeRow));
+    ok('⛔ מוטציה: פסקית התנאי יורדת משורת ערכת הנושא מפילה את שורה ' + themeRow,
+       !held && out.some((l) => l.indexOf('❌ שורה ' + themeRow + ' ') === 0));
+  }
 }
 
 /*  ⛔ הצהרת קלט הבדיקות — ⚠️ התווית שב-`APP.probeInput` היא מה שקובע אילו
