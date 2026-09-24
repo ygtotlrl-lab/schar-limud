@@ -20,15 +20,19 @@ var SW_CFG = {
 };
 
 /*  ⛔ דף האופליין — HTML אמיתי ⛔ ולא מחרוזת 'Offline' — ⚠️ והצבעים, הסמל
- *  והשם מהתצורה. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
+ *  והשם מהתצורה, ⭐ בבהיר ובכהה: ⛔ דף בהיר במכשיר כהה מסנוור ברגע שבו
+ *  המשתמש כבר מתוסכל. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
 var SW_OFFLINE_HTML =
   '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+  '<meta name="color-scheme" content="light dark">' +
   '<title>אין חיבור — ' + self.APP.name + '</title><style>' +
   'html,body{margin:0;height:100%}' +
   'body{display:flex;align-items:center;justify-content:center;padding:24px;' +
   'font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-  'background:' + self.APP.offline.bg + ';color:' + self.APP.offline.ink + '}' +
+  'background:' + self.APP.offline.light.bg + ';color:' + self.APP.offline.light.ink + '}' +
+  '@media (prefers-color-scheme:dark){body{background:' + self.APP.offline.dark.bg +
+  ';color:' + self.APP.offline.dark.ink + '}}' +
   '.box{max-width:340px;text-align:center}' +
   '.mark{font-size:2.4rem;margin-bottom:10px}' +
   'h1{font-size:1.15rem;margin:0 0 10px}' +

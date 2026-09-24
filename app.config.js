@@ -14,8 +14,9 @@ self.APP = Object.freeze({
   /*  ⛔ תחילית הטבלאות והאחסון — ⚠️ כל אות בה פותחת מילה בשם הריפו, בסדר. */
   prefix: 'sl_',
   colors: { theme: '#307535', background: '#ffffff' },
-  /*  ⚠️ דף האופליין של ה-service worker — ⭐ צבע הרקע והדיו שלו, והסמל. */
-  offline: { bg: '#1d4a34', ink: '#FFFFFF', mark: '📴' },
+  /*  ⚠️ דף האופליין של ה-service worker — ⭐ רקע ודיו לכל מצב, והסמל:
+      ⛔ הכהה הוא אסימוני הערכה הכהה של האפליקציה. */
+  offline: { light: { bg: '#1d4a34', ink: '#FFFFFF' }, dark: { bg: '#18242f', ink: '#e8eef5' }, mark: '📴' },
   /*  ⚠️ המפתח הוא מפתח `anon` ציבורי — ⛔ ולא מפתח שירות: ההרשאות במסד. */
   supabase: {
     url: 'https://kxbtskqobynewvnckaaz.supabase.co',
