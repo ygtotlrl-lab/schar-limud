@@ -276,7 +276,7 @@ const APP = {
      *  מחרוזת JS אינה סימון שבמסמך. */
     'test_names': 'whiten',
   },
-  gapRows: [228, 82, 150, 175, 186, 194, 160, 102],
+  gapRows: [228, 82, 150, 175, 186, 194, 160, 101],
   /*  ⛔ אין כאן מסלול תצוגה שמושך משכבת השורות — ⚠️ המסכים
    *  קוראים מהמראה שעל הדיסק, ⭐ ולכן אין קריאה שצריך למדוד בה חלון.
    *  ⛔ **והרשימות ריקות ואינן נשמטות** — ⚠️ שדה חסר נקרא «לא נשאל». */
@@ -596,21 +596,22 @@ const APP = {
       why: 'מדידת חוסר-פעילות לנעילה — אינה מסלול שמירה' },
   ],
   probeInput: {
-    '93|המשוב בלחיצה נקבע ולא נירש': 'src',
+    '93|המשוב בלחיצה נקבע ולא נירש': 'mixed',
     '89|`Enter` שומר בכל שדה עריכה': 'src',
     '90|מאזין אחד, בהאצלה מ-`document`': 'src',
-    '95|כפתור שכותב מושבת בזמן הכתיבה': 'src',
+    '94|כפתור שכותב מושבת בזמן הכתיבה': 'src',
     '194|מבנה טופס הכניסה': 'src',
     '160|שם נגזר אינו נשמר ברשומה': 'src',
     '41|שער מריץ את כל טענותיו': 'tools',
-    '101|שכבת המראה': 'src',
+    '100|שכבת המראה': 'src',
     '196|מראת המשתמשים': 'src',
     '195|מודל ההרשאות': 'src',
     '28|שער סורק קוד מולבן': 'tools',
     '28|ההלבנה שומרת על מספרי השורות': 'mixed',
     '176|הקשר נלכד בכניסה לפונקציה': 'src',
-    '105|פריסה במסכי טלפון וטאבלט': 'src',
-    '106|ערכת נושא — בהיר וכהה': 'src',
+    '104|פריסה במסכי טלפון וטאבלט': 'mixed',
+    '105|ערכת נושא — בהיר וכהה': 'mixed',
+    '110|תנאי ה-`@media` והפחתת תנועה': 'mixed',
     '108|סולם אחד לגודל, לריווח ולרדיוס': 'src',
     '109|אין סגנון מוטבע': 'src',
     '112|גרף נבנה מ-CSS ולא מספרייה': 'src',
@@ -648,8 +649,8 @@ const APP = {
     '207|דגלי מעבר — אין דגל דלוק': 'src',
     '86|טיפול באירועים — דלגציה ממאזין אחד': 'src',
     '197|נתיב עדכון חלקי למראת המשתמשים': 'src',
-    '100|פינוי אוטומטי': 'src',
-    '100|אופק הפינוי נוקה מהסנכרון': 'src',
+    '99|פינוי אוטומטי': 'src',
+    '99|אופק הפינוי נוקה מהסנכרון': 'src',
     '190|אימות פינוי מול הענן': 'src',
     '150|שיתוף קבצים': 'src',
     '133|מעטפת APK (WebView)': 'src',
@@ -663,8 +664,8 @@ const APP = {
     '14|בודקים — קיום': 'src',
     '15|בודקים — משימה מוצהרת': 'tools',
     '87|דפוס הודעת שגיאה יחיד': 'src',
-    '96|`toast` — חתימה, גוף ומחלקות': 'src',
-    '96|סיווג ההודעה נגזר מהמסלול': 'src',
+    '95|`toast` — חתימה, גוף ומחלקות': 'src',
+    '95|סיווג ההודעה נגזר מהמסלול': 'src',
     '227|מיכל באנר העדכון במקור': 'src',
     '227|הרענון מ-controllerchange בלבד': 'src',
     '227|סימן דחיית הבאנר מתמיד': 'src',
@@ -687,8 +688,8 @@ const APP = {
     '74|נעילת חוסר-פעילות': 'src',
     '75|מודל הסשן — בזיכרון בלבד': 'src',
     '228|בדיקת עדכון תקופתית ל-service worker': 'src',
-    '103|פסק זמן אחיד לקריאות רשת': 'src',
-    '104|מאזיני מצב רשת': 'src',
+    '102|פסק זמן אחיד לקריאות רשת': 'src',
+    '103|מאזיני מצב רשת': 'src',
     '182|גריעת tombstones לפי גיל': 'src',
     '227|עדכון אוטומטי — בדיקה מחזורית': 'src',
     '150|גשר שיתוף': 'src',
@@ -759,7 +760,7 @@ function callArity(text, name) {
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי היה
  *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
  *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [37, 34, 50, 51, 59, 99, 57, 189, 119, 167, 63, 27, 68, 30, 39, 43, 205, 211];
+export const ROWS = [37, 34, 50, 51, 59, 98, 57, 189, 119, 167, 63, 27, 68, 30, 39, 43, 205, 211];
 
 /*  היכולות המשותפות. `block` — הליבה שחייבת להיות זהה בית-לבית.
  *  `hooks` — נקודות ההפעלה: `at:'boot'` = פונקציית העלייה, `at:'settings'`
@@ -808,7 +809,7 @@ const CAPS = {
   scales: {
     name: 'CSS סולמות הערך החזותי',
     docRows: ['סולם אחד לגודל, לריווח ולרדיוס', 'כל ערך חזותי נגזר — סריקה הפוכה'],
-    block: { sha: 'df356c4429d0d517', lines: 40,
+    block: { sha: 'a049c94910c24e4b', lines: 46,
              css: true,
              start: '/* ═══ סולמות הערך החזותי — מודול משותף',
              end:   '/* ═══ סוף CSS הסולמות' },
@@ -3771,7 +3772,7 @@ const CLOSES_P = new Set(['address', 'article', 'aside', 'blockquote', 'details'
   'table', 'ul']);
 function modalPlacement(html) { return memoByHash('modal', html, () => _modalPlacement(html)); }
 function _modalPlacement(html) {
-  const blank = (m) => m.replace(/[^\n]/g, ' ');
+  const blank = (m) => m.replace(/[^\n]+/g, (x) => ' '.repeat(x.length));
   const t = html.replace(/<script[\s\S]*?<\/script>/gi, blank)
                 .replace(/<style[\s\S]*?<\/style>/gi, blank)
                 .replace(/<textarea[\s\S]*?<\/textarea>/gi, blank)
@@ -4241,7 +4242,7 @@ function schemaIdempotent() {
  *  תג, ⭐ והוא מסלול חי (חלון ההדפסה): ⛔ שער שסופר טקסט רואה בו כפילות. */
 function docParseGaps() { return memoByHash('docparse', src, _docParseGaps); }
 function _docParseGaps() {
-  const blank = (m) => m.replace(/[^\n]/g, ' ');
+  const blank = (m) => m.replace(/[^\n]+/g, (x) => ' '.repeat(x.length));
   const t = src.replace(/<script[\s\S]*?<\/script>/gi, blank)
                .replace(/<style[\s\S]*?<\/style>/gi, blank)
                .replace(/<!--[\s\S]*?-->/g, blank);
@@ -4997,6 +4998,128 @@ function cssText() {
   return [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, ' ');
 }
+/*  ⛔ כללי הגיליון עם ההקשר שלהם — ⚠️ **מה נכנס**: כל כלל ⟵ בורר, גוף,
+ *  ושרשרת שאילתות ה-`@media` שעוטפות אותו; ⭐ **ולמה ההקשר**: אותו בורר
+ *  בתוך `@media (hover:hover)` ומחוצה לו הם שתי טענות הפוכות. */
+function cssRules() { return memoByHash('cssrules', src, _cssRules); }
+function _cssRules() {
+  const out = [];
+  const walk = (t, media) => {
+    let k = 0;
+    for (;;) {
+      const o = t.indexOf('{', k);
+      if (o < 0) return;
+      const sel = t.slice(k, o).trim();
+      const body = braceBodyAt(t, o);
+      if (/^@media/.test(sel)) walk(body, media.concat(sel.slice(6).trim()));
+      else if (!/^@/.test(sel)) out.push({ sel, body, media });
+      k = o + body.length + 2;
+    }
+  };
+  walk(cssText(), []);
+  return out;
+}
+/*  ⛔ הריחוף, הלחיצה והמיקוד — ⚠️ **מה נמדד**: כל חלק בורר שנושא
+ *  `:hover` יושב בתוך `@media (hover:hover)`, ⛔ וכל חלק בורר בתוכו נושא
+ *  `:hover` — ⭐ ולכן `:active`, או `a:hover, a:focus-visible` מאוחד, נופלים;
+ *  ⛔ ו-`:focus` שאינו `:focus-visible` חל על שדה קלט בלבד. ⚠️ **ולמה**: במגע
+ *  `:hover` ו-`:focus` נשארים על הרכיב אחרי הלחיצה, ⭐ והלחצן נראה לחוץ עד
+ *  שנוגעים במקום אחר — ⛔ ומי שבודק בעכבר אינו רואה זאת. ⚠️ **ומה אינו
+ *  מכוסה**: מכשיר שמדווח ריחוף ואין לו — ⭐ מחשב עם מסך מגע. */
+function hoverStateGaps() {
+  const out = [];
+  const fields = fieldClasses();
+  const isField = (part) => {
+    const subj = part.trim().split(/\s+|>|\+|~/).filter(Boolean).pop() || '';
+    if (/^(?:input|select|textarea)\b/.test(subj)) return true;
+    return (subj.match(/\.[\w-]+/g) || []).some((c) => fields.has(c.slice(1)));
+  };
+  for (const r of cssRules()) {
+    const inHover = r.media.some((q) => /\(\s*hover\s*:\s*hover\s*\)/.test(q));
+    for (const part of r.sel.split(',')) {
+      const p = part.trim();
+      if (/:hover\b/.test(p) && !inHover) out.push(`\`:hover\` מחוץ ל-\`@media (hover:hover)\`: ${p}`);
+      if (inHover && !/:hover\b/.test(p)) out.push(`חלק בורר בלי \`:hover\` בתוך \`@media (hover:hover)\`: ${p}`);
+      if (/:focus(?![\w-])/.test(p) && !isField(p.replace(/:focus(?![\w-])/g, '')))
+        out.push(`\`:focus\` על משטח שאינו שדה קלט: ${p}`);
+    }
+  }
+  return out;
+}
+/*  ⛔ שדה קלט מזוהה לפי התגית שנושאת את המחלקה — ⚠️ `input` · `select` ·
+ *  `textarea` במקור, ⭐ ומחלקה שחלה על אחת מהן היא מחלקת שדה: ⛔ רשימת
+ *  שמות הייתה מתיישנת ביום שנוסף שדה. */
+function fieldClasses() {
+  return memoByHash('fieldcls', src, () => {
+    const s = new Set();
+    for (const m of src.matchAll(/<(?:input|select|textarea)\b[^>]*?\bclass\s*=\s*\\?["']([^"'\\]+)/g))
+      for (const c of m[1].split(/\s+/)) if (c) s.add(c);
+    return s;
+  });
+}
+/*  ⛔ תנאי ה-`@media` נגזרים מהטבלה ⛔ ואינם רשימה בשער — ⚠️ **מה נכנס**:
+ *  כל שורה שנושאת את פסקית «ותנאי ה-`@media` שלה», ⭐ והתנאי שבה; ⛔ **ומה
+ *  מפיל**: תנאי או סוג מדיה בקוד שאין לו שורה, ערך שאינו הערך שבפסקית,
+ *  ושורה שהתנאי שלה אינו בקוד. ⚠️ **ולמה מהטבלה**: כל תנאי נוסף כחריגה במקום
+ *  שבו נכשל, ⭐ ואיש לא ראה את התנאים כנושא אחד. */
+const MEDIA_CLAUSE = /\*\*ותנאי ה-`@media` שלה — `([^`]+)`([^*]*)/;
+function mediaConds() {
+  return memoByHash('mcond', readOnce(APP.docs), () => {
+    const ls = readOnce(APP.docs).split('\n');
+    const a = ls.findIndex((l) => /^<!--\s*SHARED:start\s+id="table"/.test(l));
+    const b = ls.findIndex((l, i) => i > a && /^<!--\s*SHARED:end/.test(l));
+    const out = {};
+    for (const l of ls.slice(Math.max(a, 0), b < 0 ? 0 : b)) {
+      const r = /^\|\s*(\d+)\s*\|/.exec(l), m = MEDIA_CLAUSE.exec(l);
+      if (!r || !m) continue;
+      const kv = m[1].split(':').map((x) => x.trim());
+      out[r[1]] = { feat: kv[0], val: kv[1] || '', scale: /לפי הסולם/.test(m[2]) };
+    }
+    return out;
+  });
+}
+function mediaCondGaps(row) {
+  const conds = mediaConds();
+  const mine = conds[row];
+  if (!mine) return [`שורה ${row} אינה נושאת את פסקית תנאי ה-\`@media\``];
+  const by = new Map(Object.values(conds).map((c) => [c.feat, c]));
+  const out = [];
+  let has = false;
+  for (const m of src.matchAll(/@media[^{]*\{/g)) {
+    const q = m[0].slice(6, -1);
+    const at = 'בשורה ' + lineNo(src, m.index);
+    const types = q.replace(/\([^)]*\)/g, ' ').replace(/\b(?:and|only|not)\b|,/g, ' ').trim();
+    if (types) out.push(`סוג מדיה שאין לו שורה: ${types}, ${at}`);
+    for (const f of q.matchAll(/\(([^)]*)\)/g)) {
+      const kv = f[1].split(':').map((x) => x.trim());
+      const c = by.get(kv[0]);
+      if (kv[0] === mine.feat) has = true;
+      if (!c) out.push(`תנאי \`@media\` שאין לו שורה: (${f[1].trim()}), ${at}`);
+      else if (c.val && c.val !== (kv[1] || '')) out.push(`ערך שאינו הערך שבשורה: (${f[1].trim()}), ${at}`);
+      else if (c.scale && !/^\d+px$/.test(kv[1] || '')) out.push(`נקודה שאינה בפיקסלים: (${f[1].trim()}), ${at}`);
+    }
+  }
+  if (!has) out.push(`תנאי השורה אינו בקוד: ${mine.feat}`);
+  return out;
+}
+/*  ⛔ הפחתת תנועה — ⚠️ **מה נמדד**: תחת `prefers-reduced-motion:reduce`
+ *  כל `--dur-N` הוא אפס, ⛔ וכל משך מעבר ואנימציה נגזר מ-`--dur-*`;
+ *  ⭐ **ולמה שני הצדדים**: אפס בסולם מכבה רק את מה שנגזר ממנו, ⛔ ומעבר
+ *  שמשכו ליטרל ממשיך לנוע. ⚠️ **ומה אינו מכוסה**: אנימציה ב-JS שאינה קוראת
+ *  את ההעדפה. */
+function reducedMotionGaps() {
+  const out = [];
+  const durs = new Set([...src.matchAll(/(--dur-\d+)\s*:/g)].map((m) => m[1]));
+  const zero = new Set();
+  for (const r of cssRules())
+    if (r.media.some((q) => /prefers-reduced-motion\s*:\s*reduce/.test(q)))
+      for (const m of r.body.matchAll(/(--dur-\d+)\s*:\s*0s\b/g)) zero.add(m[1]);
+  for (const d of durs) if (!zero.has(d)) out.push(`תחת הפחתת תנועה ${d} אינו אפס`);
+  for (const m of src.matchAll(/\b(?:transition|animation)(?:-duration)?\s*[:=]\s*['"]?([^;'"}\n]*)/g))
+    if (/(?:^|[\s,(])\d*\.?\d+m?s\b/.test(m[1].replace(/var\([^)]*\)/g, ' ')))
+      out.push(`מעבר שמשכו אינו \`--dur-*\`, בשורה ${lineNo(src, m.index)}: ${m[1].trim().slice(0, 40)}`);
+  return out;
+}
 function themeRoots() {
   const grab = (t) => {
     const m = new Map();
@@ -5488,9 +5611,11 @@ function bgFamilyGaps() {
   /*  ⛔ שלוש הרמות נאכפות באוצר המילים — ⚠️ שתי בדיקות נוכחות
    *  לאותם שלושה שמות הן אותו ערך פעמיים, ⭐ ומה שנשאר כאן הוא השימוש:
    *  ⛔ רקע ריחוף שנלקח מרקע העמוד. */
-  for (const m of cssText().matchAll(/([^{}]*:hover[^{}]*)\{([^}]*)\}/g))
-    if (/background(?:-color)?\s*:\s*var\(--bg\)/.test(m[2]))
-      out.push(`רקע ריחוף מ-\`--bg\`: ${m[1].trim().slice(0, 40)} ⛔ — מחליפים ל-\`var(--card-2)\``);
+  /*  ⚠️ הכללים נקראים מהמפרק המשותף — ⛔ ביטוי שסורק את הגיליון כולו
+   *  חוזר על כל בוררי הבלוק מכל נקודת פתיחה, ⭐ והמפרק רץ פעם אחת לכל מקור. */
+  for (const r of cssRules())
+    if (/:hover/.test(r.sel) && /background(?:-color)?\s*:\s*var\(--bg\)/.test(r.body))
+      out.push(`רקע ריחוף מ-\`--bg\`: ${r.sel.slice(0, 40)} ⛔ — מחליפים ל-\`var(--card-2)\``);
   return out;
 }
 function themeGaps() {
@@ -6498,15 +6623,16 @@ function keySaveGaps() {
 }
 const MATRIX = [
   { row: 93, name: 'המשוב בלחיצה נקבע ולא נירש',
-    probe: () => tapFeedbackGaps().length === 0 },
+    probe: (row) => tapFeedbackGaps().length === 0 && hoverStateGaps().length === 0 &&
+      mediaCondGaps(row).length === 0 },
   /*  ⛔ חותמת רעננות נכשלת סגור — ⚠️ הכשל מחזיר `0`,
    *  ⭐ ו«אין ראיה שהענן חדש» אינו «הענן חדש»: ⛔ והשכבה קיימת בחלק
    *  מהאפליקציות בלבד, ⚠️ ולכן ה-probe פר-אפליקציה. */
-  { row: 102, name: 'חותמת רעננות נכשלת סגור', app: true },
+  { row: 101, name: 'חותמת רעננות נכשלת סגור', app: true },
   /*  ⛔ כפתור שכותב מושבת בזמן הכתיבה — ⚠️ שני מימושים חיו זה
    *  לצד זה, ⭐ ובשתיים לא היה אף אחד: ⛔ לחיצה שנייה על «שמור» בזמן
    *  שהראשונה באוויר שלחה בקשה שנייה. */
-  { row: 95, name: 'כפתור שכותב מושבת בזמן הכתיבה',
+  { row: 94, name: 'כפתור שכותב מושבת בזמן הכתיבה',
     probe: () => busyGuardGaps().length === 0 },
   { row: 90, name: 'מאזין אחד, בהאצלה מ-`document`',
     probe: () => listenerGaps().length === 0 },
@@ -6546,8 +6672,8 @@ const MATRIX = [
    *  `viewport` אחד · ⛔ אין `max-width` בשאילתת פריסה · ⛔ וכל נקודת
    *  שבירה בסולם המוצהר: ⚠️ שתי הראשונות לבדן עוברות על קובץ שסולמו
    *  שרירותי, ⭐ והשלישית לבדה עוברת על קובץ שמערבב כיוונים. */
-  { row: 105, name: 'פריסה במסכי טלפון וטאבלט',
-    probe: () => bpGaps().length === 0 },
+  { row: 104, name: 'פריסה במסכי טלפון וטאבלט',
+    probe: (row) => bpGaps().length === 0 && mediaCondGaps(row).length === 0 },
   /*  ⛔ ערכת נושא — בהיר וכהה — ⚠️ הטענה אינה «יש בלוק כהה»
    *  אלא **שהוא מכסה את הערכה הבהירה כולה**: ⭐ אסימון שנשכח נשאר בהיר
    *  במצב כהה, ⛔ והטקסט שמעליו נעלם. */
@@ -6566,8 +6692,13 @@ const MATRIX = [
    *  בשורת הפילוח, ⭐ וזה מה שהוכיח שגרף אינו דורש ספרייה. */
   { row: 112, name: 'גרף נבנה מ-CSS ולא מספרייה',
     probe: () => chartGaps().length === 0 },
-  { row: 106, name: 'ערכת נושא — בהיר וכהה',
-    probe: () => themeGaps().length === 0 },
+  { row: 105, name: 'ערכת נושא — בהיר וכהה',
+    probe: (row) => themeGaps().length === 0 && mediaCondGaps(row).length === 0 },
+  /*  ⛔ כל ערך חזותי נגזר — ⚠️ **הצד שנמדד כאן הוא התנאי**: ⭐ שאר
+   *  השורה נאכף בסריקה ההפוכה של הגיליון, ⛔ ותנאי ה-`@media` והפחתת התנועה
+   *  נמדדים כאן, לצד שלושת התנאים האחרים שבטבלה. */
+  { row: 110, name: 'תנאי ה-`@media` והפחתת תנועה',
+    probe: (row) => mediaCondGaps(row).length === 0 && reducedMotionGaps().length === 0 },
   /*  ⛔ הערה מכילה נימוק, ולא מצביע — ⚠️ הנימוק המדוד:
    *  ירדו מאות ספירות, מצבות והפניות לכללים שנמחקו, ⭐ וכולן נמצאו
    *  במקרה: ⛔ אף שורה לא אכפה אותן. */
@@ -6780,13 +6911,13 @@ const MATRIX = [
    *  שדרש `oldRecords` הכריז «אין פינוי» על מדיניות חיה. ⚠️ ומערך ריק אינו
    *  מדיניות — ⛔ `wholeKeys: []` נמדד כריק, ⭐ ו-getter נמדד לפי מה שהוא
    *  שואל: ⛔ getter שאינו נשען על עֵד הדחיפה אינו פינוי מול ראיה. */
-  { row: 100, name: 'פינוי אוטומטי',
+  { row: 99, name: 'פינוי אוטומטי',
     probe: () => { const t = tierShape();
                    return t.ok && t.items > 0 &&
                           Number((/LS_SWEEP_PCT\s*=\s*([\d.]+)/.exec(src) || [])[1]) === LS_SWEEP_PCT; } },
   /*  ⛔ והאופק סוגר את עצמו — ⚠️ הכפתור שניקה אותו ירד עם אזור המצב,
    *  ⭐ והסנכרון הוא מה שמנקה אותו כשהאחסון ירד מתחת לסף האזהרה. */
-  { row: 100, name: 'אופק הפינוי נוקה מהסנכרון',
+  { row: 99, name: 'אופק הפינוי נוקה מהסנכרון',
     probe: () => horizonReleaseWired() },
   /*  ⛔ **העֵד ולא ה-`verify`** — ⚠️ התקן אומר «העֵד הוא ראיה
    *  מהענן עצמו, פר-מפתח»: ⭐ `verify:` הוא **מסלול הגיבוי** של העֵד
@@ -6827,9 +6958,9 @@ const MATRIX = [
    *  ⚠️ הודעה שנייה דרסה את הראשונה, ⭐ ומי שקרא את המסך לא ידע שהייתה שנייה. */
   /*  ⛔ וסיווג ההודעה נגזר מהמסלול — ⚠️ הסימן שבטקסט הוא
    *  המסלול, ⭐ והצבע חייב להסכים איתו: ⛔ בשני הכיוונים. */
-  { row: 96, name: 'סיווג ההודעה נגזר מהמסלול',
+  { row: 95, name: 'סיווג ההודעה נגזר מהמסלול',
     probe: () => toastKindGaps().length === 0 },
-  { row: 96, name: '`toast` — חתימה, גוף ומחלקות',
+  { row: 95, name: '`toast` — חתימה, גוף ומחלקות',
     /*  ⛔ הגוף נמדד ב-`src` ⛔ ולא ב-`code` — ⚠️ המחרוזות מולבנות שם,
      *  ⭐ ו-`createElement('div')` הוא בדיוק מה שנמדד כאן. */
     probe: () => {
@@ -7008,15 +7139,15 @@ const MATRIX = [
    *  ⭐ ורשימת המפתחות השטוחים משני צדדיה. */
   { row: 41, name: 'שער מריץ את כל טענותיו',
     probe: () => memoSrc('gateSealGaps', gateSealGaps).length === 0 },
-  { row: 101, name: 'שכבת המראה', probe: () => mirrorLayerGaps().length === 0 },
-  { row: 103, name: 'פסק זמן אחיד לקריאות רשת',
+  { row: 100, name: 'שכבת המראה', probe: () => mirrorLayerGaps().length === 0 },
+  { row: 102, name: 'פסק זמן אחיד לקריאות רשת',
     probe: () => hasCode(/var\s+NET_TIMEOUT_MS\s*=\s*8000\s*;/) },
   /*  ⚠️ **ה-probe הזה קורא את המקור הגולמי ולא את הקוד המטוקן** — שם
    *  האירוע הוא **מחרוזת**, והטוקניזציה מרוקנת מחרוזות; probe על
    *  `code` לא היה יכול להבחין בין `'online'` ל-`'offline'`. ⛔ אין
    *  להשתמש ב-`hasSrc` לשם פונקציה או לקבוע — שם שמופיע
    *  בהערה בלבד היה נספר כמימוש, וזה בדיוק מה ש-`code` בא למנוע.   */
-  { row: 104, name: 'מאזיני מצב רשת',
+  { row: 103, name: 'מאזיני מצב רשת',
     probe: () => hasSrc(/window\.addEventListener\('online'/) &&
                  hasSrc(/window\.addEventListener\('offline'/) },
   /*  ⛔⛔ המנגנון עבר לבלוק חתום וחווט בכולן — ⚠️ עד כאן הוא חי
@@ -7310,9 +7441,9 @@ const CLAIM_NO_MUT = {
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
   '92|מחלקה משותפת שמצביה נבדלים':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
-  '97|ליטרל עברי באתר הודעה':
+  '96|ליטרל עברי באתר הודעה':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
-  '98|ג · פעולה שדורשת רשת':
+  '97|ג · פעולה שדורשת רשת':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
   '110|ליטרל צבע בגיליון':
     'המוטציה שבשער נוקבת במנגנון שהיא שוברת — ⛔ ולא בתווית שמאתרת את הטענה בפלט',
@@ -7442,7 +7573,7 @@ const GATES = {
   123: { claims: { test_failsurface: ['[fail-surface]', '[fail-literal]', '[queued-msg]', '[msg-shared]'] } },
   /*  ⛔ אסימון עיצוב בדפוס אחד — ⚠️ המספר שנושא מקף,
    *  ⭐ האסימון שחי כאן בלבד ומוצהר, ⛔ והחריץ שעומד במבחן המכני. */
-  94: { claims: { test_names: ['[token-pattern]', '[token-app]', '[token-slot]'] } },
+  106: { claims: { test_names: ['[token-pattern]', '[token-app]', '[token-slot]'] } },
   /*  ⛔ טבלת סנכרון נושאת את חמש העמודות — ⚠️ מול הסכימה
    *  המוצהרת, ⭐ וההצהרה נמדדת משני צדדיה. */
   217: { claims: { test_dbscan: ['[sync-cols]', '[sync-cols-why]'] } },
@@ -7458,7 +7589,7 @@ const GATES = {
                    test_origin: '[ls-role-names]' } },
   /*  ⛔ מדיניות האחסון המקומי — ⚠️ המכסה שנמדדה בדפדפן והספים שנגזרים ממנה,
    *  ⭐ האפליקציות שחולקות את ה-origin, ⛔ וכל טבלת מראה בפינוי או קבועה בגודלה. */
-  100: { claims: { test_origin: ['[ls-quota-derived]', '[ls-quota-measured]', '[ls-apps-peers]',
+  99: { claims: { test_origin: ['[ls-quota-derived]', '[ls-quota-measured]', '[ls-apps-peers]',
                                  '[mirror-evict]', '[mirror-screen-whole]', '[child-with-parent]',
                                  '[old-records-ts]'] } },
   /*  ⛔ שם מיגרציה נגזר, ומותאם לרשומה שרצה — ⚠️ הדפוס והרצף
@@ -7582,7 +7713,7 @@ const GATES = {
    *  שמבחינה בין «אין ערך» ל«ערך פגום»: ⛔ שער אחד לשני הצדדים.  */
   181: { claims: { test_dbfacts: ['י. ערך במפתח-ערך', 'יא. ערך פגום נבדל'] } },
   216: { claim: 'ז. עמודה בלי קורא' },
-  97: { claim: 'ליטרל עברי באתר הודעה' },
+  96: { claim: 'ליטרל עברי באתר הודעה' },
   4: { claim: ['canonIds', 'CANON', 'הסדר הקנוני'] },
   1: { claim: 'שם האפליקציה' },
   3: { claims: { 'check-docs': ['DOC_MAX_LINES', 'DOC_MAX_SHARED'], test_budget: 'MAX_LINES' } },
@@ -7690,8 +7821,8 @@ const GATES = {
                   test_sharedsync: ['block-drift', 'canon-drift'],
                   test_signedshared: 'unsignedTwins',
                   test_toolsid: ['pure-derived', 'perapp-derived'], test_lists: 'SHARED_BLOCKS' } },
-  99: { claim: 'storage' },
-  98: { claim: 'ג · פעולה שדורשת רשת' },
+  98: { claim: 'storage' },
+  97: { claim: 'ג · פעולה שדורשת רשת' },
   116: { claim: 'עברית' },
   119: { claims: { 'check-comments': 'RULE_W', 'check-capabilities': 'bannerGaps' } },
   120: { claim: 'BANNER_W' },
@@ -7757,7 +7888,7 @@ const GATES = {
   74: { claims: { test_lock: 'LOCK_MS' } },
   75: { claims: { test_session: '_sessUser' } },
   76: { claims: { test_idarg: 'badWraps' } },
-  102: { claims: { test_kvmeta: 'kvMeta' } },
+  101: { claims: { test_kvmeta: 'kvMeta' } },
   133: { claims: { test_shell: 'ShellActivity' } },
   177: { claims: { test_backup_policy: 'p_keep' } },
   195: { claims: { test_roles: 'admin' } },
@@ -8400,7 +8531,7 @@ for (const m of MATRIX) {
   try {
     _IN_SEEN = new Set();
     exists = m.app ? !!(APP.tableProbe[m.row] && APP.tableProbe[m.row]({ code, src, hasCode, cfgBlock, fnBody, hasPath, fileHas }))
-                   : !!m.probe();
+                   : !!m.probe(m.row);
   } catch (e) { _IN_SEEN = null;
     fail(`שורה ${m.row} («${m.name}»): ה-probe זרק — נמדד ` +
     `«${e.message}» והצפוי ערך בוליאני. מתקנים את ה-probe`); continue; }

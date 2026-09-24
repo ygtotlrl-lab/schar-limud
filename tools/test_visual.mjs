@@ -20,9 +20,9 @@
    · `:focus` · `:active` · `:disabled`, ⭐ והשם נחתך מהגיליון **באסימון
    מלא**: ⛔ **והנמדד הוא נוכחות המצב** ⛔ ולא ערכיו.
 
-   **מה אינו נאכף כאן:** ⚠️ **הערך שבשאילתת `@media`** — ⛔ הוא נמדד מול
-   `BP_SCALE` בבודק היכולות, ⭐ וכאן נמדד **אוצר המילים** של השאילתה בלבד:
-   ⛔ יחידה, תכונה וכיוון · ⚠️ **והגוון של אסימון** — ⛔ היחס נמדד בשורת
+   **מה אינו נאכף כאן:** ⚠️ **שאילתת `@media`** — ⛔ הערך, היחידה, התכונה
+   והכיוון נמדדים בבודק היכולות, ⭐ ברשומת ה-MATRIX של כל שורה שנושאת תנאי:
+   ⛔ אותה טענה בשני מקומות היא שתי הכרעות על אותה ראיה · ⚠️ **והגוון של אסימון** — ⛔ היחס נמדד בשורת
    ערכת הנושא, ⭐ וכאן נמדד רק שהערך **נגזר** מאסימון · ⚠️ **ודף האופליין
    שב-`sw`** — ⛔ הוא מסמך עצמאי שאין לו גישה לערכת האפליקציה ·
    ⚠️ **וערכי המצב של מחלקה משותפת** — ⛔ צבע · מיקום · גודל · ריווח:
@@ -70,11 +70,11 @@ export const ROWS = [92, 110, 111, 85, 107, 214, 121, 91];
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
  *  ⭐ **ולמה המבנה קיים**: בלעדיו דפוס נשחק בשקט — ⚠️ השער ממשיך להכריז
  *  עליו, ⛔ והוא כבר אינו נמדד. */
-export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'media', 'classes',
+export const PATTERNS = ['color', 'scaled', 'closing', 'future', 'classes',
                          'semantic', 'layer', 'clstok', 'surface', 'drag', 'util'];
 export const MUTS = ['color', 'color', 'color', 'color', 'scaled', 'scaled', 'scaled',
                      'scaled', 'closing', 'closing', 'closing', 'closing', 'color',
-                     'color', 'color', 'future', 'media', 'future',
+                     'color', 'color', 'future', 'future',
                      'classes', 'classes',
                      'semantic', 'semantic', 'semantic', 'layer', 'layer', 'layer',
                      'clstok', 'clstok', 'clstok',
@@ -93,7 +93,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  טענה משותפת שאבדה.
  *  ⚠️ **וכאן אין ריצפה פרטית** — ⛔ הסריקה זהה בכולן, ⭐ ומה שנבדל הוא
  *  מספר האתרים ⛔ ולא מספר הטענות. */
-const FLOOR = { shared: 31, app: 0, appWhy: '' };
+const FLOOR = { shared: 30, app: 0, appWhy: '' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 let PRE_MUT = null;
@@ -333,7 +333,7 @@ function fnRange(src, name) {
 }
 
 function scan(src, allow) {
-  const out = { color: [], scaled: [], closing: [], media: [], future: [] };
+  const out = { color: [], scaled: [], closing: [], future: [] };
   const skip = (allow.fns || []).map((n) => fnRange(src, n)).filter(Boolean);
   const inSkip = (i) => skip.some(([a, b]) => i >= a && i < b);
   const zones = [];
@@ -387,21 +387,6 @@ function scan(src, allow) {
     for (const n of vv.matchAll(NUM_LIT))
       if (n[1] && !/^-?0(?:\.0+)?$/.test(n[0].replace(/[a-z%]+$/, ''))) out.closing.push(where + ': ' + n[0]);
   }
-  /*  ⛔ אוצר המילים של שאילתת הפריסה — ⚠️ הערך עצמו נמדד מול `BP_SCALE`
-   *  בבודק היכולות, ⭐ וכאן נמדד מה שהוא אינו מודד: היחידה והתכונה. */
-  for (const m of src.matchAll(/@media([^{]*)\{/g)) {
-    const q = m[1];
-    if (/prefers-color-scheme|\bprint\b|\bscreen\b/.test(q) && !/width/.test(q)) continue;
-    for (const f of q.matchAll(/\(([^)]*)\)/g)) {
-      const txt = f[1].trim();
-      if (/^min-width\s*:\s*\d+px$/.test(txt)) continue;
-      /*  ⛔ שאילתת העדפת משתמש אינה נקודת שבירה — ⚠️ אין בה יחידה ואין
-       *  בה כיוון, ⭐ ו-`BP_SCALE` אינו מודד אותה: ⛔ והדרישה לכתוב אותה
-       *  כ-`min-width` הייתה הופכת העדפת נגישות לרוחב מסך. */
-      if (/^prefers-(?:color-scheme|reduced-motion)\s*:/.test(txt)) continue;
-      out.media.push('שורה ' + lineOf(src, m.index) + ': (' + txt + ')');
-    }
-  }
   return out;
 }
 
@@ -438,10 +423,6 @@ t(F.closing.length === 0,
   `ערך מספרי שאינו נגזר ואינו מוחרג — נמדדו ${F.closing.length} והצפוי אפס` +
   (F.closing.length ? ' · ' + F.closing.slice(0, 4).join(' · ') +
    ' — מה עושים: גוזרים מדרגה, או מוסיפים את התכונה לקבוצת החרגה עם נימוקה' : ''));
-t(F.media.length === 0,
-  `שאילתת פריסה מחוץ לאוצר המילים — נמדדו ${F.media.length} והצפוי אפס` +
-  (F.media.length ? ' · ' + F.media.slice(0, 4).join(' · ') +
-   ' — מה עושים: כותבים אותה כ-(min-width:<N>px), ש-BP_SCALE נמדד מולה' : ''));
 t(F.future.length === 0,
   `תכונה עתידית שערכה אינו נגזר — נמדדו ${F.future.length} והצפוי אפס` +
   (F.future.length ? ' · ' + F.future.slice(0, 4).join(' · ') : ''));
@@ -451,8 +432,10 @@ const SCALE_DEF = [
   ['z', 7, /--z-(\d):\s*(\d+)/g], ['dur', 6, /--dur-(\d):\s*([\d.]+s)/g],
   ['op', 7, /--op-(\d):\s*([\d.]+)/g], ['lh', 6, /--lh-(\d):\s*([\d.]+)/g],
 ];
+/*  ⛔ דרגה נספרת פעם אחת — ⚠️ `--dur-N` מוגדר שוב כאפס תחת הפחתת תנועה,
+ *  ⭐ והגדרה שנייה לאותה דרגה אינה דרגה נוספת. */
 for (const [fam, n, re] of SCALE_DEF) {
-  const got = [...IDX.matchAll(re)].map((m) => Number(m[1]));
+  const got = [...new Set([...IDX.matchAll(re)].map((m) => Number(m[1])))];
   t(got.length === n && got.every((x, i) => x === i + 1),
     `סולם --${fam}-* — נמדדו ${got.length} דרגות והצפוי ${n}, רצופות מאחת`);
 }
@@ -1102,7 +1085,6 @@ const MUT = [
   { m: 'מ14', key: 'color',   lbl: 'ליטרל צבע במתאר',                edit: () => put(IDX, 'outline:1px solid #fedcba;') },
   { m: 'מ15', key: 'color',   lbl: 'ליטרל צבע במדרון',               edit: () => put(IDX, 'background-image:linear-gradient(90deg,#111111,#222222);') },
   { m: 'מ16', key: 'future',  lbl: '`filter` עם ערך שאינו נגזר',     edit: () => put(IDX, 'will-change:opacity 3px;') },
-  { m: 'מ17', key: 'media',   lbl: 'שאילתת פריסה ביחידה שאינה `px`',  edit: () => IDX.replace('@media (min-width:640px)', '@media (min-width:40em)') },
   { m: 'מ18', key: 'future',  lbl: '`clip-path` שנכנס לראשונה',      edit: () => put(IDX, 'clip-path:inset(4px);') },
 ];
 for (const r of MUT) {

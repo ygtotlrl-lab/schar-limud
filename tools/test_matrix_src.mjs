@@ -36,7 +36,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
 /* ⚠️ פר-אפליקציה — הריצפה הפרטית של השער נבדלת ביניהן לפי היכולת שכל אחת נושאת, והנימוק בשדה עצמו */
-const FLOOR = { shared: 21, app: 0, appWhy: '' };
+const FLOOR = { shared: 39, app: 0, appWhy: '' };
 /* ⚠️ סוף פר-אפליקציה */
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
@@ -427,6 +427,63 @@ const rows = [];
     '  bpNoRule: {\n    ' + gone + ": 'הוצהרה במוטציית-הנגד — ⚠️ נקודה שאין בה מה להשתנות',");
   await bpMut('נקודה שירדה מהגיליון ומוצהרת בשמה',
     [[SHEET, CLEAN_SHEET, dropped], [CAP_FILE, CLEAN_CAP_TXT, withDecl]], false);
+}
+
+/* ────── ⛔ הריחוף, המיקוד ותנאי ה-`@media` ──────────────────────────────────
+   ⛔ מה נאכף: `:hover` חל רק בתוך `@media (hover:hover)` ⛔ וכל חלק בורר שם
+   נושא `:hover` · ⚠️ `:focus` שמור לשדה קלט · ⭐ ותנאי ה-`@media` נגזרים
+   מהשורות שנושאות את הפסקית, ⛔ והפחתת תנועה מאפסת את `--dur-*`.
+   ⛔ הנימוק המדוד: במגע `:hover` ו-`:focus` נשארו על הלחצן אחרי הלחיצה
+   בכל האפליקציות, ⚠️ ומי שבודק בעכבר אינו רואה זאת.
+   ⛔ מה יישבר בלעדיו: כלל ריחוף אחד שנכתב מחוץ לבלוק, ⚠️ והלחצן נתקע שוב.
+   ⛔ מה אינו נאכף כאן: **ערכי** המצבים — ⭐ הם מוצר.
+   ──────────────────────────────────────────────────────────────────────── */
+{
+  const SHEET = path.join(WORK, 'app.css');
+  const CLEAN_SHEET = fs.readFileSync(SHEET, 'utf8');
+  /*  ⛔ מספר השורה נגזר **משמה** ⛔ ואינו מוקלד — ⚠️ מספור מחדש מזיז את
+   *  השורות, ⭐ ומוטציה שמחפשת מספר מוקלד נופלת על העץ התקין. */
+  const rowOf = (name) => {
+    const r = rows.find((x) => x.line.split('|')[2].trim() === name);
+    if (!r) throw new Error(`שורה בשם «${name}» אינה בטבלה — ⛔ עדכן את השם או את הטבלה`);
+    return r.row;
+  };
+  const ROW_TAP = rowOf('המשוב בלחיצה נקבע ולא נירש');
+  const ROW_VIS = rowOf('כל ערך חזותי נגזר — סריקה הפוכה');
+  const HOVER = '@media (hover:hover){\n';
+  const inHover = (rule) => CLEAN_SHEET.replace(HOVER, HOVER + '  ' + rule + '\n');
+  const RM = /@media \(prefers-reduced-motion:reduce\)\{\n  :root\{[^}]*\}\n\}\n/;
+  /*  ⛔ המוטציה נבדקת מול **שם השורה שנפלה** ⛔ ולא מול «נפל» — ⚠️ שער
+   *  שנופל מסיבה אחרת נראה כאכיפה ⭐ ואינו אוכף דבר. */
+  const mediaMut = async (label, files, mustFall, row) => {
+    let changed = false;
+    for (const [, clean, text] of files) if (text !== clean) changed = true;
+    ok('המוטציה «' + label + '» שינתה את הקוד שנמסר לריצה', changed);
+    const { held, out, filtered } = await why(files, partOf(row));
+    if (!mustFall) { ok('⭐ מוטציית-נגד: ' + label + ' ⛔ אינה מפילה', held); return; }
+    ok('⛔ מוטציה: ' + label + ' מפילה את שורה ' + row + (filtered ? ' בסינון «src»' : ''),
+       !held && out.some((l) => l.indexOf('❌ שורה ' + row + ' ') === 0));
+  };
+  await mediaMut('כלל `:hover` מחוץ ל-`@media (hover:hover)`',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\n.zz-mut:hover{color:var(--text)}\n']], true, ROW_TAP);
+  await mediaMut('`:active` בתוך `@media (hover:hover)`',
+    [[SHEET, CLEAN_SHEET, inHover('.zz-mut:active{color:var(--text)}')]], true, ROW_TAP);
+  await mediaMut('`a:hover, a:focus-visible` מאוחד',
+    [[SHEET, CLEAN_SHEET, inHover('a:hover,a:focus-visible{color:var(--text)}')]], true, ROW_TAP);
+  /*  ⭐ מוטציית-נגד: כלל ריחוף חדש **בתוך** הבלוק — ⚠️ קוד שנוסף ⛔ ולא הערה. */
+  await mediaMut('כלל `:hover` חדש בתוך `@media (hover:hover)`',
+    [[SHEET, CLEAN_SHEET, inHover('.zz-mut:hover{color:var(--text)}')]], false, ROW_TAP);
+  await mediaMut('`:focus` על לחצן',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\nbutton.zz-mut:focus{outline:none}\n']], true, ROW_TAP);
+  /*  ⭐ מוטציית-נגד: `:focus` על שדה קלט — ⚠️ שם הוא אומר «אתה כותב כאן». */
+  await mediaMut('`:focus` על שדה קלט',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\ninput:focus{outline:none}\n']], false, ROW_TAP);
+  await mediaMut('`@media print` שאין לו שורה',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\n@media print{main{margin:0}}\n']], true, ROW_VIS);
+  await mediaMut('הפחתת התנועה יורדת מהגיליון',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET.replace(RM, '')]], true, ROW_VIS);
+  await mediaMut('מעבר שמשכו ליטרל',
+    [[SHEET, CLEAN_SHEET, CLEAN_SHEET + '\n.zz-mut{transition:color .3s}\n']], true, ROW_VIS);
 }
 
 process.chdir(ROOT);

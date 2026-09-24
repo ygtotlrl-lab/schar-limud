@@ -71,7 +71,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .auth-field input{border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-4);outline:none;transition:border var(--dur-2);width:100%;background:var(--card)}
 .auth-field input:focus{border-color:var(--brand)}
 .auth-btn{width:100%;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-7);padding:var(--sp-5);font-family:Heebo;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-2);transition:background var(--dur-2)}
-.auth-btn:hover{background:var(--accent-2)}
+/*  ⛔ `:hover` חל רק במכשיר שיש לו ריחוף — ⚠️ במגע הוא נשאר על הרכיב
+ *  אחרי הלחיצה, ⭐ והלחצן נראה לחוץ עד שנוגעים במקום אחר: ⛔ המשוב במגע
+ *  הוא `:active` בלבד, ⚠️ ולכן הוא נשאר מחוץ לבלוק.
+ *  ⚠️ **והבלוק יושב כאן ולא בסוף הגיליון** — ⛔ כלל ריחוף שיורד אל אחרי
+ *  `.active` או `:active` באותה סגוליות גובר עליהם. */
+@media (hover:hover){
+  .auth-btn:hover{background:var(--accent-2)}
+  .nav-logout:hover{background:var(--border)}
+  .tab-btn:hover{color:var(--text-2)}
+  .btn:hover{background:var(--accent-2)}
+  .btn.out:hover{background:var(--card-2)}
+  .btn.danger:hover{background:var(--bad-soft-2)}
+  .tbl tr:hover td{background:var(--card-2)}
+  .tbl.pivot tfoot tr:hover td{background:var(--card-2)}
+  .st-row:hover{background:var(--card-2)}
+  .sheet-hd .x:hover{background:var(--card-2)}
+  #ask .sheet-ft button:hover{background:var(--card-2)}
+  #ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
+  .acc-hdr:hover{background:var(--card-2)}
+  .sd-opt:hover{background:var(--accent);color:var(--on-accent)}
+}
 .auth-btn:active{background:var(--accent-2)}
 .auth-btn:disabled{opacity:var(--op-3);cursor:default}
 .auth-spinner{display:none;margin:var(--sp-5) auto 0;width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:var(--r-7);animation:auth-spin var(--dur-6) linear infinite}
@@ -81,12 +101,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
 .nav-user{font-size:var(--fs-2);color:var(--text-3);display:flex;align-items:center;gap:var(--sp-4)}
 .nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-5);font-family:Heebo;font-size:var(--fs-2);cursor:pointer;transition:background var(--dur-2)}
-.nav-logout:hover{background:var(--border)}
 /*  ⛔ מעל סרגל הלשוניות — ⚠️ טוסט שיושב מתחתיו אינו נראה. */
 :root{--toast-bottom:80px}
 #tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
 .tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color var(--dur-2)}
-.tab-btn:hover{color:var(--text-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--text);font-weight:700}
 .panel{display:none;padding:var(--sp-6)}
@@ -96,19 +114,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .card-hdr h3{font-size:var(--fs-4);font-weight:700;color:var(--text)}
 .card-body{padding:var(--sp-6)}
 .btn{display:inline-flex;align-items:center;gap:var(--sp-3);background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2);white-space:nowrap}
-.btn:hover{background:var(--accent-2)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:var(--op-3);cursor:default}
 .btn.out{background:var(--card);border:1.5px solid var(--text);color:var(--text)}
-.btn.out:hover{background:var(--card-2)}
 .btn.danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid var(--bad-soft)}
-.btn.danger:hover{background:var(--bad-soft-2)}
 .btn.sm{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-2)}
 .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-3)}
 .tbl th{background:var(--bg);color:var(--text-2);padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:600;font-size:var(--fs-2);white-space:nowrap;border-bottom:2px solid var(--border)}
 .tbl td{padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
 .tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:var(--card-2)}
 .tbl td.num{text-align:center;font-weight:600}
 .tbl th.num{text-align:center}
 /* ===== הלוח השנתי: תלמיד בשורה, חודש בעמודה =====
@@ -136,7 +150,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tbl.pivot tfoot tr.sub td.amt-ok{color:var(--ok)}
 .tbl.pivot tfoot tr.sub td.amt-warn{color:var(--warn)}
 .tbl.pivot tfoot tr.sub td.amt-bad{color:var(--bad)}
-.tbl.pivot tfoot tr:hover td{background:var(--card-2)}
 /* ⛔ מובייל-תחילה: השם עובר לשורה שנייה במקום להיחתך — ⚠️ «לא לחתוך שמות
    באף רזולוציה», ⭐ ולכן זו ברירת המחדל וההרחבה היא שמבטלת אותה. */
 .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:var(--lh-2)}
@@ -160,7 +173,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 
 .st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:var(--sp-4);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--dur-1)}
 .st-row:last-child{border-bottom:none}
-.st-row:hover{background:var(--card-2)}
 
 
 .st-name{font-size:var(--fs-4);color:var(--text)}
@@ -174,18 +186,14 @@ body.locked{overflow:hidden}
 .sheet-hd{display:flex;align-items:center;gap:var(--sp-5);margin-bottom:var(--sp-6)}
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
 .sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:var(--lh-1);color:var(--text-3);cursor:pointer;padding:0 var(--sp-2)}
-.sheet-hd .x:hover{background:var(--card-2)}
 .sheet-ft{display:flex;gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 .sheet-ft:empty{display:none}
 .sheet-bd:empty{display:none}
 #ask-body{font-size:var(--fs-4);color:var(--text-2)}
 #ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
-#ask .sheet-ft button:hover{background:var(--card-2)}
 #ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
-#ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
 .acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-5) var(--sp-6);cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
-.acc-hdr:hover{background:var(--card-2)}
 .acc-hdr span{font-size:var(--fs-3);font-weight:600;color:var(--text)}
 .acc-body{display:none;padding:var(--sp-6)}
 .acc-body.open{display:block}
@@ -195,7 +203,6 @@ body.locked{overflow:hidden}
 .sd-wrap{position:relative}
 .sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);max-height:200px;overflow-y:auto;z-index:var(--z-3);box-shadow:0 8px 20px var(--sh-1)}
 .sd-opt{padding:var(--sp-4) var(--sp-5);cursor:pointer;font-size:var(--fs-3);color:var(--text)}
-.sd-opt:hover{background:var(--accent);color:var(--on-accent)}
 .txn-row{display:grid;grid-template-columns:80px 1fr auto auto auto;gap:var(--sp-4);align-items:center;padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);font-size:var(--fs-3)}
 .txn-row:last-child{border-bottom:none}
 .set-list-item{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);gap:var(--sp-4)}
@@ -299,6 +306,9 @@ body.locked{overflow:hidden}
    ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
       אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
       הם שני חיפושים.
+   ⛔ **ותחת הפחתת תנועה כל `--dur-N` הוא אפס** — ⚠️ כל מעבר ואנימציה
+      נגזרים מהסולם, ⭐ ואפס בו מכבה את כולם: ⛔ ו-`0s` ולא `0` — משך בלי
+      יחידה אינו ערך תקף, ⚠️ והמאפיין נזרק בשקט.
    ⛔ שינוי כאן — כל האפליקציות **וכל עותקי השער**, באותו סבב.
    ═══════════════════════════════════════════════════════════════════════ */
 :root{
@@ -314,6 +324,9 @@ body.locked{overflow:hidden}
 --alert:#B3261E;--on-alert:#FFFFFF;
 --sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
 --on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
+}
+@media (prefers-reduced-motion:reduce){
+  :root{--dur-1:0s;--dur-2:0s;--dur-3:0s;--dur-4:0s;--dur-5:0s;--dur-6:0s}
 }
 .u-mt-2{margin-top:var(--sp-2)}
 .u-mt-5{margin-top:var(--sp-5)}
