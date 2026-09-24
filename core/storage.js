@@ -148,24 +148,18 @@ function lsAlert(msg) {
     el = document.createElement('div');
     el.id = 'ls-alert';
     el.setAttribute('role', 'alert');
-    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:var(--alert);' +
-      'color:var(--on-alert);direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-      'padding:12px 46px;box-shadow:0 2px 14px var(--sh-3)';
     var sp = document.createElement('span');
     sp.id = 'ls-alert-msg';
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = '✕';
     b.setAttribute('aria-label', 'סגור');
-    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:var(--on-alert);' +
-      'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
     b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
     (document.body || document.documentElement).appendChild(el);
   }
   var m = document.getElementById('ls-alert-msg');
   if (m) m.textContent = String(msg == null ? '' : msg);
-  el.style.display = '';
 }
 
 /* ── כתיבה מוגנת ────────────────────────────────────────────────────────
@@ -180,8 +174,8 @@ var _lsToastAt = 0;
    של כל אפליקציה פותחת ב-`if (!lsGuardToast(msg)) return;`, וכל הודעה
    שמתחילה ב-✅ נבלעת אם כתיבה מקומית נכשלה בשתי וחצי השניות האחרונות —
    כלומר בתוך אותה פעולת משתמש. הבאנר האדום כבר על המסך, והוא ההודעה
-   הנכונה. **אין להסיר את השורה הזו מ-`toast`** — בלעדיה חוזר בדיוק המצב
-   שהסבב הזה בא למנוע: כתיבה שנכשלה ומשתמש שמקבל "נשמר בהצלחה". */
+   הנכונה. **אין להסיר את השורה הזו מ-`toast`** — בלעדיה — כתיבה שנכשלה
+   ומשתמש שמקבל "נשמר בהצלחה". */
 var _lsLastFailAt = 0;
 var LS_SUCCESS_MUTE_MS = 2500;
 function lsSuccessBlocked() { return (Date.now() - _lsLastFailAt) < LS_SUCCESS_MUTE_MS; }

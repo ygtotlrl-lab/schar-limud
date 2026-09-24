@@ -28,7 +28,7 @@
       <label for="au-pass">סיסמה</label>
       <input id="au-pass" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="current-password">
     </div>
-    <button class="auth-btn" id="auth-btn" data-act="login" data-ksave>כניסה</button>
+    <button class="auth-btn" id="auth-btn" data-act="login" data-busy="⏳ בודק…" data-ksave>כניסה</button>
     <div class="auth-err" id="auth-err"></div>
     <div class="auth-spinner" id="auth-spinner"></div>
   </div>
@@ -69,7 +69,7 @@
         <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
         <div class="card-body"><div id="dash-chart"></div></div>
       </div>
-      <div class="u-d-none card" id="dash-month-card">
+      <div class="hidden card" id="dash-month-card">
         <div class="card-hdr">
           <h3 id="dash-month-title">פירוט חודש</h3>
           <button class="btn sm out" data-act="dash-month-close">סגור</button>
@@ -87,7 +87,7 @@
             <label>תלמיד</label>
             <div class="sd-wrap">
               <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
-              <div class="u-d-none sd-list" id="sd-list-student"></div>
+              <div class="hidden sd-list" id="sd-list-student"></div>
               <input type="hidden" id="sd-val-student">
             </div>
           </div>
@@ -104,7 +104,7 @@
             <select id="txn-method" data-chg="txn-method">
               <option value="">-- בחר --</option>
             </select>
-            <div id="txn-method-hint" class="u-d-none credit-sub"></div>
+            <div id="txn-method-hint" class="hidden credit-sub"></div>
           </div>
           <div class="frm-row">
             <label for="txn-note">הערה</label>
@@ -118,7 +118,7 @@
           <h3>יומן תשלומים</h3>
           <div class="u-w-160 sd-wrap">
             <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-3 u-w-100p u-ol-none" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
-            <div class="u-d-none sd-list" id="sd-list-txnfilter"></div>
+            <div class="hidden sd-list" id="sd-list-txnfilter"></div>
             <input type="hidden" id="sd-val-txnfilter">
           </div>
         </div>
@@ -133,12 +133,12 @@
         <div class="u-pb-5 card-body">
           <div class="sd-wrap">
             <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="u-bd-2-solid-border u-r-4 u-p-4-5 u-ff-heebo u-fs-4 u-w-100p u-ol-none u-tr-border-2s" placeholder="בחר תלמיד..." autocomplete="off" data-sd="sc">
-            <div class="u-d-none sd-list" id="sd-list-sc"></div>
+            <div class="hidden sd-list" id="sd-list-sc"></div>
             <input type="hidden" id="sd-val-sc">
           </div>
         </div>
       </div>
-      <div id="sc-main" class="u-d-none">
+      <div id="sc-main" class="hidden">
         <div class="card">
           <div class="sc-hdr">
             <div class="u-d-flex u-ai-fs u-jc-sb u-g-5">
@@ -215,13 +215,13 @@
       <!-- ⭐ אין כאן שער סיסמה. ההרשאה נגזרת מ-`sl_users.role`
            של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
            ההודעה שמוצגת למי שאינו admin — לא טופס. -->
-      <div id="settings-denied" class="u-d-none card">
+      <div id="settings-denied" class="hidden card">
         <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
         <div class="card-body">
           <div id="set-denied-msg" class="u-fs-4 u-c-text2 u-lh-17"></div>
         </div>
       </div>
-      <div id="settings-main" class="u-d-none">
+      <div id="settings-main" class="hidden">
         <div class="card">
           <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
           <div class="u-d-flex u-g-4 u-ai-c u-fwr-wrap card-body ksave">
@@ -336,7 +336,8 @@ import { bkBoot, logAction } from './core/backup.js';
 import { isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessBoot,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, swApply, swHideUpdate, toast, uiNoDialog } from './core/ui.js';
+         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast,
+         uiNoDialog } from './core/ui.js';
 import { barChart } from './core/chart.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -601,10 +602,9 @@ var LK_CFG = {
   lock:   function () { doLogout(); },
 };
 /* ── SESS_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/* ⚠️ `legacy` הוא רשימת מפתחות ה-localStorage שהאפליקציה **שמרה בהם סשן
-   בעבר** ואינה שומרת בהם עוד. ⛔ אין למחוק שם מהרשימה גם אחרי
-   שהמנגנון הישן ירד מהקוד — המפתח עצמו עדיין יושב על הדיסק של
-   כל מכשיר שכבר נכנסו בו פעם, והוא מחזיק `id`, `username` ו-`role`. */
+/* ⚠️ `legacy` הוא רשימת מפתחות ה-localStorage של סשן **שהאפליקציה אינה
+   כותבת אליהם** — ⛔ ואין למחוק שם מהרשימה: המפתח עצמו עדיין יושב על
+   הדיסק של כל מכשיר שנכנסו בו, והוא מחזיק `id`, `username` ו-`role`. */
 var SESS_CFG = {
   legacy: ['sl_session'],
 };
@@ -730,12 +730,11 @@ var ERA_CFG = {
    ה-`client_id` הזה בענן — הרשומה מסומנת ⏳, והמשתמש יודע שהיא לא אושרה.
    ───────────────────────────────────────────────────────────────────────── */
 // מפתחות הסימון בנויים על **מפתח המיזוג** (`slKey`), ולכן מחיקה אינה מפתח
-// נפרד: מאז שלב 2 מחיקה היא כתיבה מקומית של `deleted=true` על אותה רשומה.
+// נפרד: מחיקה היא כתיבה מקומית של `deleted=true` על אותה רשומה.
 var PK_TXN = 'txn:', PK_STU = 'student:', PK_SET = 'setting:', PK_LST = 'list:';
 function pendTxnKey(row) { return PK_TXN + slKey(row); }
 function pendStuKey(row) { return PK_STU + slKey(row); }
-// הגדרות ורשימות נכנסו לשכבה ב-009, ולכן גם הן מסומנות עד שיש ראיה
-// שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ר' `slKeyOf`.
+// גם הגדרות ורשימות מסומנות עד שיש ראיה שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ר' `slKeyOf`.
 function pendSetKey(row) { return PK_SET + slKeyOf(KV_TABLE, row); }
 function pendLstKey(row) { return PK_LST + slKey(row); }
 
@@ -768,10 +767,8 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
 /* ══════════════════════════════════════════════════════════════════════════
    עבודה אופליין — מראה, מיזוג ברמת רשומה ודחיפת-מצב
    ══════════════════════════════════════════════════════════════════════════
-   עד הסבב הזה schar-limud קראה ישירות מ-Supabase בכל `syncAll` (כל 3 שניות)
-   ולא החזיקה שום עותק מקומי: בלי רשת לא היה מה להציג ולא היה לאן לכתוב. זה
-   היה הפער האחרון בעבודה האופליין, והוא נשאר פתוח בכוונה כי `sl_transactions`
-   הוא **כספים** — מנוע מיזוג על כסף הוא החלטת אפיון ולא נגררת.
+   ⚠️ בלי עותק מקומי אין בלי רשת מה להציג ואין לאן לכתוב. ⛔ `sl_transactions`
+   הוא **כספים** — ⭐ מנוע מיזוג על כסף הוא החלטת אפיון ולא נגררת.
 
    ארבעת הרכיבים, בדפוס דחיפת-המצב ⛔ ולא בדפוס התור:
      1. **עותק מקומי** של ארבע הטבלאות ב-`sl_mirror_*`, **כולל רשומות מחוקות** —
@@ -863,12 +860,10 @@ function slMerge(local, remote, isPending, keyOf) {
 
 
 // ⛔ **שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות**.
-// עד הסבב הזה `slStripSecrets` הופעל **רק בנקודת המשיכה** מהענן. זה היה
-// בטוח בפועל, אבל בטוח **במקרה** ולא **במבנה**: מה שהגן היה היעדר מסלול
-// שכותב סוד למראה, ולא מחסום. נתיב חדש אחד — כתיבה מקומית, מיגרציית
-// שרידים, ייבוא — היה מדלג על הסינון לגמרי וכותב את `admin_pass` בטקסט
-// גלוי ל-localStorage, באותו origin שבו חיות עוד שלוש אפליקציות.
-// מעכשיו הסינון יושב בשלוש נקודות, כמו רשימת השדות שנשלפים במשיכה:
+// `slStripSecrets` מופעל בשלוש נקודות — ⚠️ בנקודה אחת, המשיכה, הוא בטוח
+// **במקרה** ולא **במבנה**: ⛔ נתיב חדש אחד — כתיבה מקומית, מיגרציית
+// שרידים, ייבוא — היה מדלג על הסינון וכותב את `admin_pass` בטקסט גלוי
+// ל-localStorage, באותו origin שבו חיות האפליקציות האחרות. ⭐ שלוש הנקודות:
 // במשיכה (`syncAll`), בכתיבה המקומית (`slLocalWrite` — מסרבת במפורש),
 // **ובשער הדיסק כאן** — כך שגם נתיב שיתווסף בעתיד לא יוכל להדליף.
 function slSanitizeRows(t, rows) {
@@ -939,12 +934,9 @@ var SL_USERS_TABLE = 'sl_users';
 // `pass_salt`+`pass_fp` לאימות, ו-`role` להרשאות (הוא מקור האמת
 // היחיד לגישה למסך ההגדרות, ולכן חייב לרדת למכשיר כדי שההרשאה תעבוד
 // אופליין בדיוק כמו הכניסה). ⛔ **אין להוסיף כאן `password`.**
-// ⭐ `active` נוסף — בלעדיו `slVerifyOffline` לא יכלה לחסום משתמש
-// מושבת, ומי שהושבת בלוח הבקרה המשיך להיכנס לאפליקציית הכספים מכל מכשיר
-// שכבר החזיק מראה. שתי האחיות בודקות `active` מאז סבבים
-// 22–23; כאן העמודה לא הייתה קיימת כלל — לא בטבלה ולא במראה.
-// ⭐ והיא קיימת בטבלה (`not null default true`), ולכן
-// הפיגום שהשלים אותה ב-`slUserPub` הוסר — ר' ההערה שם.
+// ⭐ `active` ברשימה — ⚠️ בלעדיו `slVerifyOffline` אינה יכולה לחסום משתמש
+// מושבת, ⛔ ומי שהושבת בלוח הבקרה ממשיך להיכנס לאפליקציית הכספים מכל
+// מכשיר שכבר מחזיק מראה. ⭐ העמודה קיימת בטבלה (`not null default true`).
 var SL_USER_COLS = ['client_id', 'username', 'pass_salt', 'pass_fp', 'role', 'active'];
 var SL_PASS_ITER_USER = 100000;
 // המלח הנשמר הוא אקראי פר-משתמש; הקידומת מוסיפה הפרדת-הקשר, כך שטבלה
@@ -956,12 +948,9 @@ function slUserPub(r) {
   var o = {};
   if (!r || typeof r !== 'object') return o;
   SL_USER_COLS.forEach(function (c) { if (r[c] !== undefined && r[c] !== null) o[c] = r[c]; });
-  /* ⛔ אין כאן השלמת `active` — הפיגום הוסר. עד כאן שורה בלי
-     העמודה הושלמה ל**פעיל**, מפני שהעמודה עצמה טרם הייתה קיימת בטבלה;
-     ⭐ נמדד שהיא קיימת, `not null default true`, וכל המשתמשים
-     נושאים `active = true`. ⛔ ומשקיימת, «חסר» חדל להיות «ישן» והפך
-     ל**חוסר-ידיעה** — ולכן ההכרעה נכשלת-סגור ב-`slVerifyOffline`
-     (`u.active !== true` ⇒ `bad`), בדיוק כמו בשתי האחיות. */
+  /* ⛔ אין כאן השלמת `active` — ⚠️ העמודה קיימת בטבלה, `not null
+     default true`, ⭐ ולכן «חסר» הוא **חוסר-ידיעה** ⛔ ולא «פעיל»:
+     ההכרעה נכשלת-סגור ב-`slVerifyOffline` (`u.active !== true` ⇒ `bad`). */
   return o;
 }
 // 16 בתים אקראיים כ-hex. מחזירה null כשאין crypto — והקורא **נכשל סגור**.
@@ -1131,8 +1120,8 @@ var USER_CFG = {
   offMsg: function () { return MSG_OFF_USER_WRITE; },
   from: function () { return SB.from('sl_users'); },
   run: function (q) { return withTimeout(q); },
-  /*  ⛔ אין כאן נפילה-חזרה על עמודות הטביעה — ⚠️ הן קיימות בטבלה מאז
-   *  `013`, ⭐ ואין באפליקציה הזו מסך שיוצר משתמש: ⛔ הכרזה על נפילה-חזרה
+  /*  ⛔ אין כאן נפילה-חזרה על עמודות הטביעה — ⚠️ הן קיימות בטבלה,
+   *  ⭐ ואין באפליקציה הזו מסך שיוצר משתמש: ⛔ הכרזה על נפילה-חזרה
    *  שאין לה מקרה בפועל היא הצהרה שאיש אינו יכול לאמת. */
   missingFp: function () { return false; },
   after: function (res) { return res; }
@@ -1221,7 +1210,7 @@ async function slSaveMyPassword() {
   try { slUsersSaveOne(u); } catch (e3) { console.warn('[pass] כתיבה למראה נכשלה', e3); }
   plTouch();
   closeModal();
-  if (body.pass_fp) toast(MSG_PASS_UPDATED);
+  if (body.pass_fp) toast(MSG_PASS_UPDATED, null, 'good');
   else toast(MSG_PASS_UPDATED_NO_FP2, null, 'bad');
 }
 
@@ -1235,8 +1224,8 @@ async function slSaveMyPassword() {
    המשותף, ⭐ ששם הנוסח אחד לכל הריפו; ⚠️ ומה שרק כאן נאמר —
    `MSG_SET_DENIED`/`MSG_SET_NO_ROLE` — יושב מחוצה לו. */
 var MSG_NO_USERS      = '⚠️ אין עדיין משתמשים במערכת — יש ליצור משתמש ראשון ב-SQL Editor של Supabase';
-// ⭐ שתי הודעות חדשות — מאז שהאימות המקוון עובר דרך הטביעה, שני
-// מצבי הכישלון האלה קיימים גם **עם** רשת. ⛔ אין לאחד אותם עם
+// ⭐ האימות המקוון עובר דרך הטביעה, ⚠️ ולכן שני מצבי הכישלון האלה
+// קיימים גם **עם** רשת. ⛔ אין לאחד אותם עם
 // `MSG_BAD_LOGIN` — «אין למשתמש סיסמה מוגדרת» אינו «סיסמה שגויה».
 /* ⛔ ההודעה נוקבת בשדות ולא ב«סיסמה» (צעד ב) — ⚠️ אין עוד עמודת טקסט גלוי
    שאפשר לכתוב אליה סיסמה, ⭐ ומה שנקבע ב-SQL Editor הוא **הטביעה**:
@@ -1360,7 +1349,7 @@ function slPayload(tbl, row) {
 }
 
 /*  ⛔ דחיפת-מצב: הכתיבה עצמה, למנה שהשכבה המשותפת מסרה — ⚠️ **מסלול אחד**:
- *  ⭐ `upsert` על מפתח הזהות, ⛔ שהוא זהה בכל השורות מאז שה-`SERIAL` ירד.
+ *  ⭐ `upsert` על מפתח הזהות, ⛔ שהוא זהה בכל השורות.
  *  ⚠️ **וזה מה שהופך אותה לאידמפוטנטית** — ⭐ המזהה נוצר במכשיר לפני
  *  שראה שרת, ⛔ ולכן ניסיון חוזר אחרי תשובה שאבדה ברשת מעדכן ⛔ ואינו
  *  מכפיל: ⚠️ ובכסף, שורה כפולה היא תשלום כפול.
@@ -1412,8 +1401,8 @@ var DEV_CFG = { key: 'sl_device_id' };
 // ⛔ ניסיון חוזר מעדכן את אותה שורה. **כל רשומה חדשה חייבת לקבל אותו.**
 // ⭐ **המחולל עצמו עבר למודול המשותף** — `newClientId()` זהה
 // בית-לבית בכל האפליקציות.
-// ⛔ אין להחזיר לכאן מימוש מקומי — חמישה שמות לאותה יכולת הם
-//    בדיוק מה שהסבב הזה בא לסלק, והם נסחפים בשקט זה מזה.
+// ⛔ אין להחזיר לכאן מימוש מקומי — כמה שמות לאותה יכולת נסחפים
+//    בשקט זה מזה.
 
 // המזהה של הרשומה ש**נרשמת עכשיו**. זו הנקודה שבה ה-UPSERT מקבל משמעות כבר
 // היום: משתמש שלוחץ "שמור" שוב אחרי כשל שולח את **אותו** client_id, ולכן אם
@@ -1425,8 +1414,6 @@ var DEV_CFG = { key: 'sl_device_id' };
 //   • אותו תוכן אחרי כשל = ניסיון חוזר ⇐ אותו מזהה ⇐ שורה אחת.
 //   • תוכן שהשתנה = תשלום אחר ⇐ מזהה חדש ⇐ שורה חדשה. בלי זה, תשלום שני
 //     שנרשם אחרי כשל היה **דורס** את הראשון במקום להתווסף אליו.
-// בסבב האופליין המלא התור היוצא הוא שיחזיק את המזהה פר-רשומה, והלוגיקה כאן
-// תהיה עודפת — אבל עד אז היא מה שהופך את ה-UPSERT למשמעותי.
 var _pendingCid = {};
 function pendingCid(slot, fp){
   var p=_pendingCid[slot];
@@ -1522,8 +1509,8 @@ function hasCreditItem(){return Object.keys(LISTS).some(function(c){return (LIST
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
 var _sdData={},_sdSelected={};
 function sdSetOptions(k,o){_sdData[k]=o;}
-function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).style.display='block';}
-function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).style.display='block';}
+function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).classList.remove('hidden');}
+function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).classList.remove('hidden');}
 // ה-label עבר עד היום דרך `replace(/'/g,"\\'")` לתוך מחרוזת JS שבתוך מאפיין
 // onmousedown — בנייה שנשברת מכל מרכאה כפולה, סוגר, או תו HTML בשם. במקומה:
 // data-attributes מולבנים ב-esc, ו-sdSelectEl קורא אותם מהאלמנט. אין יותר
@@ -1532,15 +1519,17 @@ function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)ret
 // ⛔ המזהה נקרא כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא `text`,
 // ⭐ ו-`parseInt` עליו מחזיר `NaN`: ⛔ הבורר היה בוחר תלמיד שאינו קיים.
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
-function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).style.display='none';_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
-function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.style.display='none';},160);}
-function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').style.display='none';document.getElementById('auth-btn').disabled=false;}
-function startAuthLoad(){document.getElementById('auth-err').textContent='';document.getElementById('auth-spinner').style.display='block';document.getElementById('auth-btn').disabled=true;}
+function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).classList.add('hidden');_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
+function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.classList.add('hidden');},160);}
+/*  ⛔ הכפתור אינו מושבת כאן — ⚠️ הניתוב (`actRun`) מנטרל אותו עד שההבטחה
+ *  נגמרת, ⭐ ומחזיר אותו בכל מסלול: ⛔ השבתה שנייה כאן היא מסלול שני. */
+function showAuthErr(m){document.getElementById('auth-err').textContent=m;document.getElementById('auth-spinner').classList.remove('on');}
+function startAuthLoad(){document.getElementById('auth-err').textContent='';document.getElementById('auth-spinner').classList.add('on');}
 // ⭐ כניסה גם בלי רשת.
-// **עם רשת המסלול לא השתנה**: השאילתה לענן היא עדיין מקור האמת, וההשוואה
-// היא מול `password` שבמסד. מה שנוסף הוא (א) מסלול אופליין מול הטביעה,
-// (ב) `select` של עמודות מפורשות במקום `*` — הסיסמה אינה מגיעה לזיכרון
-// בכלל, ו-(ג) השלמת טביעה + רענון מראת המשתמשים, ברקע ואחרי הכניסה.
+// **עם רשת** השאילתה לענן היא מקור האמת, וההשוואה היא מול הטביעה;
+// ⭐ ומעליה (א) מסלול אופליין מול הטביעה, (ב) `select` של עמודות מפורשות
+// ⛔ ולא `*` — הסיסמה אינה מגיעה לזיכרון בכלל, ו-(ג) השלמת טביעה + רענון
+// מראת המשתמשים, ברקע ואחרי הכניסה.
 // ⛔ **אין כאן אכיפת פורמט שש ספרות** — ר' ההערה מעל `slVerifyOffline`.
 async function doLogin(){
   var u=document.getElementById('au-user').value.trim(),p=document.getElementById('au-pass').value;
@@ -1552,12 +1541,11 @@ async function doLogin(){
     // הכניסה המקוונת חייבת להמשיך לעבוד בחלון הזה; מה שלא יעבוד הוא
     // הכניסה האופליין, והיא תאמר זאת במפורש ('no-fp').
     // ⭐ השורה נשלפת לפי **שם המשתמש בלבד**, וההשוואה היא מול
-    // הטביעה (`slVerifyOffline`), בדיוק כמו במסלול האופליין. עד הסבב הזה
-    // ישב כאן `.eq('password',p)` — כלומר הסיסמה הגלויה שב-`sl_users`
-    // הייתה **המפתח שפותח את הכניסה**, וכל מי שהחזיק את מפתח ה-anon
-    // (שיושב ב-`index.html` הציבורי) יכול היה לקרוא אותה. ⚠️ `password`
-    // ממילא לא היה ב-`SL_USER_COLS`, ולכן מרגע שה-`.eq` ירד אין בקוד הזה
-    // שום מסלול שקורא את העמודה.
+    // הטביעה (`slVerifyOffline`), בדיוק כמו במסלול האופליין. ⛔ סינון
+    // ב-`.eq('password',p)` הופך את הסיסמה הגלויה **למפתח שפותח את
+    // הכניסה**, ⚠️ וכל מי שמחזיק את מפתח ה-anon (שיושב ב-`index.html`
+    // הציבורי) יכול לקרוא אותה. ⭐ `password` אינה ב-`SL_USER_COLS`,
+    // ⛔ ואין בקוד הזה מסלול שקורא אותה.
     var r=await SB.from('sl_users').select(SL_USER_COLS.join(',')).eq('username',u).maybeSingle();
     if(r.error)throw r.error;
     if(r.data){
@@ -1587,7 +1575,7 @@ async function doLogin(){
     slUsersSaveOne(pub);
     ctxSwitch();
     sessSet(pub);
-    document.getElementById('auth-spinner').style.display='none';
+    document.getElementById('auth-spinner').classList.remove('on');
     enterApp();
     // ── ברקע, אחרי שהמסך כבר עלה: השלמת הטביעה של המשתמש הזה ואז רענון
     //    המראה. הסדר חשוב — משיכה לפני ההשלמה הייתה מחזירה טביעה ישנה.
@@ -1619,7 +1607,7 @@ async function doLoginOffline(u,p){
   if(verdict!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
   ctxSwitch();
   sessSet(slUserPub(cu));
-  document.getElementById('auth-spinner').style.display='none';
+  document.getElementById('auth-spinner').classList.remove('on');
   enterApp();
   toast(MSG_OFFLINE_LOGIN,5000, 'bad');
 }
@@ -1648,12 +1636,10 @@ function enterApp(){
 }
 
 /* ── המשתמש המחובר ────────────────────────────────────────────────────────
-   ⭐ **הסשן אינו נשמר במכשיר** — עד הסבב הזה `sl_session` החזיק
-   `id`+`username`+`role` ב-localStorage **בלי תפוגה**, ולכן מי שנכנס פעם
-   אחת נשאר מחובר לנצח על אותו מכשיר. ⛔ ההחלטה בוטלה ע"י המנהל
-   ב-2026-08-26, והמשתמש חי מעכשיו בזיכרון בלבד — ר' «מודל הסשן» למטה.
-   ⛔ אין להחזיר שמירה כזו: על מכשיר משותף היא כניסה קבועה, והיא
-   גם הורידה את **ההרשאה** (`role`) לדיסק.
+   ⭐ **הסשן אינו נשמר במכשיר** — המשתמש חי בזיכרון בלבד, ⚠️ וסשן
+   ב-localStorage **בלי תפוגה** משאיר מי שנכנס פעם אחת מחובר לנצח על
+   אותו מכשיר. ⛔ אין להחזיר שמירה כזו: על מכשיר משותף היא כניסה קבועה,
+   והיא מורידה גם את **ההרשאה** (`role`) לדיסק.
 
    ⚠️ **הכניסה האופליין לא נפגעה** — היא מוכרעת ב-`slVerifyOffline` מול
    `pass_fp` שבמראת המשתמשים, ולא מול הסשן. ⛔ אין לערבב בין
@@ -1736,11 +1722,10 @@ async function syncAll(){
       hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
       MIRROR.sl_transactions=slMerge(MIRROR.sl_transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); mirrorSave('sl_transactions');
     }
-    // הגדרות ורשימות — מאז 009 יש להן `updated_at`, ולכן הן ממוזגות ברמת
+    // הגדרות ורשימות — יש להן `updated_at`, ולכן הן ממוזגות ברמת
     // רשומה בדיוק כמו שתי טבלאות הליבה, ולא מוחלפות בבלוק.
     // ⛔ `slStripSecrets` **לפני** המיזוג: `admin_pass` לא נכנסת למראה בשום
-    //    מסלול. (בעבר נלקחה כאן גם טביעת סיסמת השער מהשורות הגולמיות;
-    //    השער בוטל, ולכן אין יותר שום קורא של הערך הזה — רק ההסרה נשארה.)
+    //    מסלול, ⚠️ ואין לה קורא.
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
@@ -1753,7 +1738,7 @@ async function syncAll(){
       MIRROR.sl_lists=slMerge(MIRROR.sl_lists,rs[3].data,function(k){return pendHas(PK_LST+k);}); mirrorSave('sl_lists');
     }
     slApplyMirror();
-    refreshUI();
+    pullRender(refreshUI);
 
     // ── דחיפת-מצב: כל שורה מקומית שניצחה במיזוג עולה. **רק לטבלה שנמשכה
     //    בהצלחה** — בלי לדעת מה יש בענן אי אפשר לדעת מה מקומי-וחדש-יותר,
@@ -1794,7 +1779,7 @@ async function syncAll(){
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
       if(!_syncWarned){_syncWarned=true;toast(MSG_LOAD_FAIL_PRE+errs.join(', ')+MSG_LOAD_FAIL_POST,4000, 'bad');}
-    }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK);}
+    }else if(_syncWarned){_syncWarned=false;toast(MSG_SYNC_BACK, null, 'good');}
   }catch(e){
     _lastSyncOk=false;
     console.error('[sync]',e);
@@ -1815,9 +1800,8 @@ function slSyncLog(action, key, recordCount, details) {
 }
 var _slPullLogged = false;
 // ⚠️ מסך ההגדרות מרונדר מחדש **רק כשהוא באמת מוצג** — אחרת כל סנכרון
-// (כל 3 שניות) היה בונה מחדש רשימות שאיש אינו רואה. בעבר התנאי היה
-// «השער נפתח»; היום הוא «יש הרשאה **וגם** הפאנל פעיל», כי הרשאה לבדה
-// אינה אומרת שהמסך על המסך.
+// (כל 3 שניות) היה בונה מחדש רשימות שאיש אינו רואה. ⭐ התנאי הוא «יש
+// הרשאה **וגם** הפאנל פעיל», ⚠️ כי הרשאה לבדה אינה אומרת שהמסך על המסך.
 /*  ⛔ נקודת הרענון של הצינור — ⚠️ **מה נכנס**: הציור שאחרי כל שמירה,
  *  ⛔ **ומה מפיל**: המתנה לרשת כאן — ⭐ הכתיבה כבר במראה ובתור,
  *  ⚠️ והסנכרון מרנדר שוב ברקע כשהוא מביא משהו חדש. */
@@ -1845,7 +1829,7 @@ function txnMethodHint(){
   var sel=document.getElementById('txn-method'),h=document.getElementById('txn-method-hint');
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
-  h.style.display=on?'block':'none';
+  h.classList.toggle('hidden',!on);
   if(on)h.innerHTML='<span class="u-c-credit u-fw-700">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 // זריעת הסעיף ב-sl_lists (פעם אחת, אחרי סנכרון תקין). מריצים מהאפליקציה
@@ -1857,7 +1841,7 @@ async function ensureCreditMethod(){
   if(hasCreditItem()){_creditSeedDone=true;return;}
   _creditSeedDone=true;
   try{
-    // מאז 009 גם הזריעה עוברת במסלול הרגיל: כתיבה מקומית עם `client_id`
+    // גם הזריעה עוברת במסלול הרגיל: כתיבה מקומית עם `client_id`
     // ואז דחיפה ב-UPSERT. `insert` ישיר היה יוצר שורה שנייה בכל ניסיון
     // חוזר אחרי תשובה שאבדה ברשת (כלל 10).
     var row={client_id:newClientId(),category:'payment_methods',value:CREDIT_METHOD,deleted:false,deleted_at:null,deleted_by:null};
@@ -1977,7 +1961,7 @@ function renderDash(){
 }
 function showDashMonth(year,month){
   document.getElementById('dash-month-title').textContent=monthLabel(year,month);
-  document.getElementById('dash-month-card').style.display='block';
+  document.getElementById('dash-month-card').classList.remove('hidden');
   var actual=actualByMonth(year);
   // מוצגים תלמידים שהיו פעילים בחודש — ובנוסף כל תלמיד פעיל שנרשמה לו
   // תנועה בחודש הזה גם אם הוא מחוץ לטווח, כדי שהסכום כאן יהיה זהה בדיוק
@@ -1995,13 +1979,12 @@ function showDashMonth(year,month){
     '<div class="u-fw-400 u-c-text3 u-fs-2 u-mt-2">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
   document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
 }
-function closeDashMonth(){document.getElementById('dash-month-card').style.display='none';}
-// הפריסה עברה מ"בריכה" אחת (סכום כל התשלומים) ל**תור תשלומים לפי תאריך**:
-// כל שקל שנפרס על חודש יודע מאיזו תנועה בא, ולכן אפשר לפצל את מה ששולם
-// בחודש ל-cash (תקבול אמיתי) מול cred (זיכוי על חשבון יתרת זכות). בלי
-// הפיצול הזה אי אפשר להוציא את הזיכויים מסיכומי הגבייה — הם מתמזגים
-// בבריכה עם הכסף האמיתי. הסכומים זהים לחלוטין לפריסת-הבריכה הקודמת
-// (paid = cash + cred), רק מסווגים.
+function closeDashMonth(){document.getElementById('dash-month-card').classList.add('hidden');}
+// הפריסה היא **תור תשלומים לפי תאריך** ⛔ ולא «בריכה» אחת (סכום כל
+// התשלומים): כל שקל שנפרס על חודש יודע מאיזו תנועה בא, ולכן אפשר לפצל
+// את מה ששולם בחודש ל-cash (תקבול אמיתי) מול cred (זיכוי על חשבון יתרת
+// זכות). ⚠️ בבריכה הזיכויים מתמזגים עם הכסף האמיתי, ⛔ ואי אפשר להוציא
+// אותם מסיכומי הגבייה. ⭐ paid = cash + cred.
 function calcDistribution(sid,year){
   var s=STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
   var cs=s.card_settings||{},defT=(parseInt(SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
@@ -2044,7 +2027,7 @@ function calcDistribution(sid,year){
    ══════════════════════════════════════════════════════════════════════════ */
 async function saveTxn(){
   var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
-  if(!sid){toast(MSG_PICK_STUDENT_PLAIN);return;}if(!date){toast(MSG_PICK_DATE);return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT);return;}
+  if(!sid){toast(MSG_PICK_STUDENT_PLAIN, null, 'bad');return;}if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
   // client_id נוצר במכשיר ולכן לתשלום יש זהות עוד לפני שראה שרת. זה התנאי
   // לדחיפה אידמפוטנטית: שליחה חוזרת מעדכנת את אותה שורה במקום להכפיל תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
@@ -2091,7 +2074,7 @@ var DOM_ACTIONS = {
   'sw-dismiss':          function () { swHideUpdate(); },
   /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
    *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
-  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
@@ -2117,7 +2100,7 @@ var DOM_ACTIONS = {
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
   'dash-month-close':        function () { closeDashMonth(); },
-  'sc-past-show':            function () { scPastShow(); },
+  'sc-past-show':            function () { return scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
   'student-open-add':        function () { openAddStudent(); },
   'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
@@ -2186,13 +2169,13 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   refreshUI();
-  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 /*  ⛔ המזהה נשמר כמחרוזת ⛔ ואינו מומר למספר — ⚠️ `client_id` הוא טקסט
- *  מאז שה-`SERIAL` ירד: ⭐ `parseInt` על מזהה שנוצר במכשיר מחזיר NaN,
+ *  שנוצר במכשיר: ⭐ `parseInt` עליו מחזיר NaN,
  *  ⛔ והכרטיס נפתח ריק. */
-function selectStudent(id){SC_STUDENT_ID=String(id);SC_YEAR=null;document.getElementById('sc-main').style.display='block';renderStudentCard();}
+function selectStudent(id){SC_STUDENT_ID=String(id);SC_YEAR=null;document.getElementById('sc-main').classList.remove('hidden');renderStudentCard();}
 /* ══════════════════════════════════════════════════════════════════════════
    כרטיס התלמיד — פריסה שנתית, טווח פעילות ויתרת זכות
    ══════════════════════════════════════════════════════════════════════════ */
@@ -2263,7 +2246,7 @@ function toggleStudentActive(){var s=STUDENTS.find(function(x){return idEq(x.cli
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));refreshUI();
-  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF);schedulePush();}
+  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
 // דפדפן ללא תמיכה ב-input[type=month] (פיירפוקס) נופל ל-input טקסט חופשי,
 // ולכן הערך מאומת כאן ולא רק במסד. מחזיר null אחרי טוסט אם הקלט פסול.
 function readMonthRange(startId,endId){
@@ -2276,7 +2259,7 @@ function readMonthRange(startId,endId){
 }
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
-  if(!name){toast(MSG_NAME_REQUIRED);return;}
+  if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
   var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=STUDENTS.find(function(x){return idEq(x.client_id, SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
@@ -2302,16 +2285,12 @@ function saveStudentSettings(){
    ⛔ **אין להוסיף שער סיסמה נפרד מעל מסך ההגדרות.** ההרשאה נגזרת
    מהמשתמש המחובר בלבד, ואין שכבה שנייה מעליה.
 
-   **הרקע — וזו אינה זהירות תיאורטית.** באחת האפליקציות היה שער כזה בדיוק
-   (`admin_pass` ב-`sl_settings`), והוא הוסר משתי סיבות שכל
-   אחת מהן מספיקה לבדה:
-   1. הוא יצר **שכבת הרשאה כפולה** שלא הייתה קיימת באף אחת
-      מהאחרות — מנגנון שני עם מסך משלו, מסלול שינוי משלו ותחזוקה
-      משלו, לאותו אדם.
-   2. **בהתקנה טרייה הוא נפל חזרה למחרוזת `'admin'`** — כלומר השער
-      נפתח לכל מי שהקליד «admin». מה שעמד בין ההתקנה לשער
-      הפתוח היה שורת זריעה בקובץ הסכימה; הגנה שתלויה בכך
-      שמישהו הריץ קובץ אינה הגנה.
+   **הנימוק — שתי סיבות, וכל אחת מהן מספיקה לבדה:**
+   1. שער כזה הוא **שכבת הרשאה כפולה** — מנגנון שני עם מסך משלו,
+      מסלול שינוי משלו ותחזוקה משלו, לאותו אדם.
+   2. **בהתקנה טרייה שער כזה נופל חזרה לערך ברירת מחדל** — ⚠️ ונפתח
+      לכל מי שמקליד אותו: ⛔ הגנה שתלויה בכך שמישהו הריץ שורת זריעה
+      בקובץ הסכימה אינה הגנה.
 
    ⛔ **ואין לזרוע ערך ברירת מחדל לסיסמה או לתפקיד בשום מקום** — לא
    בסכימה, לא במיגרציה, לא בקוד ולא בקובץ בדיקה. ברירת מחדל
@@ -2344,8 +2323,8 @@ function showPanel(key,btn){
 function renderSettingsPanel(){
   var acc=slSettingsAccess(), ok=(acc==='ok');
   var denied=document.getElementById('settings-denied'), main=document.getElementById('settings-main');
-  if(denied)denied.style.display=ok?'none':'block';
-  if(main)main.style.display=ok?'block':'none';
+  if(denied)denied.classList.toggle('hidden',ok);
+  if(main)main.classList.toggle('hidden',!ok);
   if(!ok){
     var m=document.getElementById('set-denied-msg');
     if(m)m.innerHTML=(acc==='no-role')?MSG_SET_NO_ROLE:MSG_SET_DENIED;
@@ -2359,7 +2338,7 @@ function renderSettingsPanel(){
 // `updated_at` כמו על כל שורה.
 function saveDefaultTuition(){
   var v=document.getElementById('set-def-tuition').value;
-  if(!v||isNaN(v)){toast(MSG_VALUE_BAD);return;}
+  if(!v||isNaN(v)){toast(MSG_VALUE_BAD, null, 'bad');return;}
   var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
   if(!slLocalWrite(KV_TABLE,row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
@@ -2417,7 +2396,7 @@ function deleteListItem(key){
     if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     pendMark(pendLstKey(row));
     refreshUI();
-    toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000);
+    toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000, 'good');
     schedulePush();
   });}
 function openAddStudent(){
@@ -2437,7 +2416,7 @@ function openAddStudent(){
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal(MSG_ADD_STUDENT, body, foot);
 }
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED);return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
@@ -2454,9 +2433,9 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   if(!slLocalWrite('sl_students',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
-  if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').style.display='none';document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
+  if(SC_STUDENT_ID===s.id){SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
   refreshUI();
-  toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000);
+  toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2507,8 +2486,8 @@ async function slBoot(){
 
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
-  // ⛔ מסך ההתקנה הוסר — אין יותר בדיקת סכימה מול השרת בעלייה,
-  //    ולכן אין גם מה לדלג עליו כשאין רשת.
+  // ⛔ אין בדיקת סכימה מול השרת בעלייה — ⚠️ ולכן אין מה לדלג עליו
+  //    כשאין רשת.
   setTimeout(function(){document.getElementById('au-user').focus();},50);
 }
 document.addEventListener('DOMContentLoaded', slBoot);

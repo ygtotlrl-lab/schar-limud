@@ -3,7 +3,7 @@
    השורות: «מודאלים» · «מיכל הדיאלוג — מקומו ושכבתו» ·
    «`Enter` שומר בכל שדה עריכה» · «כפתור שכותב מושבת בזמן הכתיבה» ·
    «`toast` — חתימה, גוף ומחלקות» · «עדכון אוטומטי — בדיקה מחזורית» ·
-   «באנר עדכון `sw`»
+   «באנר עדכון `sw`» · «`pull` — מנגנון המשיכה»
    ⛔ המודול זהה בית-לבית בכל ריפו שנושא אותו — ⚠️ והתצורה פר-אפליקציה
       נמסרת ב-`appConfigure` שבראש `index.html`, ⭐ ואינה כתובה כאן.
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
@@ -28,10 +28,10 @@ function busy(btn, on, label) {
   if (!btn) return;
   if (on) {
     if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
-    btn.disabled = true; btn.style.opacity = 'var(--op-4)'; btn.style.cursor = 'wait';
+    btn.disabled = true; btn.classList.add('is-busy');
     btn.innerHTML = label || '⏳ שומר…';
   } else {
-    btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
+    btn.disabled = false; btn.classList.remove('is-busy');
     if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
   }
 }
@@ -45,7 +45,8 @@ function actRun(el, fn) {
   if (!out || typeof out.then !== 'function') return;
   el._actBusy = true;
   var isBtn = el.tagName === 'BUTTON';
-  if (isBtn) busy(el, true, '⏳ שומר…');
+  /*  ⚠️ התווית מ-`data-busy` — ⭐ פעולה שבודקת ⛔ אינה «שומרת». */
+  if (isBtn) busy(el, true, el.getAttribute('data-busy') || '⏳ שומר…');
   out.then(function () { }, function (e) {
     console.error('[act] ' + el.getAttribute('data-act'), e);
   }).then(function () {
@@ -258,7 +259,7 @@ function toast(msg, dur, kind) {
   el.textContent = msg;
   box.appendChild(el);
   setTimeout(function () {
-    el.style.transition = 'opacity var(--dur-4)'; el.style.opacity = '0';
+    el.classList.add('out');
     setTimeout(function () { el.remove(); }, 260);
   }, dur || app.TOAST_DEFAULT_MS);
 }
@@ -283,6 +284,43 @@ function modalEsc(e) {
   return false;
 }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
+
+/* ═══ ציור שאחרי משיכה — מודול משותף ════════════════════════════════════
+   ⛔ **ציור שבא ממשיכה נדחה כשיש קלט פתוח** — ⚠️ שדה במיקוד · עריכה
+      בשורה (`[data-editing]`) · או דיאלוג פתוח: ⭐ משיכה ברקע שמוחקת
+      הקלדה היא אובדן נתונים, ⛔ ושינוי חותמת ממכשיר אחר מפעיל אותה בכל רגע.
+   ⛔ **וכשהקלט נסגר — הציור רץ פעם אחת** — ⚠️ ולא נבלע: ⭐ המסך מתעדכן
+      מיד כשאין מה למחוק.
+   ⛔ **וציור שהמשתמש עצמו גרם לו אינו עובר כאן** — ⚠️ הוא התשובה ללחיצה,
+      ⭐ ודחייתו הייתה נראית כלחיצה שלא עשתה דבר.
+   ═══════════════════════════════════════════════════════════════════════ */
+/*  ⚠️ הבדיקה חוזרת במרווח ⛔ ואינה מאזין — ⭐ אין אירוע אחד שמסמן «הקלט
+ *  נסגר»: ⛔ יציאה ממיקוד · ביטול עריכה · וסגירת דיאלוג הם שלושה מסלולים. */
+var PULL_WAIT_MS = 400;
+var _pullQ = [], _pullT = 0;
+var PULL_FIELD = 'input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable="true"]';
+/*  ⛔ שדה שהוסתר אינו קלט פתוח — ⚠️ מיקוד נשאר לעיתים על שדה במסך שכבר
+ *  ירד (הכניסה שאחריה המשיכה הראשונה), ⭐ והציור היה נדחה לנצח. */
+function inputOpen() {
+  var a = document.activeElement;
+  if (a && a.matches && a.matches(PULL_FIELD) && a.getClientRects().length) return true;
+  /*  ⚠️ עריכה בשורה נספרת גם כשהלשונית שלה מוסתרת — ⭐ ההקלדה שבה
+   *  מחכה לחזרה, ⛔ וציור היה מוחק אותה בלי שהמשתמש ראה. */
+  if (document.querySelector('[data-editing]')) return true;
+  return !!document.querySelector('#modal.open,#ask.open');
+}
+function pullRender(fn) {
+  if (_pullQ.indexOf(fn) < 0) _pullQ.push(fn);
+  pullFlush();
+}
+function pullFlush() {
+  clearTimeout(_pullT); _pullT = 0;
+  if (!_pullQ.length) return;
+  if (inputOpen()) { _pullT = setTimeout(pullFlush, PULL_WAIT_MS); return; }
+  var q = _pullQ; _pullQ = [];
+  q.forEach(function (f) { try { f(); } catch (e) { console.error('[pull] ציור אחרי משיכה נכשל', e); } });
+}
+/* ═══════════════ סוף מודול ציור שאחרי משיכה ═════════════════════════════ */
 
 /* ═══ Enter שומר בשדה עריכה — מודול משותף ═══════════════════════════════
    ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
@@ -321,5 +359,5 @@ function ksKey(e) {
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { actRun, ask, busy, closeAsk, closeModal, esc, ksKey, lsToast,
-         modalBackdrop, modalEsc, openModal, swApply, swHideUpdate,
-         swRegister, toast, uiNoDialog };
+         modalBackdrop, modalEsc, openModal, pullRender, swApply,
+         swHideUpdate, swRegister, toast, uiNoDialog };

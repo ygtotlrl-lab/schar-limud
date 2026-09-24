@@ -294,6 +294,10 @@ function staleSchemaHalt(e) {
   if (!isStaleSchema(e)) return false;
   if (!_staleSchema) {
     _staleSchema = true;
+    /*  ⛔ הטיימרים נעצרים כאן, ⚠️ והדגל לבדו אינו מספיק: ⭐ טיימר שכבר
+     *  נדרך היה יורה עוד בקשה, ⛔ ורענון הדף הוא היציאה היחידה. */
+    rtyStop();
+    plStop();
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
@@ -611,7 +615,7 @@ function pendRender() {
   if (typeof document === 'undefined' || !document.body) return;
   pendEnsureStyle();
   var txt = pendCounterText(), bar = document.getElementById('pend-bar');
-  if (!txt) { if (bar) bar.style.display = 'none'; }
+  if (!txt) { if (bar) bar.classList.add('hidden'); }
   else {
     if (!bar) {
       bar = document.createElement('div');
@@ -622,7 +626,6 @@ function pendRender() {
     try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.extra) extra = app.PEND_CFG.extra() || ''; } catch (e) { }
     bar.textContent = txt + (extra ? ' · ' + extra : '');
     bar.className = pendLateCount() ? 'late' : '';
-    bar.style.display = '';
   }
   pendRenderAlert();
 }
@@ -689,23 +692,22 @@ function rtyReady() { return !_staleSchema && _rtyPending() && _rtyOnline() && _
 function rtyStop() { if (_rtyTimer) { clearTimeout(_rtyTimer); _rtyTimer = null; } }
 
 function rtyArm() {
-  if (_rtyTimer) return false;
-  if (!_rtyPending()) return false;
+  if (_rtyTimer || !rtyReady()) return false;
   _rtyTimer = setTimeout(_rtyFire, _rtyDelay);
   return true;
 }
 
 function _rtyFire() {
   _rtyTimer = null;
-  if (!_rtyPending()) { _rtyDelay = RTY_BASE_MS; return; }
-  if (!_rtyOnline() || !_rtyVisible()) { rtyArm(); return; }
   rtyKick();
 }
 
+/*  ⛔ **כל החלטה לנסות עוברת ב-`rtyReady`** — ⚠️ הטיימר, המאזינים והדריכה:
+ *  ⭐ ארבע בדיקות מפוזרות הן ארבעה מקומות שבהם תנאי נשכח. ⚠️ ומה שאינו
+ *  מוכן אינו נדרך — ⭐ `online` ו-`visibilitychange` מעירים אותו. */
 function rtyKick() {
   if (_rtyBusy) return Promise.resolve(false);
-  if (!_rtyPending()) { rtyStop(); _rtyDelay = RTY_BASE_MS; return Promise.resolve(false); }
-  if (!_rtyOnline() || !_rtyVisible()) { rtyArm(); return Promise.resolve(false); }
+  if (!rtyReady()) { rtyStop(); return Promise.resolve(false); }
   _rtyBusy = true;
   rtyStop();
   var p;
@@ -773,8 +775,10 @@ function _plFull() {
   } catch (e) { return Promise.resolve(done(false)); }
 }
 
+function plStop() { if (_plTimer) { clearInterval(_plTimer); _plTimer = null; } }
+
 function plTick() {
-  if (_plBusy) return Promise.resolve(false);
+  if (_plBusy || _staleSchema) return Promise.resolve(false);
   var live; try { live = !!app.PL_CFG.active(); } catch (e) { live = false; }
   if (!live) return Promise.resolve(false);
   _plBusy = true;
@@ -800,7 +804,7 @@ function plBoot() {
     try { window.addEventListener('online', function () { plTick(); }); }
     catch (e) { console.warn('[pl] wiring', e); }
   }
-  if (_plTimer) return false;
+  if (_plTimer || _staleSchema) return false;
   var ms = 0;
   try { ms = parseInt(app.PL_CFG.every, 10) || 0; } catch (e) { ms = 0; }
   if (!ms) ms = 3000;
