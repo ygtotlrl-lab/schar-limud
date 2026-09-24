@@ -296,7 +296,7 @@ body.locked{overflow:hidden}
 #updater.show{display:flex}
 #updater .in{
   background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
-  display:flex;align-items:center;gap:var(--sp-5);box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--sh-3);
   font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
 #updater button{
