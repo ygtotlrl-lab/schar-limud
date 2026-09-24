@@ -1,3 +1,4 @@
+// ⛔ נוצר מהתצורה — `app.config.js`, ב-`node tools/gen-app.mjs`: אין לערוך ביד
 pluginManagement {
     repositories {
         google()

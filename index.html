@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>שכר לימוד</title>
+<title></title>
 <link rel="manifest" href="manifest.json">
+<script src="app.config.js"></script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.837fbb2e.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.c7721cea.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.aa306d87.png">
@@ -344,6 +345,7 @@ import { barChart } from './core/chart.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
  *  ⭐ והשומר קורא אותה בזמן הקריאה ⛔ ולא בזמן המסירה. */
+document.title = self.APP.name;
 appConfigure({
   get BK_CFG() { return BK_CFG; },
   get DATA_ERA() { return DATA_ERA; },
@@ -363,7 +365,7 @@ appConfigure({
   get USER_CFG() { return USER_CFG; },
   get saveRefresh() { return saveRefresh; }
 });
-var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
+var SB = sbWatch(supabase.createClient(self.APP.supabase.url,self.APP.supabase.key));
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
 /* ⭐ המשתמש המחובר יושב במודול הסשן המשותף ולא במשתנה כאן —
    ⛔ בזיכרון בלבד, ואינו יורד לדיסק. `sessGet()`/`sessSet()` הן הגישה
@@ -455,8 +457,8 @@ var KV_TABLE = 'sl_settings';
  *  מסלול שאין לו גוף, סוג שאינו אחד משלושה, ומסלול שאינו מוסיף דבר.
  *  ⭐ **ולמה זה קיים**: מבנה שני לאותו נתון הוא מפתח שאיש אינו סורק. */
 var MIRROR_CFG = {
-  prefix: 'sl_mirror_',
-  app:    'sl_',
+  prefix: self.APP.prefix + 'mirror_',
+  app:    self.APP.prefix,
   tables: function () { return PUSH_TABLES.concat([SL_USERS_TABLE]); },
   noPush: [{ t: 'sl_users', via: 'writeUser', adds: 'secret' }],
   empty:  function () { return []; },
@@ -468,11 +470,11 @@ var MIRROR_CFG = {
 // ── מדיניות האחסון המקומי של האפליקציה הזו ─────────────────────────────
 // זו הטבלה **היחידה** שנבדלת בין האפליקציות; המודול שמתחתיה זהה בכולן.
 var LS_CFG = {
-  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: שם האפליקציה שבתצורה — אותו מקור של `SW_CFG.prefix`,
    *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
    *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
    *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
-  cachePrefix: 'schar-limud-',
+  cachePrefix: self.APP.id + '-',
   logKey: 'sl_ls_log',
   hzPrefix: 'sl_ls_hz_',
   /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
@@ -710,7 +712,7 @@ var HW_CFG = {
  *  להסבה ואיש כבר אינו קורא — ⚠️ והיא נזרקת פעם אחת. */
 var DATA_ERA = 2;
 var ERA_CFG = {
-  prefix: 'sl_',
+  prefix: self.APP.prefix,
   client: function () { return SB; },
   table:  function () { return KV_TABLE; },
   /*  ⛔ המוחק — ⚠️ מפתחות המראה **ואופק הפינוי שלהם**: ⭐ אופק ששרד מסנן
