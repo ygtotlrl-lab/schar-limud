@@ -5,7 +5,7 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'schar-limud-v170';
+var CACHE_NAME = 'schar-limud-v171';
 
 // קבצים מקומיים. נתיבים יחסיים — נפתרים מול מיקומו של sw.js עצמו.
 var CORE = [
@@ -15,9 +15,11 @@ var CORE = [
   './core/util.js',
   './core/sync.js',
   './core/storage.js',
+  './core/mirror.js',
   './core/backup.js',
   './core/auth.js',
   './core/ui.js',
+  './core/chart.js',
   './manifest.json',
   './icons/icon-192.af5952e2.png',
   './icons/icon-512.6e7eb2aa.png'
