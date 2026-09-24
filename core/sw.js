@@ -76,6 +76,12 @@ function swInScope(u) {
   return u.origin === SW_SCOPE.origin && u.pathname.indexOf(SW_SCOPE.pathname) === 0;
 }
 
+/*  ⛔ קובצי הקליפה — `CORE` — נגזרים מהרשימה ⛔ ואינם מוקלדים שוב. */
+var SW_CORE_URLS = CORE.map(function (x) { return new URL(x, self.location).href; });
+function swInCore(u) {
+  return SW_CORE_URLS.indexOf(u.origin + u.pathname) !== -1;
+}
+
 function swIsShellPath(u) {
   return SW_SHELL_PATHS.indexOf(u.pathname) !== -1;
 }
@@ -214,17 +220,21 @@ function ensureCdnCached() {
 }
 ensureCdnCached(); // קוד עליון = רץ פעם אחת בכל עליית SW
 
-/*  ניווט — רשת קודם. תשובה תקינה מנתיב הקליפה מרעננת את הקליפה; תשובה
- *  שאינה תקינה (404 של נתיב עמוק) מקבלת את הקליפה שבמטמון. */
+/*  ⛔ ניווט — מאותו מטמון כמו הקוד: ⚠️ דף מהרשת וקוד מהמטמון הם שתי גרסאות
+ *  במסך אחד, ⭐ ו-`import` של שם שעוד אינו קיים עוצר את הדף כולו. ⛔ כשיש
+ *  קליפה במטמון של ה-worker הזה — היא התשובה, ⛔ ואינה מתרעננת כאן: ⚠️ גרסה
+ *  חדשה נכנסת רק בהתקנת worker חדש, ⭐ שמשתלט ומרענן — דף וקוד יחד.
+ *  ⭐ בלי קליפה (כניסה ראשונה) — מהרשת; ⚠️ ותשובה שאינה תקינה (404 של נתיב
+ *  עמוק) נשארת כפי שהיא, ⛔ שאין קליפה ליפול אליה. */
 function swNavigate(request, u) {
-  return fetch(request).then(function (net) {
-    if (net && net.ok) {
-      if (swIsShellPath(u)) swStore(SW_SHELL, net);
+  return swShell().then(function (shell) {
+    if (shell) return shell;
+    return fetch(request).then(function (net) {
+      if (net && net.ok && swIsShellPath(u)) swStore(SW_SHELL, net);
       return net;
-    }
-    return swShell().then(function (shell) { return shell || net; });
-  }).catch(function () {
-    return swNavOffline(request);
+    }).catch(function () {
+      return swNavOffline(request);
+    });
   });
 }
 
@@ -254,11 +264,13 @@ function swNetworkFirst(request) {
 
 /*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ונשמרה.
  *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
- *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה. */
+ *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה.
+ *  ⛔ **וקובץ מהקליפה אינו מתרענן ברקע** — ⚠️ קוד חדש שנכתב למטמון הישן
+ *  פוגש בטעינה הבאה את הדף הישן: ⭐ הקליפה נכנסת כולה בהתקנה, ורק שם. */
 function swCacheFirst(request, u) {
   return caches.open(CACHE_NAME).then(function (cache) {
     return cache.match(request, SW_SUB_OPTS).then(function (hit) {
-      if (hit) { swRevalidate(request, u); return hit; }
+      if (hit) { if (!swInCore(u)) swRevalidate(request, u); return hit; }
       return swFetchAsset(request, u).then(function (res) {
         swStore(request, res);
         return res;
