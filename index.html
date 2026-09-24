@@ -321,8 +321,8 @@ import { MSG_FILL_ALL, MSG_FILL_LOGIN, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR,
          MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH,
          MSG_PASS_SIX, MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL,
          MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK,
-         appConfigure, errMsg, getDeviceId, isNetErr, kvParse, readNum,
-         uniqHas, withTimeout } from './core/util.js';
+         appConfigure, dayToday, errMsg, getDeviceId, isNetErr, kvParse,
+         readNum, uniqHas, withTimeout } from './core/util.js';
 import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick,
          eraNotePush, idEq, mergeCore, newClientId, pendAlertDismiss,
          pendAll, pendBoot, pendClearMany, pendCount, pendFailed, pendHas,
@@ -686,7 +686,7 @@ var HW_CFG = {
       if (!d) return true;
       var y = acadYearOf(String(d).slice(0, 10));
       if (!isFinite(y)) return true;
-      return y >= acadYearOf(todayStr());
+      return y >= acadYearOf(dayToday());
     },
     idOf: function (r) { return slKey(r); },
     ts: function (r) { return slTs(r); },
@@ -1452,7 +1452,6 @@ var _heColl = null;
 try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
 var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 function fmt(n){return Number(n||0).toLocaleString('he-IL');}
-function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
 function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
 function monthLabel(y,m){return MONTH_HE[m]+' '+(m>=8?y:y+1);}
@@ -1837,7 +1836,7 @@ function updateDropdowns(){
   // היכולת לרשום ניצול יתרת זכות.
   if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
   if(cur)sel.value=cur;
-  var dt=document.getElementById('txn-date');if(!dt.value)dt.value=todayStr();
+  var dt=document.getElementById('txn-date');if(!dt.value)dt.value=dayToday();
   var at=document.getElementById('txn-amount');if(!at.value)at.value=SETTINGS['default_tuition']||'';
   txnMethodHint();
 }
@@ -1916,7 +1915,7 @@ function pctClass(got,target){var p=pctNum(got,target);return p===null?'':p>=90?
 function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך יעד ‎'+fmt(target)+'‎';}
 
 function renderDash(){
-  if(DASH_YEAR===null)DASH_YEAR=acadYearOf(todayStr());
+  if(DASH_YEAR===null)DASH_YEAR=acadYearOf(dayToday());
   document.getElementById('dash-year-label').textContent=acadYearLabel(DASH_YEAR);
   var act=STUDENTS.filter(function(s){return s.active;}),actual=actualByMonth(DASH_YEAR);
   // הטבלה הפוכה מכפי שהייתה: תלמיד בשורה (שם מלא, עמודה דביקה בימין)
@@ -2213,8 +2212,8 @@ function renderStudentCard(){
   renderScYearTabs();renderScAnnual();
 }
 function renderScYearTabs(){
-  var y={};TRANSACTIONS.filter(function(t){return t.student_client_id===SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(todayStr())]=1;
-  var sorted=Object.keys(y).map(Number).sort();if(!SC_YEAR||!y[SC_YEAR])SC_YEAR=acadYearOf(todayStr());
+  var y={};TRANSACTIONS.filter(function(t){return t.student_client_id===SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.date)]=1;});y[acadYearOf(dayToday())]=1;
+  var sorted=Object.keys(y).map(Number).sort();if(!SC_YEAR||!y[SC_YEAR])SC_YEAR=acadYearOf(dayToday());
   document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+acadYearLabel(yr)+'</button>';}).join('');
 }
 function scSelectYear(y){SC_YEAR=y;renderScYearTabs();renderScAnnual();}
@@ -2377,7 +2376,7 @@ function saveDefaultTuition(){
 function renderSettingsLists(){
   // תגית יתרת זכות ברשימת התלמידים — לשנת הלימודים הנוכחית, כדי לראות
   // במבט מי שילם מראש. שדה נפרד: אינו מעורבב בשום סיכום חוב.
-  var cy=acadYearOf(todayStr());
+  var cy=acadYearOf(dayToday());
   document.getElementById('set-students-list').innerHTML=STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="u-fw-600">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
@@ -2431,7 +2430,7 @@ function openAddStudent(){
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
-    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(monthKeyOf(todayStr()))+'"></div>'
+    +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="u-ta-r" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
     +'<div class="u-mb-3 frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="u-ta-r"></div>'
     +'<div class="u-fs-2 u-c-text3 u-mb-2 u-lh-15">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'

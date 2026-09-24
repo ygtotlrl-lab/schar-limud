@@ -1,10 +1,10 @@
 /* ═══ core/util.js — עוזרי הליבה ════════════════════════════════════════
-   ⭐ מסירת התצורה, מחרוזות ההודעה, הרשת, מזהה המכשיר וערך מפתח-ערך.
+   ⭐ מסירת התצורה, מחרוזות ההודעה, הרשת, מזהה המכשיר, ערך מפתח-ערך והיום.
    ⛔ **והסיומת `.js` ⛔ ולא `.mjs`** — ⚠️ שרת סטטי שאינו מכיר `.mjs` מחזיר
       `application/octet-stream`, ⭐ והמודול נדחה כולו: ⛔ הדף אינו עולה.
-   השורות: «`devid` — מזהה מכשיר» · «מחרוזת למשתמש היא קבוע» ·
-   «פסק זמן אחיד לקריאות רשת» · «ערך במפתח-ערך הוא JSON» ·
-   «רשימה אינה נושאת פריט כפול» · «שדה מספרי»
+   השורות: «היום — בשעון מקומי, ובמקום אחד» · «`devid` — מזהה מכשיר» ·
+   «מחרוזת למשתמש היא קבוע» · «פסק זמן אחיד לקריאות רשת» ·
+   «ערך במפתח-ערך הוא JSON» · «רשימה אינה נושאת פריט כפול» · «שדה מספרי»
    ⛔ המודול זהה בית-לבית בכל ריפו שנושא אותו — ⚠️ והתצורה פר-אפליקציה
       נמסרת ב-`appConfigure` שבראש `index.html`, ⭐ ואינה כתובה כאן.
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
@@ -59,6 +59,36 @@ function uniqHas(list, val, keyFn) {
   return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
 }
 /* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
+
+/* ═══ היום ועוגן הצהריים — מודול משותף ════════════════════════════════════
+   ⛔ **«היום» נגזר מהשעון המקומי** — ⚠️ ולא מ-`toISOString().slice(0,10)`:
+      ⭐ UTC מקדים את התאריך המקומי בשעות הקצה, ⛔ ותנועה שנרשמת אחרי חצות
+      נופלת ליום — ולעיתים לחודש — הקודם.
+   ⛔ אין להחליף ב-`toISOString` — זה בדיוק הבאג שהפונקציה מונעת.
+   ⚠️ **ו-`n` הוא חשבון לוח** — ⭐ ימים שלמים מהיום המקומי, ⛔ בלי מילישניות:
+      יום אינו תמיד 24 שעות.
+   ⭐ **ו-`dayIso` הוא הצורה האחת של תאריך כמחרוזת** — `YYYY-MM-DD` מקומי.
+   ⛔ **ותאריך שהופך ל-`Date` מעוגן בצהריים מקומיים** — ⚠️ חצות ועוד כפולות
+      של 24 שעות נופל ליום הקודם במעבר לשעון חורף: ⭐ `dayNoon` מקבלת
+      מחרוזת `YYYY-MM-DD`, `Date`, או שנה-חודש(0)-יום.
+   ═══════════════════════════════════════════════════════════════════════ */
+function _dayPad(n) { return (n < 10 ? '0' : '') + n; }
+function dayNoon(a, m0, d) {
+  if (a instanceof Date) return new Date(a.getFullYear(), a.getMonth(), a.getDate(), 12, 0, 0);
+  if (typeof a === 'string') {
+    var p = a.slice(0, 10).split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0);
+  }
+  return new Date(a, m0, d, 12, 0, 0);
+}
+function dayToday(n) {
+  var t = new Date();
+  return dayIso(dayNoon(t.getFullYear(), t.getMonth(), t.getDate() + (+n || 0)));
+}
+function dayIso(d) {
+  return d.getFullYear() + '-' + _dayPad(d.getMonth() + 1) + '-' + _dayPad(d.getDate());
+}
+/* ═══════════════ סוף היום ועוגן הצהריים ════════════════════════════════ */
 
 /* ═══ מסירת התצורה — מודול משותף ════════════════════════════════════════
    ⭐ **התצורה פר-אפליקציה נמסרת פעם אחת, בעלייה** — ⚠️ המודולים זהים
@@ -204,4 +234,6 @@ export { app, appConfigure, readNum, uniqKeyOf, uniqList, uniqHas,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED,
          MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR, MSG_STALE_CODE,
          MSG_SWITCHED_TO, MSG_SW_NO_WAITING, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
-         errMsg, getDeviceId, isNetErr, kvParse, withTimeout };
+         errMsg, getDeviceId, isNetErr, kvParse, withTimeout, dayIso,
+         dayNoon,
+         dayToday };
