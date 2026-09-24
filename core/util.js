@@ -10,6 +10,8 @@
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
    ════════════════════════════════════════════════════════════════════ */
 
+import { lsGet, lsSetRaw } from './storage.js';
+
 /* ═══ קריאת ערך מספרי — מודול משותף ═══════════════════════════════════════
    ⛔ **כל קריאת ערך מספרי משדה עוברת כאן** — ⚠️ המרה ישירה מחזירה `NaN`
       על שדה ריק, ⭐ ו-`NaN` שנכנס להשוואה נכשל בשקט: ⛔ `!val` תופס גם
@@ -155,10 +157,10 @@ function errMsg(e) {
    ═══════════════════════════════════════════════════════════════════════ */
 var _deviceIdMem = null;
 function getDeviceId() {
-  var id = app.lsGet(app.DEV_CFG.key, null);
+  var id = lsGet(app.DEV_CFG.key, null);
   if (!id) {
     id = _deviceIdMem || _randDeviceId();
-    app.lsSetRaw(app.DEV_CFG.key, id);
+    lsSetRaw(app.DEV_CFG.key, id);
   }
   _deviceIdMem = id;
   return id;

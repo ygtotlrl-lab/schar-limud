@@ -13,6 +13,7 @@
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, isNetErr,
          kvParse, withTimeout } from './util.js';
+import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
 
 /* ═══ מזהי רשומות — מודול משותף ═══════════════════════════════════════════
    ═══════════════════════════════════════════════════════════════════════ */
@@ -456,7 +457,7 @@ function pendForget() { _pendMap = null; _pendDrawHold = {}; }
 function pendAll() {
   if (_pendMap) return _pendMap;
   var v = null;
-  try { var raw = app.lsGet(pendKeyName(), null); v = raw == null ? null : JSON.parse(raw); }
+  try { var raw = lsGet(pendKeyName(), null); v = raw == null ? null : JSON.parse(raw); }
   catch (e) { v = null; }
   _pendMap = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
   // ניקוי ערכים פגומים — חותמת שאינה מספר חיובי אינה ראיה לכלום
@@ -479,9 +480,9 @@ function pendSave() {
     keys.sort(function (a, b) { return m[a] - m[b]; });
     var drop = keys.slice(0, keys.length - PEND_MAX);
     drop.forEach(function (k) { delete m[k]; });
-    try { app.lsLog('pend-overflow', drop.length + ' סימונים נגרעו (תקרה ' + PEND_MAX + ')', 0); } catch (e) { }
+    try { lsLog('pend-overflow', drop.length + ' סימונים נגרעו (תקרה ' + PEND_MAX + ')', 0); } catch (e) { }
   }
-  return app.lsSet(pendKeyName(), JSON.stringify(m));
+  return lsSet(pendKeyName(), JSON.stringify(m));
 }
 
 // סימון. חותמת קיימת **אינה נדרסת** — הגיל נמדד מהכתיבה הראשונה שלא אושרה,
@@ -764,7 +765,7 @@ function _plFull() {
   var done = function (v) { _plBusy = false; return v; };
   /*  ⛔ שחרור האופק **לפני** המשיכה ⛔ ולא אחריה — ⚠️ הניקוי הוא שמתיר
    *  לכתיבה שבסופה להחזיר את הישן, ⭐ וניקוי שאחריה ממתין למשיכה הבאה. */
-  try { app.lsHorizonRelease(); } catch (e0) { }
+  try { lsHorizonRelease(); } catch (e0) { }
   try {
     return Promise.resolve(app.PL_CFG.pull()).then(
       function () { _plFullAt = Date.now(); return done(true); },
@@ -985,14 +986,14 @@ function eraThrow(o) {
  *  ⭐ אין בה עותק ישן שיזדקן, ⛔ ואפס היה זורק אותה בעלייה הראשונה. */
 function eraLocalKey() { return app.ERA_CFG.prefix + 'era'; }
 function eraLocal() {
-  var v = parseInt(app.lsGet(eraLocalKey(), ''), 10);
+  var v = parseInt(lsGet(eraLocalKey(), ''), 10);
   return isFinite(v) ? v : app.DATA_ERA;
 }
 /*  ⛔ השומר — ⚠️ העידן החדש **וחותמת ה-ISO**: ⭐ שניהם על הדיסק, ⛔ ומי
  *  שפותח את האחסון רואה מה נוקה ומתי. */
 function eraSave(era, stampKey, stamp) {
-  app.lsSet(eraLocalKey(), String(era));
-  app.lsSet(stampKey, JSON.stringify(stamp));
+  lsSet(eraLocalKey(), String(era));
+  lsSet(stampKey, JSON.stringify(stamp));
 }
 /*  ⛔ העידן נקרא מטבלת המפתח-ערך של האפליקציה ⛔ ולא מטבלה חדשה — ⚠️ ולכל
  *  אפליקציה מספר משלה: ⭐ צורת השורה נבדלת ביניהן, ⛔ ומספר אחד לכולן היה
