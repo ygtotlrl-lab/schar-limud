@@ -315,9 +315,26 @@
 /*  ⛔ הליבה המשותפת נטענת כמודול ⛔ ואינה מוכפלת כאן — ⚠️ והמסמך עצמו הוא
  *  מודול: ⭐ סקריפט קלאסי רץ **לפני** כל מודול, ⛔ וקריאה אליו בעלייה
  *  הייתה מוצאת `undefined`. */
-import { readNum, uniqHas } from './core/util.js';
-import { newClientId, idEq, mergeCore, tombPruneMerged, tombBoot,
-         ctxEpoch, ctxSwitch, ctxStale } from './core/sync.js';
+import { MSG_FILL_ALL, MSG_FILL_LOGIN, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR,
+         MSG_MY_PASS_TITLE, MSG_NO_CRYPTO, MSG_OFFLINE_LOGIN,
+         MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP, MSG_OFF_UNKNOWN,
+         MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH,
+         MSG_PASS_SIX, MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL,
+         MSG_SAVED, MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR,
+         MSG_STALE_CODE, MSG_SW_NO_WAITING, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
+         appConfigure, errMsg, getDeviceId, isNetErr, kvParse, readNum,
+         uniqHas, withTimeout } from './core/util.js';
+import { ctxEpoch, ctxStale, ctxSwitch, idEq, mergeCore, newClientId,
+         tombBoot, tombPruneMerged } from './core/sync.js';
+
+/*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
+ *  ⭐ והשומר קורא אותה בזמן הקריאה ⛔ ולא בזמן המסירה. */
+appConfigure({
+  get DEV_CFG() { return DEV_CFG; },
+  get lsGet() { return lsGet; },
+  get lsSetRaw() { return lsSetRaw; },
+  get toast() { return toast; }
+});
 var SB = sbWatch(supabase.createClient('https://kxbtskqobynewvnckaaz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg'));
 var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
 /* ⭐ המשתמש המחובר יושב במודול הסשן המשותף ולא במשתנה כאן —
@@ -350,55 +367,6 @@ var TOAST_DEFAULT_MS = 2400;
 // להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
 // פר-אפליקציה בהחלטת מנהל — ⚠️ ולכן אינה בבלוק החתום.
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
-/* ═══ מחרוזות ההודעה המשותפות — מודול משותף ══════════════════════════════
-   ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
-   ⚠️ עד כאן הצהירה **הערה** «מילה במילה זהות», ⛔ ואיש לא מדד — ⭐ ונמדד
-   ששני שמות נשאו טקסט אחר, ⚠️ ושאחת-עשרה הודעות נכתבו כליטרל בשניים
-   ובשלושה ריפו בלי שם כלל.
-   ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
-   אותה בכל זאת: ⭐ המושג חי בכולן, ⛔ ורשימה שנגזרת ממי שמציג אותה
-   היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
-   ⛔⛔ **ונוסח הכשל נגזר מההתנהגות** — ⚠️ שלושת אתריו החיים של
-   `MSG_OFFLINE` הם **קריאה** שנכשלה, ⭐ ולא נכתב שם דבר שאפשר לסנכרן:
-   ⛔ «תסתנכרן כשהחיבור יחזור» הוא הבטחה על נתון שאינו קיים, ⚠️ והיא
-   נמדדה בשתיים. ⭐ **וההבטחה נכונה רק על כתיבה שכבר בתור** —
-   `MSG_SAVED_LOCAL` ו-`MSG_CLOUD_SYNC_FAIL`, ⛔ ושם היא נאמרת מפורשות.
-   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_BAD_LOGIN` נבדל פר-אפליקציה
-   בהחלטת מנהל, ⭐ ונשאר עם נימוקו במקומו.
-   ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
-   «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
-   נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
-   ═══════════════════════════════════════════════════════════════════════ */
-var MSG_SAVED = '✅ נשמר בהצלחה';
-var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
-var MSG_SAVE_FAIL = '❌ השמירה נכשלה';
-var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
-var MSG_CLOUD_SYNC_FAIL = '⚠️ הסנכרון לענן נכשל — הנתונים שמורים במכשיר ויישלחו כשהרשת תחזור';
-var MSG_OFFLINE = '📴 אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-var MSG_SW_NO_WAITING = '⚠️ אין גרסה שממתינה — הדף כבר על האחרונה';
-var MSG_SW_TIMEOUT = '⚠️ העדכון לא הושלם — נסה שוב';
-var MSG_DELETE = 'מחק';
-var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
-var MSG_FILL_LOGIN = '⚠️ נא למלא שם משתמש וסיסמה';
-var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
-var MSG_KV_BAD = 'ערך פגום בענן';
-var MSG_LOGIN_ERR = '❌ הכניסה נכשלה — ';
-var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
-var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
-var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
-var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
-var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
-var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
-var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
-var MSG_SERVER_ERR = 'שגיאת שרת';
-var MSG_SWITCHED_TO = 'הוחלף ל';
-var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
-var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
-var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
-/* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
 /* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
    ⛔ ההודעה היא קבוע ⛔ ואינה ליטרל באתר התצוגה — ⚠️ טקסט שנכתב במקום
    שבו הוא נאמר נכתב שוב במסך הבא, ⭐ ושני ניסוחים לאותו מצב הם שני
@@ -447,37 +415,6 @@ var MSG_DEL_STUDENT_PRE = 'למחוק את ';
 var MSG_DEL_STUDENT_ANON = 'תלמיד';
 var MSG_DEL_STUDENT_POST = '? התלמיד יוסר מהרשימות; רשומות התשלומים שלו יישמרו במערכת.';
 /* ══ סוף הודעות פר-אפליקציה ═════════════════════════════════════════════ */
-/* ═══ עוזרי הרשת — מודול משותף ════════════════════════════════════════════
-   ⛔ שלוש הפונקציות ישבו **בין** בלוקים חתומים, ⚠️ ולכן אף `sha256` לא מדד
-      אותן — ⭐ והן נסחפו בשקט בעוד שהטבלה מצהירה עליהן «זהה בית-לבית»:
-      `isNetErr` נכתב בשורה אחת באחת ובשש בשלוש, ריווח `withTimeout` נבדל
-      בשתיים, ו-`errMsg` בשורה אחת בשתיים.
-   ⛔ אין לתת להן קידומת פרויקט — ⚠️ השם הזהה הוא מה שמאפשר להשוות ביניהן
-      בין כל הריפו, ⛔ ושם עם קידומת מחזיר אותן למצב שאיש אינו מודד בו.
-   ⛔ **ו-`MSG_OFFLINE` נקרא מבחוץ** — ⚠️ נוסחו נבדל פר-אפליקציה, ⭐ והבלוק
-      מפנה אליו ⛔ ואינו מכיל אותו.
-   ⛔ שינוי כאן — כל האפליקציות, באותו סבב: אחרת
-      הבלוק נסחף בין הריפו.
-   ═══════════════════════════════════════════════════════════════════════ */
-var NET_TIMEOUT_MS = 8000;
-function isNetErr(e) {
-  if (!navigator.onLine) return true;
-  var m = ((e && (e.message || e.details || '')) + '').toLowerCase();
-  return m.indexOf('fetch') !== -1 || m.indexOf('network') !== -1 ||
-         m.indexOf('failed to') !== -1 || m.indexOf('timeout') !== -1;
-}
-function withTimeout(p, ms) {
-  return Promise.race([
-    Promise.resolve(p),
-    new Promise(function(_, reject) {
-      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
-    })
-  ]);
-}
-function errMsg(e) {
-  return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: ' + ((e && (e.message || e.code)) || e));
-}
-/* ═══════════════ סוף מודול עוזרי הרשת ══════════════════════════════════ */
 /* ═══ משיכה מסוננת בשרת — מודול משותף ═════════════════════════════════════
    ⛔ מסך מושך **רק את החלון שהוא מציג** — ⚠️ הנימוק המדוד: מסך ההשגחה מציג
       חודש עברי אחד ⛔ ומשך **18,085 סימונים** בכל כניסה אליו, ⭐ ואת כולם
@@ -1994,6 +1931,10 @@ function pendKeyName() {
 }
 // החלפת הקשר (מוסד/משתמש) — המפה נטענת מחדש מהמפתח החדש.
 function pendReload() { _pendMap = null; _pendDrawHold = {}; pendAll(); pendRender(); }
+/*  ⛔ המשתנים חיים במודול — ⚠️ ומי שמחוצה לו אינו כותב אליהם: ⭐ הוא קורא לאלה. */
+function pendAlertDismiss() { _pendAlertDismissed = Date.now(); pendRenderAlert(); }
+/*  ⛔ בלי טעינה מחדש — ⚠️ בהחלפת הקשר הטעינה שייכת להקשר החדש. */
+function pendForget() { _pendMap = null; _pendDrawHold = {}; }
 
 function pendAll() {
   if (_pendMap) return _pendMap;
@@ -2499,6 +2440,8 @@ var PL_CFG = {
    ═══════════════════════════════════════════════════════════════════════ */
 var PL_FALLBACK_MS = 60000;   // אין שורת חותמת בענן ⇒ משיכה מלאה אחת לדקה
 var _plTimer = null, _plBusy = false, _plFullAt = 0, _plWired = false;
+/*  ⛔ החותמת חיה במודול — ⚠️ ובהחלפת הקשר היא מתאפסת כאן, ⭐ ולא בכתיבה מבחוץ. */
+function plForget() { _plFullAt = 0; }
 
 /* חותמת מהענן: מספר, מחרוזת JSON של מספר, או כל דבר אחר ⇒ 0. */
 function plNum(v) {
@@ -2764,6 +2707,8 @@ var HW_CFG = {
    ══════════════════════════════════════════════════════════════════════ */
 var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה — רשת אחרי עלייה
 var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
+/*  ⛔ הראיה חיה במודול — ⚠️ ובהחלפת הקשר היא נשכחת כאן, ⭐ ולא בכתיבה מבחוץ. */
+function hwForget() { _hwCloudSeen = {}; }
 var _hwSweepBusy = false;
 var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
 
@@ -3222,26 +3167,6 @@ function slTs(r) {
 // יותר. עדיף — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי 24 שעות, בעוד
 // שעריכה שנמחקת בשקט אינה משאירה שום עקבות. (אותה עדיפות בדיוק כמו
 // "היעדר רשומה אינו מחיקה" — ספק ⇐ שומרים את מה שהמשתמש כתב.)
-/* ═══ מזהה מכשיר — מודול משותף ════════════════════════════════════════════
-   ⛔ שינוי כאן — כל האפליקציות, באותו
-      סבב: אחרת הבלוק נסחף בין הריפו.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _deviceIdMem = null;
-function getDeviceId() {
-  var id = lsGet(DEV_CFG.key, null);
-  if (!id) {
-    id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(DEV_CFG.key, id);
-  }
-  _deviceIdMem = id;
-  return id;
-}
-function _randDeviceId() {
-  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
-  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
-  return id;
-}
-/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 // חיבור שכר לימוד לליבה המשותפת. ⛔ החתימה לא השתנתה.
 // ⛔ `dedupe: false` — ⚠️ **וזו הידית החשובה כאן, כי מדובר בכסף**:
 //    שתי שורות עם אותו מפתח באותו מערך נשארות שתיהן, בדיוק כפי שהיה.
@@ -4122,28 +4047,6 @@ function ksKey(e) {
 }
 /* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
 
-/* ═══ ערך מפתח-ערך — מודול משותף ════════════════════════════════════════
-   ⛔ «אין ערך» ו«ערך פגום» אינן אותה תשובה — ⚠️ שתיהן חזרו «נכשל», ⭐ והמשתמש
-      חיפש רשת שלא נפלה.
-   ⛔ ולכן `null` הוא ערך שאינו קיים ⛔ ואינו כשל, ⚠️ וערך שאינו JSON הוא כשל
-      שנוקב בשם המפתח.
-   ⛔ והנוסח אחד בכולן — ⚠️ הודעה שנבדלת בין האפליקציות היא ארבעה חיפושים
-      לאותה תקלה.
-   ⛔ שינוי כאן — כל האפליקציות, באותו סבב: ⚠️ אחרת
-      הבלוק נסחף בין הריפו. */
-function kvParse(key, raw) {
-  if (raw === null || raw === undefined || raw === '') return { ok: true, value: null, bad: false };
-  try { return { ok: true, value: JSON.parse(raw), bad: false }; }
-  catch (e) {
-    /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
-     *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
-    console.error('[sync] ' + MSG_KV_BAD + ' [' + key + ']:', e);
-    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
-    return { ok: false, value: null, bad: true };
-  }
-}
-function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
-/* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
 /* ═══ גרף העמודות — מודול משותף ═════════════════════════════════════════════
    ⛔ סדרה מוצגת ברוחב יחסי ⛔ ולא בספריית גרפים — ⚠️ הרוחב הוא התכונה
       היחידה שנגזרת מהנתון, ⭐ והוא החריג היחיד לסגנון מוטבע.
@@ -4770,7 +4673,7 @@ var DOM_ACTIONS = {
   /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
    *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
-  'pend-alert-ok':       function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); },
+  'pend-alert-ok':       function () { pendAlertDismiss(); },
   'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
   'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
