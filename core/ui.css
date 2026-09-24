@@ -126,3 +126,11 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 .boot-fail-btn{border:0;border-radius:var(--r-5);padding:var(--sp-5) var(--sp-7);font:inherit;font-weight:700;
   cursor:pointer;user-select:none;background:var(--boot-fg-use);color:var(--boot-bg-use)}
 .boot-fail-btn:focus-visible{outline:3px solid var(--boot-fg-use);outline-offset:3px}
+/* ══ מצב הטעינה ═════════════════════════════════════════════════════════
+   ⛔ הקליפה נושאת אותו בתוך `#view` — ⚠️ עד שהקוד מצייר את המסך, ⭐ ואותו
+   מצב בכל האפליקציות: ⛔ מסך ריק בזמן טעינה נקרא כתקלה. */
+.view-loading{min-height:60vh;display:grid;place-items:center}
+.view-spin{width:28px;height:28px;border-radius:var(--r-7);border:3px solid var(--border);
+  border-top-color:var(--brand);animation:view-spin .8s linear infinite}
+@keyframes view-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.view-spin{animation:none}}
