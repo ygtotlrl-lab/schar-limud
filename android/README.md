@@ -15,7 +15,7 @@ Built in the exact pattern of the organisation's round-13 shell (the network-loa
 |---|---|
 | **Package ID** | `com.schar.limud` |
 | **טוען** | `https://ygtotlrl-lab.github.io/schar-limud/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 18 — ⛔ עולה בכל שינוי תחת `android/`: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
+| **versionCode** | 19 — ⛔ עולה בכל שינוי תחת `android/`: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
@@ -73,7 +73,7 @@ Built in the exact pattern of the organisation's round-13 shell (the network-loa
 
 `MainActivity.java` היה בעבר **עותקים חופשיים** של אותה מעטפת:
 hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח, ו-yoman כפולה בגלל
-גשר השיתוף. שער החתימה הקפיא את המצב, ⛔ אך לא איחד אותו.
+גשר השיתוף. החתימה הקפיאה את המצב, ⛔ אך לא איחדה אותו.
 
 מעכשיו הקוד מפוצל לשניים:
 
@@ -90,8 +90,7 @@ hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח
 
 ⚠️ **החריגה היחידה היום היא גשר השיתוף של yoman-avoda**, והיא מדודה: הליבה
 נושאת חתימה אחת בכולן (`d8efd10bc6d47354`), ורק המעטפת של yoman נבדלת.
-`tools/test_shell.mjs` אוכף את שתי החתימות, ו⛔ **נכשל אם נמצא גשר
-בליבה** — גשר שם היה מגיע לכל האפליקציות בבת אחת.
+⛔ **ואין גשר בליבה** — גשר שם היה מגיע לכל האפליקציות בבת אחת.
 <!-- SHARED:end -->
 
 ## Build
