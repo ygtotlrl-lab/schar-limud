@@ -14,6 +14,7 @@
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, isNetErr,
          kvParse, withTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
+import { closeModal, esc, toast } from './ui.js';
 
 /* ═══ מזהי רשומות — מודול משותף ═══════════════════════════════════════════
    ═══════════════════════════════════════════════════════════════════════ */
@@ -297,7 +298,7 @@ function staleSchemaHalt(e) {
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
-    try { app.toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
+    try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
 }
@@ -354,14 +355,14 @@ function sbWatch(c) {
    ═══════════════════════════════════════════════════════════════════════ */
 function errToast(e) {
   console.error('[save]', e);
-  app.toast((e && (e.message || e.error_description)) || MSG_SAVE_FAIL, null, 'bad');
+  toast((e && (e.message || e.error_description)) || MSG_SAVE_FAIL, null, 'bad');
 }
 function afterSave(msg) {
-  app.closeModal();
+  closeModal();
   app.saveRefresh();
   /*  ⛔ בלי רשת ההודעה אומרת «במכשיר» — ⚠️ «נשמר» סתם נקרא «נשמר בענן»,
    *  ⭐ וזו בדיוק ההטעיה שכתיבה מקומית-תחילה יוצרת. */
-  if (msg) app.toast(navigator.onLine ? msg : MSG_SAVED_LOCAL, null, 'good');
+  if (msg) toast(navigator.onLine ? msg : MSG_SAVED_LOCAL, null, 'good');
   schedulePush();
   return Promise.resolve();
 }
@@ -591,7 +592,7 @@ function pendTag(key) {
   var age = Date.now() - t, late = age > PEND_LATE_MS;
   var title = 'ממתין לסנכרון מאז ' + new Date(t).toLocaleString('he-IL') +
               ' (' + pendFmtAge(age) + ') — שמור במכשיר, טרם אושר בענן';
-  return '<span class="pend-tag' + (late ? ' late' : '') + '" title="' + app.esc(title) + '">' +
+  return '<span class="pend-tag' + (late ? ' late' : '') + '" title="' + esc(title) + '">' +
          (late ? '⚠️' : '⏳') + ' ממתין</span>';
 }
 

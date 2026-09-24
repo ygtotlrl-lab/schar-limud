@@ -7,6 +7,7 @@
    ════════════════════════════════════════════════════════════════════ */
 
 import { app } from './util.js';
+import { lsToast } from './ui.js';
 
 /* ═══ עמידות אחסון מקומי — מודול משותף ═════════════════════════════════
    ══════════════════════════════════════════════════════════════════════════ */
@@ -221,7 +222,7 @@ function lsToastThrottled(msg) {
   var now = Date.now();
   if (now - _lsToastAt < 8000) return;
   _lsToastAt = now;
-  try { app.lsToast(msg, 6000, 'bad'); } catch (e) { }
+  try { lsToast(msg, 6000, 'bad'); } catch (e) { }
 }
 function lsGet(key, fallback) {
   try {
@@ -268,7 +269,7 @@ function lsHorizonRelease() {
     if (!lsHorizonKeys().length) return 0;
     if (lsUsage().total >= LS_WARN_BYTES) return 0;
     var n = lsClearHorizons();
-    if (n) { try { app.lsToast(MSG_LS_RESTORED, 5000, 'good'); } catch (e1) { } }
+    if (n) { try { lsToast(MSG_LS_RESTORED, 5000, 'good'); } catch (e1) { } }
     return n;
   } catch (e) { return 0; }
 }
@@ -688,9 +689,9 @@ function lsBootAlert(u) {
     lsAlert(MSG_LS_CRIT + ' (' + lsFmtBytes(u.total) + ' מתוך ' + lsFmtBytes(u.quota) + ')');
   } else if (u.total >= LS_WARN_BYTES) {
     lsLog('⚠️ מעל סף האזהרה', lsFmtBytes(u.total), u.total);
-    try { app.lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000, 'bad'); } catch (e) { }
+    try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000, 'bad'); } catch (e) { }
   }
-  if (lsHorizonKeys().length) { try { app.lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
+  if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */

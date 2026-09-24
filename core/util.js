@@ -11,6 +11,7 @@
    ════════════════════════════════════════════════════════════════════ */
 
 import { lsGet, lsSetRaw } from './storage.js';
+import { toast } from './ui.js';
 
 /* ═══ קריאת ערך מספרי — מודול משותף ═══════════════════════════════════════
    ⛔ **כל קריאת ערך מספרי משדה עוברת כאן** — ⚠️ המרה ישירה מחזירה `NaN`
@@ -187,7 +188,7 @@ function kvParse(key, raw) {
     /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
      *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
     console.error('[sync] ' + MSG_KV_BAD + ' [' + key + ']:', e);
-    app.toast('⚠️ ' + kvBadLabel(key), null, 'bad');
+    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
     return { ok: false, value: null, bad: true };
   }
 }
