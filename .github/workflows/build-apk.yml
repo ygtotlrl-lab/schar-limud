@@ -17,10 +17,10 @@ on:
   # sw.js, …) do NOT need a new APK — the app loads the live site — so those
   # paths are deliberately not listed here.
   #
-  # This trigger is also what makes the workflow runnable before it reaches the
-  # default branch: GitHub only offers "Run workflow" for files that already
-  # exist on the default branch, while push events fire from any branch.
+  # ⛔ אין להסיר את `branches` — ⚠️ חבילה חתומה נבנית מהענף שמשוחרר ממנו:
+  # ⭐ דחיפה לענף עבודה אינה שחרור, ובנייה ממנה חותמת קוד שעוד לא מוזג.
   push:
+    branches: [main]
     paths:
       - 'android/**'
       # ⛔ התיעוד אינו נכנס ל-APK — ⚠️ שינוי בו אינו בנייה ואינו קידום גרסה.
