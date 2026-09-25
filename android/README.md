@@ -3,8 +3,6 @@
 A native Android **WebView** shell (not a TWA) that loads the **live site** over the
 network — כתובת האפליקציה, `android.url` שבתצורה.
 
-Built in the exact pattern of the organisation's round-13 shell (the network-loading one),
-
 ## מה בפנים
 
 | | |
@@ -43,8 +41,7 @@ Built in the exact pattern of the organisation's round-13 shell (the network-loa
 לבדוק.
 <!-- SHARED:end -->
 
-⚠️ **כאן אין APK ותיק להחליף** — המעטפת הראשונה בריפו הזה טוענת מהרשת מהיום
-הראשון, ולכן המעבר היחיד הוא דפדפן ← APK. ⛔ **והנתונים כאן הם כסף**
+⛔ **והנתונים כאן הם כסף**
 (`sl_transactions`): תשלום שנרשם בדפדפן וטרם עלה לענן אינו «אי-נוחות».
 
 <!-- SHARED:start id="android-icons" -->
@@ -114,9 +111,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **קובץ** | ⛔ אינו בריפו — GitHub Secret `KEYSTORE_B64`, מפוענח לקובץ זמני בזמן בנייה ונמחק אחריה (PKCS12, RSA 4096) |
 | **alias** | ⛔ אינו מוקלד — `sign-apk.sh` גוזר אותו מהמפתח עצמו |
 | **storepass / keypass** | ⛔ אינה בריפו — GitHub Secret `KEYSTORE_PASS` |
-| **תוקף** | 10,000 יום — 2026-09-15 עד 2054-01-31 |
 | **SHA256** | טביעת המפתח — `signSha256` שבתצורה |
-| **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |
 
 ⭐ **מסלול חתימה אחד ויחיד** — `signing/sign-apk.sh`. ⛔ החלופות
 הידניות אינן מתועדות כאן: מסלול חתימה שני בתיעוד הוא בדיוק הדרך שבה APK
@@ -128,35 +123,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 
 ### פרטי המעטפת
 שם החבילה, `versionCode` ו-SDK — מהתצורה ומ-`tools/gen-app.mjs`;
-`usesCleartextTraffic=false`. ⚠️ המעטפת הראשונה כאן טוענת מהרשת מהיום
-הראשון — ⛔ לא היה כאן שלב `file://`.
-
-<!-- SHARED:start id="android-smali-scope" -->
-## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
-
-⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
-היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
-ולכן אין בה URL שצריך לתקן.
-⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
-ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
-«Sign with the PERMANENT key» שלמעלה.
-⭐ **שני הקבצים שנושאים את ה-URL הם `MainActivity.smali` ו-`MainActivity$2.smali`**
-— ⛔ וההוראה זהה בכל הריפו; הכתובת עצמה, שם תיקיית העבודה והמפתח הם
-פר-אפליקציה, ⛔ ויושבים בבלוק שמתחת.
-<!-- SHARED:end -->
-
-```bash
-apktool d <app>.apk -o /tmp/schar_work -f
-rm -rf /tmp/schar_work/build          # חובה לפני בנייה חוזרת
-apktool b /tmp/schar_work -o built.apk
-zipalign -f 4 built.apk aligned.apk
-SIGN_KEYSTORE=<עותק מקומי של המפתח> SIGN_PASS=<הערך שב-KEYSTORE_PASS> \
-  signing/sign-apk.sh aligned.apk output.apk
-```
-
-⚠️ **כאן אין APK ותיק בלי מקור** — המעטפת הראשונה בריפו הזה נבנתה מ-`android/`
-מהיום הראשון. הפרק נשמר כדפוס ארגוני אחיד, ⛔ ולא מפני שיש כאן APK שצריך
-לתקן.
+`usesCleartextTraffic=false`.
 
 <!-- SHARED:start id="android-cache-apk" -->
 ### ⚠️ Cache APK — כלל זהב
