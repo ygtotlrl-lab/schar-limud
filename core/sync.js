@@ -161,6 +161,13 @@ function tombStamp(r) {
   return null;
 }
 
+// זמן המחיקה ל-`deleted_at` — ISO, ⭐ וכל מחיקה בכל אפליקציה כותבת אותו מכאן.
+// ⛔ אל תקרא לשעון כשיש חותמת מצבה — ⚠️ דחיפה חוזרת של אותה מצבה הייתה
+//    מזיזה את זמן המחיקה, ⭐ והמחיקה היא רגע אחד: רגע החותמת.
+function tombAt(ts) {
+  return new Date((typeof ts === 'number' && isFinite(ts)) ? ts : Date.now()).toISOString();
+}
+
 function prunePastTombstones(arr, nowTs) {
   if (!Array.isArray(arr)) return [];
   var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
@@ -1042,7 +1049,7 @@ function eraKick() {
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { newClientId, idEq, idArg, mergeCore, tombStamp,
+export { newClientId, idEq, idArg, mergeCore, tombAt, tombStamp,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
