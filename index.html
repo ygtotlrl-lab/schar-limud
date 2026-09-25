@@ -97,7 +97,7 @@ import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick,
          pendAll, pendBoot, pendClearMany, pendCount, pendFailed, pendHas,
          pendMark, pendMarkMany, pendTag, plBoot, plNum, plTick, plTouch,
          pushDirty, rtyBoot, rtyNote, runSave, sbWatch, schedulePush,
-         tombBoot, tombPruneMerged } from './core/sync.js';
+         tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } from './core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
          mirrorTables, mirrorWrite } from './core/mirror.js';
@@ -830,9 +830,6 @@ var SL_COLS = {
 };
 var _slLastPullOk = 0;
 
-// ⛔ `slNow` היא חותמת ה-**מחיקה** (`deleted_at`), ⚠️ והיא נשארת ISO —
-// ⛔ ואינה חותמת המיזוג: ⭐ `updated_at` הוא `Date.now()` במילישניות.
-function slNow() { return new Date().toISOString(); }
 // מפתח הזהות. `client_id` כשקיים — הוא נוצר במכשיר ושורד את המסע לשרת;
 // `id` הוא נפילה-חזרה לרשומות היסטוריות שקדמו ל-migrations/006.
 function slKey(r) {
@@ -2192,7 +2189,7 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
   if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
-  var row=Object.assign({},t,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
+  var row=Object.assign({},t,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   refreshUI();
@@ -2419,7 +2416,7 @@ function deleteListItem(key){
     if(!yes)return;
     var r0=(MIRROR.sl_lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
     if(!r0){toast(MSG_ITEM_MISSING, null, 'bad');return;}
-    var row=Object.assign({},r0,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
+    var row=Object.assign({},r0,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
     if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     pendMark(pendLstKey(row));
     refreshUI();
@@ -2456,7 +2453,7 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
  ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
   if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
-  var row=Object.assign({},s,{deleted:true,deleted_at:slNow(),deleted_by:slWhoName()});
+  var row=Object.assign({},s,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_students',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
