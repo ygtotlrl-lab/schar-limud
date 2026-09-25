@@ -1,14 +1,17 @@
 /* ═══ core/auth.js — הכניסה והסשן ═══════════════════════════════════════
-   ⭐ נעילה, סשן, הרשאות וכתיבת משתמש — ⚠️ רק במי שיש בה כניסה.
+   ⭐ נעילה, סשן, הרשאות, טביעת הסיסמה, מראת המשתמשים וכתיבת משתמש —
+      ⚠️ רק במי שיש בה כניסה.
    השורות: «כתיבת משתמש עוברת בפונקציה אחת» ·
    «`lock` — נעילת חוסר-פעילות» · «`sess` — מודל הסשן» · «מודל ההרשאות» ·
-   «מראת המשתמשים — ועדכונה החלקי» · «שכבת כניסה»
+   «מראת המשתמשים — ועדכונה החלקי» · «שכבת כניסה» · «`PBKDF2` — פרמטרים» ·
+   «כניסה אופליין»
    ⛔ המודול זהה בית-לבית בכל ריפו שנושא אותו — ⚠️ והתצורה פר-אפליקציה
       נמסרת ב-`appConfigure` שבראש `index.html`, ⭐ ואינה כתובה כאן.
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
    ════════════════════════════════════════════════════════════════════ */
 
-import { app } from './util.js';
+import { MSG_PASS_CHANGED_OUT, MSG_USER_DISABLED_OUT, app } from './util.js';
+import { MIRROR, mirrorSave } from './mirror.js';
 import { newClientId } from './sync.js';
 import { logAction, logFlush } from './backup.js';
 
@@ -142,6 +145,210 @@ function isAdminOf(u) { return !!u && String(u.role) === ROLE_ADMIN; }
 function isAdmin() { return isAdminOf(sessGet()); }
 /* ═══════════════ סוף מודול מודל ההרשאות ═════════════════════════════════ */
 
+/* ═══ טביעת הסיסמה — מודול משותף ═════════════════════════════════════════
+   ⛔ PBKDF2-SHA256 · 100,000 סיבובים · 256 ביט · **ומלח אקראי פר-משתמש** —
+      ⚠️ מכשיר שאבד חושף טביעות ולא סיסמאות, ⭐ וההשהיה היא מה שהופך
+      ניחוש-בכוח על העותק שבדיסק ליקר גם מול סיסמה בת שש ספרות.
+   ⛔ **וההקשר נגזר מהתצורה** — `<id>/<prefix>users/v1/` — ⚠️ ה-origin משותף
+      לכל האפליקציות, ⭐ וטבלה מחושבת מראש לאחת אינה תקפה באחרת: ⛔ אין
+      לשנות את הצורה — ⚠️ כל טביעה שמורה נגזרה ממנה, ⛔ ושינוי נועל בחוץ
+      את כל המשתמשים.
+   ⛔ **כל כשל נכשל סגור** — ⚠️ אין מלח או אין `crypto.subtle` ⇒ `null`,
+      ⭐ והקורא אינו שומר טביעה ⛔ ואינו משאיר טביעה ישנה.
+   ══════════════════════════════════════════════════════════════════════ */
+var AUTH_PASS_ITER = 100000;
+function _authApp() { return (typeof self !== 'undefined' && self.APP) || {}; }
+function authUsersTable() { return _authApp().prefix + 'users'; }
+function _authPassCtx() { return _authApp().id + '/' + authUsersTable() + '/v1/'; }
+function _authHex(b) {
+  var h = '';
+  for (var i = 0; i < b.length; i++) h += (b[i] + 0x100).toString(16).slice(1);
+  return h;
+}
+// 16 בתים אקראיים כ-hex.
+function authRandSalt() {
+  try {
+    if (typeof crypto === 'undefined' || !crypto || !crypto.getRandomValues) return null;
+    var b = new Uint8Array(16); crypto.getRandomValues(b);
+    return _authHex(b);
+  } catch (e) { return null; }
+}
+// PBKDF2-SHA256 → hex בן 64 תווים.
+async function authPassFp(pass, salt) {
+  try {
+    if (!salt) return null;
+    if (typeof crypto === 'undefined' || !crypto || !crypto.subtle || !crypto.subtle.importKey) return null;
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey('raw', enc.encode(String(pass == null ? '' : pass)), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(_authPassCtx() + String(salt)), iterations: AUTH_PASS_ITER, hash: 'SHA-256' }, key, 256);
+    return _authHex(new Uint8Array(bits));
+  } catch (e) { console.warn('[auth] גזירת טביעה נכשלה', e); return null; }
+}
+// מלח חדש וטביעה לסיסמה — `{salt, fp}` או `null`.
+async function authMakePassFp(pass) {
+  var salt = authRandSalt();
+  if (!salt) return null;
+  var fp = await authPassFp(pass, salt);
+  return fp ? { salt: salt, fp: fp } : null;
+}
+/*  ⛔ שדות הכתיבה לסיסמה — ⚠️ כשל גזירה **מאפס את שני השדות** ואינו מדלג:
+ *  ⭐ טביעה ישנה ששרדה שינוי סיסמה הייתה פותחת את הכניסה האופליין בסיסמה
+ *  הקודמת, לנצח. ⛔ וכל מסלול שכותב סיסמה עובר כאן. */
+async function authPassFields(pass) {
+  var made = await authMakePassFp(pass);
+  return made ? { pass_salt: made.salt, pass_fp: made.fp }
+              : { pass_salt: null, pass_fp: null };
+}
+/*  ⛔ תשובת שרת שאומרת «עמודות הטביעה אינן קיימות» — ⚠️ בלי הזיהוי כל
+ *  שמירת משתמש נכשלת לגמרי בחלון שבין דחיפת הקוד להרצת המיגרציה. */
+function authMissingFpCol(err) {
+  var m = ((err && (err.message || err.details || err.hint || err.code || '')) + '').toLowerCase();
+  return m.indexOf('pass_fp') !== -1 || m.indexOf('pass_salt') !== -1;
+}
+/*  ⛔ האימות — מקוון ואופליין — מול הטביעה בלבד, ⭐ ומחזיר אחת מארבע:
+ *  `ok` · `bad` (סיסמה שגויה או משתמש מושבת) · `no-fp` · `no-crypto`.
+ *  ⛔ אין לאחד את שלושת הכישלונות — ⚠️ «סיסמה שגויה» על היעדר טביעה שולח
+ *  את המשתמש להקליד שוב ושוב סיסמה נכונה. ⛔ ואין כאן אכיפת פורמט — ⚠️ היא
+ *  הייתה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן. */
+async function authVerify(u, pass) {
+  if (!u || u.active !== true) return 'bad';
+  if (!u.pass_salt || !u.pass_fp) return 'no-fp';
+  var fp = await authPassFp(pass, u.pass_salt);
+  if (!fp) return 'no-crypto';
+  return (fp === u.pass_fp) ? 'ok' : 'bad';
+}
+/* ═══════════════ סוף מודול טביעת הסיסמה ═════════════════════════════════ */
+
+/* ═══ מראת המשתמשים — מודול משותף ═════════════════════════════════════════
+   ⛔ עותק מקומי של טבלת המשתמשים לכניסה אופליין — ⚠️ לכל משתמש ולא רק למי
+      שנכנס אחרון במכשיר: ⭐ מכשיר שמישהו אחר נכנס בו אחרון היה נועל בחוץ
+      את כל השאר.
+   ⛔ **רשימת-היתר של עמודות ולא רשימת-איסור** — ⚠️ עמודה רגישה שתתווסף
+      לטבלה אינה יורדת לדיסק, ⭐ והשאילתה עצמה מבקשת רק אותן: ⛔ הסיסמה
+      אינה מגיעה לזיכרון הדפדפן כלל.
+   ⛔ **וכל כתיבה למראה עוברת ב-`usersSanitize`** — המלאה, החלקית, ושער
+      הדיסק שב-`MIRROR_CFG.clean`: ⚠️ נתיב שלישי הוא נתיב שעוקף את הרשימה.
+   ⚠️ **והמראה מחזיקה גם משתמש מושבת** — ⭐ `authVerify` הוא שחוסם אותו:
+      ⛔ שורה שנשמטה הייתה משאירה במכשיר אחר את העותק הפעיל הישן.
+   ══════════════════════════════════════════════════════════════════════ */
+var AUTH_USER_COLS = ['client_id', 'username', 'full_name', 'role', 'active',
+                      'created_at', 'updated_at', 'pass_salt', 'pass_fp'];
+/*  ⛔ שדה שנמסר ריק נכתב ריק — ⚠️ איפוס הטביעה הוא ערך ולא היעדר:
+ *  ⭐ ורק שדה שלא נמסר כלל נשאר כפי שהיה. */
+function _authSlim(r) {
+  var o = {};
+  AUTH_USER_COLS.forEach(function (c) { if (r[c] !== undefined) o[c] = r[c]; });
+  return o;
+}
+function usersSanitize(rows) {
+  return (Array.isArray(rows) ? rows : [rows])
+    .filter(function (r) { return r && typeof r === 'object' && r.username != null; })
+    .map(_authSlim);
+}
+function usersGet() {
+  var v = MIRROR[authUsersTable()];
+  return Array.isArray(v) ? v : [];
+}
+// החלפת המראה כולה — משיכה מלאה מהענן.
+function usersSaveAll(rows) {
+  if (!Array.isArray(rows)) return false;
+  MIRROR[authUsersTable()] = usersSanitize(rows);
+  return mirrorSave(authUsersTable());
+}
+/*  ⛔ משתמש בודד, בלי משיכה מלאה — ⚠️ הכניסה המקוונת ושינוי הסיסמה מחזיקים
+ *  את השורה בידם, ⭐ ובלי המסלול הזה מכשיר שאיבד רשת היה מאמת מול טביעה
+ *  ישנה. ⛔ **מיזוג שדות ולא החלפת שורה** — ⚠️ תשובה בלי עמודה אינה מוחקת
+ *  טביעה קיימת. */
+function usersSaveOne(row) {
+  var clean = usersSanitize(row)[0];
+  if (!clean) return false;
+  var t = authUsersTable(), arr = usersGet().slice(), hit = null;
+  for (var i = 0; i < arr.length && !hit; i++) {
+    var u = arr[i];
+    if (!u) continue;
+    if (clean.client_id != null ? String(u.client_id) === String(clean.client_id)
+                                : String(u.username) === String(clean.username)) hit = u;
+  }
+  if (hit) Object.keys(clean).forEach(function (k) { hit[k] = clean[k]; });
+  else arr.push(clean);
+  MIRROR[t] = arr;
+  return mirrorSave(t);
+}
+function usersByName(username) {
+  var arr = usersGet();
+  for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].username) === String(username)) return arr[i];
+  return null;
+}
+/*  ⛔ רענון המראה מהענן — ⚠️ בכל המשתמשים ובעמודות שברשימה בלבד. ⭐ נקרא
+ *  אחרי כניסה מקוונת, ⛔ ושומר הריצה הכפולה מונע שתי משיכות שנערמות ברשת
+ *  איטית. ⚠️ `USER_CFG.refreshed` — מה שהאפליקציה עושה אחרי שהמראה נשמרה.
+ *  ⛔ ובלי משתמש מחובר אין משיכה — ⚠️ רשימת הצוות אינה יורדת למכשיר של
+ *  מי שטרם נכנס. */
+var _authPulling = false;
+async function usersRefresh() {
+  if (_authPulling || !sessActive() || !app.USER_CFG.ready()) return false;
+  _authPulling = true;
+  try {
+    var r = await app.USER_CFG.run(app.USER_CFG.from().select(AUTH_USER_COLS.join(',')));
+    if (!r || r.error || !Array.isArray(r.data)) return false;
+    usersSaveAll(r.data);
+    if (app.USER_CFG.refreshed) app.USER_CFG.refreshed();
+    return true;
+  } catch (e) { console.warn('[auth] רענון המראה נכשל', e); return false; }
+  finally { _authPulling = false; }
+}
+/* ═══════════════ סוף מודול מראת המשתמשים ════════════════════════════════ */
+
+/* ═══ אימות מחדש בחזרת הרשת — מודול משותף ═════════════════════════════════
+   ⛔ כניסה אופליין מאומתת מחדש מול הענן כשהרשת חוזרת — ⚠️ בלעדיה משתמש
+      שהושבת, או שסיסמתו שונתה במכשיר אחר, נשאר מחובר עד הטעינה הבאה.
+   ⭐ הכניסה נלכדת ב-`authLog` — ⚠️ המשתמש והטביעה שמולה אומת; ⛔ ומאזין
+      ה-`online` נדרך בכניסה האופליין הראשונה, ⭐ שבלעדיה אין מה לאמת.
+   ⛔ **כשל רשת אינו מכריע** — ⚠️ רק תשובה סמכותית מוציאה: ⭐ אין שורה,
+      השורה מושבתת, או שהטביעה בענן אינה זו שמולה נכנס.
+   ══════════════════════════════════════════════════════════════════════ */
+var AUTH_OFFLINE_BRANCHES = ['offline', 'switch_offline'];
+var _authOffline = null, _authWired = false;
+function _authNoteLogin(ok, branch, username) {
+  if (!ok) return;
+  if (AUTH_OFFLINE_BRANCHES.indexOf(branch) === -1) { _authOffline = null; return; }
+  var cu = usersByName(username), su = sessGet();
+  _authOffline = { client_id: su ? su.client_id : (cu && cu.client_id),
+                   fp: cu ? cu.pass_fp : null };
+  if (_authWired || typeof window === 'undefined') return;
+  _authWired = true;
+  try { window.addEventListener('online', function () { authRevalidate(); }); }
+  catch (e) { console.warn('[auth] online', e); }
+}
+async function authRevalidate() {
+  var o = _authOffline;
+  if (!o || o.client_id == null || !app.USER_CFG.ready()) return false;
+  var res;
+  try {
+    res = await app.USER_CFG.run(app.USER_CFG.from().select(AUTH_USER_COLS.join(','))
+      .eq('client_id', String(o.client_id)).maybeSingle());
+  } catch (e) { return false; }
+  /*  ⛔ ההקשר נלכד בכניסה ונבדק אחרי ההמתנה — ⚠️ יציאה או כניסה אחרת
+   *  בזמן הבקשה אינה נזקפת למשתמש הקודם. */
+  if (_authOffline !== o) return false;
+  var su = sessGet();
+  if (!su || String(su.client_id) !== String(o.client_id)) { _authOffline = null; return false; }
+  if (!res || res.error) return false;
+  var row = res.data;
+  _authOffline = null;
+  if (!row || row.active !== true || (o.fp && row.pass_fp !== o.fp)) {
+    if (row) usersSaveOne(row);
+    app.USER_CFG.logout((row && row.active === true) ? MSG_PASS_CHANGED_OUT : MSG_USER_DISABLED_OUT);
+    return false;
+  }
+  usersSaveOne(row);
+  if (app.USER_CFG.revalidated) app.USER_CFG.revalidated(row);
+  console.log('[auth] כניסה אופליין אושררה מול הענן');
+  return true;
+}
+/* ═══════════════ סוף מודול האימות מחדש ══════════════════════════════════ */
+
 /* ═══ כתיבת משתמש — מודול משותף ═══════════════════════════════════════════
    ⛔ שינוי כאן — שלוש האפליקציות שיש בהן כניסה,
       באותו סבב: אחרת הבלוק נסחף בין הריפו.
@@ -177,7 +384,7 @@ function writeUser(id, row) {
     /*  ⛔ נפילה-חזרה לחלון שבין דחיפת הקוד להרצת המיגרציה — ⚠️ בלעדיה
      *  **כל** שמירת משתמש נכשלת עד שהעמודות ייווצרו: ⭐ המשתמש נשמר,
      *  והכניסה האופליין שלו תיפתח בשינוי הסיסמה הבא. */
-    if (!(res && res.error && app.USER_CFG.missingFp(res.error))) return res;
+    if (!(res && res.error && authMissingFpCol(res.error))) return res;
     var b2 = Object.assign({}, body);
     delete b2.pass_salt; delete b2.pass_fp;
     return _writeUserSend(b2, key).then(function (r) {
@@ -202,11 +409,16 @@ function authLog(ok, branch, username) {
             { typed_username: username || '', online: !!navigator.onLine });
   if (ok && AUTH_ONLINE_BRANCHES.indexOf(branch) !== -1) {
     try { logFlush(); } catch (e) { console.warn('[auth] logFlush', e); }
+    try { usersRefresh(); } catch (e) { console.warn('[auth] usersRefresh', e); }
   }
+  _authNoteLogin(ok, branch, username);
 }
 /* ═══════════════ סוף מודול רישום כניסה ══════════════════════════════════ */
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { ROLE_ADMIN, authLog, isAdmin, isAdminOf, lkBoot, lkReset, lkStop,
-         sessActive, sessClear, sessGet, sessSet, writeUser };
+export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authMissingFpCol, authPassFields,
+         authPassFp, authRandSalt, authRevalidate, authUsersTable, authVerify,
+         isAdmin, isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessClear,
+         sessGet, sessSet, usersByName, usersGet, usersRefresh, usersSanitize,
+         usersSaveAll, usersSaveOne, writeUser };
