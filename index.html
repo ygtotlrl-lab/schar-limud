@@ -1954,20 +1954,20 @@ function renderDash(){
 
   var rows='',colT={},grand=0;
   act.forEach(function(s){
-    var mm=actual[s.client_id]||{},tot=0,cells='';
+    var mm=actual[s.client_id]||{},tot=0,cellsHtml='';
     YEAR_MONTHS.forEach(function(m){
       var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
       // חודש מחוץ לטווח ההצטרפות/עזיבה מוצג כ-'·' — אבל רק אם באמת לא
       // נרשמה בו תנועה. תשלום מראש/בדיעבד מוצג תמיד, כדי שסכום העמודה
       // יהיה שווה בדיוק לסכום התנועות של החודש.
       if(!v&&!studentInMonth(s,DASH_YEAR,m)){
-        cells+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">·</td>';return;
+        cellsHtml+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">·</td>';return;
       }
       var extra=v&&!studentInMonth(s,DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לטווח הפעילות של התלמיד"':'';
-      cells+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">'+(v?fmt(v):'—')+'</td>';
+      cellsHtml+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' data-act="dash-month" data-year="'+DASH_YEAR+'" data-month="'+m+'">'+(v?fmt(v):'—')+'</td>';
     });
     grand=Math.round((grand+tot)*100)/100;
-    rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cells+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
+    rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHtml+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
   });
   document.getElementById('dash-tbody').innerHTML=rows||'<tr><td class="stu">—</td><td class="num" colspan="13">אין תלמידים פעילים</td></tr>';
 
@@ -2444,12 +2444,12 @@ function openAddStudent(){
   /*  ⚠️ הטופס נבנה כמחרוזת ונמסר ל-`openModal` — ⛔ מזהי השדות
    *  לא נגעו, ולכן `saveNewStudent` ממשיכה לקרוא בדיוק את אותם `id`;
    *  ⛔ וכל שדה נשאר מקושר ל-`<label for=…>`. */
-  var opts='<option value="">-- ללא --</option>';
-  (LISTS['sections']||[]).forEach(function(s){opts+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
+  var optsHtml='<option value="">-- ללא --</option>';
+  (LISTS['sections']||[]).forEach(function(s){optsHtml+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
   var body=''
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
-    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+opts+'</select></div>'
+    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+optsHtml+'</select></div>'
     +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
     +'<div class="frm-row-last frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp"></div>'
     +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';

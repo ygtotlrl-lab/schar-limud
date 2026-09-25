@@ -22,17 +22,24 @@ var SW_CFG = {
 /*  ⛔ דף האופליין — HTML אמיתי ⛔ ולא מחרוזת 'Offline' — ⚠️ והצבעים, הסמל
  *  והשם מהתצורה, ⭐ בבהיר ובכהה: ⛔ דף בהיר במכשיר כהה מסנוור ברגע שבו
  *  המשתמש כבר מתוסכל. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
+/*  ⛔ `esc` של הדף אינו זמין כאן — ⚠️ ה-worker סקריפט קלאסי ואינו מייבא
+ *  מודול: ⭐ ולכן בריחה משלו, באותם חמישה תווים. */
+function swEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
 var SW_OFFLINE_HTML =
   '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
   '<meta name="color-scheme" content="light dark">' +
-  '<title>אין חיבור — ' + self.APP.name + '</title><style>' +
+  '<title>אין חיבור — ' + swEsc(self.APP.name) + '</title><style>' +
   'html,body{margin:0;height:100%}' +
   'body{display:flex;align-items:center;justify-content:center;padding:24px;' +
   'font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-  'background:' + self.APP.offline.light.bg + ';color:' + self.APP.offline.light.ink + '}' +
-  '@media (prefers-color-scheme:dark){body{background:' + self.APP.offline.dark.bg +
-  ';color:' + self.APP.offline.dark.ink + '}}' +
+  'background:' + swEsc(self.APP.offline.light.bg) + ';color:' + swEsc(self.APP.offline.light.ink) + '}' +
+  '@media (prefers-color-scheme:dark){body{background:' + swEsc(self.APP.offline.dark.bg) +
+  ';color:' + swEsc(self.APP.offline.dark.ink) + '}}' +
   '.box{max-width:340px;text-align:center}' +
   '.mark{font-size:2.4rem;margin-bottom:10px}' +
   'h1{font-size:1.15rem;margin:0 0 10px}' +
@@ -40,8 +47,8 @@ var SW_OFFLINE_HTML =
   'a{display:inline-block;color:inherit;border:1.5px solid currentColor;border-radius:22px;' +
   'padding:10px 26px;font-weight:700;text-decoration:none}' +
   '</style></head><body><div class="box">' +
-  '<div class="mark">' + self.APP.offline.mark + '</div>' +
-  '<h1>' + self.APP.name + ' — אין חיבור לאינטרנט</h1>' +
+  '<div class="mark">' + swEsc(self.APP.offline.mark) + '</div>' +
+  '<h1>' + swEsc(self.APP.name) + ' — אין חיבור לאינטרנט</h1>' +
   '<p>האפליקציה עדיין לא נשמרה במלואה במכשיר.<br>' +
   'התחבר לרשת פעם אחת, ומאז היא תיפתח גם ללא חיבור.</p>' +
   '<a href="./">נסה שוב</a>' +
