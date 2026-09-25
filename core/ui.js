@@ -9,7 +9,7 @@
    ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
    ════════════════════════════════════════════════════════════════════ */
 
-import { MSG_SW_NO_WAITING, MSG_SW_TIMEOUT, app } from './util.js';
+import { MSG_SW_TIMEOUT, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 
 /* ═══ כפתור עסוק והשומר שבניתוב — מודול משותף ════════════════════════════
@@ -71,7 +71,9 @@ function actRun(el, fn) {
  *  `SKIP_WAITING`, ⛔ **ומה מפיל**: ערך קצר, שיורה לפני ההשתלטות
  *  ויהפוך לרענון שני. */
 var SW_APPLY_MS = 10000;
-var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0;
+/*  ⛔ `_swTaken` — העובד החדש כבר שולט והבאנר מוצג במקום רענון: ⚠️ אין
+ *  אז עובד ממתין, ⭐ והלחיצה היא רענון ⛔ ולא `SKIP_WAITING`. */
+var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0, _swTaken = false;
 function swBanner() { return document.getElementById('updater'); }
 /*  ⛔ מזהה הגרסה נקרא משם המטמון החי — ⚠️ ואין לו ליטרל שני בדף: ⭐ הוא
  *  מסונן בתחילית האפליקציה, ⛔ ובזמן התקנה יש שני שמות — הישן והחדש:
@@ -106,17 +108,18 @@ function swHideUpdate() {
   swBannerHide();
   swVer().then(function (v) { if (v) lsSet(app.LS_CFG.dismissKey, v); });
 }
-/*  ⛔ הרענון אינו כאן — ⚠️ הוא ב-`controllerchange` בלבד: ⭐ טיימר שמרענן
- *  בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting` שורד, הבאנר
- *  חוזר, והלחיצה הבאה חוזרת עליו. */
-/*  ⛔ שני כשלים נבדלים ⛔ ושני נוסחים — ⚠️ «אין עובד ממתין» הוא באנר
- *  שגרסתו כבר הוחלה, ⭐ ו«התקרה חלפה» הוא עדכון שהתחיל ולא השתלט:
- *  ⛔ נוסח אחד לשניהם שולח את מי שכבר מעודכן ללחוץ שוב ושוב. */
+/*  ⛔ הרענון שאחרי `SKIP_WAITING` אינו כאן — ⚠️ הוא ב-`controllerchange`:
+ *  ⭐ טיימר שמרענן בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting`
+ *  שורד, הבאנר חוזר, והלחיצה הבאה חוזרת עליו. */
+/*  ⛔ הלחיצה לפי המצב — ⚠️ העובד החדש כבר שולט ⟵ רענון מיד · ⭐ עובד
+ *  ממתין ⟵ `SKIP_WAITING` · ⛔ ובלי אף אחד מהם העובד בדרך להשתלטות,
+ *  ⚠️ והלחיצה ממתינה לה: ⭐ הודעת «אין גרסה» הייתה נאמרת על דף שמריץ
+ *  את הקוד הישן, ⛔ והבאנר ירד בלי שהגרסה החדשה נטענה. */
 function swApply(btn) {
   _swAccepted = true;
   busy(btn, true, 'מעדכן…');
-  if (!(_swReg && _swReg.waiting)) { swApplyFail(btn, MSG_SW_NO_WAITING); return; }
-  _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  if (_swTaken) { _swReloaded = true; location.reload(); return; }
+  if (_swReg && _swReg.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   _swWait = setTimeout(function () { swApplyFail(btn, MSG_SW_TIMEOUT); }, SW_APPLY_MS);
 }
 /*  ⛔ עובד ממתין ששרד את הלחיצה הוא כשל ⛔ ולא מצב — ⚠️ הבאנר יורד
@@ -140,7 +143,7 @@ function swRegister() {
   navigator.serviceWorker.addEventListener('controllerchange', function () {
     if (_swWait) { clearTimeout(_swWait); _swWait = 0; }
     if (_swReloaded || !hadController) return;
-    if (!_swAccepted && touched) { swShowUpdate(); return; }
+    if (!_swAccepted && touched) { _swTaken = true; swShowUpdate(); return; }
     _swReloaded = true;
     location.reload();
   });
@@ -156,11 +159,11 @@ function swRegister() {
       });
     });
     /*  ⛔ הבאנר יורד כשהעובד מפסיק להמתין ⛔ ולא רק בלחיצה — ⚠️ באנר
-     *  שגרסתו כבר הוחלה מזמין לחיצה שאין לה מה להחיל, ⭐ והמשתמש מקבל
-     *  כשל על עדכון שהצליח. */
+     *  שגרסתו כבר הוחלה מזמין לחיצה שאין לה מה להחיל. ⛔ ולא כשהעובד
+     *  החדש כבר שולט — ⭐ שם הדף עדיין מריץ את הישן, והלחיצה היא הרענון. */
     function checkForUpdate() {
       try {
-        reg.update().then(function () { if (!reg.waiting) swBannerHide(); })
+        reg.update().then(function () { if (!reg.waiting && !_swTaken) swBannerHide(); })
            .catch(function () {});
       } catch (e) {}
     }
