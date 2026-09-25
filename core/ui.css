@@ -112,7 +112,7 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 /* ═══ סוף core/ui.css ════════════════════════════════════════════════════ */
 /* ══ שומר העלייה ════════════════════════════════════════════════════════
    ⛔ המסך שעולה כשקוד הדף לא עלה — ⚠️ מעל הכול, ⭐ ובצבעי `offline` שבתצורה,
-   שהשומר כותב למשתנים: ⛔ והכפתור בצבעים ההפוכים, ⚠️ שהזוג כבר עומד בניגוד. */
+   שהשומר כותב למשתנים: ⛔ והכפתור בצבעים ההפוכים, ⚠️ שצבע שלישי אינו בתצורה. */
 #boot-fail{--boot-bg:#FFFFFF;--boot-ink:#1A1A1A;--boot-bg-dark:#121212;--boot-ink-dark:#F2F2F2;
   --boot-fg-use:var(--boot-ink);--boot-bg-use:var(--boot-bg);
   position:fixed;inset:0;z-index:var(--z-7);display:flex;align-items:center;justify-content:center;
