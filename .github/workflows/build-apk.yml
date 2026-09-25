@@ -23,6 +23,8 @@ on:
   push:
     paths:
       - 'android/**'
+      # ⛔ התיעוד אינו נכנס ל-APK — ⚠️ שינוי בו אינו בנייה ואינו קידום גרסה.
+      - '!android/README.md'
       - 'signing/**'
       - '.github/workflows/build-apk.yml'
 
