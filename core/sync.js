@@ -39,16 +39,6 @@ function idEq(a, b) {
   if (a == null || b == null) return false;
   return String(a) === String(b);
 }
-// מזהה כארגומנט למאפיין `onclick`, וכבורר לאיתור האלמנט בחזרה.
-// ⛔ **מצוטט תמיד** — uuid בלי מרכאות הוא שם משתנה שאינו קיים,
-// וכל כפתורי העריכה והמחיקה היו מתים.
-// ⛔ והסינון הוא **רשימת-היתר של תווים** ולא בריחה: ערך המאפיין
-//    עובר פענוח-ישויות לפני שהוא נקרא כ-JS, ולכן `&#39;` שנוצר ע"י `esc`
-//    היה חוזר להיות גרש וסוגר את המחרוזת. מזהה חוקי כאן הוא ספרות, אותיות
-//    לטיניות, מקף וקו תחתון בלבד — כל השאר נחתך.
-function idArg(v) {
-  return "'" + String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '') + "'";
-}
 /* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
 
 /* ═══ מיזוג רשומות — מודול משותף ═════════════════════════════════════════
@@ -1051,7 +1041,7 @@ function eraKick() {
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { newClientId, idEq, idArg, mergeCore, tombAt, tombStamp,
+export { newClientId, idEq, mergeCore, tombAt, tombStamp,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
