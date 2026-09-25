@@ -151,6 +151,8 @@ var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הו�
 var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
 var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
 var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+var MSG_USER_DISABLED_OUT = '⚠️ המשתמש הושבת — מתנתק';
+var MSG_PASS_CHANGED_OUT = '⚠️ הסיסמה שונתה — יש להיכנס מחדש';
 /* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
 
 /* ═══ עוזרי הרשת — מודול משותף ════════════════════════════════════════════
@@ -229,10 +231,11 @@ export { app, appConfigure, readNum, uniqKeyOf, uniqList, uniqHas,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,
-         MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
+         MSG_PASS_CHANGED_OUT, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED,
          MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR, MSG_STALE_CODE,
          MSG_SWITCHED_TO, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
+         MSG_USER_DISABLED_OUT,
          errMsg, getDeviceId, isNetErr, kvParse, withTimeout, dayIso,
          dayNoon,
          dayToday };
