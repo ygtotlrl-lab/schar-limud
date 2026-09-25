@@ -134,3 +134,10 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
   border-top-color:var(--brand);animation:view-spin .8s linear infinite}
 @keyframes view-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.view-spin{animation:none}}
+/* ══ הקליפה החשופה ══════════════════════════════════════════════════════
+   ⛔ `is-bare` על שורש הקליפה — ההורה של `#view` — מסתיר כל מה שאינו מיכל
+   התוכן: ⚠️ הקליפה מתחילה חשופה ב-HTML, ⭐ והקוד חושף את המסגרת רק יחד עם
+   מסך שמשתמש בה — ⛔ מסגרת שגלויה לפני המסך הראשון מהבהבת מעליו.
+   ⛔ ו-`:not(#view)` נושא סגוליות של מזהה — ⚠️ אין להחליפו במחלקה: ⭐ הוא
+   גובר על ה-`display` שהאפליקציה נותנת לחלקי המסגרת. */
+.is-bare > :not(#view){display:none}

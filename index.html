@@ -20,8 +20,8 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<!--  ⛔ הקליפה — כותרת · לשוניות · מיכל תוכן: ⚠️ `is-bare` מסתיר את הכותרת,
-      את הלשוניות ואת הלוחות עד הכניסה, ⭐ ומסך הכניסה במיכל. -->
+<!--  ⛔ הקליפה — כותרת · לשוניות · מיכל תוכן: ⚠️ והיא מתחילה חשופה, ⭐ והמסגרת
+      נחשפת רק יחד עם הלוחות — ⛔ ולא בטעינה ובכניסה. -->
 <div id="main-app" class="is-bare">
   <div id="topnav">
     <span class="nav-title">שכר לימוד</span>
@@ -105,8 +105,8 @@ import { bkBoot, logAction } from './core/backup.js';
 import { isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessBoot,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast,
-         uiNoDialog } from './core/ui.js';
+         modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         toast, uiNoDialog } from './core/ui.js';
 import { barChart } from './core/chart.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -138,8 +138,8 @@ appConfigure({
    ⛔ הקליפה ב-HTML נושאת מבנה בלבד — כותרת · לשוניות · מיכל תוכן · שכבות:
    ⚠️ ותוכן המסכים כאן, ⭐ ו-`mountView()` מציירת אותם לפני כל קוד שמחפש
    אלמנט בתוכם. ⛔ אין להזיז את הקריאה אליה מטה.
-   ⛔ ומסך הכניסה הוא מסך כמו כל מסך — ⚠️ במיכל, ⭐ ו-`is-bare` שעל
-   `#main-app` מסתיר את הכותרת, את הלשוניות ואת הלוחות עד הכניסה. */
+   ⛔ ומסך הכניסה הוא מסך כמו כל מסך — ⚠️ במיכל, ⭐ והלוחות מוסתרים עד
+   הכניסה, ⛔ ואיתם המסגרת. */
 function screenLoginHTML() {
   return `
 <div id="auth-screen">
@@ -391,7 +391,7 @@ function screenSettingsHTML() {
 function mountView() {
   var v = document.getElementById('view');
   if (!v) { console.error('[ui] אין מיכל תוכן — #view'); return; }
-  v.innerHTML = screenLoginHTML() + '<div id="app">' + screenDashHTML() + screenTxnHTML() +
+  v.innerHTML = screenLoginHTML() + '<div id="app" class="hidden">' + screenDashHTML() + screenTxnHTML() +
     screenStudentHTML() + screenSettingsHTML() + '</div>';
 }
 mountView();
@@ -1646,13 +1646,19 @@ async function doLoginOffline(u,p){
   enterApp();
   toast(MSG_OFFLINE_LOGIN,5000, 'bad');
 }
-function doLogout(){ctxSwitch();sessClear();lkStop();document.getElementById('main-app').classList.add('is-bare');document.getElementById('auth-screen').classList.remove('hidden');document.getElementById('au-pass').value='';}
+function doLogout(){ctxSwitch();sessClear();lkStop();slShowLogin(true);document.getElementById('au-pass').value='';}
+/*  ⛔ מסך הכניסה והלוחות מתחלפים יחד — ⚠️ והמסגרת עם הלוחות: ⭐ נקודה אחת
+ *  לשלושתם, ⛔ ששלוש קריאות פזורות הן שלושה מקומות לשכוח אחד. */
+function slShowLogin(on) {
+  document.getElementById('auth-screen').classList.toggle('hidden', !on);
+  document.getElementById('app').classList.toggle('hidden', on);
+  shellBare(on);
+}
 // ⭐ העלייה קוראת מהעותק המקומי **לפני** כל נגיעה ברשת.
 // אין יותר `await syncAll()` חוסם: בלי רשת הוא היה תוקע את המסך, ועם רשת
 // איטית הוא השאיר ספינר במקום נתונים שכבר יש לנו על הדיסק.
 function enterApp(){
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('main-app').classList.remove('is-bare');
+  slShowLogin(false);
   document.getElementById('nav-username').textContent=sessGet().username;
   slApplyMirror();
   refreshUI();
@@ -2519,8 +2525,7 @@ async function slBoot(){
   //    כשהמשתמש נכנס לפני דקה. ⛔ אין להחזיר: סשן שנשמר בלי תפוגה הוא
   //    כניסה קבועה על מכשיר משותף, ר' «המשתמש המחובר» למעלה.
 
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('main-app').classList.add('is-bare');
+  slShowLogin(true);
   // ⛔ אין בדיקת סכימה מול השרת בעלייה — ⚠️ ולכן אין מה לדלג עליו
   //    כשאין רשת.
   setTimeout(function(){document.getElementById('au-user').focus();},50);

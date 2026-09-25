@@ -130,7 +130,6 @@ var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
 var MSG_CLOUD_SYNC_FAIL = '⚠️ הסנכרון לענן נכשל — הנתונים שמורים במכשיר ויישלחו כשהרשת תחזור';
 var MSG_OFFLINE = '📴 אין חיבור לאינטרנט — הפעולה לא בוצעה';
 var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-var MSG_SW_NO_WAITING = '⚠️ אין גרסה שממתינה — הדף כבר על האחרונה';
 var MSG_SW_TIMEOUT = '⚠️ העדכון לא הושלם — נסה שוב';
 var MSG_DELETE = 'מחק';
 var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
@@ -233,7 +232,7 @@ export { app, appConfigure, readNum, uniqKeyOf, uniqList, uniqHas,
          MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED,
          MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR, MSG_STALE_CODE,
-         MSG_SWITCHED_TO, MSG_SW_NO_WAITING, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
+         MSG_SWITCHED_TO, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
          errMsg, getDeviceId, isNetErr, kvParse, withTimeout, dayIso,
          dayNoon,
          dayToday };

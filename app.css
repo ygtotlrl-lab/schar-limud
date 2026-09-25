@@ -64,9 +64,6 @@ body{-webkit-tap-highlight-color:transparent}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 
 /* ══ קליפה ═════════════════════════════════════════════════════════════ */
-/*  ⛔ לפני הכניסה — ⚠️ הכותרת, הלשוניות והלוחות מוסתרים, ⭐ ומסך הכניסה,
- *  שבמיכל, ממלא את החלון. */
-#main-app.is-bare > #topnav,#main-app.is-bare > #tabbar,#main-app.is-bare #app{display:none}
 #app{max-width:var(--col);margin:0 auto;padding-bottom:var(--sp-7)}
 @media (hover:hover){
   .nav-logout:hover{background:var(--border)}
