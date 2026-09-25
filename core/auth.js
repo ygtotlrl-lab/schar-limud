@@ -186,6 +186,8 @@ async function authPassFp(pass, salt) {
   } catch (e) { console.warn('[auth] גזירת טביעה נכשלה', e); return null; }
 }
 // מלח חדש וטביעה לסיסמה — `{salt, fp}` או `null`.
+// ⛔ מיוצאת אף שאין לה מייבא — ⚠️ המנהל גוזר בה את הטביעה למשתמש חדש
+//    מהקונסולה של הדף עצמו, לפני ה-`INSERT`: ⭐ זה השימוש הידני שלה.
 async function authMakePassFp(pass) {
   var salt = authRandSalt();
   if (!salt) return null;
@@ -417,8 +419,7 @@ function authLog(ok, branch, username) {
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authMissingFpCol, authPassFields,
-         authPassFp, authRandSalt, authRevalidate, authUsersTable, authVerify,
-         isAdmin, isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessClear,
-         sessGet, sessSet, usersByName, usersGet, usersRefresh, usersSanitize,
-         usersSaveAll, usersSaveOne, writeUser };
+export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
+         authUsersTable, authVerify, isAdmin, isAdminOf, lkBoot, lkReset, lkStop,
+         sessActive, sessClear, sessGet, sessSet, usersByName, usersGet,
+         usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };
