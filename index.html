@@ -102,7 +102,7 @@ import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } fr
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
          mirrorTables, mirrorWrite } from './core/mirror.js';
 import { bkBoot, logAction } from './core/backup.js';
-import { isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessBoot,
+import { isAdminOf, lkBoot, lkReset, lkStop, sessActive,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
          modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
@@ -126,7 +126,6 @@ appConfigure({
   get PL_CFG() { return PL_CFG; },
   get PUSH_CFG() { return PUSH_CFG; },
   get RTY_CFG() { return RTY_CFG; },
-  get SESS_CFG() { return SESS_CFG; },
   get TOAST_DEFAULT_MS() { return TOAST_DEFAULT_MS; },
   get USER_CFG() { return USER_CFG; },
   get saveRefresh() { return saveRefresh; }
@@ -636,14 +635,6 @@ var LK_CFG = {
   active: function () { return sessActive(); },
   lock:   function () { doLogout(); },
 };
-/* ── SESS_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/* ⚠️ `legacy` הוא רשימת מפתחות ה-localStorage של סשן **שהאפליקציה אינה
-   כותבת אליהם** — ⛔ ואין למחוק שם מהרשימה: המפתח עצמו עדיין יושב על
-   הדיסק של כל מכשיר שנכנסו בו, והוא מחזיק `id`, `username` ו-`role`. */
-var SESS_CFG = {
-  legacy: ['sl_session'],
-};
-
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ בשכר לימוד החותמת היא שורת `sl_settings` שמפתחה `SL_STAMP_KEY`. היא
    **מוחרגת מהמראה** ב-`slStripMeta` — שורת מטא אינה הגדרה, ⛔ ודחיפת-מצב
@@ -935,11 +926,8 @@ function slStripMeta(rows) {
 }
 
 /* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users ══════════════════════
-   **הבעיה שהטביעה פותרת.** כל שאר האפליקציה עובדת אופליין,
-   אבל `doLogin` שלח שאילתה לענן — ולכן **בלי רשת אי אפשר היה להיכנס
-   כלל**. מי שכבר נכנס פעם אחת המשיך דרך `sl_session`, אבל מכשיר שמישהו
-   אחר נכנס בו אחרון נעל בחוץ את כל השאר. זו הייתה האפליקציה האחרונה
-   מהן שנשארה כך.
+   **הבעיה שהטביעה פותרת.** כל שאר האפליקציה עובדת אופליין — ⛔ והכניסה
+   חייבת לעבוד גם היא בלי רשת, ⚠️ לכל משתמש ולא רק למי שנכנס אחרון במכשיר.
 
    **הפתרון — אותו מנגנון בדיוק.** לכל משתמש `pass_salt` + `pass_fp`:
    PBKDF2-SHA256, `SL_PASS_ITER_USER` סיבובים, **מלח אקראי פר-משתמש**. הטביעה יורדת
@@ -2492,8 +2480,6 @@ async function slBoot(){
   // משותפת לכל האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
   try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
-  // מודל הסשן — נקודת ההפעלה היחידה של המודול.
-  try { sessBoot(); } catch (e) { console.warn('[sess] sessBoot', e); }
   // סימוני "ממתין לסנכרון" — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }

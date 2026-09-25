@@ -10,7 +10,6 @@
 
 import { app } from './util.js';
 import { newClientId } from './sync.js';
-import { lsGet, lsLog, lsRemove } from './storage.js';
 
 /* ═══ נעילת חוסר-פעילות — מודול משותף ═════════════════════════════════════
    ═══════════════════════════════════════════════════════════════════════ */
@@ -115,44 +114,11 @@ function lkBoot() {
 /* ═══ מודל הסשן — מודול משותף ═════════════════════════════════════════════
    ═══════════════════════════════════════════════════════════════════════ */
 var _sessUser = null;
-var _sessBooted = false;
 
 function sessSet(u) { _sessUser = u || null; return _sessUser; }
 function sessGet() { return _sessUser; }
 function sessClear() { _sessUser = null; }
 function sessActive() { return !!_sessUser; }
-
-/*  רשימת מפתחות השריד, נכשלת-סגור על תצורה חסרה. */
-function _sessLegacy() {
-  try {
-    var k = (typeof app.SESS_CFG === 'object' && app.SESS_CFG && app.SESS_CFG.legacy) || [];
-    return Object.prototype.toString.call(k) === '[object Array]' ? k : [];
-  } catch (e) { return []; }
-}
-
-/*  ניקוי שרידי הסשן; מחזירה את מספר המפתחות שנמחקו בפועל.
-    ⚠️ הקריאה קודמת למחיקה בכוונה — כדי שהיומן יירשם רק כשבאמת היה שם
-    משהו, ולא בכל עלייה של כל מכשיר. */
-function _sessPurge() {
-  var keys = _sessLegacy(), gone = [];
-  for (var i = 0; i < keys.length; i++) {
-    try {
-      if (lsGet(keys[i], null) === null) continue;
-      lsRemove(keys[i]);
-      gone.push(keys[i]);
-    } catch (e) { /* אחסון חסום — לא נוגעים, וננסה שוב בעלייה הבאה */ }
-  }
-  if (gone.length) { try { lsLog('sess-purge', gone.join(',')); } catch (e) { } }
-  return gone.length;
-}
-
-/*  ⛔ נקודת ההפעלה היחידה — פונקציית העלייה של האפליקציה,
-    זו שקוראת גם ל-`lsBoot()` ול-`pendBoot()`. */
-function sessBoot() {
-  if (_sessBooted) return 0;
-  _sessBooted = true;
-  return _sessPurge();
-}
 /* ═══════════════ סוף מודול הסשן ═════════════════════════════════════════ */
 
 /* ═══ מודל ההרשאות — מודול משותף ══════════════════════════════════════════
@@ -224,4 +190,4 @@ function writeUser(id, row) {
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { ROLE_ADMIN, isAdmin, isAdminOf, lkBoot, lkReset, lkStop,
-         sessActive, sessBoot, sessClear, sessGet, sessSet, writeUser };
+         sessActive, sessClear, sessGet, sessSet, writeUser };
