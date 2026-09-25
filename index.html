@@ -812,11 +812,9 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
      3. **סנכרון ברקע** — משיכה, מיזוג, ואז דחיפת מה שמקומי וחדש יותר.
      4. **מיזוג ברמת רשומה** לפי `client_id` ו-`updated_at` (migrations/008).
 
-   ⚠️ **זהות הרשומה — `client_id` עם נפילה-חזרה ל-`id`.** 25 התנועות ו-63
-   התלמידים שקדמו ל-006 מחזיקים `client_id = NULL`, ולכן מפתח המיזוג הוא
-   `c:<client_id>` כשקיים ו-`i:<id>` אחרת. רשומה שנוצרה במכשיר היא ההפך —
-   יש לה `client_id` ואין לה `id` (הוא SERIAL שהמסד מקצה), והיא נתפרת לשורה
-   שחזרה מהענן לפי ה-`client_id`.
+   ⚠️ **זהות הרשומה — `client_id` בלבד.** ⭐ `text` שנוצר במכשיר לפני
+   השליחה, ומפתח המיזוג הוא `c:<client_id>`: ⛔ שורה בלי `client_id` אין לה
+   מפתח, ⚠️ והרשומה שנוצרה במכשיר נתפרת לשורה שחזרה מהענן לפיו.
 
    ⚠️ **המכשיר חותם `updated_at` בעצמו** ביצירה ובעדכון — ⭐ `Date.now()`
    במילישניות. ⛔ בלי זה רשומה שנוצרה אופליין הייתה נושאת את חותמת **ההגעה
@@ -1300,8 +1298,8 @@ function slApplyMirror() {
     if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = kvParse(r.key, r.value).value;
   });
   LISTS = {};
-  // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
-  // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
+  // ⚠️ `key` הוא מפתח המיזוג — ⭐ וכפתור המחיקה מצביע עליו, ⛔ ולא על שדה
+  // שאין לפריט שנוצר במכשיר.
   (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
     .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ key: slKey(r), id: r.client_id, value: r.value }); });
@@ -2098,8 +2096,8 @@ function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
-// מקבלת את **מפתח המיזוג** ולא את ה-id: תשלום שנרשם אופליין עדיין אין לו id
-// (הוא SERIAL של המסד), ובלי זה אי אפשר היה למחוק אותו לפני שהסתנכרן.
+// מקבלת את **מפתח המיזוג** — `client_id` שנוצר במכשיר: ⭐ ולכן תשלום שנרשם
+// אופליין נמחק גם לפני שהסתנכרן.
 /* ══════════════════════════════════════════════════════════════════════════
    העברת מזהה ל-DOM — `data-id` ודלגציה
    ══════════════════════════════════════════════════════════════════════════
@@ -2407,9 +2405,9 @@ function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LIST
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
   return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
-// כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — ה-`id` הוא
-// SERIAL שהמסד מקצה, ולכן פריט שנוצר אופליין חסר זהות בלעדיו, וניסיון
-// חוזר אחרי תשובה שאבדה ברשת היה יוצר שורה שנייה.
+// כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — `text` שנוצר
+// במכשיר לפני השליחה: ⛔ בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת היה יוצר
+// שורה שנייה.
 function addListItem(cat){
   var v=prompt('הזן ערך חדש:');
   if(!v||!v.trim())return;
