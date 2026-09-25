@@ -1,4 +1,4 @@
-# schar-limud — Native WebView APK
+# שכר לימוד — Native WebView APK
 
 A native Android **WebView** shell (not a TWA) that loads the **live site** over the
 network:
