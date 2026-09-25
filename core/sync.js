@@ -49,16 +49,6 @@ function idEq(a, b) {
 function idArg(v) {
   return "'" + String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '') + "'";
 }
-// ⛔ **נקודת המעבר האחת בין מזהה למספר** — ⚠️ והיא אינה השוואת זהות: ⭐ היא
-//    מחלצת **חותמת שנשמרה בשדה המזהה בגרסה ישנה**, מהתקופה שבה המזהה היה
-//    `Date.now()`. ⛔ ומחרוזת שאינה ספרות בלבד מחזירה 0 ⛔ ולא `NaN` —
-//    ⚠️ `NaN` בהשוואה נכשל בשקט, ⭐ ואפס הוא «אין חותמת» מוצהר.
-// ⛔ אין להמיר מזהה למספר בשום מקום אחר — הוא `text`, ⛔ ו-`parseInt` עליו
-//    מחזיר `NaN`: ⚠️ ההשוואה נכשלת בלי שאיש רואה.
-function legacyIdStamp(v) {
-  var s = String(v == null ? '' : v);
-  return /^[0-9]+$/.test(s) ? Number(s) : 0;
-}
 /* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
 
 /* ═══ מיזוג רשומות — מודול משותף ═════════════════════════════════════════
@@ -1052,7 +1042,7 @@ function eraKick() {
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { newClientId, idEq, idArg, legacyIdStamp, mergeCore, tombStamp,
+export { newClientId, idEq, idArg, mergeCore, tombStamp,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,

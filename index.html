@@ -102,7 +102,7 @@ import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } fr
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
          mirrorTables, mirrorWrite } from './core/mirror.js';
 import { bkBoot, logAction } from './core/backup.js';
-import { isAdminOf, lkBoot, lkReset, lkStop, sessActive, sessBoot,
+import { isAdminOf, lkBoot, lkReset, lkStop, sessActive,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
          modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
@@ -126,7 +126,6 @@ appConfigure({
   get PL_CFG() { return PL_CFG; },
   get PUSH_CFG() { return PUSH_CFG; },
   get RTY_CFG() { return RTY_CFG; },
-  get SESS_CFG() { return SESS_CFG; },
   get TOAST_DEFAULT_MS() { return TOAST_DEFAULT_MS; },
   get USER_CFG() { return USER_CFG; },
   get saveRefresh() { return saveRefresh; }
@@ -636,14 +635,6 @@ var LK_CFG = {
   active: function () { return sessActive(); },
   lock:   function () { doLogout(); },
 };
-/* ── SESS_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/* ⚠️ `legacy` הוא רשימת מפתחות ה-localStorage של סשן **שהאפליקציה אינה
-   כותבת אליהם** — ⛔ ואין למחוק שם מהרשימה: המפתח עצמו עדיין יושב על
-   הדיסק של כל מכשיר שנכנסו בו, והוא מחזיק `id`, `username` ו-`role`. */
-var SESS_CFG = {
-  legacy: ['sl_session'],
-};
-
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ בשכר לימוד החותמת היא שורת `sl_settings` שמפתחה `SL_STAMP_KEY`. היא
    **מוחרגת מהמראה** ב-`slStripMeta` — שורת מטא אינה הגדרה, ⛔ ודחיפת-מצב
@@ -812,11 +803,9 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
      3. **סנכרון ברקע** — משיכה, מיזוג, ואז דחיפת מה שמקומי וחדש יותר.
      4. **מיזוג ברמת רשומה** לפי `client_id` ו-`updated_at` (migrations/008).
 
-   ⚠️ **זהות הרשומה — `client_id` עם נפילה-חזרה ל-`id`.** 25 התנועות ו-63
-   התלמידים שקדמו ל-006 מחזיקים `client_id = NULL`, ולכן מפתח המיזוג הוא
-   `c:<client_id>` כשקיים ו-`i:<id>` אחרת. רשומה שנוצרה במכשיר היא ההפך —
-   יש לה `client_id` ואין לה `id` (הוא SERIAL שהמסד מקצה), והיא נתפרת לשורה
-   שחזרה מהענן לפי ה-`client_id`.
+   ⚠️ **זהות הרשומה — `client_id` בלבד.** ⭐ `text` שנוצר במכשיר לפני
+   השליחה, ומפתח המיזוג הוא `c:<client_id>`: ⛔ שורה בלי `client_id` אין לה
+   מפתח, ⚠️ והרשומה שנוצרה במכשיר נתפרת לשורה שחזרה מהענן לפיו.
 
    ⚠️ **המכשיר חותם `updated_at` בעצמו** ביצירה ובעדכון — ⭐ `Date.now()`
    במילישניות. ⛔ בלי זה רשומה שנוצרה אופליין הייתה נושאת את חותמת **ההגעה
@@ -937,11 +926,8 @@ function slStripMeta(rows) {
 }
 
 /* ═══ כניסה אופליין — טביעת סיסמה למשתמשי sl_users ══════════════════════
-   **הבעיה שהטביעה פותרת.** כל שאר האפליקציה עובדת אופליין,
-   אבל `doLogin` שלח שאילתה לענן — ולכן **בלי רשת אי אפשר היה להיכנס
-   כלל**. מי שכבר נכנס פעם אחת המשיך דרך `sl_session`, אבל מכשיר שמישהו
-   אחר נכנס בו אחרון נעל בחוץ את כל השאר. זו הייתה האפליקציה האחרונה
-   מהן שנשארה כך.
+   **הבעיה שהטביעה פותרת.** כל שאר האפליקציה עובדת אופליין — ⛔ והכניסה
+   חייבת לעבוד גם היא בלי רשת, ⚠️ לכל משתמש ולא רק למי שנכנס אחרון במכשיר.
 
    **הפתרון — אותו מנגנון בדיוק.** לכל משתמש `pass_salt` + `pass_fp`:
    PBKDF2-SHA256, `SL_PASS_ITER_USER` סיבובים, **מלח אקראי פר-משתמש**. הטביעה יורדת
@@ -1300,8 +1286,8 @@ function slApplyMirror() {
     if (r && !slIsSecretSetting(r.key)) SETTINGS[r.key] = kvParse(r.key, r.value).value;
   });
   LISTS = {};
-  // ⚠️ `key` ולא `id`: פריט שנוצר במכשיר עדיין אין לו `id` (SERIAL), ולכן
-  // כפתור המחיקה שלו היה מצביע על `undefined`. המפתח הוא מפתח המיזוג.
+  // ⚠️ `key` הוא מפתח המיזוג — ⭐ וכפתור המחיקה מצביע עליו, ⛔ ולא על שדה
+  // שאין לפריט שנוצר במכשיר.
   (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
     .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!LISTS[r.category]) LISTS[r.category] = []; LISTS[r.category].push({ key: slKey(r), id: r.client_id, value: r.value }); });
@@ -2098,8 +2084,8 @@ function txnMethodPill(t){
   if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
-// מקבלת את **מפתח המיזוג** ולא את ה-id: תשלום שנרשם אופליין עדיין אין לו id
-// (הוא SERIAL של המסד), ובלי זה אי אפשר היה למחוק אותו לפני שהסתנכרן.
+// מקבלת את **מפתח המיזוג** — `client_id` שנוצר במכשיר: ⭐ ולכן תשלום שנרשם
+// אופליין נמחק גם לפני שהסתנכרן.
 /* ══════════════════════════════════════════════════════════════════════════
    העברת מזהה ל-DOM — `data-id` ודלגציה
    ══════════════════════════════════════════════════════════════════════════
@@ -2407,9 +2393,9 @@ function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LIST
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
   return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
-// כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — ה-`id` הוא
-// SERIAL שהמסד מקצה, ולכן פריט שנוצר אופליין חסר זהות בלעדיו, וניסיון
-// חוזר אחרי תשובה שאבדה ברשת היה יוצר שורה שנייה.
+// כתיבה מקומית-תחילה (009). כל פריט חדש מקבל `client_id` — `text` שנוצר
+// במכשיר לפני השליחה: ⛔ בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת היה יוצר
+// שורה שנייה.
 function addListItem(cat){
   var v=prompt('הזן ערך חדש:');
   if(!v||!v.trim())return;
@@ -2494,8 +2480,6 @@ async function slBoot(){
   // משותפת לכל האפליקציות, ולכן גם אפליקציה שכמעט לא כותבת מקומית
   // חייבת למדוד — היא זו שתיפגע ממה שהאחיות מילאו.
   try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
-  // מודל הסשן — נקודת ההפעלה היחידה של המודול.
-  try { sessBoot(); } catch (e) { console.warn('[sess] sessBoot', e); }
   // סימוני "ממתין לסנכרון" — נטענים מהדיסק ומוצגים מיד, עוד לפני
   // הכניסה. רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
   try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
