@@ -56,6 +56,15 @@ function actRun(el, fn) {
 }
 /* ═══════════════ סוף מודול כפתור עסוק ═══════════════════════════════════ */
 
+/*  ⛔ שורש הקליפה הוא ההורה של `#view` — ⚠️ ואין לו שם שני: ⭐ המחלקה
+ *  והכלל משותפים, ⛔ ומסך שמשתמש במסגרת חושף אותה יחד עם הציור שלו —
+ *  ⚠️ ולא לפניו. */
+function shellBare(on) {
+  var v = document.getElementById('view');
+  if (!v || !v.parentElement) { console.error('[ui] אין מיכל תוכן — #view'); return; }
+  v.parentElement.classList.toggle('is-bare', !!on);
+}
+
 /* ═══ הרשמת service worker — מודול משותף ════════════════════════════════
    ⛔ מנגנון זיהוי אחד — `reg.update()`: ⚠️ ואין מנגנון שני לאותה שאלה.
    ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר, ⭐ ו-`claim()`
@@ -369,5 +378,5 @@ function ksKey(e) {
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { actRun, ask, busy, closeAsk, closeModal, esc, ksKey, lsToast,
-         modalBackdrop, modalEsc, openModal, pullRender, swApply,
+         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply,
          swHideUpdate, swRegister, toast, uiNoDialog };
