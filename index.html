@@ -338,7 +338,7 @@ function screenSettingsHTML() {
   return `
 <div id="panel-settings" class="panel">
   <!-- ⭐ אין כאן שער סיסמה. ההרשאה נגזרת מ-\`sl_users.role\`
-       של המשתמש המחובר, בדיוק כמו בשלוש האחיות. הכרטיס הזה הוא
+       של המשתמש המחובר, ⛔ ולא מסיסמת שער. הכרטיס הזה הוא
        ההודעה שמוצגת למי שאינו admin — לא טופס. -->
   <div id="settings-denied" class="hidden card">
     <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
@@ -405,7 +405,8 @@ var STUDENTS=[],TRANSACTIONS=[],SETTINGS={},LISTS={};
 var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 // ⭐ מצב מנגנון המשיכה. `_slSeenTs` היא החותמת האחרונה שהמכשיר
 //    ראה, ו-`_slLastSeenOk` היא חותמת **תצוגה** בלבד (שיחה מוצלחת עם הענן).
-//    ⛔ אין להזין מהן את עֵד הפינוי — ר' `_slPushedAt`.
+//    ⛔ אין להזין מהן את עֵד הפינוי — ⚠️ הן מתקדמות גם במשיכה, ⭐ והעֵד הוא
+//    `_slPushedAt` פר-מפתח.
 var _slSeenTs=0,_slLastSeenOk=0;
 var SL_STAMP_KEY='last_changed';
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
@@ -426,7 +427,7 @@ var TOAST_DEFAULT_MS = 2400;
    ══════════════════════════════════════════════════════════════════════════ */
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ ו-`MSG_BAD_LOGIN` נבדלת
 // פר-אפליקציה בהחלטת מנהל — ⚠️ ולכן אינה במודול המשותף.
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 /* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
@@ -519,7 +520,7 @@ var LS_CFG = {
   appType: { type: 'annual', why: 'החישוב שלה נפרש על שנה — ⚠️ דרישה, שולם ויתרה לתלמיד נסכמים מכל תנועות שנת הלימודים' },
 
   // `wholeKeys` — ⛔ ריק ומוצהר: ⚠️ ההגדרות והרשימות נכתבות מקומית-תחילה,
-  // ⭐ ומחיקת מפתח שלם מרוקנת את המסך אופליין — ⛔ הן קבועות בגודלן (למטה).
+  // ⭐ ומחיקת מפתח שלם מרוקנת את המסך אופליין — ⛔ הן קבועות בגודלן.
   wholeKeys: [],
   // `oldRecords` — ⚠️ התנועות, הישנה קודם: ⛔ עם עֵד דחיפה משלהן
   // (`_slPushedAt`) ⭐ ואימות מול הענן למכשיר שרק קורא. ⛔ תנועה שנערכה
@@ -577,7 +578,7 @@ function _slVerify(mkQuery) {
 /* ⛔ `sl_users` אינה ברשימה — היא מחזיקה `password` בטקסט גלוי
    ואת `pass_salt`/`pass_fp`, ו-`sh_backup` קריאה ל-`anon`; גיבוי שלה היה
    מעתיק את הסוד למקום שני ומבטל את הפרדת הסוד מהגיבוי. שחזור משתמשים נעשה
-   ידנית ע"י המנהל מלוח הבקרה, ר' «אחרי ההרצה» בקובץ ההתקנה. */
+   ידנית ע"י המנהל מלוח הבקרה. */
 var BK_CFG = {
   client: function () { return SB; },
   flagKey: 'sl_last_backup',
@@ -632,7 +633,7 @@ var RTY_CFG = {
 /* ── LK_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ `active()` הוא «יש משתמש מחובר», ו-`lock()` הוא מסלול היציאה של
    האפליקציה. ⛔ אין להוסיף כאן הודעה משלה — חלון האזהרה של
-   הליבה הוא ההודעה, ⚠️ והודעה נוספת כאן היא ההפרש היחיד מול האחיות. */
+   הליבה הוא ההודעה, ⚠️ והודעה נוספת כאן היא נוסח שני לאותה אזהרה. */
 var LK_CFG = {
   active: function () { return sessActive(); },
   lock:   function () { doLogout(); },
@@ -763,7 +764,7 @@ var ERA_CFG = {
 var PK_TXN = 'txn:', PK_STU = 'student:', PK_SET = 'setting:', PK_LST = 'list:';
 function pendTxnKey(row) { return PK_TXN + slKey(row); }
 function pendStuKey(row) { return PK_STU + slKey(row); }
-// גם הגדרות ורשימות מסומנות עד שיש ראיה שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ר' `slKeyOf`.
+// גם הגדרות ורשימות מסומנות עד שיש ראיה שהענן קיבל אותן. מפתח ההגדרה הוא `key` ולא `client_id` — ⚠️ מיפתוח לפי `client_id` יוצר שתי שורות לאותה הגדרה.
 function pendSetKey(row) { return PK_SET + slKeyOf(KV_TABLE, row); }
 function pendLstKey(row) { return PK_LST + slKey(row); }
 
@@ -779,7 +780,7 @@ function pendResolveErr(pk, e) { if (!isNetErr(e)) pendFailed(pk); }
 // ששעון 24 השעות ימשיך למנות מהכתיבה הראשונה שלא אושרה.
 // ⚠️ `t0` נלקח בתחילת הסנכרון. רשומה שנכתבה **תוך כדי** הסנכרון לא נבדקה
 // מול הענן ולא נדחפה, ולכן הסימון שלה נשאר — אותו כלל בדיוק כמו
-// `pendConfirmPush` בשלוש האחיות.
+// `pendConfirmPush`.
 function pendSyncScan(keepKeys, t0) {
   var want = {};
   (keepKeys || []).forEach(function (k) { want[k] = 1; });
@@ -815,13 +816,11 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
    לשרת** ולא את חותמת העריכה, והמיזוג היה מעדיף תמיד את מי שהגיע ראשון
    לשרת על פני מי שערך אחרון.
 
-   ⚠️ **`sl_settings` ו-`sl_lists` — נכנסו לשכבה במלואן (migrations/009).**
-   עד 009 הן היו ממורות לקריאה בלבד: 008 נתנה `updated_at` לשתי טבלאות
-   הליבה בלבד, ובלי חותמת אין במה להשוות. 009 נותנת להן `updated_at`,
-   `client_id` עם אינדקס ייחודי **מלא**, ו-tombstones ל-`sl_lists` — ולכן
-   הן ממוזגות, נדחפות ונכתבות מקומית בדיוק כמו השתיים האחרות.
-   **החריג היחיד שנשאר: `admin_pass`** — שריד של שער ההגדרות שבוטל,
-   שאינו יורד לדיסק. ר' `SL_NEVER_MIRROR_SETTINGS` למטה.
+   ⚠️ **`sl_settings` ו-`sl_lists` בשכבה במלואן** — ⭐ הן נושאות `updated_at`,
+   `client_id` עם אינדקס ייחודי **מלא**, ו-tombstones ל-`sl_lists`, ולכן
+   הן ממוזגות, נדחפות ונכתבות מקומית כמו התלמידים והתנועות.
+   **החריג היחיד: `admin_pass`** — ⛔ שורת סוד שאינה יורדת לדיסק,
+   ⚠️ והיא מוכרזת ב-`SL_NEVER_MIRROR_SETTINGS`.
    ═══════════════════════════════════════════════════════════════════════ */
 // ⛔ העמודות שמותר לשלוח — ⚠️ רשימת היתר ולא רשימת איסור: ⭐ עמודה חדשה
 // שתתווסף לטבלה אינה עולה מכאן עד שמישהו הכריז עליה.
@@ -1072,7 +1071,7 @@ function slApplyMirror() {
 // מסלול קריטי: בכסף אסור להציג "נשמר" על כתיבה שלא נכתבה.
 function slLocalWrite(tbl, row) {
   if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
-  // ⛔ שורת סוד לעולם לא נכתבת מקומית — ראה הפרק שמעל.
+  // ⛔ שורת סוד לעולם לא נכתבת מקומית — ⚠️ הדיסק משותף ל-origin כולו.
   if (tbl === KV_TABLE && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
   row.updated_at = Date.now();            // ⚠️ חותמת המכשיר — ראה ההערה בראש
   var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
@@ -1167,7 +1166,7 @@ async function slSendRows(tbl, rows) {
 // מה צריך לעלות: רשומה מקומית שאין לה מקבילה בענן, שהיא חדשה ממנה, **או
 // שהיא עדיין מסומנת ⏳**. ⛔ אין להסיר את הסעיף השלישי — ⚠️ שתי הראשונות
 // משוות חותמות, ⭐ ובחותמת שווה שתיהן שקטות: הרשומה הייתה נשארת מסומנת ⏳
-// לנצח ולעולם לא נדחפת — ר' ההערה ב-slMerge.
+// לנצח ולעולם לא נדחפת.
 function slDirtyRows(t, remoteByKey, isPending) {
   var out = [];
   (MIRROR[t] || []).forEach(function (l) {
@@ -1218,7 +1217,7 @@ function pendingCid(slot, fp){
 function releaseCid(slot){ delete _pendingCid[slot]; }
 // ===== נעילה אוטומטית אחרי 5 דקות ללא פעילות =====
 // ⭐ המנגנון יושב בליבה המשותפת — ⛔ ואין לממש כאן חלון אזהרה
-//    משלה: אותו ערך והתנהגות אחרת מזו של האחיות.
+//    משלה: ⚠️ אותו ערך בהתנהגות אחרת מזו של הליבה.
 //    `lkReset()` היא הידית שקוד האפליקציה קורא לה.
 // ===== בריחת HTML =====
 // כל ערך שמקורו בנתוני משתמש (שם תלמיד, הערה, ערך רשימה, אמצעי תשלום)
@@ -1360,7 +1359,7 @@ async function doLogin(){
     }
     if(!r.data){
       // טבלה ריקה ⇒ אין כאן סיסמה שגויה אלא התקנה שטרם נוצר בה משתמש.
-      // (אין משתמש ברירת מחדל בסכימה — ר' 000_initial_schema.)
+      // ⛔ אין משתמש ברירת מחדל בסכימה — ⚠️ סיסמה ידועה לכל היא חשבון פתוח.
       authLog(false,'wrong_credentials_online',u);
       var any=await SB.from(authUsersTable()).select('client_id').limit(1);
       showAuthErr((any&&!any.error&&Array.isArray(any.data)&&!any.data.length)?MSG_NO_USERS:MSG_BAD_LOGIN);
@@ -1460,7 +1459,7 @@ function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
 
 // שומר חפיפה: ברשת איטית setInterval(syncAll,3000) הערים קריאות זו על זו.
 // **חובה לשחרר ב-finally** ולא בסוף ה-try — כשל אחד שמשאיר את הדגל דלוק
-// מקפיא את הסנכרון לתמיד (בדיוק הבאג של _slSyncing שתוקן ב-hanhala).
+// מקפיא את הסנכרון לתמיד.
 var _syncBusy=false,_syncWarned=false,_lastSyncOk=false;
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 /*  ⛔ ארבע הקטגוריות ועמודת הסדר של כל אחת — ⚠️ שליפה בעמודים חייבת סדר
@@ -2099,10 +2098,8 @@ function saveStudentSettings(){
    ברירת מחדל לתפקיד היא הרשאה שניתנת למי שאיש לא החליט
    להעניק לו אותה. תפקיד נכתב **במפורש** ביצירת המשתמש.
 
-   ⚠️ **הערה זו זהה בית-לבית בכל האפליקציות** פרט לשורת «כאן:» שבסופה.
-   לקח אבטחתי שנלמד באפליקציה אחת נרשם בכולן — גם כשהמנגנון עצמו
-   רלוונטי רק לאחת. הערה שיושבת במקום אחד אינה
-   מגינה על הארגון.
+   ⚠️ **הערה זו נרשמת גם במקום שבו המנגנון אינו חל** — ⭐ לקח אבטחתי
+   שנרשם רק במקום שבו נלמד אינו מגן על המקום שבו ייכתב הקוד הבא.
 
    כאן: `renderSettingsPanel` / `slSettingsAccess` — ההרשאה נגזרת מ-`sl_users.role`,
    וכל מה שאינו בדיוק `'admin'` נדחה. `migrations/011` מגדירה את העמודה
@@ -2162,7 +2159,7 @@ function renderSettingsLists(){
 }
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה: מחיקתו הייתה מסתירה אותו מהטופס
 // ומשאירה תנועות שסווגו לפיו בלי דרך לרשום חדשות. (הסיווג ההיסטורי עצמו
-// אינו נשען על הפריט הזה — ראה ההערה ליד CREDIT_METHOD.)
+// אינו נשען על הפריט הזה — ⚠️ הוא נקרא מהמחרוזת ששמורה על התנועה.)
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(LISTS[cat]||[]).map(function(i){
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
   return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
@@ -2224,8 +2221,9 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
   pendMark(pendStuKey(row));
   releaseCid('student');
   return true;}
-// מחיקת תלמיד = soft-delete בלבד. מחיקה פיזית הפעילה ON DELETE CASCADE על
-// sl_transactions והשמידה את כל היסטוריית הכספים שלו — ראה migrations/002.
+// מחיקת תלמיד = soft-delete בלבד. ⛔ מחיקה פיזית של אב היא מחיקת כל
+// היסטוריית הכספים שלו ב-sl_transactions — ⚠️ והמפתח הזר `restrict` אינו
+// מחליף את הכלל, הוא רק עוצר אותו במסד.
 function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return slKey(x)===String(key);})[0];
  ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
@@ -2281,7 +2279,7 @@ async function slBoot(){
   try { usersSaveAll(mirrorLoadOne(authUsersTable()) || []); } catch (e) { console.warn('[users] load', e); }
   // ⛔ **אין כאן שחזור סשן** — כל עלייה מתחילה במסך הכניסה, גם
   //    כשהמשתמש נכנס לפני דקה. ⛔ אין להחזיר: סשן שנשמר בלי תפוגה הוא
-  //    כניסה קבועה על מכשיר משותף, ר' «המשתמש המחובר» למעלה.
+  //    כניסה קבועה על מכשיר משותף.
 
   slShowLogin(true);
   // ⛔ אין בדיקת סכימה מול השרת בעלייה — ⚠️ ולכן אין מה לדלג עליו

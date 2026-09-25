@@ -58,8 +58,8 @@ var SW_SCOPE = new URL('./', self.location);
 var SW_ROOT = SW_SCOPE.href;
 var SW_SHELL = new URL('./index.html', self.location).href;
 
-/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון —
- *  ר' הנימוק בכותרת המודול. */
+/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון — ⚠️ תשובה
+ *  מנתיב עמוק היא 404 של המארח, ⛔ ושמירתה כקליפה מרעילה את המטמון. */
 var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
 
 /*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן: ignoreSearch
@@ -103,8 +103,8 @@ function swOfflinePage() {
   });
 }
 
-/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML — ר' כותרת
- *  המודול. `Response.error()` הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט
+/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML — ⚠️ HTML תחת כתובת
+ *  של סקריפט או גיליון נקרא כקוד ונשבר בשקט. `Response.error()` הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט
  *  שנמדד ונשמר כידית. */
 function swSubMiss() {
   if (SW_CFG.subMiss === '504') return new Response('', { status: 504, statusText: 'Offline' });
@@ -133,7 +133,8 @@ function swPut(cache, key, res) {
   });
 }
 
-/*  ⛔ רק תשובה שאומתה נשמרת — ר' כותרת המודול. */
+/*  ⛔ רק תשובה שאומתה נשמרת — ⚠️ שגיאה או תשובה אטומה שנשמרה מוגשת
+ *  מהמטמון לנצח. */
 function swStore(key, res) {
   if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
   var clone = res.clone();
@@ -319,7 +320,7 @@ self.addEventListener('activate', function (event) {
       return cache.match(SW_SHELL, SW_NAV_OPTS);
     }).then(function (hit) {
       /*  ⛔ אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש —
-       *  ר' כותרת המודול. */
+       *  ⚠️ מכשיר אופליין היה נשאר בלי קליפה כלל. */
       if (!hit) return;
       return caches.keys().then(function (names) {
         return Promise.all(names.map(function (name) {
