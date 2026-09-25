@@ -379,4 +379,4 @@ function ksKey(e) {
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { actRun, ask, busy, closeAsk, closeModal, esc, ksKey, lsToast,
          modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply,
-         swHideUpdate, swRegister, toast, uiNoDialog };
+         swHideUpdate, toast, uiNoDialog };
