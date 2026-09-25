@@ -65,7 +65,7 @@ var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
 /*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן: ignoreSearch
  *  מתעלם מה-query, וב-PostgREST כל הפילטרים יושבים דווקא שם. חיפוש כללי
  *  איתו גרם לכך שבקשת כניסה של משתמש אחד התאימה לתשובה שנשמרה
- *  עבור אחר — כניסה בזהות זרה. ניווט בלבד רשאי להשתמש ב-NAV_OPTS. */
+ *  עבור אחר — כניסה בזהות זרה. ניווט בלבד רשאי להשתמש ב-SW_NAV_OPTS. */
 var SW_NAV_OPTS = { ignoreVary: true, ignoreSearch: true };
 var SW_SUB_OPTS = { ignoreVary: true };
 
