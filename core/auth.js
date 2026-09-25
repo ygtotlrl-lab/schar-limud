@@ -10,7 +10,7 @@
 
 import { app } from './util.js';
 import { newClientId } from './sync.js';
-import { logAction } from './backup.js';
+import { logAction, logFlush } from './backup.js';
 
 /* ═══ נעילת חוסר-פעילות — מודול משותף ═════════════════════════════════════
    ═══════════════════════════════════════════════════════════════════════ */
@@ -193,10 +193,16 @@ function writeUser(id, row) {
 /*  ⛔ כל כניסה — הצלחה וכישלון — נרשמת כאן ⛔ ולא באתר הכניסה: ⚠️ רישום
  *  שחי באפליקציה אחת הוא אפליקציה אחת שנרשמת. `branch` אומר איזה מסלול
  *  הכריע. ⛔ אין להוסיף לרשומה את הסיסמה או כל נגזרת שלה — ⚠️ היומן נקרא
- *  לכל מי שמחזיק את מפתח ה-anon. */
+ *  לכל מי שמחזיק את מפתח ה-anon.
+ *  ⭐ כניסה מקוונת שהצליחה היא ראיה שהרשת עובדת — ⛔ ולכן תור היומן נשלח
+ *  כאן, ⚠️ ולא באתר הכניסה של כל אפליקציה. */
+var AUTH_ONLINE_BRANCHES = ['online', 'switch_online'];
 function authLog(ok, branch, username) {
   logAction(ok ? 'login_ok' : 'login_fail', branch || null, 0,
             { typed_username: username || '', online: !!navigator.onLine });
+  if (ok && AUTH_ONLINE_BRANCHES.indexOf(branch) !== -1) {
+    try { logFlush(); } catch (e) { console.warn('[auth] logFlush', e); }
+  }
 }
 /* ═══════════════ סוף מודול רישום כניסה ══════════════════════════════════ */
 

@@ -101,7 +101,7 @@ import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick,
 import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } from './core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
          mirrorTables, mirrorWrite } from './core/mirror.js';
-import { bkBoot, logAction, logFlush } from './core/backup.js';
+import { bkBoot, logAction } from './core/backup.js';
 import { authLog, isAdminOf, lkBoot, lkReset, lkStop, sessActive,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
@@ -1595,7 +1595,6 @@ async function doLogin(){
     ctxSwitch();
     sessSet(pub);
     authLog(true,'online',u);
-    logFlush();   // ⭐ הרשת מוכחת-עובדת — שולחים את מה שנצבר באופליין
     document.getElementById('auth-spinner').classList.remove('on');
     enterApp();
     // ── ברקע, אחרי שהמסך כבר עלה: השלמת הטביעה של המשתמש הזה ואז רענון
