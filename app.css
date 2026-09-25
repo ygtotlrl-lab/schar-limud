@@ -9,6 +9,10 @@
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  סרגל לשוניות תחתון קבוע. */
   --toast-bottom:26px;
+  /*  ⛔ רוחב עמודת התוכן — ⚠️ המיכל וכל פס קבוע קוראים אותו: ⭐ ערך
+   *  שכל צרכניו קוראים ממקום אחד משתנה פעם אחת, ⛔ ופס שרוחבו מוקלד
+   *  נפרד מהעמודה ביום שהיא משתנה. */
+  --col:800px;
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בכולן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
   /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בכולן,
@@ -64,7 +68,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /*  ⛔ לפני הכניסה — ⚠️ הכותרת, הלשוניות והלוחות מוסתרים, ⭐ ומסך הכניסה,
  *  שבמיכל, ממלא את החלון. */
 #main-app.is-bare > #topnav,#main-app.is-bare > #tabbar,#main-app.is-bare #app{display:none}
-#app{max-width:800px;margin:0 auto;padding-bottom:var(--sp-7)}
+#app{max-width:var(--col);margin:0 auto;padding-bottom:var(--sp-7)}
 @media (hover:hover){
   .nav-logout:hover{background:var(--border)}
 }
@@ -75,7 +79,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
 .nav-user{font-size:var(--fs-2);color:var(--text-3);display:flex;align-items:center;gap:var(--sp-4)}
 .nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-5);font-family:Heebo;font-size:var(--fs-2);cursor:pointer;transition:background var(--dur-2)}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:var(--col);background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
 .tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color var(--dur-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--text);font-weight:700}
@@ -291,7 +295,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /*  ⛔ בחלון רחב העמודה מתרחבת — ⚠️ המסכים כאן הם טבלאות, ⭐ ורוחב שנשאר
    קצוב מקפל את שורת התנועה לשתי שורות במסך שיש בו מקום: ⛔ והסרגל
    התחתון מתרחב איתה, ⚠️ שהוא נמדד לרוחב העמודה ⛔ ולא לרוחב החלון. */
-@media (min-width:1200px){#app{max-width:1040px}}
+@media (min-width:1200px){:root{--col:1040px}}
 @media (min-width:640px){
   .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
 }
