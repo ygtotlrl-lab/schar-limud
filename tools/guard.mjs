@@ -2,7 +2,8 @@
 /* ── שומר הדחיפה ─────────────────────────────────────────────────────────── */
 /*  בודק רק את מה ששובר את האפליקציה למשתמש ברגע הדחיפה:
  *  תחביר כל סקריפט שבתוך `index.html`, של `sw.js` ושל `core/*.js` —
- *  ⛔ ושכל קובץ ברשימת המטמון (`CORE` שב-`sw.js`) קיים בעץ.
+ *  ⛔ שכל קובץ ברשימת המטמון (`CORE` שב-`sw.js`) קיים בעץ,
+ *  ⛔ ושה-`sw.js` מגדיר `CACHE_NAME` שאינו ריק.
  *  ⭐ וכל השאר נמדד בסריקה הגדולה.
  *
  *  ⛔ הקובץ זהה בית-לבית בכל הריפו — ⚠️ אין בו תצורה פר-אפליקציה:
@@ -14,6 +15,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { createContext, runInContext } from 'node:vm';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -47,6 +49,26 @@ if (!n) fails.push('index.html — אין בו סקריפט מוטבע: הקוב
 /*  ── sw.js — סקריפט קלאסי ── */
 const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 syntax('sw.js', sw, 'commonjs');
+
+/*  ── sw.js — `CACHE_NAME` מוגדר ואינו ריק ──
+ *  ⛔ בלעדיו ה-worker נכשל בהתקנה והאפליקציה אינה מתעדכנת — ⚠️ והתחביר
+ *  תקין גם בלעדיו. ⭐ הערך נגזר כפי שה-worker גוזר אותו: התצורה רצה
+ *  בהקשר מבודד, והביטוי מוערך מעליה. */
+{
+  checked++;
+  const decl = sw.match(/^\s*(?:var|let|const)\s+CACHE_NAME\s*=\s*([^;\n]+)/m);
+  let name = '';
+  if (decl) {
+    try {
+      const ctx = createContext({});
+      ctx.self = ctx;
+      runInContext(readFileSync(join(ROOT, 'app.config.js'), 'utf8'), ctx);
+      name = runInContext(`(${decl[1]})`, ctx);
+    } catch (e) { name = ''; }
+  }
+  if (!decl) fails.push('sw.js — `CACHE_NAME` אינו מוגדר');
+  else if (typeof name !== 'string' || !name.trim()) fails.push('sw.js — `CACHE_NAME` ריק');
+}
 
 /*  ── core/*.js — מודולים ── */
 const coreDir = join(ROOT, 'core');
