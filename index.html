@@ -101,8 +101,8 @@ import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick,
 import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } from './core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
          mirrorTables, mirrorWrite } from './core/mirror.js';
-import { bkBoot, logAction } from './core/backup.js';
-import { isAdminOf, lkBoot, lkReset, lkStop, sessActive,
+import { bkBoot, logAction, logFlush } from './core/backup.js';
+import { authLog, isAdminOf, lkBoot, lkReset, lkStop, sessActive,
          sessClear, sessGet, sessSet, writeUser } from './core/auth.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
          modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
@@ -1571,18 +1571,19 @@ async function doLogin(){
       // ⛔ אין למזג את שלושת המצבים — «אין למשתמש סיסמה מוגדרת»
       // אינו «סיסמה שגויה», והודעה מאוחדת שולחת אותו להקליד שוב ושוב
       // סיסמה נכונה במקום לומר לו את הדבר היחיד שיפתור.
-      if(vOn==='no-crypto'){ showAuthErr(MSG_NO_CRYPTO); return; }
+      if(vOn==='no-crypto'){ authLog(false,'no_crypto_online',u); showAuthErr(MSG_NO_CRYPTO); return; }
       // ⛔ **צעד ב — האתחול החד-פעמי מהטקסט הגלוי ירד** ⚠️ ואין להחזירו:
       // הוא היה ההשוואה האחרונה מול `sl_users.password`, והעמודה ירדה
       // בהחלטת המנהל. ⭐ ומה שהחליף אותו: משתמש חדש נולד עם טביעה — המנהל
       // גוזר `pass_salt`/`pass_fp` ומדביק אותם ב-`INSERT` (הנוסח בבאנר
       // המיגרציה). ⛔ ומשתמש בלי טביעה מקבל הודעה משלו ⛔ ולא «סיסמה שגויה».
-      if(vOn==='no-fp'){ showAuthErr(MSG_NO_FP_ONLINE); return; }
-      else if(vOn!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
+      if(vOn==='no-fp'){ authLog(false,'no_fp_online',u); showAuthErr(MSG_NO_FP_ONLINE); return; }
+      else if(vOn!=='ok'){ authLog(false,'wrong_credentials_online',u); showAuthErr(MSG_BAD_LOGIN); return; }
     }
     if(!r.data){
       // טבלה ריקה ⇒ אין כאן סיסמה שגויה אלא התקנה שטרם נוצר בה משתמש.
       // (אין משתמש ברירת מחדל בסכימה — ר' 000_initial_schema.)
+      authLog(false,'wrong_credentials_online',u);
       var any=await SB.from('sl_users').select('client_id').limit(1);
       showAuthErr((any&&!any.error&&Array.isArray(any.data)&&!any.data.length)?MSG_NO_USERS:MSG_BAD_LOGIN);
       return;
@@ -1593,6 +1594,8 @@ async function doLogin(){
     slUsersSaveOne(pub);
     ctxSwitch();
     sessSet(pub);
+    authLog(true,'online',u);
+    logFlush();   // ⭐ הרשת מוכחת-עובדת — שולחים את מה שנצבר באופליין
     document.getElementById('auth-spinner').classList.remove('on');
     enterApp();
     // ── ברקע, אחרי שהמסך כבר עלה: השלמת הטביעה של המשתמש הזה ואז רענון
@@ -1602,6 +1605,7 @@ async function doLogin(){
   }catch(e){
     // רשת שנפלה באמצע (navigator.onLine משקר לא פעם ב-WebView) — לא
     // מציגים "שגיאה" למי שיש לו טביעה תקפה על המכשיר; מנסים אופליין.
+    authLog(false,isNetErr(e)?'net_error':'server_error',u);
     if(isNetErr(e)) return doLoginOffline(u,p);
     /*  ⛔ כשל מערכת אינו יושב על משטח המשתמש — ⚠️ `.auth-err` שמור למה
      *  שהמשתמש יכול לתקן בהקלדה: ⭐ והמשטח מתאפס כדי שהטופס יהיה שמיש. */
@@ -1615,16 +1619,17 @@ async function doLogin(){
    חייבות משהו להמתין לו (גזירת PBKDF2 היא אסינכרונית). */
 async function doLoginOffline(u,p){
   var cu=slUserByName(u);
-  if(!cu){ showAuthErr(MSG_OFF_UNKNOWN); return; }
+  if(!cu){ authLog(false,'unknown_user_offline',u); showAuthErr(MSG_OFF_UNKNOWN); return; }
   startAuthLoad();
   var verdict;
   try{ verdict=await slVerifyOffline(cu,p); }
-  catch(e){ console.warn('[login] אימות אופליין נכשל',e); showAuthErr(MSG_OFF_NO_CRYPTO); return; }
-  if(verdict==='no-fp'){ showAuthErr(MSG_OFF_NO_FP); return; }
-  if(verdict==='no-crypto'){ showAuthErr(MSG_OFF_NO_CRYPTO); return; }
-  if(verdict!=='ok'){ showAuthErr(MSG_BAD_LOGIN); return; }
+  catch(e){ console.warn('[login] אימות אופליין נכשל',e); authLog(false,'no_crypto_offline',u); showAuthErr(MSG_OFF_NO_CRYPTO); return; }
+  if(verdict==='no-fp'){ authLog(false,'no_fp_offline',u); showAuthErr(MSG_OFF_NO_FP); return; }
+  if(verdict==='no-crypto'){ authLog(false,'no_crypto_offline',u); showAuthErr(MSG_OFF_NO_CRYPTO); return; }
+  if(verdict!=='ok'){ authLog(false,'wrong_credentials_offline',u); showAuthErr(MSG_BAD_LOGIN); return; }
   ctxSwitch();
   sessSet(slUserPub(cu));
+  authLog(true,'offline',u);
   document.getElementById('auth-spinner').classList.remove('on');
   enterApp();
   toast(MSG_OFFLINE_LOGIN,5000, 'bad');
