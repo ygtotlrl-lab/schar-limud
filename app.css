@@ -9,6 +9,10 @@
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  סרגל לשוניות תחתון קבוע. */
   --toast-bottom:26px;
+  /*  ⛔ רוחב עמודת התוכן — ⚠️ המיכל וכל פס קבוע קוראים אותו: ⭐ ערך
+   *  שכל צרכניו קוראים ממקום אחד משתנה פעם אחת, ⛔ ופס שרוחבו מוקלד
+   *  נפרד מהעמודה ביום שהיא משתנה. */
+  --col:800px;
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בכולן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
   /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בכולן,
@@ -19,10 +23,9 @@
    *  הירוק הכהה שהמניפסט צובע בו את שורת המערכת ושדיו האייקון נגזר ממנו,
    *  ⭐ והירוק הבהיר שעל הכפתורים הוא `--brand-soft`: ⛔ מיפוי אליו צבע
    *  את באנר העדכון בגוון שאינו הזהות, ⚠️ ובאחיות הוא הזהות.
-   *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם, ⭐ ונמדד 5.64. */
+   *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם. */
   --brand:var(--brand-fill); --on-brand:#ffffff;
-  /*  ⛔ ארבעת אסימוני הזהות — ⚠️ לבן על `--brand-fill` 5.64 · `--brand-ink`
-   *  על הכרטיס 8.25 · ועל `--brand-soft` 5.60: ⭐ הרקע הרך הוא הירוק הבהיר
+  /*  ⛔ ארבעת אסימוני הזהות — ⭐ הרקע הרך הוא הירוק הבהיר
    *  שעל הכפתורים, ⛔ והדיו עליו הוא דיו הזהות ⛔ ולא דיו הטקסט. */
   --brand-fill:#307535; --brand-ink:#1f5a24; --brand-soft:#9fe870;
 --ok:#2e7d32;--ok-soft:#e8f5e9;--warn:#b45309;--warn-soft:#fdf1e3;--bad:#c62828;--bad-soft:#ffebee;--bad-soft-2:#ffe0e4;--border:#e0e0e0;--bg:#f5f5f5;--card-2:#f5f5f5;--text:#1a1a1a;--text-2:#555555;--text-3:#9e9e9e;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:var(--r-5);--credit:#1565c0;--creditl:#eef5fd}
@@ -64,7 +67,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /*  ⛔ לפני הכניסה — ⚠️ הכותרת, הלשוניות והלוחות מוסתרים, ⭐ ומסך הכניסה,
  *  שבמיכל, ממלא את החלון. */
 #main-app.is-bare > #topnav,#main-app.is-bare > #tabbar,#main-app.is-bare #app{display:none}
-#app{max-width:800px;margin:0 auto;padding-bottom:var(--sp-7)}
+#app{max-width:var(--col);margin:0 auto;padding-bottom:var(--sp-7)}
 @media (hover:hover){
   .nav-logout:hover{background:var(--border)}
 }
@@ -75,7 +78,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .nav-title{font-size:var(--fs-4);font-weight:700;color:var(--text)}
 .nav-user{font-size:var(--fs-2);color:var(--text-3);display:flex;align-items:center;gap:var(--sp-4)}
 .nav-logout{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-5);font-family:Heebo;font-size:var(--fs-2);cursor:pointer;transition:background var(--dur-2)}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:var(--col);background:var(--card);border-top:1px solid var(--border);display:flex;z-index:var(--z-2)}
 .tab-btn{flex:1;background:none;border:none;padding:var(--sp-5) var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-1);color:var(--text-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);transition:color var(--dur-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--text);font-weight:700}
@@ -291,7 +294,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /*  ⛔ בחלון רחב העמודה מתרחבת — ⚠️ המסכים כאן הם טבלאות, ⭐ ורוחב שנשאר
    קצוב מקפל את שורת התנועה לשתי שורות במסך שיש בו מקום: ⛔ והסרגל
    התחתון מתרחב איתה, ⚠️ שהוא נמדד לרוחב העמודה ⛔ ולא לרוחב החלון. */
-@media (min-width:1200px){#app{max-width:1040px}}
+@media (min-width:1200px){:root{--col:1040px}}
 @media (min-width:640px){
   .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
 }
