@@ -225,7 +225,7 @@ function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { app, appConfigure, readNum, uniqKeyOf, uniqList, uniqHas,
+export { app, appConfigure, readNum, uniqList, uniqHas,
          MSG_CLOUD_SYNC_FAIL, MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,

@@ -1041,7 +1041,7 @@ function eraKick() {
 
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
-export { newClientId, idEq, mergeCore, tombAt, tombStamp,
+export { newClientId, idEq, mergeCore, tombAt,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
