@@ -2,10 +2,10 @@
 
 ## פרטי ריפו
 - **ריפו:** `ygtotlrl-lab/schar-limud`
-- **GitHub Pages:** `https://ygtotlrl-lab.github.io/schar-limud/`
+- **GitHub Pages:** כתובת האפליקציה — `android.url` שבתצורה
 - **טוקן:** מנוהל ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ
 - **קובץ ראשי:** `index.html`
-- **Supabase:** project `kxbtskqobynewvnckaaz` | טבלאות `sl_*` (ראה למטה)
+- **Supabase:** project — `supabase.url` שבתצורה | טבלאות `sl_*` (ראה למטה)
 
 ---
 

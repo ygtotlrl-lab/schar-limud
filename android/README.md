@@ -1,11 +1,7 @@
 # שכר לימוד — Native WebView APK
 
 A native Android **WebView** shell (not a TWA) that loads the **live site** over the
-network:
-
-```
-https://ygtotlrl-lab.github.io/schar-limud/
-```
+network — כתובת האפליקציה, `android.url` שבתצורה.
 
 Built in the exact pattern of the organisation's round-13 shell (the network-loading one),
 
@@ -13,10 +9,10 @@ Built in the exact pattern of the organisation's round-13 shell (the network-loa
 
 | | |
 |---|---|
-| **Package ID** | `com.schar.limud` |
-| **טוען** | `https://ygtotlrl-lab.github.io/schar-limud/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 19 — ⛔ עולה בכל שינוי תחת `android/`: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
-| **minSdk / targetSdk** | 21 / 34 |
+| **Package ID** | שם החבילה — `android.package` שבתצורה |
+| **טוען** | כתובת האפליקציה — `android.url` שבתצורה — **מהרשת**, לא מנכסים מוטבעים |
+| **versionCode** | ⛔ עולה בכל שינוי ב-APK: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
+| **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ זהים בכולן |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
 | **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` (תשתית — אין כרגע input כזה בדף) |
@@ -119,8 +115,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **alias** | ⛔ אינו מוקלד — `sign-apk.sh` גוזר אותו מהמפתח עצמו |
 | **storepass / keypass** | ⛔ אינה בריפו — GitHub Secret `KEYSTORE_PASS` |
 | **תוקף** | 10,000 יום — 2026-09-15 עד 2054-01-31 |
-| **SHA256** | `0D:1F:DD:8B:5A:3E:9C:65:75:D8:71:80:EC:FF:62:45:CB:F1:14:E0:93:0B:5A:F5:AE:90:02:44:0D:A1:B6:4C` |
-| **SHA1** | `69:FC:ED:C6:02:6B:36:E7:23:72:82:A0:D0:47:15:15:F9:C5:77:52` |
+| **SHA256** | טביעת המפתח — `signSha256` שבתצורה |
 | **DN** | `CN=schar, OU=Yeshiva, O=Yeshiva, L=Rishon LeZion, ST=Israel, C=IL` |
 
 ⭐ **מסלול חתימה אחד ויחיד** — `signing/sign-apk.sh`. ⛔ החלופות
@@ -132,7 +127,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 היא ה-workflow. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
 
 ### פרטי המעטפת
-package `com.schar.limud`, versionCode 3, minSdk 21 / targetSdk 34,
+שם החבילה, `versionCode` ו-SDK — מהתצורה ומ-`tools/gen-app.mjs`;
 `usesCleartextTraffic=false`. ⚠️ המעטפת הראשונה כאן טוענת מהרשת מהיום
 הראשון — ⛔ לא היה כאן שלב `file://`.
 
