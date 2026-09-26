@@ -10,10 +10,10 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 | **Package ID** | שם החבילה — `android.package` שבתצורה |
 | **טוען** | כתובת האפליקציה — `android.url` שבתצורה — **מהרשת**, לא מנכסים מוטבעים |
 | **versionCode** | ⛔ עולה בכל שינוי ב-APK: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
-| **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ זהים בכולן |
+| **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ ואינם נערכים ביד |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
-| **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` (תשתית — אין כרגע input כזה בדף) |
+| **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` (תשתית — ⚠️ אין בדף `input` כזה) |
 | **אופליין** | ה-service worker + שכבת ה-MIRROR של האתר. המעטפת מציגה דף שגיאה בעברית **רק** בהפעלה ראשונה בלי רשת |
 
 <!-- SHARED:start id="android-web-update" -->
@@ -26,7 +26,7 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 ## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK
 
 ה-WebView של האפליקציה מחזיק **מחיצת אחסון משלו**, נפרדת מזו של הדפדפן באותו
-מכשיר. מי שעבד עד עכשיו בדפדפן ועובר ל-APK מתחיל עם localStorage **ריק**:
+מכשיר. מי שעובד בדפדפן ועובר ל-APK מתחיל עם localStorage **ריק**:
 כניסה מחדש, והעותק המקומי נטען מהענן — שהוא ממילא מקור האמת.
 
 ⛔ **מה שכן יכול ללכת לאיבוד: רשומה שנרשמה במכשיר וטרם עלתה לענן.** לכן —
@@ -51,7 +51,6 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 (`ic_launcher.png` ו-`ic_launcher_foreground.png` בכל אחת מחמש הרזולוציות)
 ו**קובץ XML אדפטיבי אחד**, `mipmap-anydpi-v26/ic_launcher.xml`, שהרקע שלו הוא
 `res/drawable/ic_launcher_background.xml`.
-⭐ **נמדד בכל הריפו — אותו מבנה בדיוק בכולן.**
 
 ⛔ **אין לערוך את קובצי ה-`mipmap` ידנית** — כולם נגזרים ממקור גרפי אחד, וכל
 עריכה ידנית היא גרסה שנייה שתידרס בגזירה הבאה בלי שאיש יידע.

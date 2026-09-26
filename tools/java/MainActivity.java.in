@@ -55,7 +55,7 @@ public class MainActivity extends ShellActivity {
      *
      * <p>⛔ A native bridge on a remotely loaded page is reach handed to whoever serves
      * the page. It must never be callable from an arbitrary site, so this is enforced
-     * twice over — see {@link #installBridge()}.
+     * twice over: the platform allow-list, and the origin check inside the bridge.
      *
      * <p>Origin, not URL: scheme + host + port — derived from the app URL in the config;
      * the path is irrelevant to the security boundary.
@@ -70,9 +70,8 @@ public class MainActivity extends ShellActivity {
     // ── Share bridge, origin-restricted ──────────────────────────────────────────
     //
     // ⛔ addJavascriptInterface injects into EVERY frame of EVERY page the WebView loads,
-    // with no origin concept at all. On the old shell that was harmless — the only page
-    // was the one baked into the APK. Loading the live site changes that: the WebView can
-    // now, in principle, end up on a page we do not serve, and the bridge would go with it.
+    // with no origin concept at all. The shell loads the live site, so the WebView can,
+    // in principle, end up on a page we do not serve — and the bridge would go with it.
     //
     // Two paths, and the first one is preferred because the platform enforces it:
     //
@@ -184,7 +183,7 @@ public class MainActivity extends ShellActivity {
      *
      * <p>@JavascriptInterface methods run on a private binder thread, so the live document
      * URL is read on the UI thread before anything happens. The interface should not even
-     * be attached off-origin (see {@link #onShellNavigation(String)}); this is the second lock.
+     * be attached off-origin at all; this is the second lock.
      */
     private class ShareBridge {
         @JavascriptInterface

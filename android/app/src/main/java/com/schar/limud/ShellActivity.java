@@ -24,15 +24,14 @@ import android.widget.Toast;
  *
  * <p>⛔ Generated from the app config by {@code tools/gen-app.mjs} and never
  * edited by hand: the body is one template, and only the {@code package} line
- * differs between the apps. Everything else that differs — the URL, the
+ * is per-app. Everything else that is per-app — the URL, the
  * sentence on the offline page, the accent colour and the optional share
  * bridge — is supplied by the generated {@link MainActivity}.
  *
  * <p><b>Why a WebView and never a Trusted Web Activity.</b> A TWA runs the site
  * inside Chrome, and the content filters installed on the users' devices block
- * Chrome, so a TWA build never opens. This was measured, not assumed: a
- * PWABuilder TWA build simply did not launch. A plain WebView renders
- * in-process and is not affected.
+ * Chrome, so a TWA build never opens. A plain WebView renders in-process and
+ * is not affected.
  *
  * <p><b>The shell loads the live site over the network, and there are no bundled
  * assets — on purpose.</b> A file:// fallback copy would live in a <i>different
@@ -65,7 +64,7 @@ public abstract class ShellActivity extends Activity {
      * The first sentence of the offline page, in Hebrew and complete.
      *
      * <p>⚠️ The whole sentence and not just the app name: the verb agrees with
-     * the name's gender («הנהלה רוחנית לא הצליחה» vs «יומן עבודה לא הצליח»),
+     * the name's gender (feminine «…לא הצליחה» vs masculine «…לא הצליח»),
      * so a name-only placeholder would produce broken Hebrew for half the names.
      */
     protected abstract String offlineLine();
@@ -136,7 +135,7 @@ public abstract class ShellActivity extends Activity {
 
         // ⛔ http/https ALWAYS stays inside the WebView. Handing a web URL to the system
         // browser would land the user in Chrome, which the content filters on their
-        // devices block — the very failure that made the TWA build unusable. Everything
+        // devices block — the same reason the shell is not a TWA. Everything
         // else (tel:, mailto:, whatsapp:, …) has no renderer here and goes to the system.
         @Override
         public boolean shouldOverrideUrlLoading(WebView wv, WebResourceRequest request) {

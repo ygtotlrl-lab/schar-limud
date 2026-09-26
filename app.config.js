@@ -32,7 +32,7 @@ self.APP = Object.freeze({
     accent: '#c9a84c',
     /*  ⛔ `versionCode` לעולם אינו יורד, ⚠️ ומקודם בכל שינוי בקובץ שנכנס ל-APK —
         ⭐ בלי קידום המכשיר המותקן אינו מקבל את ה-APK החדש. */
-    versionCode: 22,
+    versionCode: 23,
     versionName: '15.0',
     launcherBg: { kind: 'solid', color: '#FFFFFF' },
     /*  ⚠️ גשר השיתוף — ⭐ `FileProvider` ו-`androidx`, רק באפליקציה שמייצאת קובץ. */
@@ -50,8 +50,8 @@ self.APP = Object.freeze({
     master: 'design/icon-master.png',
     bgKey: [252, 253, 252],
     keyTol: 40,
-    /*  ⛔ הדיו נמדד מהמאסטר ⛔ ואינו מוקלד — ⚠️ [47,116,52] היה הצבע
-        שהחזית צוירה בו בלבד, ⭐ והאריח צויר בצבע הציור עצמו. */
+    /*  ⛔ הדיו נמדד מהמאסטר ⛔ ואינו מוקלד — ⚠️ והחזית והאריח נצבעים בו
+        שניהם: ⭐ דיו אחר לחזית בלבד מפריד את האריח מהציור. */
     ink: [60, 125, 65],
     bg: { kind: 'solid', color: [255, 255, 255] },
     mark: { w: 684, h: 612 },

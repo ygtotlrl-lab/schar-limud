@@ -144,7 +144,7 @@ ${A.android.share ? `
 dependencies {
     implementation 'androidx.core:core:1.13.1'
     // WebViewCompat.addWebMessageListener — the origin allow-list for the share bridge
-    // is enforced by WebView itself, per frame. See MainActivity#installShareBridge.
+    // is enforced by WebView itself, per frame.
     implementation 'androidx.webkit:webkit:1.11.0'
 }
 ` : ''}`;
