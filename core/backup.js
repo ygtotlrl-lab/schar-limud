@@ -60,7 +60,7 @@ function _bkLogRow(action, key, count, details) {
  *  שבו נתון נעלם ואיש אינו יודע. ⛔ והרישום אינו משנה את הזרימה — ⚠️ תיעוד
  *  אבחון שמפיל שמירה גרוע מהיעדרו. */
 function _bkWriteFail(where, e) {
-  try { console.warn('[write-fail] ' + where, (e && e.message) ? e.message : e); } catch (e0) { }
+  try { console.warn('[bk] ' + where, (e && e.message) ? e.message : e); } catch (e0) { }
 }
 function _bkLogQueue(row) {
   try {
@@ -270,7 +270,7 @@ async function bkMaybeDaily() {
          מכוון למי שנכשל בלבד. ⛔ וכשל חלקי מדווח ואינו נבלע — `failed`
          נושא את שמות המקורות, אחרת «נכשל» היה מספר בלי מען. */
       logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same, failed: failed });
-      console.warn('[backup] מקורות שנכשלו: ' + (failed.join(', ') || '?') + ' — ייבחנו שוב בהזדמנות הבאה');
+      console.warn('[bk] מקורות שנכשלו: ' + (failed.join(', ') || '?') + ' — ייבחנו שוב בהזדמנות הבאה');
     }
   } catch (e) { ok = false; }
   _bkRunning = false;

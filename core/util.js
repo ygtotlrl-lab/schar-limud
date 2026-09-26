@@ -112,7 +112,7 @@ function appConfigure(cfg) {
    `MSG_OFFLINE` הוא **קריאה** שנכשלה, ⭐ ולא נכתב שם דבר שאפשר לסנכרן:
    ⛔ «תסתנכרן כשהחיבור יחזור» הוא הבטחה על נתון שאינו קיים.
    ⭐ **וההבטחה נכונה רק על כתיבה שכבר בתור** —
-   `MSG_SAVED_LOCAL` ו-`MSG_CLOUD_SYNC_FAIL`, ⛔ ושם היא נאמרת מפורשות.
+   `MSG_SAVED_LOCAL`, ⛔ ושם היא נאמרת מפורשות.
    ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_BAD_LOGIN` נבדל פר-אפליקציה
    בהחלטת מנהל, ⭐ ונשאר עם נימוקו במקומו.
    ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
@@ -123,7 +123,6 @@ var MSG_SAVED = '✅ נשמר בהצלחה';
 var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
 var MSG_SAVE_FAIL = '❌ השמירה נכשלה';
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
-var MSG_CLOUD_SYNC_FAIL = '⚠️ הסנכרון לענן נכשל — הנתונים שמורים במכשיר ויישלחו כשהרשת תחזור';
 var MSG_OFFLINE = '📴 אין חיבור לאינטרנט — הפעולה לא בוצעה';
 var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 var MSG_SW_TIMEOUT = '⚠️ העדכון לא הושלם — נסה שוב';
@@ -222,7 +221,7 @@ function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 /*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { app, appConfigure, readNum, uniqList, uniqHas,
-         MSG_CLOUD_SYNC_FAIL, MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
+         MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,
