@@ -92,7 +92,7 @@ import { MSG_FILL_ALL, MSG_FILL_LOGIN, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR,
          MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK,
          appConfigure, dayToday, errMsg, getDeviceId, isNetErr, kvParse,
          readNum, uniqHas, withTimeout } from './core/util.js';
-import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick,
+import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick,
          eraNotePush, idEq, mergeCore, newClientId, pendAlertDismiss,
          pendAll, pendBoot, pendClearMany, pendCount, pendFailed, pendHas,
          pendMark, pendMarkMany, pendTag, plBoot, plNum, plTick, plTouch,
@@ -514,6 +514,13 @@ var LS_CFG = {
    *  המטמון שנדחה, ⛔ **ומה מפיל**: שם בלי תחילית האפליקציה —
    *  ⭐ ה-origin משותף, וסימן בלי תחילית נדרס בכל דחייה. */
   dismissKey: 'sl_sw_dismissed',
+  /*  ⛔ המרשם — כל מפתח שהאפליקציה כותבת תחת התחילית: ⚠️ מפתח שאינו כאן
+   *  נמחק בעלייה, ⭐ והשמות נגזרים מהתצורה ומהכותבים ⛔ ואינם מוקלדים שוב. */
+  keys: function () {
+    return [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key, PEND_CFG.key,
+            BK_CFG.flagKey, BK_CFG.logQueueKey]
+      .concat(eraKeys(), mirrorTables().map(mirrorKey));
+  },
 
   /*  ⭐ סוג האפליקציה — ⚠️ ממנו נגזר חלון הפינוי, ⛔ ואין מספר ימים באף
    *  רשומה: ⭐ והנימוק אומר על מה החישוב שלה נפרש. */
@@ -609,6 +616,9 @@ var BK_CFG = {
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var PEND_CFG = {
   app: 'schar-limud', key: 'sl_pending',
+  /*  ⛔ קידומות הסימון — ⚠️ נגזרות ממפת הדחיפה, ⭐ ⏳ שקידומתו אינה
+   *  כאן יורד בעלייה: ⛔ אין לו כותב, ⚠️ ואין שורה שתידחף ותוריד אותו. */
+  marks: function () { return PUSH_TABLES.map(function (t) { return _slPushOf(t).pk; }); },
   // השהיית ציור: בתום ההחזקה, תגית ⏳ שנותרה צריכה להיכנס לשורות
   // שכבר רונדרו בלעדיה. שלושת מציירי התגיות — יומן התשלומים, רשימת התנועות
   // שבכרטיס התלמיד (renderScAnnual, בלי לאפס את שדות העריכה של הכרטיס)

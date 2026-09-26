@@ -432,7 +432,28 @@ function pendKeyName() {
   return k || 'pending_sync';
 }
 // החלפת הקשר (מוסד/משתמש) — המפה נטענת מחדש מהמפתח החדש.
-function pendReload() { _pendMap = null; _pendDrawHold = {}; pendAll(); pendRender(); }
+function pendReload() { _pendMap = null; _pendDrawHold = {}; pendPrune(); pendRender(); }
+/*  ⛔ כל קידומת סימון מוצהרת — `PEND_CFG.marks`, ⚠️ וסימון שקידומתו אינה
+ *  מוצהרת יורד בטעינה: ⭐ אין לו כותב, ⛔ ולכן אין שורה שתידחף ותוריד
+ *  אותו — ⚠️ הוא מקבע את המונה ואת הניסיון החוזר לנצח, ⛔ וחוסם את
+ *  הזריקה בעידן, שדורשת תור ריק.
+ *  ⛔ המנגנון יודע רק את הקידומות של היום — ⚠️ ואין בו שם של סימון שהיה.
+ *  ⛔ **ורשימה שאינה נקראת אינה מורידה דבר** — ⚠️ רשימה ריקה או זורקת
+ *  נקראת «אין ראיה», ⛔ ולא «אין סימון תקף». */
+function pendPrune() {
+  var m = pendAll(), marks = null, drop;
+  try { marks = app.PEND_CFG.marks(); } catch (e) { console.error('[pend] הקידומות אינן נקראות — אין ניקוי', e); return 0; }
+  if (!Array.isArray(marks) || !marks.length) { console.error('[pend] אין קידומות מוצהרות — אין ניקוי'); return 0; }
+  drop = Object.keys(m).filter(function (k) {
+    return !marks.some(function (p) { return typeof p === 'string' && p && k.indexOf(p) === 0; });
+  });
+  if (!drop.length) return 0;
+  drop.forEach(function (k) { delete m[k]; });
+  pendSave();
+  try { lsLog('סימון שקידומתו אינה מוצהרת ירד', drop.join(' · '), 0); } catch (e1) { }
+  console.warn('[pend] ' + drop.length + ' סימונים שקידומתם אינה מוצהרת ירדו');
+  return drop.length;
+}
 /*  ⛔ המשתנים חיים במודול — ⚠️ ומי שמחוצה לו אינו כותב אליהם: ⭐ הוא קורא לאלה. */
 function pendAlertDismiss() { _pendAlertDismissed = Date.now(); pendRenderAlert(); }
 /*  ⛔ בלי טעינה מחדש — ⚠️ בהחלפת הקשר הטעינה שייכת להקשר החדש. */
@@ -640,7 +661,7 @@ function pendRenderAlert() {
 // גם כשהמשתמש לא נגע בכלום.
 var _pendTick = null;
 function pendBoot() {
-  pendAll();
+  pendPrune();
   pendRender();
   if (!_pendTick) _pendTick = setInterval(pendRender, 60000);
   if (typeof window !== 'undefined' && window.addEventListener) {
@@ -970,6 +991,9 @@ function eraThrow(o) {
 /*  ⛔ העידן של **העותק שעל הדיסק** — ⚠️ התקנה טרייה נושאת את עידן הקוד:
  *  ⭐ אין בה עותק ישן שיזדקן, ⛔ ואפס היה זורק אותה בעלייה הראשונה. */
 function eraLocalKey() { return app.ERA_CFG.prefix + 'era'; }
+/*  ⛔ שני המפתחות שהעידן כותב — ⚠️ והמרשם קורא אותם מכאן: ⭐ שם שמוקלד
+ *  במקום שני מתיישן ביום שהמפתח כאן משתנה, ⛔ והניקוי בעלייה מוחק אותו. */
+function eraKeys() { return [eraLocalKey(), eraResetKey(app.ERA_CFG.prefix)]; }
 function eraLocal() {
   var v = parseInt(lsGet(eraLocalKey(), ''), 10);
   return isFinite(v) ? v : app.DATA_ERA;
@@ -1035,7 +1059,7 @@ function eraKick() {
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { newClientId, idEq, mergeCore, tombAt,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
-         ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKick,
+         ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendReload, pendRender, pendTag,

@@ -659,11 +659,49 @@ function lsBootDeferred() {
   return p.then(finish, function () { return finish(0); });
 }
 
+/* ── מרשם המפתחות ──────────────────────────────────────────────────────
+   ⛔ כל מפתח שהאפליקציה כותבת תחת התחילית שלה מוצהר במרשם אחד —
+   `LS_CFG.keys`, ⚠️ ומפתח תחת התחילית שאינו שם נמחק בעלייה: ⭐ אין לו
+   כותב, ⛔ ולכן איש אינו מעדכן אותו, איש אינו מפנה אותו, והזריקה בעידן
+   אינה מגיעה אליו.
+   ⛔ המנגנון יודע רק את המרשם של היום — ⚠️ ואין בו שם של מפתח שהיה:
+   ⭐ רשימת מה שנמחק היא רשימה שמתיישנת, ⛔ ורשימת מה שמותר נגזרת מהכותבים.
+   ⛔ **ומפתח מחוץ לתחילית אינו נגע** — ⚠️ ה-origin משותף לכל האפליקציות.
+   ⭐ ואופק הפינוי של מפתח מוצהר מוצהר איתו — ⛔ ואופק של מפתח שאינו
+   מוצהר יורד עם המפתח.
+   ⛔ **ומרשם שאינו נקרא אינו מוחק דבר** — ⚠️ מרשם ריק או זורק נקרא «אין
+   ראיה», ⛔ ולא «אין מה לשמור». */
+function lsKeyRegistry() {
+  var own = {}, list = app.LS_CFG.keys(), i;
+  for (i = 0; i < list.length; i++) if (typeof list[i] === 'string' && list[i]) own[list[i]] = true;
+  return own;
+}
+function lsKeyKnown(k, own) {
+  if (own[k] === true) return true;
+  var hz = app.LS_CFG.hzPrefix;
+  return k.indexOf(hz) === 0 && own[k.slice(hz.length)] === true;
+}
+function lsKeySweep() {
+  var pre = self.APP.prefix, own = null, drop = [], i, k;
+  try { own = lsKeyRegistry(); } catch (e) { console.error('[ls] המרשם אינו נקרא — אין ניקוי', e); return 0; }
+  if (!pre || !Object.keys(own).length) { console.error('[ls] המרשם ריק — אין ניקוי'); return 0; }
+  try {
+    for (i = 0; i < localStorage.length; i++) {
+      k = localStorage.key(i);
+      if (k != null && k.indexOf(pre) === 0 && !lsKeyKnown(k, own)) drop.push(k);
+    }
+  } catch (e1) { console.error('[ls] סריקת המפתחות נכשלה — אין ניקוי', e1); return 0; }
+  drop.forEach(lsRemove);
+  if (drop.length) lsLog('מפתח שאינו מוצהר נמחק', drop.join(' · '), 0);
+  return drop.length;
+}
+
 /* ── בדיקת העלייה ───────────────────────────────────────────────────────
    נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו.
    **סינכרונית בכוונה** — היא חייבת לרוץ לפני הטעינה. כשיש מפתחות שניתן
    לאמת מול הענן, ההתרעה נדחית יחד עם האימות (`lsBootDeferred`). */
 function lsBoot(opts) {
+  lsKeySweep();
   var u = lsUsage(), swept = 0;
   if (u.total >= u.quota * LS_SWEEP_PCT) {
     swept = lsSweepGuarded('פינוי יזום בעלייה — ' + Math.round(u.pct * 100) + '% מהמכסה',
