@@ -660,21 +660,40 @@ function lsBootDeferred() {
 }
 
 /* ── מרשם המפתחות ──────────────────────────────────────────────────────
-   ⛔ כל מפתח שהאפליקציה כותבת תחת התחילית שלה מוצהר במרשם אחד —
-   `LS_CFG.keys`, ⚠️ ומפתח תחת התחילית שאינו שם נמחק בעלייה: ⭐ אין לו
-   כותב, ⛔ ולכן איש אינו מעדכן אותו, איש אינו מפנה אותו, והזריקה בעידן
-   אינה מגיעה אליו.
+   ⛔ כל מפתח במרחב האפליקציה מוצהר במרשם אחד — ⚠️ **מרחב האפליקציה** הוא
+   כל מה שקוד האפליקציה או מודול משותף כותב עבורה: ⭐ התחילית שלה, ומשפחת
+   כל מודול שכותב מחוצה לה ונרשם ב-`lsSpace`. ⚠️ ומפתח במרחב שאינו במרשם
+   נמחק בעלייה: ⭐ אין לו כותב, ⛔ ולכן איש אינו מעדכן אותו, איש אינו
+   מפנה אותו, והזריקה בעידן אינה מגיעה אליו.
    ⛔ המנגנון יודע רק את המרשם של היום — ⚠️ ואין בו שם של מפתח שהיה:
    ⭐ רשימת מה שנמחק היא רשימה שמתיישנת, ⛔ ורשימת מה שמותר נגזרת מהכותבים.
-   ⛔ **ומפתח מחוץ לתחילית אינו נגע** — ⚠️ ה-origin משותף לכל האפליקציות.
+   ⛔ **ומפתח מחוץ למרחב אינו נגע** — ⚠️ ה-origin משותף לכל האפליקציות,
+   ⭐ ומשפחה שנרשמת מכריעה בעצמה מה שלה.
    ⭐ ואופק הפינוי של מפתח מוצהר מוצהר איתו — ⛔ ואופק של מפתח שאינו
    מוצהר יורד עם המפתח.
    ⛔ **ומרשם שאינו נקרא אינו מוחק דבר** — ⚠️ מרשם ריק או זורק נקרא «אין
    ראיה», ⛔ ולא «אין מה לשמור». */
+/*  ⛔ משפחת מפתחות שמודול משותף כותב מחוץ לתחילית — ⚠️ **מה נכנס**:
+ *  `keys()` — המפתחות שהמודול כותב היום, ו-`owns(k)` — האם מפתח שייך
+ *  למשפחה ולאפליקציה הזו. ⛔ **ומשפחה שאינה מצהירה מפתח אינה נכנסת** —
+ *  ⚠️ `keys()` ריקה או זורקת היא «אין ראיה», ⛔ ולא «אין מה לשמור». */
+var _lsSpaces = [];
+function lsSpace(sp) { if (sp && typeof sp.keys === 'function' && typeof sp.owns === 'function') _lsSpaces.push(sp); }
 function lsKeyRegistry() {
   var own = {}, list = app.LS_CFG.keys(), i;
   for (i = 0; i < list.length; i++) if (typeof list[i] === 'string' && list[i]) own[list[i]] = true;
   return own;
+}
+function lsSpacesLive(own) {
+  var live = [];
+  _lsSpaces.forEach(function (sp) {
+    var ks = null;
+    try { ks = sp.keys(); } catch (e) { console.warn('[ls] משפחת מפתחות אינה נקראת — מחוץ לניקוי', e); return; }
+    if (!Array.isArray(ks) || !ks.length) return;
+    ks.forEach(function (k) { if (typeof k === 'string' && k) own[k] = true; });
+    live.push(sp);
+  });
+  return live;
 }
 function lsKeyKnown(k, own) {
   if (own[k] === true) return true;
@@ -682,13 +701,19 @@ function lsKeyKnown(k, own) {
   return k.indexOf(hz) === 0 && own[k.slice(hz.length)] === true;
 }
 function lsKeySweep() {
-  var pre = self.APP.prefix, own = null, drop = [], i, k;
+  var pre = self.APP.prefix, own = null, live = [], drop = [], i, k;
   try { own = lsKeyRegistry(); } catch (e) { console.error('[ls] המרשם אינו נקרא — אין ניקוי', e); return 0; }
   if (!pre || !Object.keys(own).length) { console.error('[ls] המרשם ריק — אין ניקוי'); return 0; }
+  live = lsSpacesLive(own);
+  function mine(key) {
+    if (key.indexOf(pre) === 0) return true;
+    for (var j = 0; j < live.length; j++) if (live[j].owns(key)) return true;
+    return false;
+  }
   try {
     for (i = 0; i < localStorage.length; i++) {
       k = localStorage.key(i);
-      if (k != null && k.indexOf(pre) === 0 && !lsKeyKnown(k, own)) drop.push(k);
+      if (k != null && mine(k) && !lsKeyKnown(k, own)) drop.push(k);
     }
   } catch (e1) { console.error('[ls] סריקת המפתחות נכשלה — אין ניקוי', e1); return 0; }
   drop.forEach(lsRemove);
@@ -883,4 +908,5 @@ function hwBoot() {
  *  ⭐ ו-`default` היה נבלע בשקט. */
 export { MSG_LS_FULL, hwBoot, hwDiskFilter, hwForget, hwNoteCloud,
          hwPastLoad, lsBoot, lsClearHorizons, lsGet, lsGuardToast,
-         lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray, lsSetRaw };
+         lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray, lsSetRaw,
+         lsSpace };
