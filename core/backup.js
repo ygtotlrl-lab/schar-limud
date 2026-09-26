@@ -7,7 +7,7 @@
 
 import { app, dayToday, withTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
-import { lsGet, lsSet } from './storage.js';
+import { lsGet, lsSet, lsSpace } from './storage.js';
 
 /* ═══ גיבוי יומי ויומן פעולות — מודול משותף ═══════════════════════════════
    ══════════════════════════════════════════════════════════════════════ */
@@ -119,13 +119,54 @@ async function logFlush() {
 var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
 var BK_ANCHOR_PREFIX = 'ANCHOR:';
 var BK_DIFF_PREFIX = 'DIFF:';
+
+/* ── המפתחות שהגיבוי כותב במכשיר ───────────────────────────────────────
+   ⛔ הם במרחב האפליקציה ⛔ ומוצהרים במרשם — ⚠️ הם מחוץ לתחילית, ⭐ ולכן
+   המודול רושם את משפחתם ב-`lsSpace`: ⛔ מפתח של מקור שירד היה נשאר
+   במכשיר לעולם. ⚠️ **מה נכנס**: ארבע המשפחות, ומפתח הגיבוי שאחריהן —
+   `<קידומת גיבוי><מפתח המקור>`. ⭐ **והשייכות** נגזרת מהקידומות
+   ומתחילית האפליקציה: ⛔ מפתח `bk_` של אפליקציה אחרת על אותו origin
+   אינו שלה, ⚠️ ואינו נגע. */
+var BK_LS = { wm: 'bk_wm_', anch: 'bk_anch_', day: 'bk_day_', sig: 'bk_sig_' };
+/*  ⭐ כל הקידומות שהגיבוי כותב בהן — ⚠️ `prefixes` כשהקידומת נבדלת בין
+ *  הקשרים, ⛔ שהמרשם מצהיר על כולם ולא על הפעיל בלבד. */
+function _bkPrefixes() {
+  var p = _bkCfg('prefixes', null);
+  return (Array.isArray(p) && p.length) ? p : [_bkCfg('prefix', '') || ''];
+}
+function bkKeys() {
+  var src = _bkCfg('sources', []) || [], pres = _bkPrefixes(), out = [];
+  pres.forEach(function (pre) {
+    src.forEach(function (s) {
+      var bkey = pre + (s.key || s.name);
+      out.push(BK_LS.day + bkey);
+      if (s.kind === 'kv') { out.push(BK_LS.sig + bkey); return; }
+      out.push(BK_LS.wm + bkey, BK_LS.anch + bkey,
+               BK_LS.sig + BK_ANCHOR_PREFIX + bkey, BK_LS.sig + BK_DIFF_PREFIX + bkey);
+    });
+  });
+  return out;
+}
+function bkOwns(k) {
+  var rest = null, fams = Object.keys(BK_LS), i, pres;
+  for (i = 0; i < fams.length; i++) {
+    if (k.indexOf(BK_LS[fams[i]]) === 0) { rest = k.slice(BK_LS[fams[i]].length); break; }
+  }
+  if (rest === null) return false;
+  if (rest.indexOf(BK_ANCHOR_PREFIX) === 0) rest = rest.slice(BK_ANCHOR_PREFIX.length);
+  else if (rest.indexOf(BK_DIFF_PREFIX) === 0) rest = rest.slice(BK_DIFF_PREFIX.length);
+  pres = _bkPrefixes();
+  for (i = 0; i < pres.length; i++) if (rest.indexOf(pres[i] + self.APP.prefix) === 0) return true;
+  return false;
+}
+lsSpace({ keys: bkKeys, owns: bkOwns });
 /*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
  *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
-function _bkMarkKey(bkey) { return 'bk_wm_' + bkey; }
+function _bkMarkKey(bkey) { return BK_LS.wm + bkey; }
 function _bkSetMark(bkey, v) {
   if (v == null) return;
   lsSet(_bkMarkKey(bkey), String(v));
-  lsSet('bk_anch_' + bkey, String(Date.now()));
+  lsSet(BK_LS.anch + bkey, String(Date.now()));
 }
 /*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
  *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
@@ -144,7 +185,7 @@ function _bkMaxTs(rows, col) {
  *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
 function _bkLayer(bkey, s) {
   var wm = lsGet(_bkMarkKey(bkey), '');
-  var at = parseInt(lsGet('bk_anch_' + bkey, '0'), 10) || 0;
+  var at = parseInt(lsGet(BK_LS.anch + bkey, '0'), 10) || 0;
   if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
     return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
   return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
@@ -218,7 +259,7 @@ async function bkMaybeDaily() {
          מגבה מחדש את מה שכבר גובה, שוב ושוב באותו יום.
          ⚠️ הדחיפה ל-`dailyKeys` קודמת לדילוג בכוונה: הרשימה היא
          רשימת-ההיתר של הגריעה, ומפתח שנופל ממנה אינו מתפנה לעולם. */
-      var dayKey = 'bk_day_' + bkey;
+      var dayKey = BK_LS.day + bkey;
       if (lsGet(dayKey, '') === today) { same++; continue; }
       if (s.kind === 'kv') {
         var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
@@ -247,7 +288,7 @@ async function bkMaybeDaily() {
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
-      var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
+      var sig = bkSig(val), sigKey = BK_LS.sig + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
       if (!ins || ins.error) { ok = false; failed.push(bkey); continue; }
