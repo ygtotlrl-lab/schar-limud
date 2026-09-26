@@ -30,11 +30,11 @@ alter table public.TABLE_NAME enable row level security;
 סטנדרטי מגיע עם `alter default privileges … grant all on tables` — כלומר
 **כל טבלה נולדת עם `DELETE` ו-`TRUNCATE`**. מחיקה בארגון היא תמיד `deleted=true`
 (כלל קריטי 5, וכלל ברזל 6 סעיף 1), ולכן ההרשאות האלה מיותרות בהגדרה ומסוכנות
-בפועל: מפתח ה-anon יושב גלוי ב-`index.html` הציבורי. ר' `migrations/012`.
+בפועל: מפתח ה-anon יושב גלוי ב-`index.html` הציבורי.
 ⚠️ **הניסוח הקודם כאן כלל `delete` לשלושת התפקידים** — הוא קדם למיגרציה 012
 ולכלל ברזל 10 סעיף 9, ותוקן.
 
-מקור האמת המלא לסכימה: `migrations/000_initial_schema.sql`.
+מקור האמת המלא לסכימה: `migrations/000_schema.sql`.
 
 ---
 

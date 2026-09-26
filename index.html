@@ -805,7 +805,7 @@ function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
         בלי ה-tombstones מחיקה שנעשתה במכשיר אחר לא הייתה מגיעה לכאן לעולם.
      2. **קריאה ממנו בעליית האפליקציה**, לפני כל נגיעה ברשת.
      3. **סנכרון ברקע** — משיכה, מיזוג, ואז דחיפת מה שמקומי וחדש יותר.
-     4. **מיזוג ברמת רשומה** לפי `client_id` ו-`updated_at` (migrations/008).
+     4. **מיזוג ברמת רשומה** לפי `client_id` ו-`updated_at`.
 
    ⚠️ **זהות הרשומה — `client_id` בלבד.** ⭐ `text` שנוצר במכשיר לפני
    השליחה, ומפתח המיזוג הוא `c:<client_id>`: ⛔ שורה בלי `client_id` אין לה
@@ -833,7 +833,7 @@ var SL_COLS = {
 var _slLastPullOk = 0;
 
 // מפתח הזהות. `client_id` כשקיים — הוא נוצר במכשיר ושורד את המסע לשרת;
-// `id` הוא נפילה-חזרה לרשומות היסטוריות שקדמו ל-migrations/006.
+// `id` הוא נפילה-חזרה לרשומה שאין בה `client_id`.
 function slKey(r) {
   if (!r || typeof r !== 'object') return '';
   return r.client_id ? 'c:' + r.client_id : '';
@@ -945,7 +945,7 @@ function slSettingsAccess(u) {
 }
 function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 var MSG_SET_DENIED  = '🔒 מסך ההגדרות פתוח למשתמשי ניהול בלבד. המשתמש שאיתו נכנסת אינו מוגדר כך — יש לפנות למנהל המערכת.';
-var MSG_SET_NO_ROLE = '🔧 מסך ההגדרות טרם הופעל במסד הנתונים. יש להריץ את <code>migrations/011_users_role.sql</code> ב-SQL Editor של Supabase, ואז להיכנס מחדש.';
+var MSG_SET_NO_ROLE = '🔧 מסך ההגדרות טרם הופעל במסד הנתונים. יש להריץ את <code>migrations/000_schema.sql</code> ב-SQL Editor של Supabase, ואז להיכנס מחדש.';
 
 /* ══════════════════════════════════════════════════════════════════════════
    כתיבת משתמש — נקודת המעבר האחת אל טבלת המשתמשים
@@ -1236,7 +1236,7 @@ function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 function acadYearOf(s){var d=new Date(s+'T00:00:00');return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
 function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
 function monthLabel(y,m){return MONTH_HE[m]+' '+(m>=8?y:y+1);}
-// ===== טווח פעילות התלמיד: start_month / end_month (migrations/004) =====
+// ===== טווח פעילות התלמיד: start_month / end_month =====
 // עד היום כל תלמיד פעיל חויב ב-12 חודשי השנה, ולכן מי שהצטרף באמצע הוצג
 // כחייב גם על חודשים שלא היה בהם. הטווח הוא חודשי לוח גרגוריאני בפורמט
 // 'YYYY-MM' — הפורמט הזה ממוין כרונולוגית כמחרוזת, ולכן ההשוואה
@@ -2102,7 +2102,7 @@ function saveStudentSettings(){
    שנרשם רק במקום שבו נלמד אינו מגן על המקום שבו ייכתב הקוד הבא.
 
    כאן: `renderSettingsPanel` / `slSettingsAccess` — ההרשאה נגזרת מ-`sl_users.role`,
-   וכל מה שאינו בדיוק `'admin'` נדחה. `migrations/011` מגדירה את העמודה
+   וכל מה שאינו בדיוק `'admin'` נדחה. `migrations/000_schema.sql` מגדיר את העמודה
    `NOT NULL` **בלי DEFAULT** — יצירת משתמש בלי `role` נכשלת במסד.
    ═════════════════════════════════════════════════════════════════════ */
 /* ⭐ מסך ההגדרות נפתח לפי **תפקיד**, לא לפי סיסמה שנייה.
