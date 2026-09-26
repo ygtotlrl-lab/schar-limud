@@ -196,12 +196,6 @@ async function authPassFields(pass) {
   return made ? { pass_salt: made.salt, pass_fp: made.fp }
               : { pass_salt: null, pass_fp: null };
 }
-/*  ⛔ תשובת שרת שאומרת «עמודות הטביעה אינן קיימות» — ⚠️ בלי הזיהוי כל
- *  שמירת משתמש נכשלת לגמרי בחלון שבין דחיפת הקוד להרצת המיגרציה. */
-function authMissingFpCol(err) {
-  var m = ((err && (err.message || err.details || err.hint || err.code || '')) + '').toLowerCase();
-  return m.indexOf('pass_fp') !== -1 || m.indexOf('pass_salt') !== -1;
-}
 /*  ⛔ האימות — מקוון ואופליין — מול הטביעה בלבד, ⭐ ומחזיר אחת מארבע:
  *  `ok` · `bad` (סיסמה שגויה או משתמש מושבת) · `no-fp` · `no-crypto`.
  *  ⛔ אין לאחד את שלושת הכישלונות — ⚠️ «סיסמה שגויה» על היעדר טביעה שולח
@@ -374,18 +368,7 @@ function writeUser(id, row) {
   var body = Object.assign({}, row);
   body.updated_at = Date.now();
   body.client_id = (key == null) ? (body.client_id || newClientId()) : key;
-  return _writeUserSend(body, key).then(function (res) {
-    /*  ⛔ נפילה-חזרה לחלון שבין דחיפת הקוד להרצת המיגרציה — ⚠️ בלעדיה
-     *  **כל** שמירת משתמש נכשלת עד שהעמודות ייווצרו: ⭐ המשתמש נשמר,
-     *  והכניסה האופליין שלו תיפתח בשינוי הסיסמה הבא. */
-    if (!(res && res.error && authMissingFpCol(res.error))) return res;
-    var b2 = Object.assign({}, body);
-    delete b2.pass_salt; delete b2.pass_fp;
-    return _writeUserSend(b2, key).then(function (r) {
-      if (r && !r.error) r._noFp = true;
-      return r;
-    });
-  }).then(function (res) { return app.USER_CFG.after(res, body); });
+  return _writeUserSend(body, key).then(function (res) { return app.USER_CFG.after(res, body); });
 }
 /* ═══════════════ סוף מודול כתיבת משתמש ══════════════════════════════════ */
 
