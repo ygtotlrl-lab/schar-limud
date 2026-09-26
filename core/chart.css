@@ -5,7 +5,7 @@
       ⭐ ו-`--card-2` למסלול שמאחוריו: ⛔ ליטרל מוטבע כאן היה נשאר בהיר
       במצב כהה, ⚠️ ומבטל את הזהות הפר-אפליקציה.
    ⛔ ופס היעד הוא **אותו** אסימון בשקיפות — ⚠️ אסימון שני היה תפקיד שני
-      לצבע קיים, ⭐ והשורה על תפקיד אחד לאסימון אוסרת אותו. */
+      לצבע קיים, ⭐ ולאסימון תפקיד אחד. */
 .bchart{display:grid;gap:var(--sp-4);padding:var(--sp-2) 0}
 .brow{display:grid;grid-template-columns:4.6rem 1fr 4.4rem;align-items:center;gap:var(--sp-4);font-size:var(--fs-3)}
 .blab{color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

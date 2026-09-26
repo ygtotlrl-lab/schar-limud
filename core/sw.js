@@ -64,8 +64,8 @@ var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
 
 /*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן: ignoreSearch
  *  מתעלם מה-query, וב-PostgREST כל הפילטרים יושבים דווקא שם. חיפוש כללי
- *  איתו גרם לכך שבקשת כניסה של משתמש אחד התאימה לתשובה שנשמרה
- *  עבור אחר — כניסה בזהות זרה. ניווט בלבד רשאי להשתמש ב-SW_NAV_OPTS. */
+ *  איתו מתאים בקשת כניסה של משתמש אחד לתשובה שנשמרה עבור אחר — כניסה
+ *  בזהות זרה. ניווט בלבד רשאי להשתמש ב-SW_NAV_OPTS. */
 var SW_NAV_OPTS = { ignoreVary: true, ignoreSearch: true };
 var SW_SUB_OPTS = { ignoreVary: true };
 
@@ -145,7 +145,7 @@ function swStore(key, res) {
 
 /*  ⛔ חיפוש במטמון של האפליקציה בלבד — ⚠️ ה-origin משותף לכל
  *  האפליקציות, ⭐ ו-`caches.match()` הגלובלי סורק את כולם והישן ראשון:
- *  ⛔ מטמון בשם שננטש הגיש אייקון של אחות. */
+ *  ⛔ מטמון בשם שננטש מגיש אייקון של אפליקציה אחרת. */
 function swMatch(request, opts) {
   return caches.open(CACHE_NAME).then(function (cache) {
     return cache.match(request, opts);
@@ -153,8 +153,9 @@ function swMatch(request, opts) {
 }
 
 /*  ⛔ המטמון שלנו לפי תוכנו ⛔ ולא לפי שמו — ⚠️ כל מפתח בתוך ה-scope או
- *  נכס CDN, ⭐ ולפחות אחד בתוך ה-scope: ⛔ קידומת שהשתנתה השאירה מטמון
- *  שאיש אינו מוחק, ⚠️ ומטמון של אחות נושא מפתח מחוץ ל-scope ונשאר. */
+ *  נכס CDN, ⭐ ולפחות אחד בתוך ה-scope: ⛔ קידומת שמשתנה משאירה מטמון
+ *  שאיש אינו מוחק, ⚠️ ומטמון של אפליקציה אחרת נושא מפתח מחוץ ל-scope
+ *  ונשאר. */
 function swOwnsCache(name) {
   if (name === CACHE_NAME) return Promise.resolve(false);
   return caches.open(name).then(function (cache) {
@@ -178,7 +179,7 @@ function swShell() {
 }
 
 /*  ⚠️ בקשת CDN חייבת mode:'cors' — תגובת no-cors היא opaque עם
- *  status 0, ו-cache.put דוחה אותה; כך הנכסים מעולם לא נשמרו.
+ *  status 0, ו-cache.put דוחה אותה, והנכס אינו נשמר.
  *  ⚠️ והפסק-זמן אינו קישוט: בקשת CDN שנתקעת משאירה את
  *  waitUntil של install תלוי לנצח, והעובד נשאר «installing» בלי אופליין. */
 function swFetchCors(url) {
@@ -271,8 +272,8 @@ function swNetworkFirst(request) {
 }
 
 /*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ונשמרה.
- *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
- *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה.
+ *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: היפוכה משנה מה
+ *  המשתמש רואה.
  *  ⛔ **וקובץ מהקליפה אינו מתרענן ברקע** — ⚠️ קוד חדש שנכתב למטמון הישן
  *  פוגש בטעינה הבאה את הדף הישן: ⭐ הקליפה נכנסת כולה בהתקנה, ורק שם. */
 function swCacheFirst(request, u) {
