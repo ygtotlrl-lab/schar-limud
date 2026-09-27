@@ -1,29 +1,6 @@
-/* ═══ core/ui.css — הגיליון המשותף ══════════════════════════════════════
-   ⭐ הסולמות, והרכיבים שקוד ב-`core/` בונה: המודאל, באנר העדכון, הטוסט,
-   מצבי הרכיב ובאנר כשל האחסון.
-   ⛔ נטען לפני `app.css` — ⚠️ ולכן מה שכאן הוא המבנה, ⭐ והאפליקציה מוסיפה
-      מעליו את הערכים שלה: מיקום, ריווח וצבע של רכיב הם מוצר.
-   ⛔ ואין כאן ערך שנבדל בין האפליקציות — ⚠️ ערך כזה יושב ב-`app.css`.
-   ════════════════════════════════════════════════════════════════════ */
-/* ══ סולמות הערך החזותי ═════════════════════════════════════════════════
-   ⛔ שמונה סולמות, ⛔ ואותן דרגות בכל האפליקציות — ⚠️ כל ערך חזותי
-      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
-      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
-      ביניהם.
-   ⛔ **ומספר הדרגות נגזר מהערכים בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
-      משוקלל בסולם לוגריתמי על כל הערכים שבשימוש, ⭐ ותקרה של שבע.
-   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
-      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בכולן.
-   ⛔ **ו-`--z-*` הוא סדר ולא גודל** — ⚠️ הדרגה נבחרת לפי **תפקיד**
-      השכבה — תוכן · סרגל · תפריט · מודאל · טוסט · באנר · נעילה — ⭐ ולא
-      לפי מספר נוח: ⛔ מספר שנבחר לכל אתר הוא מרוץ שאיש אינו מכריע בו.
-   ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
-      אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
-      הם שני חיפושים.
-   ⛔ **ותחת הפחתת תנועה כל `--dur-N` הוא אפס** — ⚠️ כל מעבר ואנימציה
-      נגזרים מהסולם, ⭐ ואפס בו מכבה את כולם: ⛔ ו-`0s` ולא `0` — משך בלי
-      יחידה אינו ערך תקף, ⚠️ והמאפיין נזרק בשקט.
-   ═══════════════════════════════════════════════════════════════════════ */
+/* core/ui.css — הגיליון המשותף
+   ── סולמות ──
+   תחת הפחתת תנועה כל --dur-N הוא 0s ולא 0 — משך בלי יחידה אינו ערך תקף והמאפיין נזרק בשקט. */
 :root{
 --fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
 --sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
@@ -41,11 +18,7 @@
 @media (prefers-reduced-motion:reduce){
   :root{--dur-1:0s;--dur-2:0s;--dur-3:0s;--dur-4:0s;--dur-5:0s;--dur-6:0s}
 }
-/* ══ משטח לחיץ ומודאל ═══════════════════════════════════════════════════
-   ⛔ לחיצה ארוכה על משטח לחיץ אינה בחירת טקסט — ⚠️ והכלל חל על הלחיצים
-      בלבד, ⭐ ולא על טקסט שהמשתמש מעתיק.
-   ⛔ המודאל: מיכל אחד שנפתח במחלקה — ⚠️ והיישור, הריווח והמסגרת
-      של הגיליון נקבעים באפליקציה. */
+/* ── משטח לחיץ ומודאל ── */
 button,[data-act]{-webkit-user-select:none;user-select:none}
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;z-index:var(--z-4);background:var(--veil);display:none;justify-content:center}
@@ -57,10 +30,8 @@ body.locked{overflow:hidden}
 }
 .sheet-ft{display:flex}
 .sheet-ft:empty{display:none}
-/* ══ באנר העדכון ════════════════════════════════════════════════════════
-   ⛔ המיכל `#updater` יושב במקור, ⚠️ והבאנר נפתח ממנו.
-   ⛔ והוא יושב במקום הטוסט — `--toast-bottom` בלי מרווח משלו: ⚠️ באנר וטוסט
-   כמעט אינם יחד, ⭐ וטוסט שמופיע בזמן שהבאנר פתוח עולה מעליו. */
+/* ── באנר העדכון ──
+   יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו. */
 #updater{
   position:fixed;inset-inline:0;z-index:var(--z-6);
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));
@@ -77,42 +48,29 @@ body.locked{overflow:hidden}
 }
 #updater button.x{
   margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
-/* ══ שכבת הטוסט ═════════════════════════════════════════════════════════
-   ⛔ שלושה סוגים בלבד, ⚠️ וכולם בגוון האפליקציה: ⭐ הצלחה על `--brand-fill` · מידע על `--brand-soft` · ⛔ ושגיאה
-   נשארת בצבע שגיאה — ⚠️ שגיאה צריכה להיראות כשגיאה.
-   ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ אלמנט קבוע אחד נדרס בהודעה
-      השנייה, ⭐ ו«נשמר» ו«שגיאת רשת» ברצף היו משאירים על המסך אחת בלבד.
-   ⛔ ו-`--toast-bottom` נקבע באפליקציה — ⚠️ הוא המרחק ממה שקבוע
-      בתחתית המסך שלה. */
-/*  ⛔ `--toasts-lift` — גובה הבאנר הפתוח ומרווח אחד, ⚠️ נמדד בפתיחתו
- *  ונכתב ב-`setProperty`: ⭐ ואפס כשהוא סגור. */
+/* ── שכבת הטוסט ──
+   div לכל הודעה — אלמנט קבוע אחד נדרס בהודעה השנייה.
+   המשתנה --toasts-lift הוא גובה הבאנר הפתוח ומרווח, נמדד בפתיחתו ונכתב ב-setProperty; אפס כשהוא סגור. */
 #toasts{--toasts-lift:0px;position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + var(--toasts-lift));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
 .toast{background:var(--brand-soft);color:var(--brand-ink);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
 .toast.good{background:var(--brand-fill);color:var(--on-brand)}
 .toast.out{opacity:0;transition:opacity var(--dur-4)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-/* ══ מצבי רכיב ══════════════════════════════════════════════════════════
-   ⛔ מצב קבוע של רכיב — מוסתר · עסוק — הוא מחלקה ⛔ ולא `.style` בתגית: ⚠️ סגנון מוטבע גובר על כל כלל, ⭐ ומי שמשנה
-   את הגיליון אינו רואה אותו.
-   ⛔ `!important` ב-`.hidden` בכוונה — ⚠️ המחלקה מסתירה רכיב שכלל אחר
-      נותן לו `display`, ⭐ והיא חייבת לגבור עליו. */
+/* ── מצבי רכיב ──
+   important! ב-.hidden בכוונה — המחלקה חייבת לגבור על כלל אחר שנותן display. */
 .hidden{display:none !important}
-/*  ⚠️ `html` בבורר — ⛔ ואין להסירו: ⚠️ הקובץ נטען לפני `app.css`, ⭐ ומצב עסוק
- *  גובר על הסמן שהרכיב נותן לעצמו במחלקה אחת. */
+/* html בבורר — אין להסירו: הקובץ נטען לפני app.css, ומצב עסוק חייב לגבור על הסמן של הרכיב. */
 html .is-busy{opacity:var(--op-4);cursor:wait}
-/* ══ באנר כשל האחסון ════════════════════════════════════════════════════
-   ⛔ הבאנר נבנה במודול האחסון ⚠️ והסגנון כאן — ⭐ מחלקה אחת במקום אחד, ⛔ ולא מחרוזת בתגית שנבנתה.
-   ⛔ ודרגת השכבה «נעילה» — ⚠️ כשל כתיבה נשאר גלוי מעל כל מסך. */
+/* ── באנר כשל האחסון ──
+   דרגת «נעילה» — כשל כתיבה נשאר גלוי מעל כל מסך. */
 #ls-alert{position:fixed;z-index:var(--z-7);left:0;right:0;top:0;background:var(--alert);color:var(--on-alert);
   direction:rtl;text-align:center;font-weight:700;font-size:var(--fs-3);line-height:var(--lh-4);
   padding:var(--sp-5) calc(var(--sp-7) * 2);box-shadow:0 2px 14px var(--sh-3)}
 #ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
   font-weight:700;font-size:var(--fs-5);line-height:var(--lh-1);cursor:pointer;padding:var(--sp-2) var(--sp-4)}
-/* ═══ סוף core/ui.css ════════════════════════════════════════════════════ */
-/* ══ שומר העלייה ════════════════════════════════════════════════════════
-   ⛔ המסך שעולה כשקוד הדף לא עלה — ⚠️ מעל הכול, ⭐ ובצבעי `offline` שבתצורה,
-   שהשומר כותב למשתנים: ⛔ והכפתור בצבעים ההפוכים, ⚠️ שצבע שלישי אינו בתצורה. */
+/* ── שומר העלייה ──
+   בצבעי offline שבתצורה, והכפתור בצבעים ההפוכים — צבע שלישי אינו בתצורה. */
 #boot-fail{--boot-bg:#FFFFFF;--boot-ink:#1A1A1A;--boot-bg-dark:#121212;--boot-ink-dark:#F2F2F2;
   --boot-fg-use:var(--boot-ink);--boot-bg-use:var(--boot-bg);
   position:fixed;inset:0;z-index:var(--z-7);display:flex;align-items:center;justify-content:center;
@@ -126,18 +84,13 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 .boot-fail-btn{border:0;border-radius:var(--r-5);padding:var(--sp-5) var(--sp-7);font:inherit;font-weight:700;
   cursor:pointer;user-select:none;background:var(--boot-fg-use);color:var(--boot-bg-use)}
 .boot-fail-btn:focus-visible{outline:3px solid var(--boot-fg-use);outline-offset:3px}
-/* ══ מצב הטעינה ═════════════════════════════════════════════════════════
-   ⛔ הקליפה נושאת אותו בתוך `#view` — ⚠️ עד שהקוד מצייר את המסך, ⭐ ואותו
-   מצב בכל האפליקציות: ⛔ מסך ריק בזמן טעינה נקרא כתקלה. */
+/* ── מצב הטעינה ── */
 .view-loading{min-height:60vh;display:grid;place-items:center}
 .view-spin{width:28px;height:28px;border-radius:var(--r-7);border:3px solid var(--border);
   border-top-color:var(--brand);animation:view-spin .8s linear infinite}
 @keyframes view-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.view-spin{animation:none}}
-/* ══ הקליפה החשופה ══════════════════════════════════════════════════════
-   ⛔ `is-bare` על שורש הקליפה — ההורה של `#view` — מסתיר כל מה שאינו מיכל
-   התוכן: ⚠️ הקליפה מתחילה חשופה ב-HTML, ⭐ והקוד חושף את המסגרת רק יחד עם
-   מסך שמשתמש בה — ⛔ מסגרת שגלויה לפני המסך הראשון מהבהבת מעליו.
-   ⛔ ו-`:not(#view)` נושא סגוליות של מזהה — ⚠️ אין להחליפו במחלקה: ⭐ הוא
-   גובר על ה-`display` שהאפליקציה נותנת לחלקי המסגרת. */
+/* ── הקליפה החשופה ──
+   הקוד חושף את המסגרת רק יחד עם מסך שמשתמש בה — מסגרת גלויה לפני המסך הראשון מהבהבת מעליו.
+   :not(#view) נושא סגוליות של מזהה — אין להחליפו במחלקה: הוא גובר על ה-display שהאפליקציה נותנת למסגרת. */
 .is-bare > :not(#view){display:none}

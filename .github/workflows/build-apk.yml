@@ -1,36 +1,22 @@
 name: Build APK
 
-# Builds the native WebView shell in android/ (NOT a TWA: the content filters on the devices block Chrome) and
-# signs it with the project's permanent key. The key is NOT in the repo: the
-# repo is public, and a committed key is a public key. It lives in the
-# KEYSTORE_B64 / KEYSTORE_PASS secrets, is decoded to a temp file for the
-# signing step only, and is removed when the job ends.
-#
-# Signing runs through signing/sign-apk.sh — the same script used by hand — so
-# the fingerprint gate exists in exactly one place.
-# ⛔ אין לשכפל כאן את לוגיקת החתימה — מסלול חתימה שני הוא מסלול
-# בלי שער, וטעות בו אינה ניתנת לתיקון אצל אף משתמש מותקן.
+# .github/workflows/build-apk.yml — בניית ה-APK וחתימתו
 
 on:
   workflow_dispatch:
-  # Also build whenever the shell itself changes. Web-only changes (index.html,
-  # sw.js, …) do NOT need a new APK — the app loads the live site — so those
-  # paths are deliberately not listed here.
-  #
-  # ⛔ אין להסיר את `branches` — ⚠️ חבילה חתומה נבנית מהענף שמשוחרר ממנו:
-  # ⭐ דחיפה לענף עבודה אינה שחרור, ובנייה ממנה חותמת קוד שעוד לא מוזג.
+  # שינויי ווב אינם דורשים APK חדש — המעטפת טוענת את האתר החי, ולכן נתיביהם אינם כאן.
+  # אין להסיר את branches — חבילה חתומה נבנית רק מהענף המשוחרר, ולא מקוד שעוד לא מוזג.
   push:
     branches: [main]
     paths:
       - 'android/**'
-      # ⛔ התיעוד אינו נכנס ל-APK — ⚠️ שינוי בו אינו בנייה ואינו קידום גרסה.
+      # התיעוד אינו נכנס ל-APK — שינוי בו אינו בנייה ואינו קידום גרסה.
       - '!android/README.md'
       - 'signing/**'
       - '.github/workflows/build-apk.yml'
 
 env:
-  # ⛔ נתיב אחד לשלב שכותב ולשלב שמוחק — ⚠️ שני נתיבים הם מפתח שנשאר
-  # על הדיסק של הרץ אחרי שהמחיקה "הצליחה".
+  # נתיב אחד לשלב שכותב ולשלב שמוחק — שני נתיבים משאירים מפתח על הרץ אחרי מחיקה שהצליחה.
   SIGN_KEYSTORE: /tmp/apk-signing.keystore
 
 jobs:
@@ -40,7 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # ⛔ שם האפליקציה נקרא מהתצורה — ⚠️ והקובץ הזה אינו נושא ערך של אפליקציה.
+      # מזהה האפליקציה נקרא מהתצורה — הזרימה אינה נושאת ערך של אפליקציה.
       - name: Read the app id from the config
         run: echo "APP_ID=$(node tools/gen-app.mjs --get id)" >> "$GITHUB_ENV"
 
@@ -50,20 +36,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ⛔ החבילות מוצהרות ואינן ברירת המחדל — ⚠️ ברירת המחדל של הפעולה
-      # מבקשת את החבילה `tools`, שאינה במאגר ה-SDK: ⭐ והיא נופלת
-      # בכל בנייה, לפני שהחתימה בכלל מתחילה.
+      # החבילות מוצהרות — ברירת המחדל של הפעולה מבקשת את החבילה tools, שאינה במאגר ה-SDK, ונופלת בכל בנייה.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools'
 
-      # ⛔ No "copy web assets" step, and it must never be added.
-      # The shell loads the live Pages site over the network,
-      # so a bundled copy would be a SECOND source of truth that only ever goes stale —
-      # and worse, it lives in the file:// storage origin, a different localStorage
-      # partition from the https site. Anything typed into it offline would be invisible
-      # to the real app.
+      # אין להוסיף שלב שמעתיק נכסי ווב — עותק ב-file:// יושב במחיצת localStorage אחרת מאתר ה-https,
+      # ומה שיוקלד בו אופליין אינו נראה לאפליקציה האמיתית.
       - name: Generate Gradle wrapper
         run: |
           set -euo pipefail
@@ -82,17 +62,10 @@ jobs:
           SIGN_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
           set -euo pipefail
-          # ⛔ המפתח נכתב מחוץ לעץ העבודה — ⚠️ קובץ בעץ נכנס ל-artifact
-          # ולסטטוס של git, והמפתח חוזר לריפו בדלת האחורית.
+          # המפתח נכתב מחוץ לעץ העבודה — קובץ בעץ נכנס ל-artifact ולסטטוס של git.
           umask 077
-          # ⛔ שלושת השלבים בסדר הזה: נרמול ⟵ שער האלפבית ⟵ פענוח.
-          # ⚠️ שער שרץ לפני הנרמול מפיל ערך שהנרמול היה מציל, ⛔ וההודעה
-          # שולחת את הקורא לחפש סיסמה שגויה במקום הדבקה מזוהמת.
-          #
-          # ⛔ וערך שמגיע מסוד מנורמל לפני שהוא נצרך — ⚠️ רווח, תווי סוף
-          # שורה וסימנים בלתי-נראים מוסרים: ⭐ ערך שעבר דרך ממשק אנושי
-          # נושא אותם — BOM, סימני כיווניות, רווח קשיח — ⛔ ואין להם
-          # משמעות בתוכן. ⚠️ ומה שאינו באלפבית עדיין מפיל — נרמול אינו סליחה.
+          # הסדר: נרמול, שער האלפבית, פענוח — שער לפני הנרמול מפיל ערך שהנרמול היה מציל, וההודעה מטעה לסיסמה שגויה.
+          # ערך שעבר ממשק אנושי נושא רווחים, סופי שורה, BOM וסימני כיווניות; מה שאינו באלפבית אחרי הנרמול עדיין מפיל.
           B64=$(printf '%s' "$KEYSTORE_B64" \
                 | LC_ALL=C tr -d ' \t\r\n' \
                 | LC_ALL=C sed -e 's/\xEF\xBB\xBF//g' \
@@ -104,7 +77,7 @@ jobs:
           fi
           printf '%s' "$B64" | base64 -d > "$SIGN_KEYSTORE"
           [ -s "$SIGN_KEYSTORE" ] || { echo "❌ KEYSTORE_B64 decoded to an empty file" >&2; exit 1; }
-          # The signing tools live in build-tools, which is not on PATH by default.
+          # כלי החתימה ב-build-tools, שאינו ב-PATH כברירת מחדל.
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using build-tools: $BT"
           echo "$BT" >> "$GITHUB_PATH"
@@ -113,8 +86,7 @@ jobs:
             android/app/build/outputs/apk/release/app-release-unsigned.apk \
             app-signed.apk
 
-      # ⛔ המחיקה רצה גם כשהחתימה נפלה — ⚠️ שלב שרץ רק בהצלחה משאיר את
-      # המפתח על הרץ בדיוק בריצות שנעצרו באמצע.
+      # המחיקה רצה גם כשהחתימה נפלה — שלב שרץ רק בהצלחה משאיר את המפתח על הרץ בדיוק בריצות שנעצרו.
       - name: Remove the decoded key
         if: always()
         run: rm -f "$SIGN_KEYSTORE"

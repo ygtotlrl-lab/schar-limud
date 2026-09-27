@@ -1,10 +1,4 @@
-/* ═══ core/sw.js — ליבת ה-service worker ════════════════════════════════
-   ⭐ ההתקנה, הניקוי, הניווט והמטמון — ⛔ ו-`sw.js` של האפליקציה נושא רק את
-      `CACHE_NAME`, `CORE` ו-`CDN_ASSETS`, ⚠️ וטוען קודם את `app.config.js`.
-   ⛔ סדר המאזינים install → activate → fetch → message.
-   ⚠️ `SW_CFG` — כל ידית כאן היא התנהגות **שנמדדה**, ⛔ ולא ברירת מחדל
-      שנפלה מאליה: ⭐ הקידומת נגזרת משם האפליקציה, ומארחי ה-CDN מהרשימה.
-   ════════════════════════════════════════════════════════════════════ */
+// core/sw.js — ליבת ה-service worker
 var SW_CFG = {
   prefix: self.APP.id + '-',
   cdnHosts: CDN_ASSETS.map(function (u) { return new URL(u).hostname; })
@@ -19,11 +13,7 @@ var SW_CFG = {
   cdnTimeoutMs: 10000
 };
 
-/*  ⛔ דף האופליין — HTML אמיתי ⛔ ולא מחרוזת 'Offline' — ⚠️ והצבעים, הסמל
- *  והשם מהתצורה, ⭐ בבהיר ובכהה: ⛔ דף בהיר במכשיר כהה מסנוור ברגע שבו
- *  המשתמש כבר מתוסכל. ⛔ ואין בו מטפל מוטבע — ⭐ הקישור לשורש ה-scope טוען מחדש. */
-/*  ⛔ `esc` של הדף אינו זמין כאן — ⚠️ ה-worker סקריפט קלאסי ואינו מייבא
- *  מודול: ⭐ ולכן בריחה משלו, באותם חמישה תווים. */
+// ה-worker סקריפט קלאסי ואינו מייבא מודול — ולכן בריחה משלו, באותם חמישה תווים.
 function swEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -58,14 +48,11 @@ var SW_SCOPE = new URL('./', self.location);
 var SW_ROOT = SW_SCOPE.href;
 var SW_SHELL = new URL('./index.html', self.location).href;
 
-/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון — ⚠️ תשובה
- *  מנתיב עמוק היא 404 של המארח, ⛔ ושמירתה כקליפה מרעילה את המטמון. */
+// תשובה מנתיב עמוק היא 404 של המארח — שמירתה כקליפה מרעילה את המטמון.
 var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
 
-/*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן: ignoreSearch
- *  מתעלם מה-query, וב-PostgREST כל הפילטרים יושבים דווקא שם. חיפוש כללי
- *  איתו מתאים בקשת כניסה של משתמש אחד לתשובה שנשמרה עבור אחר — כניסה
- *  בזהות זרה. ניווט בלבד רשאי להשתמש ב-SW_NAV_OPTS. */
+// אין לאחד את שתי המפות: ignoreSearch מתעלם מה-query, וב-PostgREST הפילטרים יושבים שם —
+// חיפוש כללי איתו מתאים בקשת כניסה של משתמש אחד לתשובה של אחר. ניווט בלבד רשאי להשתמש ב-SW_NAV_OPTS.
 var SW_NAV_OPTS = { ignoreVary: true, ignoreSearch: true };
 var SW_SUB_OPTS = { ignoreVary: true };
 
@@ -83,7 +70,6 @@ function swInScope(u) {
   return u.origin === SW_SCOPE.origin && u.pathname.indexOf(SW_SCOPE.pathname) === 0;
 }
 
-/*  ⛔ קובצי הקליפה — `CORE` — נגזרים מהרשימה ⛔ ואינם מוקלדים שוב. */
 var SW_CORE_URLS = CORE.map(function (x) { return new URL(x, self.location).href; });
 function swInCore(u) {
   return SW_CORE_URLS.indexOf(u.origin + u.pathname) !== -1;
@@ -93,8 +79,7 @@ function swIsShellPath(u) {
   return SW_SHELL_PATHS.indexOf(u.pathname) !== -1;
 }
 
-/*  דף אופליין — HTML אמיתי עם Content-Type מפורש, ⛔ לא מחרוזת 'Offline'
- *  שנראית כמסך שחור עם טקסט זעיר בפינה. */
+// HTML אמיתי עם Content-Type מפורש, בצבעי התצורה בבהיר ובכהה — מחרוזת 'Offline' נראית כמסך שחור עם טקסט זעיר.
 function swOfflinePage() {
   return new Response(SW_OFFLINE_HTML, {
     status: SW_CFG.offlineStatus,
@@ -103,25 +88,22 @@ function swOfflinePage() {
   });
 }
 
-/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML — ⚠️ HTML תחת כתובת
- *  של סקריפט או גיליון נקרא כקוד ונשבר בשקט. `Response.error()` הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט
- *  שנמדד ונשמר כידית. */
+// לעולם לא HTML — HTML תחת כתובת של סקריפט או גיליון נקרא כקוד ונשבר בשקט.
+// Response.error() הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט שנמדד ונשמר כידית.
 function swSubMiss() {
   if (SW_CFG.subMiss === '504') return new Response('', { status: 504, statusText: 'Offline' });
   try { return Response.error(); }
   catch (e) { return new Response('', { status: 504, statusText: 'Offline' }); }
 }
 
-/*  ⛔ ממדי ההצהרה נקראים משם הקובץ — ⚠️ המספר שבשם הוא הצלע,
- *  ⭐ ואייקון אייפון בצלע הקבועה של אפל; ⛔ ושם בלי טביעה אינו נבדק. */
+// המספר שבשם הקובץ הוא הצלע, ואייקון אייפון בצלע הקבועה של אפל; שם בלי טביעה אינו נבדק.
 function swImgSize(url) {
   var m = /\/([a-z-]+?)(?:-(\d+))?\.[0-9a-f]{8}\.png$/.exec(new URL(url, self.location.href).pathname);
   if (!m) return 0;
   return m[2] ? Number(m[2]) : (m[1] === 'apple-touch-icon' ? 180 : 0);
 }
 
-/*  ⛔ כל כתיבה למטמון עוברת כאן — ⚠️ מסנן שהחליף אייקון בתמונה
- *  אחרת היה ננעל במטמון לנצח: ⭐ תמונה שאינה בממדי ההצהרה אינה נכנסת. */
+// מסנן שהחליף אייקון בתמונה אחרת היה ננעל במטמון לנצח — תמונה שאינה בממדי ההצהרה אינה נכנסת.
 function swPut(cache, key, res) {
   var want = swImgSize(typeof key === 'string' ? key : key.url);
   if (!want || typeof createImageBitmap !== 'function') return cache.put(key, res);
@@ -133,8 +115,7 @@ function swPut(cache, key, res) {
   });
 }
 
-/*  ⛔ רק תשובה שאומתה נשמרת — ⚠️ שגיאה או תשובה אטומה שנשמרה מוגשת
- *  מהמטמון לנצח. */
+// שגיאה או תשובה אטומה שנשמרה מוגשת מהמטמון לנצח.
 function swStore(key, res) {
   if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
   var clone = res.clone();
@@ -143,19 +124,14 @@ function swStore(key, res) {
   }).catch(function () {});
 }
 
-/*  ⛔ חיפוש במטמון של האפליקציה בלבד — ⚠️ ה-origin משותף לכל
- *  האפליקציות, ⭐ ו-`caches.match()` הגלובלי סורק את כולם והישן ראשון:
- *  ⛔ מטמון בשם שננטש מגיש אייקון של אפליקציה אחרת. */
+// ה-origin משותף, ו-caches.match() הגלובלי סורק את כל המטמונים, הישן ראשון — ומגיש אייקון של אפליקציה אחרת.
 function swMatch(request, opts) {
   return caches.open(CACHE_NAME).then(function (cache) {
     return cache.match(request, opts);
   });
 }
 
-/*  ⛔ המטמון שלנו לפי תוכנו ⛔ ולא לפי שמו — ⚠️ כל מפתח בתוך ה-scope או
- *  נכס CDN, ⭐ ולפחות אחד בתוך ה-scope: ⛔ קידומת שמשתנה משאירה מטמון
- *  שאיש אינו מוחק, ⚠️ ומטמון של אפליקציה אחרת נושא מפתח מחוץ ל-scope
- *  ונשאר. */
+// לפי תוכן ולא לפי שם — קידומת שמשתנה משאירה מטמון שאיש אינו מוחק, ומטמון של אפליקציה אחרת נושא מפתח מחוץ ל-scope.
 function swOwnsCache(name) {
   if (name === CACHE_NAME) return Promise.resolve(false);
   return caches.open(name).then(function (cache) {
@@ -171,17 +147,14 @@ function swOwnsCache(name) {
   });
 }
 
-/*  הקליפה שבמטמון — index.html, ובהיעדרו שורש ה-scope. */
 function swShell() {
   return swMatch(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
     return hit || swMatch(SW_ROOT, SW_NAV_OPTS);
   });
 }
 
-/*  ⚠️ בקשת CDN חייבת mode:'cors' — תגובת no-cors היא opaque עם
- *  status 0, ו-cache.put דוחה אותה, והנכס אינו נשמר.
- *  ⚠️ והפסק-זמן אינו קישוט: בקשת CDN שנתקעת משאירה את
- *  waitUntil של install תלוי לנצח, והעובד נשאר «installing» בלי אופליין. */
+// mode:'cors' — תגובת no-cors היא opaque עם status 0, ו-cache.put דוחה אותה.
+// פסק הזמן אינו קישוט: בקשת CDN תקועה משאירה את waitUntil של install תלוי לנצח.
 function swFetchCors(url) {
   var opts = { mode: 'cors', credentials: 'omit' };
   if (typeof AbortController !== 'function' || !SW_CFG.cdnTimeoutMs) {
@@ -211,10 +184,8 @@ function swCachePut(cache, url, opts) {
   });
 }
 
-/*  ריפוי עצמי של מטמון ה-CDN — סקריפט CDN
- *  שחסר במטמון לא היה מושלם לעולם: install אינו רץ שוב לאותו CACHE_NAME,
- *  ובזמן-ריצה הדף מבקש אותו כ-no-cors ⇒ opaque ⇒ לא נשמר. רץ ב-activate
- *  וגם פעם אחת בכל עליית SW, משלים רק את מה שחסר, וכשל בו שקט. */
+// install אינו רץ שוב לאותו CACHE_NAME, והדף מבקש סקריפט CDN כ-no-cors (opaque, לא נשמר) —
+// לכן משלימים כאן את מה שחסר, ב-activate ובכל עליית SW; כשל בו שקט.
 function ensureCdnCached() {
   return caches.open(CACHE_NAME).then(function (cache) {
     return Promise.all(CDN_ASSETS.map(function (url) {
@@ -227,14 +198,10 @@ function ensureCdnCached() {
     }));
   }).catch(function () {});
 }
-ensureCdnCached(); // קוד עליון = רץ פעם אחת בכל עליית SW
+ensureCdnCached(); // קוד עליון — רץ פעם אחת בכל עליית SW
 
-/*  ⛔ ניווט — מאותו מטמון כמו הקוד: ⚠️ דף מהרשת וקוד מהמטמון הם שתי גרסאות
- *  במסך אחד, ⭐ ו-`import` של שם שעוד אינו קיים עוצר את הדף כולו. ⛔ כשיש
- *  קליפה במטמון של ה-worker הזה — היא התשובה, ⛔ ואינה מתרעננת כאן: ⚠️ גרסה
- *  חדשה נכנסת רק בהתקנת worker חדש, ⭐ שמשתלט ומרענן — דף וקוד יחד.
- *  ⭐ בלי קליפה (כניסה ראשונה) — מהרשת; ⚠️ ותשובה שאינה תקינה (404 של נתיב
- *  עמוק) נשארת כפי שהיא, ⛔ שאין קליפה ליפול אליה. */
+// ניווט מאותו מטמון כמו הקוד — דף מהרשת וקוד מהמטמון הם שתי גרסאות במסך אחד, ו-import של שם חסר עוצר את הדף.
+// הקליפה אינה מתרעננת כאן; גרסה חדשה נכנסת רק בהתקנת worker חדש. בלי קליפה (כניסה ראשונה) — מהרשת.
 function swNavigate(request, u) {
   return swShell().then(function (shell) {
     if (shell) return shell;
@@ -247,11 +214,8 @@ function swNavigate(request, u) {
   });
 }
 
-/*  ⚠️ `navFallback` — הידית שנמדדה: 'shell' פונה ישר לקליפה, 'request'
- *  מחפש קודם את הבקשה עצמה (ועם `navIgnoreSearch` גם '?apk=1' מוצא את
- *  './'). ⛔ שתיהן מסתיימות בדף האופליין ולעולם לא ב-undefined
- *   — respondWith על Promise<undefined> זורק TypeError, כלומר
- *  כל בקשה שנכשלת ברשת ואינה במטמון נכשלת פעמיים. */
+// שני הערכים של navFallback מסתיימים בדף האופליין ולעולם לא ב-undefined —
+// respondWith על Promise<undefined> זורק TypeError.
 function swNavOffline(request) {
   var first = SW_CFG.navFallback === 'shell'
     ? swShell()
@@ -271,11 +235,8 @@ function swNetworkFirst(request) {
   });
 }
 
-/*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ונשמרה.
- *  ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: היפוכה משנה מה
- *  המשתמש רואה.
- *  ⛔ **וקובץ מהקליפה אינו מתרענן ברקע** — ⚠️ קוד חדש שנכתב למטמון הישן
- *  פוגש בטעינה הבאה את הדף הישן: ⭐ הקליפה נכנסת כולה בהתקנה, ורק שם. */
+// מטמון-קודם ורענון ברקע — ידית שנמדדה; אין להפוך ל-network-first «לשם אחידות».
+// קובץ מהקליפה אינו מתרענן ברקע — קוד חדש במטמון הישן פוגש בטעינה הבאה את הדף הישן.
 function swCacheFirst(request, u) {
   return caches.open(CACHE_NAME).then(function (cache) {
     return cache.match(request, SW_SUB_OPTS).then(function (hit) {
@@ -296,8 +257,7 @@ function swRevalidate(request, u) {
 
 self.addEventListener('install', function (event) {
   event.waitUntil(caches.open(CACHE_NAME).then(function (cache) {
-    /*  ⚠️ כשל CDN בודד לא מפיל את ההתקנה — ensureCdnCached משלים אותו
-     *  ב-activate ובעליית ה-SW הבאה. */
+    // כשל CDN בודד אינו מפיל את ההתקנה — ensureCdnCached משלים אותו.
     var jobs = CORE.map(function (url) {
       return swCachePut(cache, url, { cache: 'reload' })
         .catch(function () { return swCachePut(cache, url, {}); })
@@ -309,9 +269,7 @@ self.addEventListener('install', function (event) {
     }));
     return Promise.all(jobs);
   }).catch(function () {}));
-  /*  ⛔ ההשתלטות מיידית בכולן — ⚠️ מסלול שמחכה ללחיצה מותיר מכשיר על
-   *  קוד ישן: ⭐ הבאנר נשאר למי שיש לו הקלדה לאבד, ⛔ והוא אינו התנאי
-   *  להשתלטות. */
+  // ההשתלטות מיידית — מסלול שמחכה ללחיצה מותיר מכשיר על קוד ישן; הבאנר אינו התנאי להשתלטות.
   if (SW_CFG.skipWaiting) self.skipWaiting();
 });
 
@@ -320,8 +278,7 @@ self.addEventListener('activate', function (event) {
     caches.open(CACHE_NAME).then(function (cache) {
       return cache.match(SW_SHELL, SW_NAV_OPTS);
     }).then(function (hit) {
-      /*  ⛔ אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש —
-       *  ⚠️ מכשיר אופליין היה נשאר בלי קליפה כלל. */
+      // אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש — מכשיר אופליין היה נשאר בלי קליפה.
       if (!hit) return;
       return caches.keys().then(function (names) {
         return Promise.all(names.map(function (name) {
@@ -348,8 +305,7 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(swNavigate(request, u));
     return;
   }
-  /*  ⚠️ `scoped` — ידית שנמדדה: היא מטפלת אך ורק בנכסי ה-scope
-   *  ובנכסי ה-CDN, וכל השאר עובר לדפדפן כפי שהוא. */
+  // scoped — ידית שנמדדה: רק נכסי ה-scope וה-CDN; כל השאר עובר לדפדפן כפי שהוא.
   if (SW_CFG.scoped && !swIsCdn(u) && !swInScope(u)) return;
 
   event.respondWith(SW_CFG.subStrategy === 'cache-first'

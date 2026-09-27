@@ -1,10 +1,8 @@
-/*  ⛔ ה-service worker של האפליקציה — הגרסה והרשימות בלבד: ⚠️ הלוגיקה
- *  בליבה המשותפת, ⭐ וערכי האפליקציה בתצורה, שנטענת ראשונה. */
+// sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
-/*  ⛔ מכאן נגזרת גרסת האפליקציה — ⚠️ ואין לה ליטרל שני ב-`index.html`. */
-var CACHE_NAME = self.APP.id + '-v213';
+// מכאן נגזרת גרסת האפליקציה שבבאנר.
+var CACHE_NAME = self.APP.id + '-v214';
 
-// קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
   './',
   './index.html',
@@ -27,8 +25,7 @@ var CORE = [
   './icons/icon-512.6e7eb2aa.png'
 ];
 
-// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף —
-// שחרור מצד הספק היה שובר את האפליקציה בלי שום שינוי קוד כאן.
+// גרסה נעוצה במדויק ולא major צף — שחרור של הספק שובר את האפליקציה בלי שינוי קוד.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js'
 ];

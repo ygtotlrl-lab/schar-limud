@@ -1,20 +1,14 @@
-/* ═══ core/backup.js — הגיבוי ═══════════════════════════════════════════
-   ⭐ הגיבוי היומי מנקודת העלייה, ויומן הפעולות.
-   ⛔ המודול זהה בית-לבית בכל ריפו שנושא אותו — ⚠️ והתצורה פר-אפליקציה
-      נמסרת ב-`appConfigure` שבראש `index.html`, ⭐ ואינה כתובה כאן.
-   ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
-   ════════════════════════════════════════════════════════════════════ */
+// core/backup.js — הגיבוי היומי ויומן הפעולות
 
 import { app, dayToday, withTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
 import { lsGet, lsSet, lsSpace } from './storage.js';
 
-/* ═══ גיבוי יומי ויומן פעולות — מודול משותף ═══════════════════════════════
-   ══════════════════════════════════════════════════════════════════════ */
-var BK_TABLE = 'sh_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
-var BK_LOG_TABLE = 'sh_sync_log';    // יומן הפעולות — insert בלבד
-var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
-var _bkRunning = false;           // נעילת ריצה — הדגל נכתב רק אחרי הצלחה
+// ── גיבוי יומי ויומן פעולות ──
+var BK_TABLE = 'sh_backup'; // הכתיבה היא insert בלבד
+var BK_LOG_TABLE = 'sh_sync_log'; // הכתיבה היא insert בלבד
+var BK_LOG_MAX = 50;
+var _bkRunning = false;
 
 function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
 function _bkCfg(name, dflt) {
@@ -25,15 +19,13 @@ function _bkCfg(name, dflt) {
 }
 function _bkClient() { try { return app.BK_CFG.client(); } catch (e) { return null; } }
 
-// רשימת הסודות (`BK_CFG.secrets`) — מפתח או שדה שברשימה אינו נכתב לגיבוי
-// לעולם; המנגנון נשאר דרוך גם כשהרשימה ריקה.
+// המנגנון נשאר דרוך גם כשהרשימה ריקה.
 function _bkSecrets() {
   var s = _bkCfg('secrets', []);
   return Array.isArray(s) ? s : [];
 }
 
-// חתימת תוכן לגיבוי הדיפרנציאלי — אורך + FNV-1a. אינה סוד ואינה אימות,
-// רק "האם זה אותו ערך בדיוק".
+// אורך + FNV-1a — אינה סוד ואינה אימות, רק «האם זה אותו ערך בדיוק».
 function bkSig(s) {
   var str = String(s == null ? '' : s), h = 0x811c9dc5;
   for (var i = 0; i < str.length; i++) {
@@ -43,7 +35,7 @@ function bkSig(s) {
   return str.length + ':' + h.toString(16);
 }
 
-/* ── יומן הפעולות ──────────────────────────────────────────────────────── */
+// ── יומן הפעולות ──
 function _bkLogRow(action, key, count, details) {
   return {
     device_id: _bkCfg('device', null),
@@ -54,10 +46,7 @@ function _bkLogRow(action, key, count, details) {
     details: details || null
   };
 }
-/*  ⛔ כשל כתיבה נרשם ואינו נבלע — ⚠️ הכתיבה נכשלת כפי שנכשלה,
- *  אבל היא מפסיקה להיות שקטה: ⭐ `catch` ריק סביב כתיבה הוא בדיוק המצב
- *  שבו נתון נעלם ואיש אינו יודע. ⛔ והרישום אינו משנה את הזרימה — ⚠️ תיעוד
- *  אבחון שמפיל שמירה גרוע מהיעדרו. */
+// הרישום אינו משנה את הזרימה — הכתיבה נכשלת כפי שנכשלה אך אינה שקטה; תיעוד שמפיל שמירה גרוע מהיעדרו.
 function _bkWriteFail(where, e) {
   try { console.warn('[bk] ' + where, (e && e.message) ? e.message : e); } catch (e0) { }
 }
@@ -71,8 +60,7 @@ function _bkLogQueue(row) {
     lsSet(qk, JSON.stringify(q));
   } catch (e) { _bkWriteFail('_bkLogQueue', e); }
 }
-// רישום fire-and-forget. ⛔ לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו
-// — תיעוד אבחון שמפיל כניסה או שמירה גרוע מהיעדרו.
+// לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו — תיעוד שמפיל כניסה או שמירה גרוע מהיעדרו.
 function logAction(action, key, count, details) {
   var row = null;
   try {
@@ -85,7 +73,6 @@ function logAction(action, key, count, details) {
     );
   } catch (e) { if (row) _bkLogQueue(row); }
 }
-// שליחת מה שהצטבר באופליין. נקראת כשיש ראיה שהרשת עובדת.
 async function logFlush() {
   var qk, q;
   try { qk = _bkVal(app.BK_CFG.logQueueKey); q = JSON.parse(lsGet(qk, '[]') || '[]'); } catch (e) { return 0; }
@@ -110,25 +97,17 @@ async function logFlush() {
   return sent;
 }
 
-/*  ⛔⛔ שלוש שכבות הגיבוי — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
- *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הלילי במסד**
- *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
- *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
- *  אותה יכולת שחזור בשבריר. */
+// עוגן מלא אחת לשבוע, דיפ בשאר הימים, והפינוי הלילי במסד אוכף את התקרות —
+// גיבוי מלא כל לילה של טבלה בת עשרות אלפי שורות הוא מגה-בייטים ביום.
 var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
 var BK_ANCHOR_PREFIX = 'ANCHOR:';
 var BK_DIFF_PREFIX = 'DIFF:';
 
-/* ── המפתחות שהגיבוי כותב במכשיר ───────────────────────────────────────
-   ⛔ הם במרחב האפליקציה ⛔ ומוצהרים במרשם — ⚠️ הם מחוץ לתחילית, ⭐ ולכן
-   המודול רושם את משפחתם ב-`lsSpace`: ⛔ מפתח של מקור שירד היה נשאר
-   במכשיר לעולם. ⚠️ **מה נכנס**: ארבע המשפחות, ומפתח הגיבוי שאחריהן —
-   `<קידומת גיבוי><מפתח המקור>`. ⭐ **והשייכות** נגזרת מהקידומות
-   ומתחילית האפליקציה: ⛔ מפתח `bk_` של אפליקציה אחרת על אותו origin
-   אינו שלה, ⚠️ ואינו נגע. */
+// ── המפתחות שהגיבוי כותב במכשיר ──
+// הם מחוץ לתחילית, ולכן המודול רושם את משפחתם ב-lsSpace — אחרת מפתח של מקור שירד נשאר במכשיר לעולם.
+// השייכות נגזרת מהקידומות ומתחילית האפליקציה: מפתח bk_ של אפליקציה אחרת על אותו origin אינו נגע.
 var BK_LS = { wm: 'bk_wm_', anch: 'bk_anch_', day: 'bk_day_', sig: 'bk_sig_' };
-/*  ⭐ כל הקידומות שהגיבוי כותב בהן — ⚠️ `prefixes` כשהקידומת נבדלת בין
- *  הקשרים, ⛔ שהמרשם מצהיר על כולם ולא על הפעיל בלבד. */
+// prefixes כשהקידומת נבדלת בין הקשרים — המרשם מצהיר על כולם ולא על הפעיל בלבד.
 function _bkPrefixes() {
   var p = _bkCfg('prefixes', null);
   return (Array.isArray(p) && p.length) ? p : [_bkCfg('prefix', '') || ''];
@@ -159,17 +138,14 @@ function bkOwns(k) {
   return false;
 }
 lsSpace({ keys: bkKeys, owns: bkOwns });
-/*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
- *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
+// נשמרת כמחרוזת ומושווית בשרת בטיפוס העמודה — bigint ו-timestamptz עוברים שניהם ב-gte כמות שהם.
 function _bkMarkKey(bkey) { return BK_LS.wm + bkey; }
 function _bkSetMark(bkey, v) {
   if (v == null) return;
   lsSet(_bkMarkKey(bkey), String(v));
   lsSet(BK_LS.anch + bkey, String(Date.now()));
 }
-/*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
- *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
- *  היה נשבר בהשוואת מחרוזות. */
+// המקסימום נגזר מהשורות ולא מהשרת — מספר מושווה מספרית ומחרוזת לקסיקוגרפית: bigint היה נשבר בהשוואת מחרוזות.
 function _bkMaxTs(rows, col) {
   var mx = null;
   for (var i = 0; i < rows.length; i++) {
@@ -180,8 +156,6 @@ function _bkMaxTs(rows, col) {
   }
   return mx;
 }
-/*  ⛔ איזו שכבה רצה היום — ⚠️ עוגן כשאין חותמת מים, כשאין חותמת עוגן,
- *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
 function _bkLayer(bkey, s) {
   var wm = lsGet(_bkMarkKey(bkey), '');
   var at = parseInt(lsGet(BK_LS.anch + bkey, '0'), 10) || 0;
@@ -190,9 +164,7 @@ function _bkLayer(bkey, s) {
   return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
            win: { col: s.ts, from: wm } };
 }
-/*  ⛔⛔ הקריאה בעימוד, ⛔ ואימות מול מונה השרת — ⚠️ תשובה שנחתכה נראית
- *  בדיוק כמו תשובה שלמה, ⭐ והדרך היחידה לדעת היא לשאול את השרת כמה שורות
- *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
+// תשובה שנחתכה נראית בדיוק כמו שלמה — לכן אימות מול מונה השרת, ואי-התאמה מחזירה null ואינה שומרת חצי גיבוי.
 async function _bkReadRows(c, s, win) {
   var sel = s.cols || '*';
   var rows = await _rowsPaged(function () {
@@ -218,8 +190,8 @@ async function _bkReadRows(c, s, win) {
   } catch (e) { return null; }
   return rows;
 }
-/* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
-// מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
+// ── הגיבוי היומי ──
+// מחזירה true רק כשכל המקורות גובו, או דולגו כבלתי-משתנים.
 async function bkMaybeDaily() {
   if (_bkRunning) return false;
   var c = _bkClient();
@@ -237,16 +209,12 @@ async function bkMaybeDaily() {
     var secrets = _bkSecrets();
     for (var i = 0; i < src.length; i++) {
       var s = src[i], val = null;
-      // ⛔ מפתח שברשימת הסודות אינו נכתב לגיבוי לעולם —
-      //    ⚠️ סוד שנכתב לגיבוי שורד בו גם אחרי שנמחק מהמקור.
+      // סוד שנכתב לגיבוי שורד בו גם אחרי שנמחק מהמקור.
       if (s.kind === 'kv' && secrets.indexOf(s.name) !== -1) continue;
-      // ⭐ `key` פר-מקור — מקור-טבלה שמפתחו מתנגש במקור אחר
-      //    באותו שם מקבל מפתח גיבוי משלו.
+      // מקור-טבלה שמפתחו מתנגש במקור אחר באותו שם מקבל מפתח גיבוי משלו.
       var bkey = pre + (s.key || s.name);
-      /* ⭐ דגל-יום פר-מקור — מקור שכבר גובה היום מדולג, גם
-         כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל מחזיק את כל
-         השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
-         מגבה מחדש את מה שכבר גובה, שוב ושוב באותו יום. */
+      // דגל-יום פר-מקור: הדגל הגלובלי נכתב רק כשכולם הצליחו, ובלעדיו מקור אחד שנכשל
+      // גורם לגבות מחדש את כל השאר בכל עלייה באותו יום.
       var dayKey = BK_LS.day + bkey;
       if (lsGet(dayKey, '') === today) { same++; continue; }
       if (s.kind === 'kv') {
@@ -254,27 +222,21 @@ async function bkMaybeDaily() {
         if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
-        /*  ⛔⛔ שכבת הגיבוי — עוגן שבועי מלא, ודיפרנציאלי בכל שאר הימים:
-         *  ⚠️ הקריאה בעימוד — ⛔ Supabase מחזיר 1,000 שורות כברירת מחדל
-         *  **בלי שגיאה**: ⭐ בקשה אחת מגבה טבלה גדולה עד התקרה בלבד,
-         *  ⛔ וכל השאר אינו מגובה — ⚠️ והכשל שקט לחלוטין. */
+        // Supabase מחזיר 1,000 שורות כברירת מחדל בלי שגיאה — בלי עימוד טבלה גדולה מגובה עד התקרה בלבד, בשקט.
         var layer = _bkLayer(bkey, s);
         var rows = await _bkReadRows(c, s, layer.win);
         if (rows === null) { ok = false; failed.push(bkey); continue; }
         bkey = layer.prefix + bkey;
-        // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה —
-        //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
-        //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
+        // שורה שמפתחה (secretField, ברירת מחדל key) ברשימת הסודות אינה מגיעה לגיבוי, גם כשהיא עדיין במקור.
         if (secrets.length) rows = rows.filter(function (r) {
           return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
         });
-        /*  ⛔ דיפרנציאלי ריק אינו נכתב ⛔ ואינו כישלון — ⚠️ יום שלא השתנה
-         *  בו דבר הוא המצב הרגיל, ⭐ ועותק ריק בכל לילה מציף את הפינוי. */
+        // דיפרנציאלי ריק אינו נכתב ואינו כישלון — עותק ריק בכל לילה מציף את הפינוי.
         if (layer.diff && !rows.length) { same++; continue; }
         val = JSON.stringify(rows);
         if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
       }
-      // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
+      // מקור שאין לו ערך בענן אינו כישלון.
       if (val == null) continue;
       var sig = bkSig(val), sigKey = BK_LS.sig + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
@@ -288,11 +250,8 @@ async function bkMaybeDaily() {
       lsSet(flag, today);
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
     } else {
-      /* ⛔ בלי כתיבת הדגל הגלובלי — ההזדמנות הבאה באותו יום תנסה שוב:
-         דגל שנכתב לפני ההצלחה מדלג על יממה שלמה של גיבוי. ⚠️ והמקורות
-         שהצליחו נושאים דגל-יום משלהם ואינם נגבים שוב, ולכן הניסיון החוזר
-         מכוון למי שנכשל בלבד. ⛔ וכשל חלקי מדווח ואינו נבלע — `failed`
-         נושא את שמות המקורות, אחרת «נכשל» היה מספר בלי מען. */
+      // בלי כתיבת הדגל הגלובלי — דגל שנכתב לפני ההצלחה מדלג על יממה שלמה; המקורות שהצליחו נושאים דגל-יום משלהם,
+      // ולכן הניסיון החוזר מכוון למי שנכשל בלבד. failed נושא את שמות המקורות — אחרת «נכשל» הוא מספר בלי מען.
       logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same, failed: failed });
       console.warn('[bk] מקורות שנכשלו: ' + (failed.join(', ') || '?') + ' — ייבחנו שוב בהזדמנות הבאה');
     }
@@ -301,14 +260,9 @@ async function bkMaybeDaily() {
   return ok;
 }
 
-/* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
-// ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול — היא
-//    יושבת בפונקציית העלייה, לצד `lsBoot()` ו-`pendBoot()`, ולעולם לא
-//    במסלול דחיפה/סנכרון.
-// ⚠️ שתי הקריאות אינן ב-`await` ואינן חוסמות: העלייה אינה ממתינה לרשת,
-//    וכל כשל נבלע בשקט בתוך המודול.
-// ⛔ ותור היומן נשלח גם בחזרת הרשת, ממאזין אחד שנדרך כאן — ⚠️ בלעדיו תור
-//    שנצבר בלי רשת מחכה לפתיחה הבאה, ⭐ ואין אפליקציה שמאזינה לו בעצמה.
+// ── נקודת ההפעלה ──
+// שתי הקריאות אינן ב-await — העלייה אינה ממתינה לרשת, וכל כשל נבלע בתוך המודול.
+// מאזין online אחד נדרך כאן — בלעדיו תור היומן שנצבר בלי רשת מחכה לפתיחה הבאה.
 var _bkWired = false;
 function bkBoot() {
   try { bkMaybeDaily(); } catch (e) { }
@@ -318,8 +272,6 @@ function bkBoot() {
   try { window.addEventListener('online', function () { logFlush(); }); }
   catch (e) { console.warn('[bk] online', e); }
 }
-/* ═══════════════ סוף מודול הגיבוי היומי ═══════════════════════════════ */
 
-/*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
- *  ⭐ ו-`default` היה נבלע בשקט. */
+// ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { bkBoot, logAction, logFlush };

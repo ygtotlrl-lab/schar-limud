@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-/* ═══ tools/gen-app.mjs — קובצי הפלטפורמה מהתצורה ═══════════════════════
-   ⭐ יוצר מ-`app.config.js` את `manifest.json`, את קובצי האנדרואיד — ⚠️ כולל
-      שני קובצי ה-Java, מהתבניות שב-`tools/java/` — ואת האייקונים:
-      ⛔ ואיש אינו עורך אותם ביד — ⚠️ עריכה ידנית נדרסת בהרצה הבאה.
-   ⛔ **והרצה שנייה אינה משנה אף קובץ** — ⚠️ מה שנוצר זהה למה שבעץ,
-      ⭐ ו-`--check` מפיל כשאינו זהה.
-   ⭐ ו-`--get <שדה>` מדפיס ערך אחד — ⚠️ החתימה והבנייה קוראות ממנו,
-      ⛔ ואינן מחזיקות עותק משלהן.
-   הרצה:  node tools/gen-app.mjs  ·  --check  ·  --get <שדה.שדה>
-   ════════════════════════════════════════════════════════════════════ */
+// tools/gen-app.mjs — קובצי הפלטפורמה מהתצורה
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,8 +7,7 @@ import { runInNewContext } from 'node:vm';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-/*  ⛔ התצורה נקראת כפי שהדפדפן קורא אותה — ⚠️ סקריפט שמציב את `self.APP`,
- *  ⭐ ולא עותק JSON שני שמתיישן מולה. */
+// התצורה נקראת כסקריפט שמציב את self.APP, כפי שהדפדפן קורא אותה — ולא מעותק JSON שני שמתיישן.
 export function loadApp() {
   const ctx = { self: {} };
   runInNewContext(readFileSync(join(ROOT, 'app.config.js'), 'utf8'), ctx, { filename: 'app.config.js' });
@@ -26,11 +16,10 @@ export function loadApp() {
 }
 export const APP = loadApp();
 
-const MARK = 'נוצר מהתצורה — `app.config.js`, ב-`node tools/gen-app.mjs`: אין לערוך ביד';
+const MARK = 'נוצר מהתצורה — app.config.js, ב-node tools/gen-app.mjs: אין לערוך ביד';
 const ICON_RE = /^(icon-192|icon-512|icon-maskable-512)\.[0-9a-f]{8}\.png$/;
 
-/*  ⛔ שמות האייקונים נקראים מהתיקייה — ⚠️ השם נושא את תוכנו, ⭐ ומחולל
- *  האייקונים הוא שכתב אותו. */
+// שמות האייקונים נקראים מהתיקייה — השם נושא hash של התוכן, ומחולל האייקונים הוא שכתב אותו.
 function iconNames() {
   const out = {};
   for (const f of readdirSync(join(ROOT, 'icons'))) {
@@ -64,13 +53,13 @@ function manifest(A) {
 function androidManifest(A) {
   const share = A.android.share;
   return `<?xml version="1.0" encoding="utf-8"?>
-<!-- ⛔ ${MARK} -->
+<!-- ${MARK} -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 ${share ? `
-    <!-- resolveActivity() for the share hand-off needs this on API 30+ -->
+    <!-- מ-API 30 resolveActivity() של גשר השיתוף רואה רק מה שמוצהר כאן -->
     <queries>
         <intent>
             <action android:name="android.intent.action.SEND" />
@@ -112,7 +101,7 @@ ${share ? `
 }
 
 function appGradle(A) {
-  return `// ⛔ ${MARK}
+  return `// ${MARK}
 plugins {
     id 'com.android.application'
 }
@@ -143,15 +132,14 @@ android {
 ${A.android.share ? `
 dependencies {
     implementation 'androidx.core:core:1.13.1'
-    // WebViewCompat.addWebMessageListener — the origin allow-list for the share bridge
-    // is enforced by WebView itself, per frame.
+    // WebViewCompat.addWebMessageListener — רשימת המקורות של גשר השיתוף נאכפת ב-WebView עצמו, לכל frame
     implementation 'androidx.webkit:webkit:1.11.0'
 }
 ` : ''}`;
 }
 
 function settingsGradle(A) {
-  return `// ⛔ ${MARK}
+  return `// ${MARK}
 pluginManagement {
     repositories {
         google()
@@ -182,16 +170,14 @@ function launcherBg(A) {
     : `    <solid android:color="${b.color}"/>`;
   if (b.kind !== 'gradient' && b.kind !== 'solid') throw new Error(`launcherBg.kind — ${b.kind}`);
   return `<?xml version="1.0" encoding="utf-8"?>
-<!-- ⛔ ${MARK} -->
+<!-- ${MARK} -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
 ${body}
 </shape>
 `;
 }
 
-/*  ⛔ שני קובצי ה-Java נוצרים מתבנית אחת — ⚠️ שורת ה-`package`, הכתובת,
- *  משפט האופליין והצבע מהתצורה, ⭐ וגשר השיתוף רק כש-`android.share` מוצהר:
- *  ⛔ קטע `//@@share … //@@end` יורד כולו כשאינו. */
+// גשר השיתוף נוצר רק כש-android.share מוצהר — אחרת קטע @@share … @@end יורד כולו.
 function javaFile(name) {
   return A => {
     const share = A.android.share;
@@ -235,7 +221,7 @@ function get(path) {
 async function main(argv) {
   if (argv[0] === '--get') { process.stdout.write(get(argv[1] || '') + '\n'); return; }
   const check = argv[0] === '--check';
-  /*  ⚠️ האייקונים קודם — ⭐ `manifest.json` נושא את שמותיהם. */
+  // האייקונים קודם — manifest.json נושא את שמותיהם.
   if (!check) await import('./gen-icons.mjs');
   let changed = 0;
   for (const [rel, make] of Object.entries(TARGETS)) {
@@ -250,7 +236,6 @@ async function main(argv) {
   console.log(`gen-app — ${changed} קבצים ${check ? 'נבדלים' : 'נכתבו'} (${APP.id})`);
 }
 
-/*  ⛔ `main` רץ רק כשהקובץ הוא נקודת הכניסה — ⚠️ מחולל האייקונים מייבא
- *  ממנו את התצורה, ⭐ וייבוא אינו הרצה. */
+// main רץ רק כשהקובץ הוא נקודת הכניסה — מחולל האייקונים מייבא ממנו את התצורה, וייבוא אינו הרצה.
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
   main(process.argv.slice(2)).catch(e => { console.error('❌ ' + (e && e.message || e)); process.exit(1); });

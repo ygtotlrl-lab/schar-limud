@@ -15,72 +15,28 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-/*  ⛔ ה-javadoc כאן נשאר באנגלית — חריגה מנומקת: זהו תקן Java, והכלים
- *  שקוראים אותו מצפים לאנגלית. ⛔ שאר ההערות בעברית. */
-/**
- * ══════════════════════════════════════════════════════════════════════════
- * The WebView shell — the shared core.
- * ══════════════════════════════════════════════════════════════════════════
- *
- * <p>⛔ Generated from the app config by {@code tools/gen-app.mjs} and never
- * edited by hand: the body is one template, and only the {@code package} line
- * is per-app. Everything else that is per-app — the URL, the
- * sentence on the offline page, the accent colour and the optional share
- * bridge — is supplied by the generated {@link MainActivity}.
- *
- * <p><b>Why a WebView and never a Trusted Web Activity.</b> A TWA runs the site
- * inside Chrome, and the content filters installed on the users' devices block
- * Chrome, so a TWA build never opens. A plain WebView renders in-process and
- * is not affected.
- *
- * <p><b>The shell loads the live site over the network, and there are no bundled
- * assets — on purpose.</b> A file:// fallback copy would live in a <i>different
- * storage origin</i> from the https site, so anything typed into it offline
- * would land in a localStorage partition the online app never reads: silent
- * data loss. It would also be a second source of truth that only ever goes
- * stale. Web releases therefore reach installed devices the moment GitHub Pages
- * updates, with no new APK — the site's service worker keeps it working offline
- * afterwards, exactly as it does in a browser.
- *
- * <p><b>There is no native bridge here, on purpose.</b> A bridge on a remotely
- * loaded page is reach handed to whoever serves the page. A bridge exists only
- * where the app config declares {@code android.share}, and it is guarded twice
- * over: addWebMessageListener with an origin allow-list, never a bare
- * addJavascriptInterface.
- *
- * <p>⛔ Nothing app-specific belongs in this file. A value that differs between
- * the apps goes through one of the abstract methods below; a behaviour only one
- * app needs goes through {@link #installBridge()} or
- * {@link #onShellNavigation(String)}.
- */
+// tools/java/ShellActivity.java.in — מעטפת ה-WebView, הליבה המשותפת
 public abstract class ShellActivity extends Activity {
 
     private static final int FILE_CHOOSER_REQUEST = 1001;
 
-    /** The live site this shell loads. */
     protected abstract String appUrl();
 
-    /**
-     * The first sentence of the offline page, in Hebrew and complete.
-     *
-     * <p>⚠️ The whole sentence and not just the app name: the verb agrees with
-     * the name's gender (feminine «…לא הצליחה» vs masculine «…לא הצליח»),
-     * so a name-only placeholder would produce broken Hebrew for half the names.
-     */
+    // המשפט המלא ולא שם האפליקציה בלבד — הפועל מתאים למין השם (הצליחה / הצליח).
     protected abstract String offlineLine();
 
-    /** Accent colour of the offline page's retry button, as a CSS hex value. */
+    // צבע כפתור הניסיון החוזר בדף האופליין, כערך hex של CSS.
     protected abstract String accentColor();
 
-    /** Attach a native bridge. Default: none — overridden only where one exists. */
+    // ריק בכוונה — נדרס רק כשיש גשר מוצהר.
     protected void installBridge() { }
 
-    /** Called on every navigation, start and finish. Default: nothing. */
+    // נקרא בכל ניווט, בתחילתו ובסופו; ריק בכוונה כברירת מחדל.
     protected void onShellNavigation(String url) { }
 
     protected WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
-    /** true once any real page has painted — keeps a late error from wiping a live app. */
+    // נדלק כשדף אמיתי כלשהו צויר — כך שגיאה מאוחרת אינה מוחקת אפליקציה חיה.
     private boolean loadedOnce = false;
 
     @Override
@@ -92,14 +48,14 @@ public abstract class ShellActivity extends Activity {
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);          // localStorage — the app's local copy lives here
+        s.setDomStorageEnabled(true); // localStorage — העותק המקומי של האפליקציה יושב כאן
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        // The site is https-only, so there is no reason to allow mixed content wholesale.
+        // האתר https בלבד — אין סיבה להתיר תוכן מעורב גורף.
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        // No file:// or content:// access is needed — nothing is loaded from disk.
+        // אין צורך בגישת file:// או content:// — דבר אינו נטען מהדיסק.
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
 
@@ -122,8 +78,7 @@ public abstract class ShellActivity extends Activity {
 
         installBridge();
 
-        // restoreState() returns null when there was no history to restore — then
-        // (and on a normal cold start) load the site.
+        // restoreState מחזיר null כשאין היסטוריה לשחזר — אז, וגם בהפעלה קרה רגילה, נטען האתר.
         if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
             webView.loadUrl(appUrl());
         } else {
@@ -133,10 +88,8 @@ public abstract class ShellActivity extends Activity {
 
     private class ShellWebViewClient extends WebViewClient {
 
-        // ⛔ http/https ALWAYS stays inside the WebView. Handing a web URL to the system
-        // browser would land the user in Chrome, which the content filters on their
-        // devices block — the same reason the shell is not a TWA. Everything
-        // else (tel:, mailto:, whatsapp:, …) has no renderer here and goes to the system.
+        // http/https נשארים תמיד ב-WebView — הדפדפן החיצוני הוא Chrome, שמסנני התוכן במכשירים חוסמים.
+        // שאר הסכמות (tel:, mailto:, whatsapp:) אין להן מרנדר כאן, והן עוברות למערכת.
         @Override
         public boolean shouldOverrideUrlLoading(WebView wv, WebResourceRequest request) {
             return handleUrl(request.getUrl());
@@ -154,7 +107,7 @@ public abstract class ShellActivity extends Activity {
             if (scheme.equals("http") || scheme.equals("https")) return false;
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                // ⛔ אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי — ⚠️ הקישור נפתח מעל המעטפת, ⭐ וחזרה מחזירה אליה.
+                // אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי — הקישור נפתח מעל המעטפת, וחזרה מחזירה אליה.
                 startActivity(intent);
             } catch (ActivityNotFoundException e) {
                 Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();
@@ -187,14 +140,8 @@ public abstract class ShellActivity extends Activity {
         }
     }
 
-    /**
-     * Cold start with no network and nothing in the service-worker cache. Once the app has
-     * loaded once, the service worker answers offline and this never runs — so it only
-     * shows while the shell is still empty.
-     *
-     * <p>⛔ Served as text/html through loadDataWithBaseURL, never as a plain string:
-     * a page body without a content type is not a message to the user.
-     */
+    // רץ רק בהפעלה קרה בלי רשת ובלי מטמון ה-SW — אחרי טעינה ראשונה ה-SW עונה אופליין.
+    // מוגש כ-text/html דרך loadDataWithBaseURL ולא כמחרוזת רגילה — גוף בלי סוג תוכן אינו הודעה למשתמש.
     protected void showOfflinePage() {
         if (loadedOnce) return;
         String html =

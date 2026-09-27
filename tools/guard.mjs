@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-/* ── שומר הדחיפה ─────────────────────────────────────────────────────────── */
-/*  בודק רק את מה ששובר את האפליקציה למשתמש ברגע הדחיפה:
- *  תחביר כל סקריפט שבתוך `index.html`, של `sw.js` ושל `core/*.js` —
- *  ⛔ שכל קובץ ברשימת המטמון (`CORE` שב-`sw.js`) קיים בעץ,
- *  ⛔ ושה-`sw.js` מגדיר `CACHE_NAME` שאינו ריק.
- *
- *  ⛔ הקובץ זהה בית-לבית בכל הריפו — ⚠️ אין בו תצורה פר-אפליקציה:
- *  הכול נגזר מהעץ שבו הוא רץ.
- *  ⛔ ואין בו תלות חיצונית — ⚠️ `node` בלבד, ⭐ והתחביר נבדק
- *  ב-`node --check` שאינו מריץ דבר. */
+// tools/guard.mjs — שומר הדחיפה
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -20,7 +11,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
 let checked = 0;
 
-/*  ⚠️ הקוד עובר ב-stdin — ⛔ ואינו נכתב לקובץ זמני: השומר קורא בלבד. */
+// הקוד עובר ב-stdin ולא בקובץ זמני — השומר קורא בלבד.
 function syntax(label, code, type) {
   checked++;
   const r = spawnSync(process.execPath, ['--check', `--input-type=${type}`, '-'],
@@ -33,26 +24,25 @@ function syntax(label, code, type) {
   }
 }
 
-/*  ── index.html — כל תג <script> בלי src ── */
+// ── index.html — כל תג script בלי src ──
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 let n = 0;
 for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
   if (/\bsrc\s*=/.test(m[1])) continue;
   n++;
-  /*  ⚠️ מספר השורה נמדד מראש הקובץ — ⭐ ולכן הקוד מקבל שורות ריקות לפניו. */
+  // מספר השורה בשגיאה נמדד מראש הקובץ — לכן הקוד מרופד בשורות ריקות לפניו.
   const pad = '\n'.repeat(html.slice(0, m.index + m[0].indexOf('>') + 1).split('\n').length - 1);
   syntax('index.html', pad + m[2], /type\s*=\s*["']module["']/.test(m[1]) ? 'module' : 'commonjs');
 }
 if (!n) fails.push('index.html — אין בו סקריפט מוטבע: הקובץ נשבר, או שהסקריפט יצא ממנו');
 
-/*  ── sw.js — סקריפט קלאסי ── */
+// ── sw.js — סקריפט קלאסי ──
 const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 syntax('sw.js', sw, 'commonjs');
 
-/*  ── sw.js — `CACHE_NAME` מוגדר ואינו ריק ──
- *  ⛔ בלעדיו ה-worker נכשל בהתקנה והאפליקציה אינה מתעדכנת — ⚠️ והתחביר
- *  תקין גם בלעדיו. ⭐ הערך נגזר כפי שה-worker גוזר אותו: התצורה רצה
- *  בהקשר מבודד, והביטוי מוערך מעליה. */
+// ── sw.js — CACHE_NAME מוגדר ואינו ריק ──
+// בלעדיו ה-worker נכשל בהתקנה, והתחביר תקין גם בלעדיו.
+// הערך מוערך כפי שה-worker גוזר אותו — מעל התצורה, בהקשר מבודד.
 {
   checked++;
   const decl = sw.match(/^\s*(?:var|let|const)\s+CACHE_NAME\s*=\s*([^;\n]+)/m);
@@ -69,15 +59,15 @@ syntax('sw.js', sw, 'commonjs');
   else if (typeof name !== 'string' || !name.trim()) fails.push('sw.js — `CACHE_NAME` ריק');
 }
 
-/*  ── core/*.js — מודולים ── */
+// ── core/*.js — מודולים ──
 const coreDir = join(ROOT, 'core');
 if (existsSync(coreDir)) {
   for (const f of readdirSync(coreDir).filter(f => f.endsWith('.js')).sort())
     syntax(`core/${f}`, readFileSync(join(coreDir, f), 'utf8'), 'module');
 }
 
-/*  ── רשימת המטמון — כל קובץ קיים ──
- *  ⛔ קובץ חסר ברשימה מפיל את ההתקנה כולה: `cache.addAll` הוא הכול-או-כלום. */
+// ── רשימת המטמון — כל קובץ קיים ──
+// cache.addAll הוא הכול-או-כלום — קובץ חסר אחד מפיל את ההתקנה כולה.
 const block = sw.match(/\bCORE\s*=\s*\[([\s\S]*?)\]/);
 if (!block) fails.push('sw.js — רשימת המטמון `CORE` לא נמצאה');
 else {
