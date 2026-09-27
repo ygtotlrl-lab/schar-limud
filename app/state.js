@@ -1,7 +1,9 @@
 // app/state.js — המצב המשותף בין המודולים
 
 // מצב שמודולים שונים כותבים — אובייקט אחד, כי קישור מיובא אינו ניתן להשמה.
-export const S = {
+const S = {
+  // הלקוח נבנה ב-main בעלייה — כל מודול מגיע אליו מכאן.
+  SB: null,
   STUDENTS: [],
   TRANSACTIONS: [],
   SETTINGS: {},
@@ -29,3 +31,9 @@ export const S = {
   // _lastSyncOk מונע הסקת «הפריט חסר» מסנכרון שנכשל.
   _creditSeedDone: false
 };
+
+// ── מה שמסך צריך מ-main ──
+// main רושם כאן בעלייה — מודול שמייבא מ-main סוגר מעגל, והרישום הוא הכיוון האחד.
+const shell = { refreshUI: null, selectStudent: null, renderTxnLog: null };
+
+export { S, shell };
