@@ -870,7 +870,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, tombAt,
+export { newClientId, idEq, mergeCore, tombAt, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
