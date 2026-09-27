@@ -760,9 +760,45 @@ function _plSeen() { try { return plNum(app.PL_CFG.seen()); } catch (e) { return
 function plTouch(ts) {
   var t = plNum(ts) || Date.now();
   try { app.PL_CFG.note(t); } catch (e) { }
+  return plStampWrite(t).then(function () { return t; });
+}
+
+/*  ⛔ חותמת הפולינג — כותב אחד וקורא אחד, ⚠️ והתצורה מוסרת רק את הלקוח
+ *  ואת הטבלה: ⭐ צורת השורה כאן בלבד, ⛔ וכותב שני שנבדל ממנה בעמודה אחת
+ *  נכשל בכל כתיבה — `updated_at` הוא `not null`, ⚠️ והחותמת אינה מגיעה
+ *  לאף מכשיר אחר.
+ *  ⚠️ הלקוח והטבלה נלכדים בשורה הראשונה — ⛔ טבלה שנקראת אחרי ההמתנה
+ *  הייתה כותבת לטבלה של הקשר שהתחלף בינתיים. */
+var PL_STAMP_KEY = 'last_changed';
+function plStampWrite(ts) {
+  var c, tbl;
+  try { c = app.PL_CFG.client(); tbl = app.PL_CFG.table(); } catch (e) { c = null; }
+  if (!c || !tbl) return Promise.resolve({ ok: false });
+  var row = { key: PL_STAMP_KEY, value: JSON.stringify(plNum(ts)), updated_at: Date.now() };
+  var fail = function (e) {
+    console.warn('[pl] כתיבת החותמת נכשלה', tbl, e && e.message ? e.message : e);
+    return { ok: false, error: e };
+  };
   try {
-    return Promise.resolve(app.PL_CFG.stamp(t)).then(function () { return t; }, function () { return t; });
-  } catch (e) { return Promise.resolve(t); }
+    return withTimeout(c.from(tbl).upsert(row, { onConflict: 'key' })).then(function (r) {
+      if (!r || r.error) return fail(r && r.error);
+      return { ok: true };
+    }, fail);
+  } catch (e) { return Promise.resolve(fail(e)); }
+}
+/*  ⚠️ `ts: null` — אין שורת חותמת בענן, ⛔ ו-`ok: false` — אין ראיה: ⭐ שני
+ *  המצבים נבדלים, ⛔ שכשל שנקרא «אין שורה» מפעיל משיכה מלאה על כל תקלה. */
+function plStampRead() {
+  var c, tbl;
+  try { c = app.PL_CFG.client(); tbl = app.PL_CFG.table(); } catch (e) { c = null; }
+  if (!c || !tbl) return Promise.resolve({ ok: false, ts: null });
+  try {
+    return withTimeout(c.from(tbl).select('value').eq('key', PL_STAMP_KEY).maybeSingle())
+      .then(function (r) {
+        if (!r || r.error) return { ok: false, ts: null };
+        return { ok: true, ts: r.data ? plNum(kvParse(PL_STAMP_KEY, r.data.value).value) : null };
+      }, function () { return { ok: false, ts: null }; });
+  } catch (e) { return Promise.resolve({ ok: false, ts: null }); }
 }
 
 function _plFull() {
@@ -786,7 +822,7 @@ function plTick() {
   _plBusy = true;
   var done = function (v) { _plBusy = false; return v; };
   var p;
-  try { p = Promise.resolve(app.PL_CFG.remote()); } catch (e) { p = Promise.reject(e); }
+  try { p = plStampRead(); } catch (e) { p = Promise.reject(e); }
   return p.then(function (r) {
     if (!r || !r.ok) return done(false);
     try { app.PL_CFG.ok(); } catch (e) { }
@@ -1063,5 +1099,6 @@ export { newClientId, idEq, mergeCore, tombAt,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendReload, pendRender, pendTag,
-         plBoot, plForget, plNum, plTick, plTouch, pushDirty, pushTable,
+         PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,
+         plTick, plTouch, pushDirty, pushTable,
          rtyBoot, rtyNote, runSave, sbWatch, schedulePush };

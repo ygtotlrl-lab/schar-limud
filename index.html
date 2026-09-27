@@ -95,7 +95,7 @@ import { MSG_FILL_ALL, MSG_FILL_LOGIN, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR,
 import { _eraPush, _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick,
          eraNotePush, idEq, mergeCore, newClientId, pendAlertDismiss,
          pendAll, pendBoot, pendClearMany, pendCount, pendFailed, pendHas,
-         pendMark, pendMarkMany, pendTag, plBoot, plNum, plTick, plTouch,
+         pendMark, pendMarkMany, pendTag, PL_STAMP_KEY, plBoot, plTick, plTouch,
          pushDirty, rtyBoot, rtyNote, runSave, sbWatch, schedulePush,
          tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwNoteCloud, hwPastLoad, lsBoot, lsClearHorizons, lsRemove } from './core/storage.js';
@@ -408,7 +408,6 @@ var DASH_YEAR=null,SC_STUDENT_ID=null,SC_YEAR=null;
 //    ⛔ אין להזין מהן את עֵד הפינוי — ⚠️ הן מתקדמות גם במשיכה, ⭐ והעֵד הוא
 //    `_slPushedAt` פר-מפתח.
 var _slSeenTs=0,_slLastSeenOk=0;
-var SL_STAMP_KEY='last_changed';
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 // שמות מקוצרים לכותרות עמודות הלוח השנתי ולתוויות הגרף (12 עמודות על מסך צר)
@@ -648,7 +647,7 @@ var LK_CFG = {
   lock:   function () { doLogout(); },
 };
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
-/* ⚠️ בשכר לימוד החותמת היא שורת `sl_settings` שמפתחה `SL_STAMP_KEY`. היא
+/* ⚠️ בשכר לימוד החותמת היא שורת `sl_settings` שמפתחה `PL_STAMP_KEY`. היא
    **מוחרגת מהמראה** ב-`slStripMeta` — שורת מטא אינה הגדרה, ⛔ ודחיפת-מצב
    שלה הייתה מחזירה לענן חותמת ישנה שיושבת במכשיר הזה.
    ⚠️ `ok()` **אינו** נוגע ב-`_slLastPullOk`: הוא עֵד המשיכה המלאה, והוא
@@ -660,17 +659,9 @@ var PL_CFG = {
   seen:   function () { return _slSeenTs; },
   note:   function (ts) { _slSeenTs = ts; },
   ok:     function () { _slLastSeenOk = Date.now(); },
-  stamp:  function (ts) {
-    return SB.from(KV_TABLE).upsert({ key: SL_STAMP_KEY, value: String(ts) }, { onConflict: 'key' });
-  },
   pull:   function () { return syncAll(); },
-  remote: function () {
-    return withTimeout(SB.from(KV_TABLE).select('value').eq('key', SL_STAMP_KEY).maybeSingle())
-      .then(function (r) {
-        if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(kvParse(SL_STAMP_KEY, r.data.value).value) : null };
-      }, function () { return { ok: false, ts: null }; });
-  },
+  client: function () { return SB; },
+  table:  function () { return KV_TABLE; },
 };
 /* ── PUSH_CFG — הדבר היחיד שנבדל בין האפליקציות ────────────────────────── */
 /* ⛔ `sl_users` **אינה כאן ואינה נדחפת לעולם** — ⚠️ המראה מחזיקה
@@ -924,12 +915,12 @@ function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k
 function slStripSecrets(rows) {
   return (Array.isArray(rows) ? rows : []).filter(function (r) { return !(r && slIsSecretSetting(r.key)); });
 }
-/* ⭐ שורת החותמת (`SL_STAMP_KEY`) אינה הגדרה ואינה יורדת למראה.
+/* ⭐ שורת החותמת (`PL_STAMP_KEY`) אינה הגדרה ואינה יורדת למראה.
    ⛔ אין לוותר על הסינון הזה — שורה שנכנסת למראה נדחפת חזרה
    ע"י `pushTable`, והמכשיר היה כותב לענן חותמת ישנה משלו ומשתיק בכך
    שינוי אמיתי שמכשיר אחר הרגע דחף. */
 function slStripMeta(rows) {
-  return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === SL_STAMP_KEY); });
+  return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === PL_STAMP_KEY); });
 }
 
 /* ═══ הרשאה — נגזרת מהמשתמש, לא מסיסמה שנייה ════════════════════════════
