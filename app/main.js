@@ -163,7 +163,7 @@ async function slBoot(){
 
   slShowLogin(true);
   setTimeout(function(){document.getElementById('au-user').focus();},50);
-  bootOk();
+  window.bootOk();
 }
 
 document.addEventListener('DOMContentLoaded', slBoot);
