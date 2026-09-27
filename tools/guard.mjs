@@ -24,7 +24,7 @@ function syntax(label, code, type) {
   }
 }
 
-// ── index.html — כל תג script בלי src ──
+// ── index.html — כל תג script בלי src, והכניסה ל-app/ ──
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 let n = 0;
 for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
@@ -34,7 +34,8 @@ for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
   const pad = '\n'.repeat(html.slice(0, m.index + m[0].indexOf('>') + 1).split('\n').length - 1);
   syntax('index.html', pad + m[2], /type\s*=\s*["']module["']/.test(m[1]) ? 'module' : 'commonjs');
 }
-if (!n) fails.push('index.html — אין בו סקריפט מוטבע: הקובץ נשבר, או שהסקריפט יצא ממנו');
+checked++;
+if (!/<script type="module" src="app\/main\.js"><\/script>/.test(html)) fails.push('index.html — אינו טוען את app/main.js');
 
 // ── sw.js — סקריפט קלאסי ──
 const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
@@ -66,6 +67,20 @@ if (existsSync(coreDir)) {
     syntax(`core/${f}`, readFileSync(join(coreDir, f), 'utf8'), 'module');
 }
 
+// ── app/ — מודולים ──
+function jsUnder(dir) {
+  let out = [];
+  for (const f of readdirSync(join(ROOT, dir)).sort()) {
+    const p = dir + '/' + f;
+    if (statSync(join(ROOT, p)).isDirectory()) out = out.concat(jsUnder(p));
+    else if (f.endsWith('.js')) out.push(p);
+  }
+  return out;
+}
+const appFiles = existsSync(join(ROOT, 'app')) ? jsUnder('app') : [];
+if (!appFiles.includes('app/main.js')) fails.push('app/main.js — אינו קיים');
+for (const f of appFiles) syntax(f, readFileSync(join(ROOT, f), 'utf8'), 'module');
+
 // ── רשימת המטמון — כל קובץ קיים ──
 // cache.addAll הוא הכול-או-כלום — קובץ חסר אחד מפיל את ההתקנה כולה.
 const block = sw.match(/\bCORE\s*=\s*\[([\s\S]*?)\]/);
@@ -79,6 +94,11 @@ else {
     const p = join(ROOT, u.replace(/^\.\//, '').split(/[?#]/)[0]);
     const ok = u === './' ? existsSync(join(ROOT, 'index.html')) : existsSync(p) && statSync(p).isFile();
     if (!ok) fails.push(`sw.js — «${u}» ברשימת המטמון ואינו קיים בעץ`);
+  }
+  // מודול שאינו במטמון נכשל בייבוא אופליין, והאפליקציה כולה אינה עולה.
+  for (const f of appFiles) {
+    checked++;
+    if (!urls.includes('./' + f)) fails.push(`sw.js — «./${f}» אינו ברשימת המטמון`);
   }
 }
 

@@ -1,7 +1,7 @@
 // sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
 // מכאן נגזרת גרסת האפליקציה שבבאנר.
-var CACHE_NAME = self.APP.id + '-v214';
+var CACHE_NAME = self.APP.id + '-v215';
 
 var CORE = [
   './',
@@ -20,6 +20,15 @@ var CORE = [
   './core/auth.js',
   './core/ui.js',
   './core/chart.js',
+  './app/state.js',
+  './app/config.js',
+  './app/domain.js',
+  './app/screens/dash.js',
+  './app/screens/login.js',
+  './app/screens/settings.js',
+  './app/screens/student.js',
+  './app/screens/txn.js',
+  './app/main.js',
   './manifest.json',
   './icons/icon-192.af5952e2.png',
   './icons/icon-512.6e7eb2aa.png'
