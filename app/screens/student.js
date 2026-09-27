@@ -4,16 +4,14 @@ import { idEq, pendMark, schedulePush } from '../../core/sync.js';
 import { hwPastLoad } from '../../core/storage.js';
 import { mirrorKey } from '../../core/mirror.js';
 import { esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
-import { MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_END_BEFORE_START,
-         MSG_END_MONTH_BAD, MSG_NAME_REQUIRED, MSG_SETTINGS_NOT_SAVED,
-         MSG_START_MONTH_BAD, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
-         MSG_TUITION_POSITIVE } from '../config.js';
-import { CREDIT_METHOD, YEAR_MONTHS, acadYearLabel, acadYearOf, calcDistribution,
-         distCredApplied, distCredit, enrollText, fmt, isCreditTxn, monthLabel,
-         normMonth, pendStuKey, pendTxnTag, slKey, slLocalWrite } from '../domain.js';
-import { txnAmountHtml, txnMethodPill } from './txn.js';
-import { refreshUI } from '../main.js';
+import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
+         MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
+         MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
+import { S, shell } from '../state.js';
+import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit,
+         enrollText, fmt, isCreditTxn, monthLabel, normMonth, pendStuKey, pendTxnTag,
+         readMonthRange, slKey, slLocalWrite, txnAmountHtml,
+         txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
@@ -172,18 +170,8 @@ async function scPastShow(){
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
-  pendMark(pendStuKey(row));refreshUI();
+  pendMark(pendStuKey(row));shell.refreshUI();
   toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
-
-// פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
-function readMonthRange(startId,endId){
-  var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
-  var sm=normMonth(rawS),em=normMonth(rawE);
-  if(rawS&&!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
-  if(rawE&&!em){toast(MSG_END_MONTH_BAD, null, 'bad');return null;}
-  if(sm&&em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
-  return {start_month:sm||null,end_month:em||null};
-}
 
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
@@ -207,5 +195,5 @@ function saveStudentSettings(){
   return true;
 }
 
-export { readMonthRange, renderScAnnual, renderStudentCard, saveStudentSettings,
-         scPastShow, scSelectYear, screenStudentHTML, selectStudent, toggleStudentActive };
+export { renderScAnnual, renderStudentCard, saveStudentSettings, scPastShow, scSelectYear,
+         screenStudentHTML, selectStudent, toggleStudentActive };

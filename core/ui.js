@@ -73,7 +73,6 @@ function swShowUpdate() {
     swToastsLift(el.offsetHeight);
   });
 }
-window.showAppUpdateBanner = swShowUpdate;
 function swHideUpdate() {
   swBannerHide();
   swVer().then(function (v) { if (v) lsSet(app.LS_CFG.dismissKey, v); });
@@ -282,4 +281,4 @@ function ksKey(e) {
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, ask, busy, closeAsk, closeModal, esc, ksKey, lsToast,
          modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply,
-         swHideUpdate, toast, uiNoDialog };
+         swHideUpdate, swShowUpdate, toast, uiNoDialog };

@@ -55,6 +55,7 @@
 
   var timer = setTimeout(function () { fail('לא הודיע תוך ' + BOOT_TIMEOUT_MS + 'ms'); }, BOOT_TIMEOUT_MS);
 
+  // הגשר היחיד של הליבה על window — סקריפט רגיל אינו מייצא, והמודולים נטענים אחריו.
   window.bootOk = function () {
     if (failed) return;
     done = true;

@@ -2,9 +2,12 @@
 import { dayToday } from '../../core/util.js';
 import { esc } from '../../core/ui.js';
 import { barChart } from '../../core/chart.js';
+import { YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
-import { MONTH_HE_SHORT, YEAR_MONTHS, acadYearLabel, acadYearOf, countInMonth, fmt,
-         isCreditTxn, monthLabel, studentInMonth } from '../domain.js';
+import { acadYearLabel, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
+         studentInMonth } from '../domain.js';
+
+var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
 
 function screenDashHTML() {
   return `

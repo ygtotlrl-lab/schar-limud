@@ -1,4 +1,4 @@
-/* app.css — עיצוב האפליקציה */
+/* app/style.css — עיצוב האפליקציה */
 
 /* ── אסימוני העיצוב ── */
 :root{
@@ -111,7 +111,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
 .sheet-hd .x{color:var(--text-3);padding:0 var(--sp-2)}
 .sheet-ft{gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
-.sheet-bd:empty{display:none}
 #ask-body{font-size:var(--fs-4);color:var(--text-2)}
 #ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
 #ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}

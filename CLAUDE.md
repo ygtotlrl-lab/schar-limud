@@ -3,7 +3,7 @@
 הטבלה ב-`TABLE.md` — מקור האמת היחיד ליכולת; סשן קורא ממנה את הפרקים שהסבב נוגע בהם.
 
 ## מפת המסכים
-- מסך ⟵ מודול: כניסה ⟵ `app/screens/login.js` · `dash` (לוח בקרה) ⟵ `app/screens/dash.js` · `txn` (תשלום ותנועות) ⟵ `app/screens/txn.js` · `student` (כרטיס תלמיד) ⟵ `app/screens/student.js` · `settings` (תלמידים, רשימות, סעיפים, יעד, «הסיסמה שלי») ⟵ `app/screens/settings.js`. הסנכרון, הכתיבה המקומית והחישוב — `app/domain.js`; הניווט ומפת הפעולות — `app/main.js`.
+- מסך ⟵ מודול: כניסה ⟵ `app/screens/login.js` · `dash` (לוח בקרה) ⟵ `app/screens/dash.js` · `txn` (תשלום ותנועות) ⟵ `app/screens/txn.js` · `student` (כרטיס תלמיד) ⟵ `app/screens/student.js` · `settings` (תלמידים, רשימות, סעיפים, יעד, «הסיסמה שלי») ⟵ `app/screens/settings.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, הכתיבה המקומית והחישוב — `app/domain.js`; החיווט, הניווט ומפת הפעולות — `app/main.js`.
 
 ## מונחי התחום
 - תלמיד (`sl_students`) — אב התנועות. תנועה (`sl_transactions`) — כסף.

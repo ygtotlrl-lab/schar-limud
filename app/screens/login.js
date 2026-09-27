@@ -1,13 +1,15 @@
 // app/screens/login.js — מסך הכניסה
 import { MSG_FILL_LOGIN, MSG_LOGIN_ERR, MSG_NO_CRYPTO, MSG_OFFLINE_LOGIN,
-         MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_SERVER_ERR, isNetErr } from '../../core/util.js';
+         MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_SERVER_ERR,
+         isNetErr } from '../../core/util.js';
 import { ctxSwitch, plTick } from '../../core/sync.js';
-import { AUTH_USER_COLS, authLog, authUsersTable, authVerify, lkReset, lkStop,
-         sessClear, sessGet, sessSet, usersByName, usersSanitize, usersSaveOne } from '../../core/auth.js';
+import { AUTH_USER_COLS, authLog, authUsersTable, authVerify, lkReset, lkStop, sessClear,
+         sessGet, sessSet, usersByName, usersSanitize,
+         usersSaveOne } from '../../core/auth.js';
 import { shellBare, toast } from '../../core/ui.js';
-import { MSG_BAD_LOGIN, MSG_NO_FP_ONLINE, MSG_NO_USERS } from '../config.js';
+import { MSG_BAD_LOGIN, MSG_NO_FP_ONLINE, MSG_NO_USERS } from '../constants.js';
+import { S, shell } from '../state.js';
 import { ensureCreditMethod, slApplyMirror, syncAll } from '../domain.js';
-import { SB, refreshUI } from '../main.js';
 
 function screenLoginHTML() {
   return `
@@ -45,7 +47,7 @@ async function doLogin(){
   startAuthLoad();
   try{
     // השורה נשלפת לפי שם המשתמש בלבד וההשוואה מול הטביעה — סינון לפי password היה הופך את הסיסמה הגלויה למפתח הכניסה, קריא לכל מי שמחזיק את מפתח ה-anon
-    var r=await SB.from(authUsersTable()).select(AUTH_USER_COLS.join(',')).eq('username',u).maybeSingle();
+    var r=await S.SB.from(authUsersTable()).select(AUTH_USER_COLS.join(',')).eq('username',u).maybeSingle();
     if(r.error)throw r.error;
     if(r.data){
       var vOn=await authVerify(r.data,p);
@@ -58,7 +60,7 @@ async function doLogin(){
     if(!r.data){
       // טבלה ריקה היא התקנה שטרם נוצר בה משתמש ולא סיסמה שגויה; אין משתמש ברירת מחדל — סיסמה ידועה לכל היא חשבון פתוח
       authLog(false,'wrong_credentials_online',u);
-      var any=await SB.from(authUsersTable()).select('client_id').limit(1);
+      var any=await S.SB.from(authUsersTable()).select('client_id').limit(1);
       showAuthErr((any&&!any.error&&Array.isArray(any.data)&&!any.data.length)?MSG_NO_USERS:MSG_BAD_LOGIN);
       return;
     }
@@ -113,7 +115,7 @@ function enterApp(){
   slShowLogin(false);
   document.getElementById('nav-username').textContent=sessGet().username;
   slApplyMirror();
-  refreshUI();
+  shell.refreshUI();
   syncAll();
   // אין כאן פולינג שדוחף — הוא היה מושך הכול ודוחף כל שלוש שניות בלי ראיה לשינוי
   // הדחיפה מונעת-אירוע, הניסיון החוזר רץ רק כשהתור אינו ריק, ו-plTick מושך רק כשהחותמת התקדמה
@@ -131,6 +133,4 @@ function slResolveUser(sess){
   return m?Object.assign({},sess,usersSanitize(m)[0]):sess;
 }
 
-function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
-
-export { doLogin, doLogout, screenLoginHTML, slResolveUser, slShowLogin, slWhoName };
+export { doLogin, doLogout, screenLoginHTML, slResolveUser, slShowLogin };

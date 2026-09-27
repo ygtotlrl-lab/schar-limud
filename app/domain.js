@@ -1,24 +1,27 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
-import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr, kvParse } from '../core/util.js';
+import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
+         kvParse } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
-         newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark,
-         pendMarkMany, pendTag, pushDirty, rtyNote, schedulePush, tombPruneMerged } from '../core/sync.js';
+         newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
+         pendTag, pushDirty, rtyNote, schedulePush,
+         tombPruneMerged } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
-import { authUsersTable, isAdminOf, sessGet, usersRefresh, usersSanitize } from '../core/auth.js';
+import { authUsersTable, isAdminOf, sessGet, usersRefresh,
+         usersSanitize } from '../core/auth.js';
 import { esc, pullRender, toast } from '../core/ui.js';
-import { S } from './state.js';
-import { KV_TABLE, MSG_LOAD_FAIL_POST } from './config.js';
-import { selectStudent } from './screens/student.js';
-import { renderTxnLog } from './screens/txn.js';
-import { HE, SB, refreshUI } from './main.js';
+import { CREDIT_METHOD, KV_TABLE, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
+         MSG_LOAD_FAIL_POST, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
+         YEAR_MONTHS } from './constants.js';
+import { S, shell } from './state.js';
 
-var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
+// ── מיון עברי ──
+try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
+
+var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-
-var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
 
 // ── עֵד הדחיפה פר-מפתח ──
 // נכתב רק בסוף מעבר דחיפה נקי שבא אחרי משיכה מוצלחת, גם במכשיר שרק קורא — אין לגזור אותו ממשיכה לבדה
@@ -35,7 +38,7 @@ function _slRowId(r) { return r ? r.client_id : null; }
 // נכשל סגור — עמוד שנכשל מחזיר null, ו«אין ראיה» אינו «הענן ריק»
 function _slVerify(mkQuery) {
   return function () {
-    if (!SB) return Promise.resolve({ ok: false, rows: [] });
+    if (!S.SB) return Promise.resolve({ ok: false, rows: [] });
     return _rowsPaged(mkQuery, 'client_id', null)
       .then(function (rs) { return Array.isArray(rs) ? { ok: true, rows: rs } : { ok: false, rows: [] }; },
             function () { return { ok: false, rows: [] }; });
@@ -132,9 +135,6 @@ function slSanitizeRows(t, rows) {
 }
 
 // ── משתמשים, סודות וכניסה ──
-// מפתחות שאסור להם להגיע ל-localStorage המשותף ל-origin; נאכפת במשיכה, בכתיבה המקומית ובשער הדיסק
-// סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
-var SL_NEVER_MIRROR_SETTINGS = [];
 
 function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
 
@@ -156,9 +156,6 @@ function slSettingsAccess(u) {
 }
 
 function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
-
-// נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
-var PASS_SIX_RE = /^[0-9]{6}$/;
 
 // נקודת הסינון היחידה של המחוקים — כל קוראי STUDENTS מקבלים אותו מכאן
 function slApplyMirror() {
@@ -248,7 +245,7 @@ async function slSendRows(tbl, rows) {
     out.push(body);
   });
   if (err) return { error: { message: err } };
-  var res = await SB.from(tbl).upsert(out, { onConflict: conflict });
+  var res = await S.SB.from(tbl).upsert(out, { onConflict: conflict });
   if (!(res && res.error)) slSyncLog('push', tbl, out.length);
   return res;
 }
@@ -321,9 +318,6 @@ function enrollText(s){
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
-// יתרת זכות אינה חוב שלילי ואינה מקוזזת; זיכוי מיתרה מקטין חוב אך אינו כסף שהתקבל
-// הסיווג לפי המחרוזת שעל התנועה ולא לפי קיום הפריט ברשימה — מחיקת הפריט אינה משנה סיווג היסטורי
-var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
 
 function isCreditValue(v){return String(v==null?'':v).trim()===CREDIT_METHOD;}
 
@@ -355,7 +349,7 @@ function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)ret
 // המזהה נקרא כמחרוזת — client_id הוא text, ו-parseInt עליו מחזיר NaN
 function sdSelectEl(el){sdSelect(el.getAttribute('data-k'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
 
-function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).classList.add('hidden');_sdSelected[k]={id:id,label:label};if(k==='sc')selectStudent(id);if(k==='txnfilter')renderTxnLog();}
+function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).classList.add('hidden');_sdSelected[k]={id:id,label:label};if(k==='sc')shell.selectStudent(id);if(k==='txnfilter')shell.renderTxnLog();}
 
 function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.classList.add('hidden');},160);}
 
@@ -369,7 +363,7 @@ var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],[KV
 // המשיכה מעומדת — select('*') בבקשה אחת נחתך בשקט בתקרת db-max-rows
 function slPullAll(){
   return Promise.all(SYNC_TABLES.map(function(e){
-    return _rowsPaged(function(){ return SB.from(e[0]).select('*'); }, e[1], null)
+    return _rowsPaged(function(){ return S.SB.from(e[0]).select('*'); }, e[1], null)
       .then(function(rows){ return rows ? {data:rows,error:null} : {data:null,error:{message:'rows:'+e[0]}}; });
   }));
 }
@@ -418,7 +412,7 @@ async function syncAll(){
       MIRROR.sl_lists=slMerge(MIRROR.sl_lists,rs[3].data,function(k){return pendHas(PK_LST+k);}); mirrorSave('sl_lists');
     }
     slApplyMirror();
-    pullRender(refreshUI);
+    pullRender(shell.refreshUI);
 
     // נדחפת רק טבלה שנמשכה בהצלחה — בלי תמונת הענן, דחיפה עיוורת מחזירה לחיים שורה שנמחקה במכשיר אחר.
     // קטגוריה שלא נמשכה נמסרת כ-null ולא כמפה ריקה — מפה ריקה נקראת «הענן ריק» ומסמנת את עד הפינוי.
@@ -506,13 +500,36 @@ function calcDistribution(sid,year){
   return result;
 }
 
-export { CREDIT_METHOD, MONTH_HE_SHORT, PASS_SIX_RE, SL_NEVER_MIRROR_SETTINGS,
-         YEAR_MONTHS, _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify,
-         acadYearLabel, acadYearOf, calcDistribution, countInMonth, distCredApplied,
-         distCredit, enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem,
-         isCreditTxn, isCreditValue, monthKeyOf, monthLabel, normMonth,
-         pcCascadeDelete, pendLstKey, pendLstTag, pendSetKey, pendStuKey, pendStuTag,
-         pendTxnKey, pendTxnTag, pendingCid, releaseCid, sdBlur, sdFilter, sdOpen,
-         sdSelectEl, sdSetOptions, slApplyMirror, slDirtyRows, slIsAdmin, slKey,
-         slKeyOf, slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs,
-         studentCredit, studentInMonth, syncAll };
+// ── משותף למסכים ──
+function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
+
+// פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
+function readMonthRange(startId,endId){
+  var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
+  var sm=normMonth(rawS),em=normMonth(rawE);
+  if(rawS&&!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
+  if(rawE&&!em){toast(MSG_END_MONTH_BAD, null, 'bad');return null;}
+  if(sm&&em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
+  return {start_month:sm||null,end_month:em||null};
+}
+
+// זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
+function txnAmountHtml(t){
+  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
+  return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
+}
+
+function txnMethodPill(t){
+  if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
+  return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
+}
+
+export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLabel,
+         acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
+         enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
+         isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
+         pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
+         pendingCid, readMonthRange, releaseCid, sdBlur, sdFilter, sdOpen, sdSelectEl,
+         sdSetOptions, slApplyMirror, slDirtyRows, slIsAdmin, slKey, slKeyOf,
+         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
+         studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

@@ -29,6 +29,8 @@ body.locked{overflow:hidden}
   .sheet-hd .x:hover{background:var(--card-2)}
 }
 .sheet-ft{display:flex}
+/* גוף או תחתית ריקים אינם תופסים מקום — הריווח של מיכל ריק נראה כחור בדיאלוג. */
+.sheet-bd:empty,
 .sheet-ft:empty{display:none}
 /* ── באנר העדכון ──
    יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו. */
@@ -60,7 +62,7 @@ body.locked{overflow:hidden}
 /* ── מצבי רכיב ──
    important! ב-.hidden בכוונה — המחלקה חייבת לגבור על כלל אחר שנותן display. */
 .hidden{display:none !important}
-/* html בבורר — אין להסירו: הקובץ נטען לפני app.css, ומצב עסוק חייב לגבור על הסמן של הרכיב. */
+/* html בבורר — אין להסירו: הקובץ נטען לפני app/style.css, ומצב עסוק חייב לגבור על הסמן של הרכיב. */
 html .is-busy{opacity:var(--op-4);cursor:wait}
 /* ── באנר כשל האחסון ──
    דרגת «נעילה» — כשל כתיבה נשאר גלוי מעל כל מסך. */

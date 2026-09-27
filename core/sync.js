@@ -3,7 +3,7 @@
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, isNetErr,
          kvParse, withTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
-import { closeModal, esc, toast } from './ui.js';
+import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 
 // ── מזהי רשומות ──
 function newClientId(){
@@ -181,11 +181,6 @@ function isStaleSchema(e) {
   return c === '42P01' || c === '42703' || s === 404 ||
          m.indexOf('does not exist') !== -1;
 }
-// מי שלא הצליח מנסה שוב ב-load — השגיאה יכולה להגיע בעלייה, לפני שמימוש הבאנר פורסם.
-function _staleBanner() {
-  try { if (window.showAppUpdateBanner) { window.showAppUpdateBanner(); return true; } } catch (x) {}
-  return false;
-}
 function staleSchemaHalt(e) {
   if (!isStaleSchema(e)) return false;
   if (!_staleSchema) {
@@ -193,9 +188,7 @@ function staleSchemaHalt(e) {
     // הטיימרים נעצרים כאן והדגל לבדו אינו מספיק — טיימר שכבר נדרך היה יורה עוד בקשה.
     rtyStop();
     plStop();
-    if (!_staleBanner()) {
-      try { window.addEventListener('load', _staleBanner); } catch (x) {}
-    }
+    try { swShowUpdate(); } catch (x) {}
     try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
@@ -870,7 +863,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, tombAt,
+export { newClientId, idEq, mergeCore, tombAt, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,

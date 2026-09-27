@@ -5,24 +5,25 @@ import { MSG_FILL_ALL, MSG_MY_PASS_TITLE, MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP,
          dayToday, uniqHas, withTimeout } from '../../core/util.js';
 import { newClientId, pendMark, plTouch, schedulePush, tombAt } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne, writeUser } from '../../core/auth.js';
+import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
+         writeUser } from '../../core/auth.js';
 import { ask, closeModal, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { S } from '../state.js';
-import { KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
+import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
-         MSG_DEL_STUDENT_TITLE, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL,
-         MSG_NAME_REQUIRED, MSG_NO_USER_RELOGIN, MSG_PASS_UPDATED,
-         MSG_PASS_UPDATED_NO_FP2, MSG_SET_DENIED, MSG_STUDENT_DELETED,
-         MSG_STUDENT_MISSING2, MSG_STUDENT_SAVE_FAIL, MSG_TUITION_POSITIVE,
-         MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_SAVE_FAIL } from '../config.js';
-import { CREDIT_METHOD, PASS_SIX_RE, acadYearLabel, acadYearOf, enrollText,
-         findListItem, fmt, isCreditValue, monthKeyOf, pcCascadeDelete, pendLstKey,
-         pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendingCid, releaseCid, slKey,
-         slLocalWrite, slSettingsAccess, studentCredit } from '../domain.js';
-import { slWhoName } from './login.js';
-import { readMonthRange } from './student.js';
-import { SB, refreshUI } from '../main.js';
+         MSG_DEL_STUDENT_TITLE, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_NAME_REQUIRED,
+         MSG_NO_USER_RELOGIN, MSG_PASS_UPDATED, MSG_PASS_UPDATED_NO_FP2, MSG_SET_DENIED,
+         MSG_STUDENT_DELETED, MSG_STUDENT_MISSING2, MSG_STUDENT_SAVE_FAIL,
+         MSG_TUITION_POSITIVE, MSG_VALUE_BAD, MSG_VALUE_EXISTS,
+         MSG_VALUE_SAVE_FAIL } from '../constants.js';
+import { S, shell } from '../state.js';
+import { acadYearLabel, acadYearOf, enrollText, findListItem, fmt, isCreditValue,
+         monthKeyOf, pcCascadeDelete, pendLstKey, pendLstTag, pendSetKey, pendStuKey,
+         pendStuTag, pendingCid, readMonthRange, releaseCid, slKey, slLocalWrite,
+         slSettingsAccess, slWhoName, studentCredit } from '../domain.js';
+
+// נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
+var PASS_SIX_RE = /^[0-9]{6}$/;
 
 function screenSettingsHTML() {
   return `
@@ -104,10 +105,10 @@ async function slSaveMyPassword() {
   if (p1 !== p2) { toast(MSG_PASS_MISMATCH, null, 'bad'); return; }
   var u = sessGet();
   if (!u || u.client_id == null) { toast(MSG_NO_USER_RELOGIN, null, 'bad'); return; }
-  if (!SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
+  if (!S.SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
   // מאומת מול הטביעה שבענן ולא מול המראה — מראה שהתיישנה הייתה מאשרת סיסמה שכבר הוחלפה במכשיר אחר
   var chk;
-  try { chk = await withTimeout(SB.from(authUsersTable()).select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
+  try { chk = await withTimeout(S.SB.from(authUsersTable()).select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
   catch (e) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
   if (chk && chk.error) { toast(MSG_PASS_VERIFY_FAIL + (chk.error.message || MSG_SERVER_ERR), null, 'bad'); return; }
   var row = chk && Array.isArray(chk.data) && chk.data[0];
@@ -197,7 +198,7 @@ function deleteListItem(key){
     var row=Object.assign({},r0,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
     if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     pendMark(pendLstKey(row));
-    refreshUI();
+    shell.refreshUI();
     toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000, 'good');
     schedulePush();
   });}
@@ -236,11 +237,11 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
   if(S.SC_STUDENT_ID===s.id){S.SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
-  refreshUI();
+  shell.refreshUI();
   toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 
-export { addListItem, deleteListItem, deleteStudent, openAddStudent,
-         renderSettingsLists, renderSettingsPanel, saveDefaultTuition, saveNewStudent,
-         screenSettingsHTML, slMyPassword, slSaveMyPassword, toggleAcc };
+export { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
+         renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
+         slMyPassword, slSaveMyPassword, toggleAcc };

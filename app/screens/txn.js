@@ -3,14 +3,14 @@ import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, pendMark, schedulePush, tombAt } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
-import { MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY, MSG_DEL_TXN_TITLE,
-         MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING, MSG_PAY_SAVE_FAIL,
-         MSG_PICK_DATE, MSG_PICK_STUDENT_PLAIN } from '../config.js';
-import { CREDIT_METHOD, fmt, hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey,
-         pendTxnTag, pendingCid, releaseCid, sdSetOptions, slKey, slLocalWrite } from '../domain.js';
-import { slWhoName } from './login.js';
-import { refreshUI } from '../main.js';
+import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+         MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING,
+         MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
+         MSG_PICK_STUDENT_PLAIN } from '../constants.js';
+import { S, shell } from '../state.js';
+import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey, pendTxnTag, pendingCid,
+         releaseCid, sdSetOptions, slKey, slLocalWrite, slWhoName, txnAmountHtml,
+         txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
   return `
@@ -109,17 +109,6 @@ function renderTxnLog(){
   document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 
-// זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
-function txnAmountHtml(t){
-  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
-  return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
-}
-
-function txnMethodPill(t){
-  if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
-  return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
-}
-
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
@@ -127,10 +116,10 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   var row=Object.assign({},t,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
-  refreshUI();
+  shell.refreshUI();
   toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 
-export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnAmountHtml, txnMethodHint,
-         txnMethodPill, updateDropdowns };
+export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
+         updateDropdowns };
