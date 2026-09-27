@@ -14,7 +14,6 @@ import { lsGet, lsSet, lsSpace } from './storage.js';
 var BK_TABLE = 'sh_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
 var BK_LOG_TABLE = 'sh_sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
-var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה — הדגל נכתב רק אחרי הצלחה
 
 function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
@@ -112,7 +111,7 @@ async function logFlush() {
 }
 
 /*  ⛔⛔ שלוש שכבות הגיבוי — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
- *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הקיים**
+ *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הלילי במסד**
  *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
  *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
  *  אותה יכולת שחזור בשבריר. */
@@ -235,30 +234,19 @@ async function bkMaybeDaily() {
   var ok = true, wrote = 0, same = 0, failed = [];
   try {
     var pre = _bkCfg('prefix', '') || '';
-    var secrets = _bkSecrets(), dailyKeys = [];
+    var secrets = _bkSecrets();
     for (var i = 0; i < src.length; i++) {
       var s = src[i], val = null;
       // ⛔ מפתח שברשימת הסודות אינו נכתב לגיבוי לעולם —
       //    ⚠️ סוד שנכתב לגיבוי שורד בו גם אחרי שנמחק מהמקור.
       if (s.kind === 'kv' && secrets.indexOf(s.name) !== -1) continue;
       // ⭐ `key` פר-מקור — מקור-טבלה שמפתחו מתנגש במקור אחר
-      //    באותו שם מקבל מפתח גיבוי משלו. הרשימה שנצברת
-      //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
+      //    באותו שם מקבל מפתח גיבוי משלו.
       var bkey = pre + (s.key || s.name);
-      dailyKeys.push(bkey);
-      /*  ⛔ שתי השכבות נכנסות לרשימת-ההיתר של הגריעה — ⚠️ מפתח
-       *  שאינו שם אינו מתפנה לעולם, ⭐ ו-`ANCHOR:`/`DIFF:` הם מפתחות
-       *  חדשים: ⛔ בלעדיהם הם היו נצברים בלי גבול. */
-      if (s.kind !== 'kv') {
-        dailyKeys.push(BK_ANCHOR_PREFIX + bkey);
-        dailyKeys.push(BK_DIFF_PREFIX + bkey);
-      }
       /* ⭐ דגל-יום פר-מקור — מקור שכבר גובה היום מדולג, גם
          כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל מחזיק את כל
          השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
-         מגבה מחדש את מה שכבר גובה, שוב ושוב באותו יום.
-         ⚠️ הדחיפה ל-`dailyKeys` קודמת לדילוג בכוונה: הרשימה היא
-         רשימת-ההיתר של הגריעה, ומפתח שנופל ממנה אינו מתפנה לעולם. */
+         מגבה מחדש את מה שכבר גובה, שוב ושוב באותו יום. */
       var dayKey = BK_LS.day + bkey;
       if (lsGet(dayKey, '') === today) { same++; continue; }
       if (s.kind === 'kv') {
@@ -296,11 +284,6 @@ async function bkMaybeDaily() {
       lsSet(dayKey, today);
       wrote++;
     }
-    /* ⭐ הגריעה אינה מותנית בהצלחת **כל** המקורות — היא רצה על
-       רשימת-ההיתר המלאה בכל פעם שנכתב עותק חדש: ⛔ כריכה להצלחת כולם
-       משתקת אותה, ומקור אחד שנכשל מונע גריעה של כל השאר. ⚠️ והיא רצה
-       **אחרי** הכתיבה, כדי שלא ייגרע עותק ישן לפני שהחדש נכתב. */
-    if (wrote) { try { await _bkRetention(c, dailyKeys); } catch (e2) { } }
     if (ok) {
       lsSet(flag, today);
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
@@ -316,22 +299,6 @@ async function bkMaybeDaily() {
   } catch (e) { ok = false; }
   _bkRunning = false;
   return ok;
-}
-
-/* ── מדיניות השמירה — גריעת עותקים יומיים ישנים מ-30 יום ──────────────── */
-// ⛔ הגריעה מוגבלת ב-`in('key', keys)` לרשימת המפתחות היומיים של
-//    האפליקציה הנוכחית בלבד — רשימת-היתר, לא קידומת:
-//    רק מפתחות האפליקציה הנוכחית מועמדים.
-// ⚠️ נכשלת סגור: `error` (כולל היעדר הרשאת DELETE) מוחזר כאפס
-//    בשקט, בלי להפיל את הגיבוי ובלי רישום-סרק יומי ליומן הראיות.
-async function _bkRetention(c, keys) {
-  if (!c || !Array.isArray(keys) || !keys.length) return 0;
-  var cutoff = new Date(Date.now() - BK_RETENTION_DAYS * 86400000).toISOString();
-  var del = await c.from(BK_TABLE)['delete']().in('key', keys).lt('created_at', cutoff).select('id');
-  if (!del || del.error || !Array.isArray(del.data)) return 0;
-  var n = del.data.length;
-  if (n > 0) logAction('retention', null, n, { days: BK_RETENTION_DAYS, keys: keys.length });
-  return n;
 }
 
 /* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
