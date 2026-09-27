@@ -62,7 +62,7 @@ body.locked{overflow:hidden}
 /* ── מצבי רכיב ──
    important! ב-.hidden בכוונה — המחלקה חייבת לגבור על כלל אחר שנותן display. */
 .hidden{display:none !important}
-/* html בבורר — אין להסירו: הקובץ נטען לפני app.css, ומצב עסוק חייב לגבור על הסמן של הרכיב. */
+/* html בבורר — אין להסירו: הקובץ נטען לפני app/style.css, ומצב עסוק חייב לגבור על הסמן של הרכיב. */
 html .is-busy{opacity:var(--op-4);cursor:wait}
 /* ── באנר כשל האחסון ──
    דרגת «נעילה» — כשל כתיבה נשאר גלוי מעל כל מסך. */

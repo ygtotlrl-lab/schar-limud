@@ -11,7 +11,7 @@ var CORE = [
   './core/sw.js',
   './core/ui.css',
   './core/chart.css',
-  './app.css',
+  './app/style.css',
   './core/util.js',
   './core/sync.js',
   './core/storage.js',
