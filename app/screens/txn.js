@@ -1,0 +1,136 @@
+// app/screens/txn.js — מסך התשלומים
+import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
+import { idEq, pendMark, schedulePush, tombAt } from '../../core/sync.js';
+import { MIRROR } from '../../core/mirror.js';
+import { ask, esc, toast } from '../../core/ui.js';
+import { S } from '../state.js';
+import { MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY, MSG_DEL_TXN_TITLE,
+         MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING, MSG_PAY_SAVE_FAIL,
+         MSG_PICK_DATE, MSG_PICK_STUDENT_PLAIN } from '../config.js';
+import { CREDIT_METHOD, fmt, hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey,
+         pendTxnTag, pendingCid, releaseCid, sdSetOptions, slKey, slLocalWrite } from '../domain.js';
+import { slWhoName } from './login.js';
+import { refreshUI } from '../main.js';
+
+function screenTxnHTML() {
+  return `
+<div id="panel-txn" class="panel">
+  <div class="card">
+    <div class="card-hdr"><h3>הוספת תשלום</h3></div>
+    <div class="card-body ksave">
+      <div class="frm-row">
+        <label>תלמיד</label>
+        <div class="sd-wrap">
+          <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="sd-input" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
+          <div class="hidden sd-list" id="sd-list-student"></div>
+          <input type="hidden" id="sd-val-student">
+        </div>
+      </div>
+      <div class="frm-row">
+        <label for="txn-date">תאריך</label>
+        <input id="txn-date" type="date">
+      </div>
+      <div class="frm-row">
+        <label for="txn-amount">סכום (&#8362;)</label>
+        <input id="txn-amount" type="text" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="frm-row">
+        <label for="txn-method">אמצעי תשלום</label>
+        <select id="txn-method" data-chg="txn-method">
+          <option value="">-- בחר --</option>
+        </select>
+        <div id="txn-method-hint" class="hidden credit-sub"></div>
+      </div>
+      <div class="frm-row">
+        <label for="txn-note">הערה</label>
+        <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
+      </div>
+      <button class="txn-save btn" data-act="txn-save" data-ksave>שמור תשלום</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <h3>יומן תשלומים</h3>
+      <div class="txn-filter sd-wrap">
+        <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="sd-input-sm" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
+        <div class="hidden sd-list" id="sd-list-txnfilter"></div>
+        <input type="hidden" id="sd-val-txnfilter">
+      </div>
+    </div>
+    <div id="txn-log"></div>
+  </div>
+</div>
+`;
+}
+
+function updateDropdowns(){
+  var act=S.STUDENTS.filter(function(s){return s.active;});
+  var toOpts=function(a){return a.map(function(s){return{id:s.client_id,label:s.name};});};
+  sdSetOptions('student',toOpts(act));sdSetOptions('sc',toOpts(S.STUDENTS));sdSetOptions('txnfilter',[{id:0,label:'כולם'}].concat(toOpts(S.STUDENTS)));
+  var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
+  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.value)+'">'+esc(m.value)+'</option>';});
+  // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
+  if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
+  if(cur)sel.value=cur;
+  var dt=document.getElementById('txn-date');if(!dt.value)dt.value=dayToday();
+  var at=document.getElementById('txn-amount');if(!at.value)at.value=S.SETTINGS['default_tuition']||'';
+  txnMethodHint();
+}
+
+function txnMethodHint(){
+  var sel=document.getElementById('txn-method'),h=document.getElementById('txn-method-hint');
+  if(!sel||!h)return;
+  var on=isCreditValue(sel.value);
+  h.classList.toggle('hidden',!on);
+  if(on)h.innerHTML='<span class="credit-mark">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+}
+
+// ── תשלומים — רישום, יומן ומחיקה רכה ──
+// אין לחסום רישום כשאין רשת — חסימה כזו מבטלת את מה שהכתיבה המקומית-תחילה באה לאפשר.
+async function saveTxn(){
+  var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
+  if(!sid){toast(MSG_PICK_STUDENT_PLAIN, null, 'bad');return;}if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
+  // client_id נוצר במכשיר ונקשר לתוכן הטופס — שליחה חוזרת מעדכנת את אותה שורה ואינה מכפילה תשלום.
+  var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
+  var row={client_id:cid,student_client_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
+  // כשל כתיבה מקומית עוצר כאן ברעש — בכסף אסור להציג «נשמר» על משהו שלא נכתב.
+  if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
+  pendMark(pendTxnKey(row));
+  releaseCid('txn');
+  document.getElementById('txn-amount').value=S.SETTINGS['default_tuition']||'';
+  document.getElementById('txn-note').value='';
+  return true;
+}
+
+function renderTxnLog(){
+  var fid=document.getElementById('sd-val-txnfilter').value||'';
+  var txns=S.TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
+  if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+}
+
+// זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
+function txnAmountHtml(t){
+  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
+  return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
+}
+
+function txnMethodPill(t){
+  if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
+  return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
+}
+
+function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
+  if(!yes)return;
+  var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
+  if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
+  var row=Object.assign({},t,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
+  if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
+  pendMark(pendTxnKey(row));
+  refreshUI();
+  toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
+  schedulePush();
+});}
+
+export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnAmountHtml, txnMethodHint,
+         txnMethodPill, updateDropdowns };

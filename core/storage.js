@@ -1,36 +1,23 @@
-/* ═══ core/storage.js — האחסון המקומי ═══════════════════════════════════
-   ⭐ הכתיבה לדיסק, הפינוי והחלון החם.
-   ⛔ המודול זהה בית-לבית בכל ריפו שנושא אותו — ⚠️ והתצורה פר-אפליקציה
-      נמסרת ב-`appConfigure` שבראש `index.html`, ⭐ ואינה כתובה כאן.
-   ⛔ ושינוי כאן — בכל הריפו שנושאים אותו, באותו סבב.
-   ════════════════════════════════════════════════════════════════════ */
+// core/storage.js — האחסון המקומי, הפינוי והחלון החם
 
 import { app } from './util.js';
 import { lsToast } from './ui.js';
 
-/* ═══ עמידות אחסון מקומי — מודול משותף ═════════════════════════════════
-   ══════════════════════════════════════════════════════════════════════════ */
+// ── עמידות אחסון מקומי ──
 
-/*  ⛔ המכסה היא מספר שנמדד בדפדפן — ⚠️ Chromium מקבל 10 MiB במדידת
- *  `lsEntryBytes` (תווים × 2) ⛔ ונופל ב-`QuotaExceededError` מעליהם:
- *  ⭐ מד שמראה יותר ממאה אחוז בזמן שהכתיבה מצליחה — מודד שגוי.
- *  ⛔ והספים נגזרים ממנה באחוזים — ⚠️ סף שמוקלד בבתים נשאר במקומו
- *  ביום שהמכסה נמדדת מחדש. */
+// המכסה נמדדה בדפדפן — Chromium מקבל 10 MiB במדידת lsEntryBytes (תווים × 2) ונופל ב-QuotaExceededError מעליהם.
+// הספים נגזרים ממנה באחוזים — סף בבתים נשאר במקומו ביום שהמכסה נמדדת מחדש.
 var LS_QUOTA_BYTES = 10 * 1024 * 1024;
-var LS_WARN_PCT    = 0.60;              // התרעה
-var LS_CRIT_PCT    = 0.80;              // התרעה בולטת
+var LS_WARN_PCT    = 0.60;
+var LS_CRIT_PCT    = 0.80;
 var LS_WARN_BYTES  = Math.floor(LS_QUOTA_BYTES * LS_WARN_PCT);
 var LS_CRIT_BYTES  = Math.floor(LS_QUOTA_BYTES * LS_CRIT_PCT);
-var LS_SWEEP_PCT   = 0.60;              // מעל זה — פינוי יזום בעלייה
-var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
-var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
+var LS_SWEEP_PCT   = 0.60;
+var LS_SWEEP_TO    = 0.45;
+var LS_LOG_MAX     = 12;
 
-/*  ⭐ חלון הפינוי נגזר מסוג האפליקציה — ⚠️ **מה נכנס**: סוג ⟵ ימים, ⛔ **ומה
- *  מפיל**: סוג שאין לו אפליקציה, ⚠️ ואפליקציה שמצהירה סוג שאינו כאן.
- *  ⭐ **ולמה המפה קיימת**: חלון שנבחר בכל אפליקציה לבדה נבחר בלי קשר
- *  לחישוב שקורא את הטבלה — ⛔ ורשומה שפונתה מתוך מה שהחישוב קורא היא
- *  יתרה שגויה, אופליין ובשקט. ⚠️ **ואפליקציה בלי סוג אינה מפנה דבר** —
- *  ⛔ חלון שאיש לא הכריע עליו אינו חלון. */
+// חלון הפינוי נבחר לפי סוג האפליקציה ולא בכל אפליקציה לבדה — רשומה שפונתה מתוך מה שהחישוב קורא היא יתרה שגויה, אופליין ובשקט.
+// אפליקציה בלי סוג אינה מפנה דבר.
 var LS_DAY_MS = 86400000;
 var LS_APP_TYPES = { annual: 400, daily: 90 };
 function lsWindowMs() {
@@ -39,7 +26,7 @@ function lsWindowMs() {
   return d > 0 ? d * LS_DAY_MS : Infinity;
 }
 
-// נוסח אחיד בכל האפליקציות. סמלים: ✅ הצלחה / ⚠️ אזהרה / ❌ שגיאה, בתחילה.
+// נוסח אחיד: סמל הצלחה, אזהרה או שגיאה בתחילת ההודעה.
 var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו והמקום יתפנה.';
 var MSG_LS_BLOCK  = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
 var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — התחברו לרשת, והמקום יתפנה מעצמו';
@@ -47,9 +34,7 @@ var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — התח
 var MSG_LS_RESTORED = '✅ האחסון התפנה — הנתונים הישנים חוזרים בסנכרון הזה';
 var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
 
-/*  ⛔ כל האפליקציות שחולקות את ה-origin — ⚠️ הקידומת היא מה שמזהה מי תופס
- *  מה, ⛔ והרשימה נמדדת מול כל הריפו: ⭐ אפליקציה שנולדה אחרי הרשימה
- *  נספרת כ«אחר», ⚠️ ואיש אינו רואה. */
+// הקידומת מזהה מי תופס מה במכסה המשותפת — אפליקציה שאינה ברשימה נספרת כ«אחר».
 var LS_APPS = [
   { id: 'hanhala', name: 'הנהלה רוחנית', pre: ['hr_'] },
   { id: 'schar',   name: 'שכר לימוד',    pre: ['sl_'] },
@@ -73,14 +58,12 @@ function lsAppOf(key) {
   }
   return { id: 'other', name: 'אחר', pre: [] };
 }
-// UTF-16: שני בתים לתו, גם למפתח וגם לערך. הערכה, לא מדידה מדויקת — אבל
-// עקבית, וזה מה שנדרש כדי להשוות מול הסף.
+// UTF-16: שני בתים לתו, למפתח ולערך — הערכה ולא מדידה מדויקת, אך עקבית מול הסף.
 function lsEntryBytes(key, val) {
   return (String(key == null ? '' : key).length + String(val == null ? '' : val).length) * 2;
 }
 
-// מדידת **כל** המפתחות בדומיין, לא רק של האפליקציה הנוכחית — זה כל העניין:
-// המכסה משותפת, ולכן אפליקציה שמסתכלת רק על עצמה לא רואה את מה שחונק אותה.
+// כל המפתחות בדומיין ולא רק של האפליקציה — המכסה משותפת, ומי שמסתכל רק על עצמו אינו רואה מה חונק אותו.
 function lsUsage() {
   var out = { total: 0, quota: LS_QUOTA_BYTES, free: 0, pct: 0, apps: [], keys: [], ok: true };
   var byApp = {}, i;
@@ -107,11 +90,9 @@ function lsUsage() {
   return out;
 }
 
-/* ── יומן הפינוי ────────────────────────────────────────────────────────
-   הפינוי שקט כלפי המשתמש, אבל **לא בלתי נראה** — בלי יומן אי אפשר לדעת
-   מתי ומה פונה. נשמר קצר בכוונה (12 רשומות) כדי שהיומן עצמו לא יהפוך
-   לצרכן מקום. הכתיבה כאן גולמית ולא דרך `lsSet` — אחרת כישלון ביומן היה
-   מפעיל פינוי שכותב ליומן, וחוזר חלילה. */
+// ── יומן הפינוי ──
+// קצר בכוונה כדי שלא יהפוך לצרכן מקום; הכתיבה גולמית ולא דרך lsSet —
+// אחרת כישלון ביומן מפעיל פינוי שכותב ליומן, וחוזר חלילה.
 function lsSetRaw(key, value) {
   try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
 }
@@ -130,7 +111,7 @@ function lsLog(action, detail, bytes) {
   } catch (e2) { }
 }
 
-// שמות הזריקה משתנים בין דפדפנים; code 22 הוא הישן, 1014 הוא של פיירפוקס.
+// שם השגיאה משתנה בין דפדפנים; code 22 הוא הישן, 1014 של פיירפוקס.
 function lsIsQuotaErr(e) {
   if (!e) return false;
   var n = e.name || '';
@@ -138,9 +119,8 @@ function lsIsQuotaErr(e) {
          e.code === 22 || e.code === 1014;
 }
 
-/* ── באנר כישלון קבוע ───────────────────────────────────────────────────
-   טוסט נעלם אחרי שלוש שניות; כישלון שמירה חייב להישאר על המסך עד שהמשתמש
-   סוגר אותו, אחרת הוא בדיוק "הכישלון השקט" שאנחנו מונעים. */
+// ── באנר כישלון קבוע ──
+// טוסט נעלם אחרי שלוש שניות; כישלון שמירה נשאר על המסך עד שהמשתמש סוגר אותו.
 function lsAlert(msg) {
   var el = document.getElementById('ls-alert');
   if (!el) {
@@ -161,20 +141,14 @@ function lsAlert(msg) {
   if (m) m.textContent = String(msg == null ? '' : msg);
 }
 
-/* ── כתיבה מוגנת ────────────────────────────────────────────────────────
-   **כל כתיבה ל-localStorage באפליקציה עוברת דרך כאן.** אין קריאה ישירה
-   ל-`localStorage.setItem` מחוץ למודול הזה (למעט `lsSetRaw` שבתוכו).
-   מחזירה true/false — ומסלול קריטי שמתעלם מהערך המוחזר הוא באג. */
+// ── כתיבה מוגנת ──
+// מחזירה true/false — מסלול קריטי שמתעלם מהערך המוחזר הוא באג.
 var _lsSweeping = false;
 var _lsToastAt = 0;
 
-/* ── שער "אין טוסט הצלחה אחרי כישלון שמירה" ─────────────────────────────
-   נקודת אכיפה **אחת** במקום עשרות בדיקות פזורות שאפשר לשכוח באחת: `toast()`
-   של כל אפליקציה פותחת ב-`if (!lsGuardToast(msg)) return;`, וכל הודעה
-   שמתחילה ב-✅ נבלעת אם כתיבה מקומית נכשלה בשתי וחצי השניות האחרונות —
-   כלומר בתוך אותה פעולת משתמש. הבאנר האדום כבר על המסך, והוא ההודעה
-   הנכונה. **אין להסיר את השורה הזו מ-`toast`** — בלעדיה — כתיבה שנכשלה
-   ומשתמש שמקבל "נשמר בהצלחה". */
+// ── השתקת טוסט הצלחה אחרי כישלון שמירה ──
+// toast() פותחת ב-lsGuardToast, והודעת הצלחה נבלעת אם כתיבה מקומית נכשלה ב-2.5 השניות האחרונות.
+// אין להסיר את השער מ-toast — בלעדיו כתיבה שנכשלה מלווה ב«נשמר בהצלחה».
 var _lsLastFailAt = 0;
 var LS_SUCCESS_MUTE_MS = 2500;
 function lsSuccessBlocked() { return (Date.now() - _lsLastFailAt) < LS_SUCCESS_MUTE_MS; }
@@ -184,16 +158,15 @@ function lsGuardToast(msg) {
 function lsSet(key, value) {
   var v = (value == null ? '' : String(value));
   try { localStorage.setItem(key, v); return true; } catch (e) {
-    // בתוך פינוי — כישלון הוא תוצאה, לא טריגר לפינוי נוסף (רקורסיה).
+    // בתוך פינוי כישלון הוא תוצאה ולא טריגר לפינוי נוסף — אחרת רקורסיה.
     if (_lsSweeping) return false;
     _lsLastFailAt = Date.now();
     if (lsIsQuotaErr(e)) {
-      // מנגנון חירום: פינוי נוסף לפי **אותו סדר** בדיוק, וניסיון אחד נוסף.
+      // פינוי חירום לפי אותו סדר בדיוק, וניסיון אחד נוסף.
       var need = lsEntryBytes(key, v) + 64 * 1024;
       var freed = lsSweepGuarded('חירום — כתיבה נכשלה במכסה: ' + key, need);
       if (freed > 0) {
-        // הצליח בניסיון השני — לא כישלון. חלון ההשתקה נסגר כדי שטוסט
-        // ההצלחה יעבור, שהרי הנתון באמת נשמר.
+        // הנתון נשמר בניסיון השני — חלון ההשתקה נסגר כדי שטוסט ההצלחה יעבור.
         try { localStorage.setItem(key, v); _lsLastFailAt = 0; lsLog('כתיבה חוזרת הצליחה', key, 0); return true; }
         catch (e2) { e = e2; }
       }
@@ -209,8 +182,7 @@ function lsSet(key, value) {
     return false;
   }
 }
-// הבאנר אידמפוטנטי ולכן מוצג בכל כישלון; הטוסט מווסת כדי שסדרת כתיבות
-// כושלת לא תהפוך למטר טוסטים שמסתיר את ההודעה עצמה.
+// הבאנר אידמפוטנטי ומוצג בכל כישלון; הטוסט מווסת כדי שסדרת כתיבות כושלת לא תסתיר את ההודעה עצמה.
 function lsToastThrottled(msg) {
   var now = Date.now();
   if (now - _lsToastAt < 8000) return;
@@ -227,12 +199,9 @@ function lsRemove(key) {
   try { localStorage.removeItem(key); return true; } catch (e) { return false; }
 }
 
-/* ── אופק הפינוי ────────────────────────────────────────────────────────
-   פינוי הרשומות הישנות גורע רשומות ישנות מהעותק **שעל הדיסק** בלבד. כדי שהן לא
-   יחזרו לדיסק בשמירה הבאה (מנוע המיזוג מחזיר כל רשומה מרוחקת שאין לה
-   מקבילה מקומית — ולכן פינוי בלי אופק הוא חסר משמעות), נשמר לכל מפתח
-   "אופק": חותמת הזמן של הרשומה החדשה ביותר שפונתה. `lsSetArray` מסננת
-   מתחתיו בכל כתיבה. **הזיכרון והענן לא נוגעים** — רק הדיסק מצטמצם. */
+// ── אופק הפינוי ──
+// המיזוג מחזיר כל רשומה מרוחקת שאין לה מקבילה מקומית, ולכן נשמר לכל מפתח אופק — חותמת החדשה ביותר שפונתה,
+// ו-lsSetArray מסננת מתחתיו. רק הדיסק מצטמצם; הזיכרון והענן אינם נוגעים.
 function lsHorizon(key) {
   var v = parseInt(lsGet(app.LS_CFG.hzPrefix + key, '0'), 10);
   return isFinite(v) && v > 0 ? v : 0;
@@ -253,10 +222,7 @@ function lsClearHorizons() {
   if (ks.length) lsLog('אופק הפינוי נוקה', ks.length + ' מפתחות', 0);
   return ks.length;
 }
-/*  ⛔ אופק הפינוי נוקה מהסנכרון — ⚠️ **מה נכנס**: ירידה מתחת לסף האזהרה,
- *  ⛔ **ומה מפיל**: השארת האופק על כנו — ⭐ הסימן שהפינוי משאיר אומר «מכאן
- *  ואילך יש לי, את הישן זרקתי», ⚠️ וכל עוד הוא עומד המשיכה אינה מחזירה את
- *  הישן: ⛔ סימן שרק המשתמש יכול לנקות נשאר לנצח ביום שבו הכפתור יורד. */
+// האופק מתנקה מתחת לסף האזהרה ולא בידי המשתמש — כל עוד הוא עומד המשיכה אינה מחזירה את הישן.
 function lsHorizonRelease() {
   try {
     if (!lsHorizonKeys().length) return 0;
@@ -266,7 +232,7 @@ function lsHorizonRelease() {
     return n;
   } catch (e) { return 0; }
 }
-// כתיבת מערך מכובדת-אופק. `tsOf(rec)` מחזירה חותמת זמן במילישניות.
+// tsOf(rec) מחזירה חותמת במילישניות.
 function lsSetArray(key, arr, tsOf) {
   var list = Array.isArray(arr) ? arr : [];
   var hz = lsHorizon(key), keep = list;
@@ -279,12 +245,9 @@ function lsSetArray(key, arr, tsOf) {
   return lsSet(key, JSON.stringify(keep));
 }
 
-/* ── פינוי יזום ─────────────────────────────────────────────────────────
-   סדר קפדני:
-     א. מטמונים וערכים שניתן לשחזר מהענן בכל רגע.
-     ב. ארכיון ורשומות ישנות **שכבר מסונכרנות** — הישן ביותר קודם.
-     ג. ⛔ נתון שטרם הסתנכרן לענן לא מפונה בשום מצב, גם אם המקום נגמר
-        לגמרי. במצב כזה עדיף להיכשל ברעש מאשר למחוק. */
+// ── פינוי יזום ──
+// הסדר: מטמונים שניתן לשחזר מהענן; אחריהם רשומות ישנות שכבר מסונכרנות, הישנה קודם.
+// נתון שטרם הסתנכרן אינו מפונה בשום מצב — עדיף להיכשל ברעש מאשר למחוק.
 function lsSweepGuarded(reason, needBytes) {
   if (_lsSweeping) return 0;
   _lsSweeping = true;
@@ -295,22 +258,15 @@ function lsSweep(reason, needBytes) {
   var need = Number(needBytes) || 0, freed = 0, i;
   lsLog('פינוי התחיל', reason, 0);
 
-  // ⛔ כלל ג נאכף לפני **שתי** הרשימות: יש **משהו** בתור שטרם עלה
-  // לענן ⇒ אי אפשר לדעת מה כבר בטוח שם, ולא מפנים דבר. ⚠️ פינוי המפתחות השלמים הוא
-  // המסוכן מבין השניים דווקא — הוא מוחק **מפתח שלם**, ומפתח שנכתב
-  // מקומית-תחילה ופונה לפני שנדחף אינו חוזר משום מקום. ⛔ ומחסום אחד
-  // לשתי הרשימות ולא שניים: תנאי שנכפל הוא תנאי שאחד מעותקיו יתיישן.
+  // יש משהו בתור שטרם עלה — אי אפשר לדעת מה כבר בענן, ולא מפנים דבר; מחסום אחד לשתי הרשימות ולא שניים.
+  // פינוי מפתחות שלמים הוא המסוכן מהשניים — מפתח מקומי-תחילה שפונה לפני שנדחף אינו חוזר משום מקום.
   if (app.LS_CFG.pending && app.LS_CFG.pending()) {
     lsLog('פינוי דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
     return 0;
   }
 
   // ── מפתחות שלמים: מטמונים שניתן לשחזר מהענן ──
-  // ⛔ העֵד נבדק **פר-פריט**, בתוך המערך — ⚠️ ולא בכניסה
-  // לרשימה: פינוי המפתחות השלמים מוחק מפתח **שלם**, ומפתח שנכתב מקומית-תחילה ולא נדחף
-  // אינו חוזר משום מקום. ⭐ ולכן כל פריט נושא `syncedThrough` משלו,
-  // ⛔ ומחסום `pending()` אינו מחליף אותו: «התור ריק»
-  // הוא ראיה על **התור** ⛔ ולא על המפתח.
+  // העֵד נבדק פר-פריט (syncedThrough), ו-pending() אינו מחליף אותו — «התור ריק» הוא ראיה על התור ולא על המפתח.
   var through = lsGlobalWitness();
   var sized = [];
   (app.LS_CFG.wholeKeys || []).forEach(function (spec) {
@@ -318,7 +274,7 @@ function lsSweep(reason, needBytes) {
     var v = lsGet(spec.key, null);
     if (v != null) sized.push({ k: spec.key, b: lsEntryBytes(spec.key, v) });
   });
-  sized.sort(function (a, b) { return b.b - a.b; });   // הגדול קודם — מפנה מהר
+  sized.sort(function (a, b) { return b.b - a.b; });
   var hit = [];
   for (i = 0; i < sized.length; i++) {
     if (need && freed >= need) break;
@@ -329,13 +285,10 @@ function lsSweep(reason, needBytes) {
 
   // ── רשומות ישנות מסונכרנות ──
   var specs = (app.LS_CFG.oldRecords || []).filter(function (s) { return !lsIsChild(s); });
-  // מפתח בלי עֵד מקומי אך עם מסלול אימות מול הענן אינו מפונה כאן — האימות
-  // אסינכרוני ולכן הוא רץ ב-`lsBootDeferred`, אחרי העלייה. מדווח כדי
-  // שהיומן לא יראה כאילו לא נעשה כלום.
+  // מפתח בלי עֵד מקומי אך עם אימות מול הענן אינו מפונה כאן — האימות אסינכרוני ורץ ב-lsBootDeferred.
   var defer = lsVerifySpecs(through);
   if (defer.length) lsLog('פינוי רשומות ישנות — ' + defer.length + ' מפתחות ללא עֵד מקומי', 'ימשיכו באימות מול הענן', 0);
-  // מפתח יכול להביא עֵד סנכרון משלו (`spec.syncedThrough`) כשהחותמת הגלובלית
-  // אינה מעידה עליו — למשל מערך שנדחף בנפרד ובהצלחה נפרדת.
+  // spec.syncedThrough — עֵד משלו כשהחותמת הגלובלית אינה מעידה עליו, למשל מערך שנדחף בנפרד.
   var anyOwn = false;
   for (i = 0; i < specs.length; i++) if (typeof specs[i].syncedThrough === 'function') anyOwn = true;
   if (!through && !anyOwn) {
@@ -358,10 +311,9 @@ function lsPruneKey(spec, through, want) {
   try { arr = JSON.parse(raw); } catch (e) { return 0; }
   if (!Array.isArray(arr) || arr.length < 2) return 0;
 
-  // חלון הגיל נגזר מסוג האפליקציה: גם רשומה מסונכרנת לא מפונה אם היא טרייה
-  // מדי. בלעדיו היינו מפנים דווקא את מה שהמשתמש עובד עליו עכשיו.
+  // גם רשומה מסונכרנת אינה מפונה אם היא טרייה מדי — אחרת מפנים את מה שהמשתמש עובד עליו עכשיו.
   var cut = lsSpecWitness(spec, through);
-  if (!cut) return 0;   // אין עֵד מקומי — המסלול הנכון הוא האימות מול הענן
+  if (!cut) return 0; // אין עֵד מקומי — המסלול הנכון הוא האימות מול הענן
   cut = Math.min(cut, Date.now() - lsWindowMs());
   if (cut <= 0) return 0;
 
@@ -372,7 +324,7 @@ function lsPruneKey(spec, through, want) {
     if (isFinite(t) && t > 0 && t <= cut) cand.push({ i: i, t: t });
   }
   if (!cand.length) return 0;
-  cand.sort(function (a, b) { return a.t - b.t; });     // הישן ביותר קודם
+  cand.sort(function (a, b) { return a.t - b.t; });
 
   var target = want > 0 ? want : Math.max(0, before - Math.floor(before * 0.5));
   var drop = {}, hz = 0, est = 0, kept = arr.length;
@@ -398,21 +350,15 @@ function lsPruneKey(spec, through, want) {
   return gained;
 }
 
-/*  ⛔ רשומת בן יורדת עם אביה — ⚠️ **מה נכנס**: פריט ב-`oldRecords` שנושא
- *  `parent` (מפתח האב) ו-`parentOf` (מזהה האב שבשורת הבן); ⛔ **ומה מפיל**:
- *  בן שנגרע בזכות עצמו — ⭐ אב שנשאר בלי בניו מוצג ריק אופליין, ⚠️ ודחיפה
- *  שלו אחר כך נקראת בענן כמחיקת הבנים.
- *  ⛔ ולכן הבן יורד רק כשאביו ירד, ⚠️ ורק כשהעֵד שלו מכסה את חותמת
- *  האב: ⭐ בלי עֵד הבן נשאר יתום עד הפינוי הבא — ⛔ יתום צורך מקום,
- *  ⚠️ ובן שנגרע בלי ראיה אובד. */
+// בן יורד רק כשאביו ירד ורק כשהעֵד שלו מכסה את חותמת האב — אב בלי בניו מוצג ריק אופליין,
+// ודחיפה שלו אחר כך נקראת בענן כמחיקת הבנים.
 function lsIsChild(spec) {
   return !!spec && typeof spec.parent === 'string' && typeof spec.parentOf === 'function';
 }
 function lsChildrenOf(spec) {
   return (app.LS_CFG.oldRecords || []).filter(function (c) { return lsIsChild(c) && c.parent === spec.key; });
 }
-/*  ⛔ בן שאביו אינו במראה ושחותמתו בתוך אופק האב — ⚠️ והוא יורד רק אם
- *  `proven` מאשרת אותו: ⭐ ראיה פר-שורה, ⛔ ושורה בלי ראיה נשארת. */
+// יורד רק אם proven מאשרת אותו — ראיה פר-שורה; שורה בלי ראיה נשארת.
 function lsDropOrphans(c, parent, proven) {
   var hz = lsHorizon(parent.key), parr, arr, alive = {};
   if (!hz || typeof parent.idOf !== 'function') return 0;
@@ -446,7 +392,6 @@ function lsPruneChildren(spec) {
   });
   return gained;
 }
-/*  ⚠️ הבן בלי עֵד מקומי — ⛔ הראיה מהענן, פר-שורה, ⭐ כמו אביו. */
 function lsVerifyChildren(spec) {
   var kids = lsChildrenOf(spec).filter(function (c) {
     return typeof c.verify === 'function' && typeof c.idOf === 'function';
@@ -468,49 +413,22 @@ function lsVerifyChildren(spec) {
   return step();
 }
 
-/* ── עדות סנכרון חלופית: אימות ישיר מול הענן ─────────────────────────────
-   פינוי הרשומות הישנות מותנה בעֵד סנכרון **מקומי** — חותמת שנכתבת רק אחרי דחיפה מוצלחת
-   מהמכשיר הזה. בדפדפן שקורא ולא כותב (המחשב שממנו רק מסתכלים) אין דחיפה,
-   ולכן אין עֵד: ⚠️ בלי מסלול נוסף הפינוי מחזיר 0 וההתרעה הצהובה נשארת
-   קבועה — בזמן שכל הנתונים כבר בענן.
+// ── עֵד חלופי: אימות ישיר מול הענן ──
+// למכשיר שרק קורא אין עֵד דחיפה; כאן שואלים את הענן. נכשל סגור, וחלון הגיל ו-pending() חלים גם כאן.
+// פינוי רצף בלבד, נעצר בראשונה שלא אומתה — lsSetArray מסננת כל חותמת ≤ hz, ודילוג היה מוחק רשומה שאינה בענן.
 
-   ⭐ המסלול הזה אינו הרפיה של הדרישה אלא **מקור ראיה אחר**: במקום להסיק
-   "זה בענן" מחותמת מקומית, שואלים את הענן. `spec.verify()` מושכת את העותק
-   הענני של אותו מפתח, ורשומה נמחקת רק אם היא נמצאת שם לפי `spec.idOf`
-   **וגם** חותמת הענן אינה ישנה מהחותמת המקומית — כלומר הענן מחזיק את
-   הגרסה הזו או חדשה ממנה.
-
-   ⛔ **נכשל סגור.** אין רשת, `verify` זרקה, החזירה `ok:false`, או שהמפתח
-      כלל אינו קיים בענן ⇒ לא מפנים דבר. היעדר ראיה אינו ראיה.
-   ⛔ **חלון הגיל (`lsWindowMs`) חל גם כאן** — הוא שכבת בטיחות נפרדת
-      מהראיה, ולא תחליף לה.
-   ⛔ **`LS_CFG.pending()` נבדק כאן בדיוק כמו בפינוי הרשומות הישנות הסינכרוני**: יש משהו
-      שטרם עלה ⇒ לא מפנים דבר.
-   ⛔ **פינוי רצף בלבד.** הרשומות נבדקות מהישנה לחדשה, והפינוי **נעצר**
-      בראשונה שלא אומתה — לא מדלג עליה וממשיך מעליה. הסיבה היא האופק:
-      אחרי הפינוי נשמר `hz` = חותמת הרשומה החדשה ביותר שנמחקה,
-      ו-`lsSetArray` מסננת **בכל כתיבה** כל רשומה שחותמתה ≤ hz. דילוג
-      והמשך היו מוחקים בכתיבה הבאה, בשקט, דווקא את הרשומה שאין לה עותק
-      בענן — ההפך הגמור מהכוונה.
-   ⚠️ **אסינכרוני.** `lsBoot` סינכרונית ורצה לפני שהמסך עולה, ולכן מסלול
-      האימות רץ אחריה (`lsBootDeferred`) — וההתרעה נדחית איתו, אחרת
-      המשתמש מקבל אזהרה צהובה על מצב שנפתר שתי שניות אחר כך. */
-
-var LS_DEFER_MS = 3000;   // המתנה אחרי העלייה לפני האימות — שהאפליקציה תספיק לעלות
+var LS_DEFER_MS = 3000; // שהאפליקציה תספיק לעלות לפני הרשת
 
 function lsGlobalWitness() {
   try { return Number(app.LS_CFG.syncedThrough && app.LS_CFG.syncedThrough()) || 0; } catch (e) { return 0; }
 }
-/* עֵד הסנכרון של מפתח בודד: משלו אם הוגדר, אחרת הגלובלי. **מפתח שהגדיר
-   `syncedThrough` משלו אינו נופל חזרה לגלובלי** — עֵד של מערך אחד אינו
-   מעיד על אחר. */
+// מפתח שהגדיר syncedThrough משלו אינו נופל חזרה לגלובלי — עֵד של מערך אחד אינו מעיד על אחר.
 function lsSpecWitness(spec, through) {
   if (spec && typeof spec.syncedThrough === 'function') {
     try { return Number(spec.syncedThrough()) || 0; } catch (e) { return 0; }
   }
   return Number(through) || 0;
 }
-// המפתחות שאין להם עֵד מקומי אך יש להם מסלול אימות מול הענן.
 function lsVerifySpecs(through) {
   var t = (through === undefined) ? lsGlobalWitness() : through;
   return (app.LS_CFG.oldRecords || []).filter(function (s) {
@@ -519,7 +437,6 @@ function lsVerifySpecs(through) {
 }
 function lsHasVerifiers() { return lsVerifySpecs().length > 0; }
 
-// מפת {מזהה: החותמת הגבוהה ביותר} מתוך העותק הענני.
 function lsCloudIndex(spec, rows) {
   if (!Array.isArray(rows) || !spec || typeof spec.idOf !== 'function') return null;
   var idx = {}, i, id, t;
@@ -534,7 +451,6 @@ function lsCloudIndex(spec, rows) {
   return idx;
 }
 
-// גריעה ממפתח אחד כשהראיה היא מפת הענן ולא חותמת מקומית.
 function lsPruneKeyVerified(spec, idx, want) {
   if (!idx || !spec || typeof spec.idOf !== 'function') return 0;
   var raw = lsGet(spec.key, null);
@@ -543,7 +459,7 @@ function lsPruneKeyVerified(spec, idx, want) {
   try { arr = JSON.parse(raw); } catch (e) { return 0; }
   if (!Array.isArray(arr) || arr.length < 2) return 0;
 
-  // הראיה מחליפה את העֵד, **לא** את חלון הגיל.
+  // הראיה מחליפה את העֵד, לא את חלון הגיל.
   var cut = Date.now() - lsWindowMs();
   if (cut <= 0) return 0;
 
@@ -554,7 +470,7 @@ function lsPruneKeyVerified(spec, idx, want) {
     if (isFinite(t0) && t0 > 0 && t0 <= cut) cand.push({ i: i, t: t0 });
   }
   if (!cand.length) return 0;
-  cand.sort(function (a, b) { return a.t - b.t; });   // הישן ביותר קודם
+  cand.sort(function (a, b) { return a.t - b.t; });
 
   var target = want > 0 ? want : Math.max(0, before - Math.floor(before * 0.5));
   var drop = {}, hz = 0, est = 0, kept = arr.length, stopped = '';
@@ -562,8 +478,7 @@ function lsPruneKeyVerified(spec, idx, want) {
     var rec = arr[cand[i].i];
     var id = spec.idOf(rec);
     id = (id == null) ? '' : String(id);
-    // ⛔ עצירה, לא דילוג — ⚠️ האופק מסנן בכל כתיבה את מה שחותמתו ≤ hz,
-    //    ⭐ ודילוג היה מוחק בכתיבה הבאה דווקא רשומה שאין לה עותק בענן.
+    // עצירה ולא דילוג — האופק מסנן בכל כתיבה את מה שחותמתו ≤ hz, ודילוג היה מוחק רשומה שאין לה עותק בענן.
     if (!id) { stopped = 'רשומה בלי מזהה'; break; }
     if (!(id in idx)) { stopped = 'רשומה שאינה בענן'; break; }
     if (idx[id] < cand[i].t) { stopped = 'הענן מחזיק גרסה ישנה יותר'; break; }
@@ -591,15 +506,12 @@ function lsPruneKeyVerified(spec, idx, want) {
   return gained;
 }
 
-// כמה בתים צריך לפנות כדי לרדת אל יעד הפינוי. 0 = אין צורך.
 function lsSweepNeed() {
   var u = lsUsage();
   if (u.total < u.quota * LS_SWEEP_PCT) return 0;
   return Math.max(0, u.total - Math.floor(u.quota * LS_SWEEP_TO));
 }
 
-/* פינוי הרשומות הישנות בגרסה האסינכרונית: לכל מפתח בלי עֵד מקומי — משיכת העותק הענני
-   ופינוי של מה שאומת בלבד. מחזירה Promise עם מספר הבתים שפונו. */
 var _lsVerifying = false;
 function lsSweepVerified(reason, needBytes) {
   if (_lsVerifying) return Promise.resolve(0);
@@ -635,8 +547,8 @@ function lsSweepVerified(reason, needBytes) {
   return step().then(done, done);
 }
 
-/* ── המסלול הנדחה ───────────────────────────────────────────────────────
-   רץ אחרי שהאפליקציה כבר עלתה, כדי שהאימות (רשת) לא יחסום את הטעינה. */
+// ── המסלול הנדחה ──
+// רץ אחרי העלייה כדי שהאימות ברשת לא יחסום את הטעינה.
 var _lsDeferTimer = null;
 function lsScheduleDeferred(delayMs) {
   if (_lsDeferTimer) return false;
@@ -659,24 +571,9 @@ function lsBootDeferred() {
   return p.then(finish, function () { return finish(0); });
 }
 
-/* ── מרשם המפתחות ──────────────────────────────────────────────────────
-   ⛔ כל מפתח במרחב האפליקציה מוצהר במרשם אחד — ⚠️ **מרחב האפליקציה** הוא
-   כל מה שקוד האפליקציה או מודול משותף כותב עבורה: ⭐ התחילית שלה, ומשפחת
-   כל מודול שכותב מחוצה לה ונרשם ב-`lsSpace`. ⚠️ ומפתח במרחב שאינו במרשם
-   נמחק בעלייה: ⭐ אין לו כותב, ⛔ ולכן איש אינו מעדכן אותו, איש אינו
-   מפנה אותו, והזריקה בעידן אינה מגיעה אליו.
-   ⛔ המנגנון יודע רק את המרשם של היום — ⚠️ ואין בו שם של מפתח שהיה:
-   ⭐ רשימת מה שנמחק היא רשימה שמתיישנת, ⛔ ורשימת מה שמותר נגזרת מהכותבים.
-   ⛔ **ומפתח מחוץ למרחב אינו נגע** — ⚠️ ה-origin משותף לכל האפליקציות,
-   ⭐ ומשפחה שנרשמת מכריעה בעצמה מה שלה.
-   ⭐ ואופק הפינוי של מפתח מוצהר מוצהר איתו — ⛔ ואופק של מפתח שאינו
-   מוצהר יורד עם המפתח.
-   ⛔ **ומרשם שאינו נקרא אינו מוחק דבר** — ⚠️ מרשם ריק או זורק נקרא «אין
-   ראיה», ⛔ ולא «אין מה לשמור». */
-/*  ⛔ משפחת מפתחות שמודול משותף כותב מחוץ לתחילית — ⚠️ **מה נכנס**:
- *  `keys()` — המפתחות שהמודול כותב היום, ו-`owns(k)` — האם מפתח שייך
- *  למשפחה ולאפליקציה הזו. ⛔ **ומשפחה שאינה מצהירה מפתח אינה נכנסת** —
- *  ⚠️ `keys()` ריקה או זורקת היא «אין ראיה», ⛔ ולא «אין מה לשמור». */
+// ── מרשם המפתחות ──
+// מפתח במרחב האפליקציה שאינו במרשם נמחק בעלייה; מפתח מחוץ למרחב אינו נגע — ה-origin משותף.
+// keys() ריקה או זורקת היא «אין ראיה» ולא «אין מה לשמור» — מרשם שאינו נקרא אינו מוחק דבר.
 var _lsSpaces = [];
 function lsSpace(sp) { if (sp && typeof sp.keys === 'function' && typeof sp.owns === 'function') _lsSpaces.push(sp); }
 function lsKeyRegistry() {
@@ -721,10 +618,8 @@ function lsKeySweep() {
   return drop.length;
 }
 
-/* ── בדיקת העלייה ───────────────────────────────────────────────────────
-   נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו.
-   **סינכרונית בכוונה** — היא חייבת לרוץ לפני הטעינה. כשיש מפתחות שניתן
-   לאמת מול הענן, ההתרעה נדחית יחד עם האימות (`lsBootDeferred`). */
+// ── בדיקת העלייה ──
+// סינכרונית בכוונה — חייבת לרוץ לפני הטעינה, לפני שהמשתמש מספיק לכתוב.
 function lsBoot(opts) {
   lsKeySweep();
   var u = lsUsage(), swept = 0;
@@ -751,16 +646,13 @@ function lsBootAlert(u) {
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
-/* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
-
-/* ═══ חלון חם ושחזור מקומי — מודול משותף ═════════════════════════════════
-   ══════════════════════════════════════════════════════════════════════ */
-var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה — רשת אחרי עלייה
-var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
-/*  ⛔ הראיה חיה במודול — ⚠️ ובהחלפת הקשר היא נשכחת כאן, ⭐ ולא בכתיבה מבחוץ. */
+// ── חלון חם ──
+var HW_BOOT_DEFER_MS = 3000; // רשת אחרי עלייה, כמו הפינוי הנדחה
+var _hwCloudSeen = {}; // בזיכרון בלבד: מפתח → {מזהה → חותמת}
+// בהחלפת הקשר הראיה נשכחת כאן, ולא בכתיבה מבחוץ.
 function hwForget() { _hwCloudSeen = {}; }
 var _hwSweepBusy = false;
-var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
+var _hwSwept = 0; // לתיעוד בלבד
 
 function _hwVal(v) { return (typeof v === 'function') ? v() : v; }
 function hwEnabled() {
@@ -783,7 +675,6 @@ function _hwLive(spec, rec) {
   catch (e) { return true; }
 }
 
-// רישום הראיה העננית — כל משיכה מוצלחת מוסיפה ומעדכנת חותמות פר-מזהה.
 function hwNoteCloud(key, rows) {
   if (!hwEnabled() || !Array.isArray(rows)) return;
   var spec = _hwSpecFor(key);
@@ -798,8 +689,7 @@ function hwNoteCloud(key, rows) {
   }
 }
 
-// שער הדיסק. ⛔ כל ספק משאיר את הרשומה — רשומה בלי ראיה עננית
-// עדכנית לה-עצמה נכתבת לדיסק כרגיל; רק ודאות מפנה.
+// כל ספק משאיר את הרשומה — רק ראיה עננית עדכנית לרשומה עצמה מפנה.
 function hwDiskFilter(key, rows) {
   if (!hwEnabled() || !Array.isArray(rows)) return rows;
   var spec = _hwSpecFor(key);
@@ -828,7 +718,6 @@ function hwDiskFilter(key, rows) {
   return kept;
 }
 
-// הפינוי עצמו — מושך את העותק הענני של כל מפרט, ואז כותב לדיסק את הנשאר.
 async function hwSweep() {
   if (!hwEnabled() || _hwSweepBusy) return { swept: 0 };
   try {
@@ -868,8 +757,7 @@ async function hwSweep() {
   return { swept: swept };
 }
 
-// מסך העבר — קריאה בלבד. מחזיר מהענן את הרשומות החיות שמחוץ לחלון,
-// מהחדשה לישנה, בלי לגעת בדיסק ובלי לגעת בזיכרון האפליקציה.
+// קריאה בלבד — אינה נוגעת בדיסק ולא בזיכרון האפליקציה.
 async function hwPastLoad(key, filter) {
   var spec = _hwSpecFor(key);
   if (!spec) return { ok: false, rows: [] };
@@ -894,18 +782,14 @@ async function hwPastLoad(key, filter) {
   return { ok: true, rows: out };
 }
 
-/* ── נקודת ההפעלה ──────────────────────────────────────────────────────── */
-// ⛔ נקודת ההפעלה היחידה היא `hwBoot()` מפונקציית העלייה — הפינוי
-//    מושהה מפני שהוא דורש רשת, בדיוק כמו הפינוי הנדחה. כשהמודול רדום (`HW_CFG.enabled` כבוי) היציאה מיידית,
-//    וכפתור השחזור נשאר פעיל בנפרד.
+// ── נקודת ההפעלה ──
+// הפינוי מושהה כי הוא דורש רשת; כשהמודול רדום היציאה מיידית, וכפתור השחזור נשאר פעיל בנפרד.
 function hwBoot() {
   if (!hwEnabled()) return;
   try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
 }
-/* ═══════════════ סוף מודול החלון החם ══════════════════════════════════ */
 
-/*  ⛔ הייצוא בשם ⛔ ואינו `default` — ⚠️ קורא שמייבא שם שנעלם נשבר בטעינה,
- *  ⭐ ו-`default` היה נבלע בשקט. */
+// ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { MSG_LS_FULL, hwBoot, hwDiskFilter, hwForget, hwNoteCloud,
          hwPastLoad, lsBoot, lsClearHorizons, lsGet, lsGuardToast,
          lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray, lsSetRaw,

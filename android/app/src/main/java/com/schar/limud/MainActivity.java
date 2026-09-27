@@ -1,12 +1,6 @@
 package com.schar.limud;
 
-/**
- * The app shell — identity.
- *
- * <p>⛔ Generated from the app config by {@code tools/gen-app.mjs} and never
- * edited by hand. All of the shell behaviour lives in {@link ShellActivity};
- * this class supplies the values that differ, and each one comes from the config.
- */
+// tools/java/MainActivity.java.in — זהות המעטפת: הערכים שנבדלים בין האפליקציות, מהתצורה
 public class MainActivity extends ShellActivity {
 
     @Override

@@ -1,23 +1,8 @@
 #!/bin/bash
-# Sign an APK with the project's PERMANENT key.
-#
-# ⛔ זה המפתח היחיד: חתימה בכל מפתח אחר מייצרת אפליקציה זרה, וכל המשתמשים
-# ייתקלו ב-INSTALL_FAILED_UPDATE_INCOMPATIBLE בלי שום דרך חזרה.
-#
-# ⛔ המפתח והסיסמה אינם בעץ — הריפו פומבי, וקובץ מחויב הוא קובץ ציבורי:
-# מי שמחזיק את שניהם חותם APK שאנדרואיד מקבל כעדכון לגיטימי. הם חיים
-# ב-GitHub Secrets, נמשכים בזמן בנייה, ומגיעים לכאן דרך הסביבה.
-#
-# ⛔ טביעת המפתח נקראת מהתצורה — ⚠️ `signSha256` שב-`app.config.js`, ⭐ והקובץ
-# הזה אינו נושא ערך של אפליקציה.
-#
-# Requires Android build-tools on PATH (zipalign + apksigner) and node.
-# Usage: SIGN_KEYSTORE=<path> SIGN_PASS=<store-pass> \
-#          ./sign-apk.sh <unsigned.apk> [output.apk]
+# signing/sign-apk.sh — חתימת ה-APK במפתח הקבוע
 set -euo pipefail
 
-# ⛔ שני המשתנים נופלים ברעש כשהם חסרים — ⚠️ ברירת מחדל כאן הייתה מחפשת
-# מפתח שאיש לא התכוון אליו, והכשל היה מתגלה רק אצל משתמש מותקן.
+# שני המשתנים נופלים ברעש כשהם חסרים — ברירת מחדל הייתה מחפשת מפתח שאיש לא התכוון אליו.
 KS="${SIGN_KEYSTORE:?SIGN_KEYSTORE is unset — the keystore lives in GitHub Secrets, not in the repo}"
 PASS="${SIGN_PASS:?SIGN_PASS is unset — the store password lives in GitHub Secrets, not in the repo}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -35,34 +20,28 @@ for tool in zipalign apksigner keytool; do
 done
 [ -f "$KS" ] || { echo "❌ missing keystore: $KS" >&2; exit 1; }
 
-# ⛔ קריאה אחת למפתח, ושתי המדידות ממנה — ⚠️ קריאה שנייה היא הזדמנות
-# שנייה לסטות, ⭐ ושתי התשובות חייבות לתאר את אותו קובץ בדיוק.
+# קריאה אחת למפתח, ושתי המדידות ממנה — קריאה שנייה היא הזדמנות שנייה לסטות.
 KSINFO="$(keytool -list -v -keystore "$KS" -storepass "$PASS" 2>/dev/null)" || {
   echo "❌ cannot read the keystore — wrong SIGN_PASS, or the file is not a keystore" >&2
   exit 1
 }
 
-# Fail before touching the APK if the keystore is not the key we expect. A wrong
-# key here is unrecoverable for every existing install, so this is a hard gate.
+# נכשל לפני שנוגעים ב-APK — מפתח שגוי אינו ניתן לתיקון בשום התקנה קיימת.
 if ! printf '%s\n' "$KSINFO" | grep -qF "SHA256: $EXPECTED_SHA256"; then
   echo "❌ keystore fingerprint does NOT match the expected key. Refusing to sign." >&2
   echo "   expected SHA256: $EXPECTED_SHA256" >&2
   exit 1
 fi
 
-# ⛔ ה-alias נגזר מהמפתח ⛔ ואינו מוקלד — ⚠️ הוא נבדל בין האפליקציות, ⭐ והמפתח
-# עצמו הוא המקור היחיד שאינו יכול לסטות ממנו: ⛔ ערך מוקלד היה עוד ערך
-# אפליקציה מחוץ לתצורה, ⚠️ וסוד נוסף היה ידית שהמנהל צריך לתחזק.
-# ⛔ ומפתח שאין בו בדיוק מפתח פרטי אחד נופל כאן ולא בשלב החתימה, שבו
-# ההודעה כבר אינה אומרת מה חסר.
+# ה-alias נגזר מהמפתח — הוא נבדל בין האפליקציות, וערך מוקלד היה ערך אפליקציה מחוץ לתצורה.
+# מפתח שאין בו בדיוק מפתח פרטי אחד נופל כאן, כשההודעה עוד אומרת מה חסר.
 ALIAS="$(printf '%s\n' "$KSINFO" | sed -n 's/^Alias name: //p')"
 if [ "$(printf '%s\n' "$ALIAS" | grep -c . || true)" != '1' ]; then
   echo "❌ the keystore does not carry exactly one alias. Refusing to sign." >&2
   exit 1
 fi
 
-# zipalign must run before apksigner — apksigner preserves alignment, zipalign
-# after signing would invalidate the v2/v3 signature.
+# zipalign לפני apksigner — zipalign אחרי החתימה פוסל את חתימת v2/v3.
 zipalign -p -f 4 "$IN" "$ALIGNED"
 apksigner sign \
   --ks "$KS" --ks-key-alias "$ALIAS" \
@@ -72,10 +51,8 @@ rm -f "$ALIGNED"
 
 apksigner verify --print-certs "$OUT"
 
-# Verify what actually landed in the APK, not just what we asked for.
-# apksigner prints the digest lowercase and WITHOUT colons, while keytool prints
-# it uppercase WITH colons — so both sides get normalised before comparing.
-# Matching the colon form against apksigner output never succeeds.
+# מאמתים את מה שנחת ב-APK בפועל — apksigner מדפיס את הטביעה בקטנות בלי נקודתיים, ו-keytool בגדולות עם נקודתיים,
+# ולכן שני הצדדים מנורמלים לפני ההשוואה.
 normalise() { tr -d ':' | tr 'A-Z' 'a-z'; }
 WANT="$(printf '%s' "$EXPECTED_SHA256" | normalise)"
 GOT="$(apksigner verify --print-certs "$OUT" \

@@ -1,6 +1,6 @@
--- ═══ 000_schema.sql — שכר לימוד: הסכימה החיה ═══════════════════════════
+-- migrations/000_schema.sql — שכר לימוד: הסכימה החיה
 
--- ─── שכר לימוד ─────────────────────────────────────────────────────────
+-- ── שכר לימוד ──
 
 create table if not exists public.sl_lists (
   category text not null,
@@ -78,8 +78,7 @@ create UNIQUE index if not exists sl_settings_client_id_key ON public.sl_setting
 create index if not exists sl_students_name_idx ON public.sl_students USING btree (name);
 create index if not exists sl_transactions_student_date_idx ON public.sl_transactions USING btree (student_client_id, date);
 
--- ⛔ revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת
---    עם DELETE ו-TRUNCATE ל-anon: המחיקה היא deleted=true, ולא DELETE.
+-- revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת עם DELETE ו-TRUNCATE ל-anon.
 revoke all on table public.sl_lists from anon, authenticated;
 grant select, insert, update on table public.sl_lists to anon, authenticated;
 grant all on table public.sl_lists to service_role;
