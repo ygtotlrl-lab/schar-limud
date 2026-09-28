@@ -266,13 +266,21 @@ function ksFire(scope, attr) {
   fn(b);
   return true;
 }
+// Escape מחזיר את הערך השמור לפני השחרור — השמירה ביציאה רואה ערך שלא השתנה ואינה כותבת.
+function kentKey(e, t) {
+  if (!t.hasAttribute('data-kent')) return false;
+  if (e.key === 'Escape') t.value = t.defaultValue;
+  t.blur();
+  e.preventDefault();
+  return true;
+}
 // נקרא מהמאזין האחד שבאפליקציה ואינו רושם משלו — סדר ההרצה בין שני מאזינים אינו מוצהר.
 function ksKey(e) {
   if (e.key !== 'Enter' && e.key !== 'Escape') return false;
   var t = e.target;
   if (!t || t.tagName !== 'INPUT' || !t.closest) return false;
   var scope = t.closest('.ksave');
-  if (!scope) return false;
+  if (!scope) return kentKey(e, t);
   if (!ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) return false;
   e.preventDefault();
   return true;
