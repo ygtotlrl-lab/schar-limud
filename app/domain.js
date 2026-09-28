@@ -57,14 +57,14 @@ function _slPushOf(t) {
 // מחיקה אינה מפתח נפרד — היא כתיבה של deleted=true על אותה רשומה
 var PK_TXN = 'txn:', PK_STU = 'student:', PK_SET = 'setting:', PK_LST = 'list:';
 
-function pendTxnKey(row) { return PK_TXN + slKey(row); }
+function pendTxnKey(row) { return PK_TXN + row.client_id; }
 
-function pendStuKey(row) { return PK_STU + slKey(row); }
+function pendStuKey(row) { return PK_STU + row.client_id; }
 
 // מפתח ההגדרה הוא key ולא client_id — מיפתוח לפי client_id יוצר שתי שורות לאותה הגדרה
-function pendSetKey(row) { return PK_SET + slKeyOf(KV_TABLE, row); }
+function pendSetKey(row) { return PK_SET + row.key; }
 
-function pendLstKey(row) { return PK_LST + slKey(row); }
+function pendLstKey(row) { return PK_LST + row.client_id; }
 
 // כשל רשת אינו ראיה — הסימון נשאר; כשל סמכותי מוריד אותו, אחרת הוא נתקע לנצח ומזייף את התרעת 24 השעות
 function pendResolveErr(pk, e) { if (!isNetErr(e)) pendFailed(pk); }
@@ -85,27 +85,22 @@ function pendTxnTag(t) { return t ? pendTag(pendTxnKey(t)) : ''; }
 
 function pendStuTag(st) { return st ? pendTag(pendStuKey(st)) : ''; }
 
-function pendLstTag(i) { return (i && i.key) ? pendTag(PK_LST + i.key) : ''; }
+function pendLstTag(i) { return (i && i.client_id) ? pendTag(PK_LST + i.client_id) : ''; }
 
 // ── עבודה אופליין ──
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
-  sl_transactions: ['client_id','student_client_id','date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
+  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
   sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
 };
 
-function slKey(r) {
-  if (!r || typeof r !== 'object') return '';
-  return r.client_id ? 'c:' + r.client_id : '';
-}
-
 // sl_settings ממופתחת לפי key — שני מכשירים מגיעים לאותו key באופן עצמאי, ומיפתוח לפי client_id היה יוצר שני ערכים לאותה הגדרה
 function slKeyOf(t, r) {
-  if (t === KV_TABLE) return (r && r.key != null && r.key !== '') ? ('k:' + r.key) : '';
-  return slKey(r);
+  var k = r ? r[t === KV_TABLE ? 'key' : 'client_id'] : null;
+  return (k == null || k === '') ? '' : String(k);
 }
 
 function slTs(r) {
@@ -149,7 +144,7 @@ function slApplyMirror() {
   S.STUDENTS = (MIRROR.sl_students || []).filter(function (s) { return !s.deleted; })
     .sort(function (a, b) { return HE.compare(a.name || '', b.name || ''); });
   S.TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
-    .sort(function (a, b) { return String(a.date || '') < String(b.date || '') ? -1 : 1; });
+    .sort(function (a, b) { return String(a.txn_date || '') < String(b.txn_date || '') ? -1 : 1; });
   S.SETTINGS = {};
   // הערך בעמודה הוא JSON — קורא שמתייחס אליו כטקסט היה קורא "5" עם הגרשיים ולא כחמש
   (MIRROR[KV_TABLE] || []).forEach(function (r) {
@@ -159,7 +154,7 @@ function slApplyMirror() {
   // כפתור המחיקה מצביע על key, מפתח המיזוג — לפריט שנוצר במכשיר אין שדה אחר
   (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
     .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
-    .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ key: slKey(r), id: r.client_id, value: r.value }); });
+    .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ client_id: r.client_id, value: r.value }); });
 }
 
 // מחזירה false כשהכתיבה ל-localStorage נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
@@ -198,13 +193,13 @@ var PC_CHILDREN = {
 
 // הכתיבה עוברת במראה ולא ב-slLocalWrite — היא חותמת Date.now() על כל שורה ומבטלת את ירושת החותמת
 function pcCascadeDelete(table, parent) {
-  var kids = PC_CHILDREN[table] || [], pid = slKey(parent), n = 0;
+  var kids = PC_CHILDREN[table] || [], pid = parent.client_id, n = 0;
   for (var i = 0; i < kids.length; i++) {
     var k = kids[i], arr = MIRROR[k.t] || [], c = 0;
     for (var j = 0; j < arr.length; j++) {
       if (arr[j].deleted || !idEq(arr[j][k.fk], pid)) continue;
       arr[j] = pcChildKill(parent, arr[j]);
-      pendMark(k.pk + slKey(arr[j]));
+      pendMark(k.pk + arr[j].client_id);
       c++;
     }
     if (c && !mirrorSave(k.t)) console.error('[mirror] ' + k.t + ' — ירושת המחיקה לא נשמרה');
@@ -257,8 +252,8 @@ var _pendingCid = {};
 
 function pendingCid(slot, fp){
   var p=_pendingCid[slot];
-  if(!p||p.fp!==fp){ p={fp:fp,id:newClientId()}; _pendingCid[slot]=p; }
-  return p.id;
+  if(!p||p.fp!==fp){ p={fp:fp,client_id:newClientId()}; _pendingCid[slot]=p; }
+  return p.client_id;
 }
 
 function releaseCid(slot){ delete _pendingCid[slot]; }
@@ -318,7 +313,7 @@ function distCredApplied(d){return YEAR_MONTHS.reduce(function(a,m){return a+((d
 function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 
 // לפי מפתח המיזוג ולא לפי id — לפריט שנוצר במכשיר אין עדיין id
-function findListItem(key){var f=null;Object.keys(S.LISTS).forEach(function(c){(S.LISTS[c]||[]).forEach(function(i){if(i.key===String(key))f=i;});});return f;}
+function findListItem(cid){var f=null;Object.keys(S.LISTS).forEach(function(c){(S.LISTS[c]||[]).forEach(function(i){if(idEq(i.client_id,cid))f=i;});});return f;}
 
 function hasCreditItem(){return Object.keys(S.LISTS).some(function(c){return (S.LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
 
@@ -359,26 +354,26 @@ async function syncAll(){
     var pulledStu=false, pulledTxn=false, pulledSet=false, pulledLst=false;
     if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
       pulledStu=true;
-      rs[0].data.forEach(function(r){ remoteStu[slKey(r)]=r; });
-      MIRROR.sl_students=mergeCore(MIRROR.sl_students,rs[0].data,{isPending:function(k){return pendHas(PK_STU+slKey({client_id:k}));}}); mirrorSave('sl_students');
+      rs[0].data.forEach(function(r){ remoteStu[r.client_id]=r; });
+      MIRROR.sl_students=mergeCore(MIRROR.sl_students,rs[0].data,{isPending:function(k){return pendHas(PK_STU+k);}}); mirrorSave('sl_students');
     }
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
-      rs[1].data.forEach(function(r){ remoteTxn[slKey(r)]=r; });
+      rs[1].data.forEach(function(r){ remoteTxn[r.client_id]=r; });
       hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
-      MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+slKey({client_id:k}));}}); mirrorSave('sl_transactions');
+      MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+k);}}); mirrorSave('sl_transactions');
     }
     // slStripSecrets רץ לפני המיזוג — admin_pass אינה נכנסת למראה בשום מסלול.
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
-      setRows.forEach(function(r){ remoteSet[slKeyOf(KV_TABLE,r)]=r; });
-      MIRROR[KV_TABLE]=mergeCore(MIRROR[KV_TABLE],setRows,{key:'key',isPending:function(k){return pendHas(PK_SET+slKeyOf(KV_TABLE,{key:k}));}}); mirrorSave(KV_TABLE);
+      setRows.forEach(function(r){ remoteSet[r.key]=r; });
+      MIRROR[KV_TABLE]=mergeCore(MIRROR[KV_TABLE],setRows,{key:'key',isPending:function(k){return pendHas(PK_SET+k);}}); mirrorSave(KV_TABLE);
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
       pulledLst=true;
-      rs[3].data.forEach(function(r){ remoteLst[slKey(r)]=r; });
-      MIRROR.sl_lists=mergeCore(MIRROR.sl_lists,rs[3].data,{isPending:function(k){return pendHas(PK_LST+slKey({client_id:k}));}}); mirrorSave('sl_lists');
+      rs[3].data.forEach(function(r){ remoteLst[r.client_id]=r; });
+      MIRROR.sl_lists=mergeCore(MIRROR.sl_lists,rs[3].data,{isPending:function(k){return pendHas(PK_LST+k);}}); mirrorSave('sl_lists');
     }
     slApplyMirror();
     pullRender(shell.refreshUI);
@@ -442,7 +437,7 @@ async function ensureCreditMethod(){
 function calcDistribution(sid,year){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
   var cs=s.card_settings||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
-  var txns=S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.date)===year;}).sort(function(a,b){return a.date>b.date?1:-1;});
+  var txns=S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}).sort(function(a,b){return a.txn_date>b.txn_date?1:-1;});
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
   function draw(n){
@@ -498,6 +493,6 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
          pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKey, slKeyOf,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKeyOf,
          slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
          studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

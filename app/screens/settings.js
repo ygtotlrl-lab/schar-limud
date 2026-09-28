@@ -19,7 +19,7 @@ import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, enrollText, findListItem, fmt, isCreditValue,
          monthKeyOf, pcCascadeDelete, pendLstKey, pendLstTag, pendSetKey, pendStuKey,
-         pendStuTag, pendingCid, readMonthRange, releaseCid, slKey, slLocalWrite,
+         pendStuTag, pendingCid, readMonthRange, releaseCid, slLocalWrite,
          slSettingsAccess, slWhoName, studentCredit } from '../domain.js';
 
 // נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
@@ -162,7 +162,7 @@ function saveDefaultTuition(){
 function renderSettingsLists(){
   // יתרת הזכות לשנת הלימודים הנוכחית — שדה נפרד שאינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(dayToday());
-  document.getElementById('set-students-list').innerHTML=S.STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(slKey(s))+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=S.STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.client_id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(s.client_id)+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
 }
 
@@ -170,7 +170,7 @@ function renderSettingsLists(){
 // הסיווג ההיסטורי אינו נשען על הפריט — הוא נקרא מהמחרוזת ששמורה על התנועה.
 function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(S.LISTS[cat]||[]).map(function(i){
   if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.key)+'">&#10005;</button></div>';
+  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
 
 // client_id נוצר במכשיר לפני השליחה — בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת יוצר שורה שנייה.
@@ -193,7 +193,7 @@ function deleteListItem(key){
   if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'bad');return;}
   ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM).then(function(yes){
     if(!yes)return;
-    var r0=(MIRROR.sl_lists||[]).filter(function(x){return slKey(x)===String(key);})[0];
+    var r0=(MIRROR.sl_lists||[]).filter(function(x){return idEq(x.client_id,key);})[0];
     if(!r0){toast(MSG_ITEM_MISSING, null, 'bad');return;}
     var row=Object.assign({},r0,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
     if(!slLocalWrite('sl_lists',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
@@ -228,7 +228,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
   return true;}
 
 // מחיקה פיזית של תלמיד היא מחיקת כל היסטוריית הכספים שלו — המפתח הזר restrict רק עוצר אותה במסד.
-function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return slKey(x)===String(key);})[0];
+function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){return idEq(x.client_id,key);})[0];
  ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
   if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}

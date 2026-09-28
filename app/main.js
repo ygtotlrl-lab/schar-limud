@@ -17,7 +17,7 @@ import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js'
 import { S, shell } from './state.js';
 import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearOf,
          pendTxnKey, slApplyMirror, slDirtyRows,
-         slIsAdmin, slKey, slKeyOf, slSanitizeRows, slSendRows, slTs,
+         slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
 import { closeDashMonth, dashNextYear, dashPrevYear, renderDash, screenDashHTML,
          showDashMonth } from './screens/dash.js';
@@ -186,13 +186,13 @@ var HW_CFG = {
     key: mirrorKey('sl_transactions'),
     label: 'תנועות שנים סגורות',
     inWindow: function (t) {
-      var d = t && t.date;
+      var d = t && t.txn_date;
       if (!d) return true;
       var y = acadYearOf(String(d).slice(0, 10));
       if (!isFinite(y)) return true;
       return y >= acadYearOf(dayToday());
     },
-    idOf: function (r) { return slKey(r); },
+    idOf: function (r) { return r.client_id; },
     ts: function (r) { return slTs(r); },
     isPending: function (r) { return pendHas(pendTxnKey(r)); },
     fetch: async function () {
