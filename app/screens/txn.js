@@ -1,6 +1,6 @@
 // app/screens/txn.js — מסך התשלומים
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
-import { idEq, pendMark, schedulePush, tombKill } from '../../core/sync.js';
+import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { sessUserId } from '../../core/auth.js';
 import { ask, comboDef, comboHTML, comboValue, esc, toast } from '../../core/ui.js';
@@ -9,7 +9,7 @@ import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
-import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey, pendTxnTag, pendingCid,
+import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid,
          releaseCid, slLocalWrite, txnAmountHtml,
          txnMethodPill } from '../domain.js';
 
@@ -91,7 +91,6 @@ async function saveTxn(){
   var row={client_id:cid,student_client_id:sid,txn_date:date,amount:amount,payment_method:method||null,note:note||null,created_by_client_id:sessUserId(),deleted:false,deleted_at:null,deleted_by:null};
   // כשל כתיבה מקומית עוצר כאן ברעש — בכסף אסור להציג «נשמר» על משהו שלא נכתב.
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
-  pendMark(pendTxnKey(row));
   releaseCid('txn');
   document.getElementById('txn-amount').value=S.SETTINGS['default_tuition']||'';
   document.getElementById('txn-note').value='';
@@ -111,7 +110,6 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
   var row=tombKill(Object.assign({},t));
   if(!slLocalWrite('sl_transactions',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
-  pendMark(pendTxnKey(row));
   shell.refreshUI();
   toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();

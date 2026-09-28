@@ -3,7 +3,7 @@ import { MSG_FILL_ALL, MSG_MY_PASS_TITLE, MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP,
          MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          dayToday, uniqHas, withTimeout } from '../../core/util.js';
-import { idEq, newClientId, pendMark, plTouch, schedulePush, tombKill } from '../../core/sync.js';
+import { idEq, newClientId, plTouch, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
          writeUser } from '../../core/auth.js';
@@ -18,8 +18,8 @@ import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, enrollText, findListItem, fmt, isCreditValue,
-         monthKeyOf, pcCascadeDelete, pendLstKey, pendLstTag, pendSetKey, pendStuKey,
-         pendStuTag, pendingCid, readMonthRange, releaseCid, slListId,
+         monthKeyOf, pcCascadeDelete, pendLstTag, pendStuTag, pendingCid, readMonthRange,
+         releaseCid, slListId,
          slLocalWrite, slSettingsAccess, studentCredit } from '../domain.js';
 
 // נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
@@ -154,7 +154,6 @@ function saveDefaultTuition(){
   var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
   var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
   if(!slLocalWrite(KV_TABLE,row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
-  pendMark(pendSetKey(row));
   return true;
 }
 
@@ -182,7 +181,6 @@ function addListItem(cat){
   if(uniqHas(S.LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
   var row={client_id:slListId(cat,val),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_lists',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
-  pendMark(pendLstKey(row));
   return true;
 }
 
@@ -197,7 +195,6 @@ function deleteListItem(key){
     if(!r0){toast(MSG_ITEM_MISSING, null, 'bad');return;}
     var row=tombKill(Object.assign({},r0));
     if(!slLocalWrite('sl_lists',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
-    pendMark(pendLstKey(row));
     shell.refreshUI();
     toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000, 'good');
     schedulePush();
@@ -223,7 +220,6 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
   var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
   var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
-  pendMark(pendStuKey(row));
   releaseCid('student');
   return true;}
 
@@ -234,7 +230,6 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var row=tombKill(Object.assign({},s));
   if(!slLocalWrite('sl_students',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
-  pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
   if(idEq(S.SC_STUDENT_ID, s.client_id)){S.SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');comboSet('sc-student',null);}
   shell.refreshUI();

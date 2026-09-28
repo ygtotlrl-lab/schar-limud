@@ -693,8 +693,20 @@ function plBoot() {
 
 // ── שכבת הדחיפה ──
 // מנה שנכשלה נדחפת שוב שורה-שורה — כתיבת מנה היא הכל-או-כלום.
-// dirty שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נמשכה היה מתיר לפנות רשומה שלא עלתה.
+// rows שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נטענה היה מתיר לפנות רשומה שלא עלתה.
 var _pushTimer = null, _eraHoldSaid = false;
+
+// נדחף רק מה שמסומן ⏳ — הסימון הוא הראיה שהרשומה טרם עלתה, והפינוי והעידן כבר נשענים עליו.
+// האפליקציה מוסרת את הרשומות המקומיות ואת מפתח הסימון בלבד; השוואה לחותמות הענן הייתה מקור אמת שני.
+function pushPending(t, ctx) {
+  return Promise.resolve(app.PUSH_CFG.rows(t, ctx)).then(function (rows) {
+    if (!Array.isArray(rows)) return null;
+    return rows.filter(function (r) {
+      var k = r ? app.PUSH_CFG.key(t, r) : null;
+      return k != null && pendHas(k);
+    });
+  });
+}
 
 // תשובה שנושאת error אינה זורקת מעצמה — הבדיקה שלה היא כאן.
 function pushRow(t, rows) {
@@ -711,7 +723,7 @@ function pushTable(t, ctx) {
     if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
     return Promise.resolve({ ok: false, still: [], n: 0 });
   }
-  return Promise.resolve(app.PUSH_CFG.dirty(t, ctx)).then(function (rows) {
+  return pushPending(t, ctx).then(function (rows) {
     if (!rows) return { ok: false, still: [], n: 0 };
     if (!rows.length) { app.PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
     var still = [], n = 0, bad = 0, i = 0;
