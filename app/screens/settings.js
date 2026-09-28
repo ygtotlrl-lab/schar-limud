@@ -3,11 +3,11 @@ import { MSG_FILL_ALL, MSG_MY_PASS_TITLE, MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP,
          MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          dayToday, uniqHas, withTimeout } from '../../core/util.js';
-import { newClientId, pendMark, plTouch, schedulePush, tombAt } from '../../core/sync.js';
+import { idEq, newClientId, pendMark, plTouch, schedulePush, tombAt } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
          writeUser } from '../../core/auth.js';
-import { ask, closeModal, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
+import { ask, closeModal, comboSet, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
@@ -236,7 +236,7 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   if(!slLocalWrite('sl_students',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendStuKey(row));
   pcCascadeDelete('sl_students',row);
-  if(S.SC_STUDENT_ID===s.id){S.SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');document.getElementById('sd-input-sc').value='';document.getElementById('sd-val-sc').value='';}
+  if(idEq(S.SC_STUDENT_ID, s.client_id)){S.SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');comboSet('sc-student',null);}
   shell.refreshUI();
   toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();

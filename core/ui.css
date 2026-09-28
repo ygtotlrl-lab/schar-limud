@@ -32,6 +32,13 @@ body.locked{overflow:hidden}
 /* גוף או תחתית ריקים אינם תופסים מקום — הריווח של מיכל ריק נראה כחור בדיאלוג. */
 .sheet-bd:empty,
 .sheet-ft:empty{display:none}
+/* ── רשימה נפתחת עם חיפוש ──
+   כאן המבנה בלבד — המראה והמצבים בגיליון של האפליקציה, ואותם מצבים בכל אחת. */
+.combo{position:relative}
+.combo-list{position:absolute;inset-inline:0;top:100%;z-index:var(--z-3);overflow-y:auto}
+.combo-opt{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);width:100%;
+  border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
+.combo-empty{cursor:default}
 /* ── באנר העדכון ──
    יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו. */
 #updater{

@@ -78,7 +78,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   #ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
 }
 @media (hover:hover){
-  .sd-opt:hover{background:var(--brand-soft);color:var(--brand-ink)}
+  .combo-opt:hover{background:var(--brand-soft);color:var(--brand-ink)}
 }
 @keyframes auth-spin{to{transform:rotate(360deg)}}
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:var(--sp-6);overflow:hidden;border:1px solid var(--border)}
@@ -114,9 +114,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 #ask-body{font-size:var(--fs-4);color:var(--text-2)}
 #ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
 #ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
-.sd-wrap{position:relative}
-.sd-list{position:absolute;top:100%;right:0;left:0;background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);max-height:200px;overflow-y:auto;z-index:var(--z-3);box-shadow:0 8px 20px var(--sh-1)}
-.sd-opt{padding:var(--sp-4) var(--sp-5);cursor:pointer;font-size:var(--fs-3);color:var(--text)}
+/* ── רשימה נפתחת עם חיפוש ── */
+.combo-list{background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);max-height:200px;box-shadow:0 8px 20px var(--sh-1)}
+.combo-opt{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-3);color:var(--text)}
+.combo-opt.is-on{background:var(--brand-soft);color:var(--brand-ink)}
+.combo-opt:active{background:var(--brand-soft);color:var(--brand-ink)}
+.combo-opt:focus-visible{background:var(--brand-soft);color:var(--brand-ink);outline:none}
+.combo-empty{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-3);color:var(--text-3)}
+.combo-q{border:2px solid var(--border);font-family:Heebo;font-size:var(--fs-4);outline:none;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-4);transition:border var(--dur-3);width:100%}
+.combo-q:focus{border-color:var(--text)}
+.txn-filter .combo-q{font-size:var(--fs-3)}
 .amt-ok{color:var(--ok);font-weight:700}
 .amt-warn{color:var(--warn);font-weight:700}
 .amt-bad{color:var(--bad);font-weight:700}
@@ -133,9 +140,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .range-hint{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-6)}
 .range-hint-sm{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-2)}
 .ro-note{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-2)}
-.sd-input{border:2px solid var(--border);font-family:Heebo;font-size:var(--fs-4);outline:none;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-4);transition:border var(--dur-3);width:100%}
-.sd-input-sm{font-size:var(--fs-3);border:2px solid var(--border);font-family:Heebo;outline:none;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-4);width:100%}
-.sd-opt-empty{color:var(--text-3);cursor:default}
 .table-scroll{overflow-x:auto}
 
 /* ── מסכים ──

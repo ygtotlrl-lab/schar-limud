@@ -34,6 +34,6 @@ const S = {
 
 // ── מה שמסך צריך מ-main ──
 // main רושם כאן בעלייה — מודול שמייבא מ-main סוגר מעגל, והרישום הוא הכיוון האחד.
-const shell = { refreshUI: null, selectStudent: null, renderTxnLog: null };
+const shell = { refreshUI: null };
 
 export { S, shell };

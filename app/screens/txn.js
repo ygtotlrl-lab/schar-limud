@@ -2,14 +2,14 @@
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, pendMark, schedulePush, tombAt } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, esc, toast } from '../../core/ui.js';
+import { ask, comboDef, comboHTML, comboValue, esc, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
-         MSG_PICK_STUDENT_PLAIN } from '../constants.js';
+         MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey, pendTxnTag, pendingCid,
-         releaseCid, sdSetOptions, slKey, slLocalWrite, slWhoName, txnAmountHtml,
+         releaseCid, slKey, slLocalWrite, slWhoName, txnAmountHtml,
          txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
@@ -20,11 +20,7 @@ function screenTxnHTML() {
     <div class="card-body" data-ks>
       <div class="frm-row">
         <label>תלמיד</label>
-        <div class="sd-wrap">
-          <input aria-label="הקלד לחיפוש" id="sd-input-student" type="text" class="sd-input" placeholder="הקלד לחיפוש..." autocomplete="off" data-sd="student">
-          <div class="hidden sd-list" id="sd-list-student"></div>
-          <input type="hidden" id="sd-val-student">
-        </div>
+        ${comboHTML('student', { id: 'txn-student', label: 'הקלד לחיפוש', placeholder: 'הקלד לחיפוש...' })}
       </div>
       <div class="frm-row">
         <label for="txn-date">תאריך</label>
@@ -51,11 +47,7 @@ function screenTxnHTML() {
   <div class="card">
     <div class="card-hdr">
       <h3>יומן תשלומים</h3>
-      <div class="txn-filter sd-wrap">
-        <input aria-label="סנן לפי תלמיד" id="sd-input-txnfilter" type="text" class="sd-input-sm" placeholder="סנן לפי תלמיד..." autocomplete="off" data-sd="txnfilter">
-        <div class="hidden sd-list" id="sd-list-txnfilter"></div>
-        <input type="hidden" id="sd-val-txnfilter">
-      </div>
+      ${comboHTML('txn-filter', { id: 'txn-filter', cls: 'txn-filter', label: 'סנן לפי תלמיד', placeholder: 'סנן לפי תלמיד...' })}
     </div>
     <div id="txn-log"></div>
   </div>
@@ -63,10 +55,13 @@ function screenTxnHTML() {
 `;
 }
 
+function studentOpts(a){return a.map(function(s){return{id:s.client_id,label:s.name};});}
+
+// תשלום נרשם לתלמיד פעיל בלבד; הסינון ביומן — לכל תלמיד, ו«כולם» הוא ערך ריק.
+comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return s.active;}));}});
+comboDef('txn-filter',{val:true,items:function(){return [{id:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
+
 function updateDropdowns(){
-  var act=S.STUDENTS.filter(function(s){return s.active;});
-  var toOpts=function(a){return a.map(function(s){return{id:s.client_id,label:s.name};});};
-  sdSetOptions('student',toOpts(act));sdSetOptions('sc',toOpts(S.STUDENTS));sdSetOptions('txnfilter',[{id:0,label:'כולם'}].concat(toOpts(S.STUDENTS)));
   var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
   sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.value)+'">'+esc(m.value)+'</option>';});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
@@ -88,7 +83,7 @@ function txnMethodHint(){
 // ── תשלומים — רישום, יומן ומחיקה רכה ──
 // אין לחסום רישום כשאין רשת — חסימה כזו מבטלת את מה שהכתיבה המקומית-תחילה באה לאפשר.
 async function saveTxn(){
-  var sid=document.getElementById('sd-val-student').value,date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
+  var sid=comboValue('txn-student'),date=document.getElementById('txn-date').value,amount=readNum(document.getElementById('txn-amount'), 0),method=document.getElementById('txn-method').value,note=document.getElementById('txn-note').value.trim();
   if(!sid){toast(MSG_PICK_STUDENT_PLAIN, null, 'bad');return;}if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
   // client_id נוצר במכשיר ונקשר לתוכן הטופס — שליחה חוזרת מעדכנת את אותה שורה ואינה מכפילה תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
@@ -103,7 +98,7 @@ async function saveTxn(){
 }
 
 function renderTxnLog(){
-  var fid=document.getElementById('sd-val-txnfilter').value||'';
+  var fid=comboValue('txn-filter');
   var txns=S.TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
   document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';

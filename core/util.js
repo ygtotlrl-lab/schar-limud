@@ -82,6 +82,7 @@ var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
 var MSG_KV_BAD = 'ערך פגום בענן';
 var MSG_LOGIN_ERR = '❌ הכניסה נכשלה — ';
 var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_NO_MATCH = 'אין תוצאות';
 var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
 var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
 var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
@@ -155,7 +156,7 @@ function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 export { app, appConfigure, readNum, uniqList, uniqHas,
          MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
-         MSG_NO_CRYPTO, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
+         MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,
          MSG_PASS_CHANGED_OUT, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED,

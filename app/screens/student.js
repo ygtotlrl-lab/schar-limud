@@ -3,7 +3,7 @@ import { dayToday } from '../../core/util.js';
 import { idEq, pendMark, schedulePush } from '../../core/sync.js';
 import { hwPastLoad } from '../../core/storage.js';
 import { mirrorKey } from '../../core/mirror.js';
-import { esc, toast } from '../../core/ui.js';
+import { comboDef, comboHTML, esc, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
@@ -19,11 +19,7 @@ function screenStudentHTML() {
   <div class="card">
     <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
     <div class="sc-body card-body">
-      <div class="sd-wrap">
-        <input aria-label="בחר תלמיד" id="sd-input-sc" type="text" class="sd-input" placeholder="בחר תלמיד..." autocomplete="off" data-sd="sc">
-        <div class="hidden sd-list" id="sd-list-sc"></div>
-        <input type="hidden" id="sd-val-sc">
-      </div>
+      ${comboHTML('student-card', { id: 'sc-student', label: 'בחר תלמיד', placeholder: 'בחר תלמיד...' })}
     </div>
   </div>
   <div id="sc-main" class="hidden">
@@ -101,6 +97,8 @@ function screenStudentHTML() {
 }
 
 // המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
+comboDef('student-card',{val:true,items:function(){return S.STUDENTS.map(function(s){return{id:s.client_id,label:s.name};});},pick:function(it){if(it)selectStudent(it.id);}});
+
 function selectStudent(id){S.SC_STUDENT_ID=String(id);S.SC_YEAR=null;document.getElementById('sc-main').classList.remove('hidden');renderStudentCard();}
 
 // ── כרטיס התלמיד ──
