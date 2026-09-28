@@ -264,6 +264,18 @@ function pendDrawFlush() {
   pendRender();
   try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.redraw) app.PEND_CFG.redraw(); } catch (e) { }
 }
+// סימון שירד יורד גם מהשורות שכבר צוירו — מונה שהתאפס ליד תגית שנשארה הוא שני מצבים לאותה רשומה.
+// ציור אחד לכל מחזור — דחיפה מנקה שורה-שורה, וציור לכל שורה היה מצייר את המסך מאות פעמים.
+var _pendRedrawTimer = null;
+function pendRedrawSoon() {
+  if (_pendRedrawTimer) return;
+  try {
+    _pendRedrawTimer = setTimeout(function () {
+      _pendRedrawTimer = null;
+      try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.redraw) app.PEND_CFG.redraw(); } catch (e) { }
+    }, 0);
+  } catch (e) { _pendRedrawTimer = null; }
+}
 function pendScheduleFlush() {
   try { setTimeout(pendDrawFlush, PEND_DRAW_DELAY_MS + 50); } catch (e) { }
 }
@@ -345,13 +357,13 @@ function pendMarkMany(keys) {
 function pendClear(key) {
   if (!key) return;
   var m = pendAll();
-  if (m[key]) { delete m[key]; delete _pendDrawHold[key]; pendSave(); pendRender(); }
+  if (m[key]) { delete m[key]; delete _pendDrawHold[key]; pendSave(); pendRender(); pendRedrawSoon(); }
 }
 function pendClearMany(keys) {
   if (!keys || !keys.length) return;
   var m = pendAll(), ch = false;
   for (var i = 0; i < keys.length; i++) if (m[keys[i]]) { delete m[keys[i]]; delete _pendDrawHold[keys[i]]; ch = true; }
-  if (ch) { pendSave(); pendRender(); }
+  if (ch) { pendSave(); pendRender(); pendRedrawSoon(); }
 }
 
 // כשל סמכותי — הכתיבה לא נכנסה, וסימון שנשאר היה מקבע את המונה ואת הניסיון החוזר לנצח.
@@ -366,7 +378,7 @@ function pendConfirmPush(prefix, t0) {
     if (prefix && k.indexOf(prefix) !== 0) return;
     if (m[k] < t0) { delete m[k]; delete _pendDrawHold[k]; ch = true; }
   });
-  if (ch) { pendSave(); pendRender(); }
+  if (ch) { pendSave(); pendRender(); pendRedrawSoon(); }
 }
 
 function pendHas(key) { return !!pendAll()[key]; }
