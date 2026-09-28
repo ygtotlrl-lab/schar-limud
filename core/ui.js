@@ -258,8 +258,11 @@ function pullFlush() {
 // ── Enter שומר בשדה עריכה ──
 // ההיקף הוא הטופס ולא השדה — שדה שנוסף לטופס מקבל את המקש בלי שאיש ייגע בו.
 // textarea אינו נכנס — Enter בו הוא שורה חדשה.
+// הנבחר הוא הכפתור הראשון שגלוי — חלק שהוסתר נשאר בעץ עם כפתוריו, והמקש היה מפעיל פעולה שאינה על המסך.
 function ksFire(scope, attr) {
-  var b = scope.querySelector('[' + attr + ']');
+  var b = Array.prototype.find.call(scope.querySelectorAll('[' + attr + ']'), function (x) {
+    return x.getClientRects().length > 0;
+  });
   if (!b || b.disabled) return false;
   var act = b.getAttribute('data-act');
   var fn = app.DOM_ACTIONS[act];
