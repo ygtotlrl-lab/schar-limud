@@ -419,13 +419,16 @@ function slSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
 
+// המזהה נגזר מהקטגוריה והערך — שני מכשירים שזורעים או מוסיפים את אותו פריט מגיעים לאותה שורה.
+function slListId(cat, val) { return cat + ':' + val; }
+
 async function ensureCreditMethod(){
   if(S._creditSeedDone||!S._lastSyncOk||!navigator.onLine)return;
   if(hasCreditItem()){S._creditSeedDone=true;return;}
   S._creditSeedDone=true;
   try{
     // כתיבה מקומית עם client_id ודחיפה ב-upsert — insert ישיר יוצר שורה שנייה בכל ניסיון חוזר אחרי תשובה שאבדה.
-    var row={client_id:newClientId(),category:'payment_methods',value:CREDIT_METHOD,deleted:false,deleted_at:null,deleted_by:null};
+    var row={client_id:slListId('payment_methods',CREDIT_METHOD),category:'payment_methods',value:CREDIT_METHOD,deleted:false,deleted_at:null,deleted_by:null};
     if(!slLocalWrite('sl_lists',row)){S._creditSeedDone=false;return;}
     pendMark(pendLstKey(row));
     await syncAll();
@@ -493,6 +496,6 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
          pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKeyOf,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKeyOf, slListId,
          slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
          studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

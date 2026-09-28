@@ -19,8 +19,8 @@ import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, enrollText, findListItem, fmt, isCreditValue,
          monthKeyOf, pcCascadeDelete, pendLstKey, pendLstTag, pendSetKey, pendStuKey,
-         pendStuTag, pendingCid, readMonthRange, releaseCid, slLocalWrite,
-         slSettingsAccess, slWhoName, studentCredit } from '../domain.js';
+         pendStuTag, pendingCid, readMonthRange, releaseCid, slListId,
+         slLocalWrite, slSettingsAccess, slWhoName, studentCredit } from '../domain.js';
 
 // נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
 var PASS_SIX_RE = /^[0-9]{6}$/;
@@ -180,7 +180,7 @@ function addListItem(cat){
   var val=v.trim();
   // ההשוואה על הערך ולא על client_id — הרשימה מזינה בוררים, ושתי אפשרויות באותו טקסט אינן ניתנות להבחנה.
   if(uniqHas(S.LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
-  var row={client_id:newClientId(),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:slListId(cat,val),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_lists',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendLstKey(row));
   return true;
