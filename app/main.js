@@ -10,12 +10,13 @@ import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorTables,
 import { bkBoot } from '../core/backup.js';
 import { authUsersTable, lkBoot, lkReset, sessActive, sessGet, sessSet,
          usersSaveAll } from '../core/auth.js';
-import { actRun, closeAsk, closeModal, ksKey, modalBackdrop, modalEsc, swApply,
-         swHideUpdate, toast } from '../core/ui.js';
+import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
+         comboOutside, comboPick, ksKey, modalBackdrop, modalEsc, swApply, swHideUpdate,
+         toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
 import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearOf,
-         pendTxnKey, sdBlur, sdFilter, sdOpen, sdSelectEl, slApplyMirror, slDirtyRows,
+         pendTxnKey, slApplyMirror, slDirtyRows,
          slIsAdmin, slKey, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
 import { closeDashMonth, dashNextYear, dashPrevYear, renderDash, screenDashHTML,
@@ -26,7 +27,7 @@ import { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSetti
          renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
          slMyPassword, slSaveMyPassword, toggleAcc } from './screens/settings.js';
 import { renderScAnnual, renderStudentCard, saveStudentSettings, scPastShow, scSelectYear,
-         screenStudentHTML, selectStudent,
+         screenStudentHTML,
          toggleStudentActive } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
@@ -261,6 +262,7 @@ function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(S.SC_STUDE
 // ── העברת מזהה ל-DOM ──
 // data-id הוא תמיד מחרוזת — ההשוואות עוברות ב-String(key), ואין להחליפן ב-=== על מספר.
 var DOM_ACTIONS = {
+  'combo-pick':          function (el) { return comboPick(el); },
   'sw-apply':            function (el) { swApply(el); },
   'sw-dismiss':          function () { swHideUpdate(); },
   // התראות התשתית נבנות ב-JS — לכן הן מנותבות במפה ולא במאזין ישיר על הכפתור.
@@ -298,6 +300,7 @@ var DOM_ACTIONS = {
 
 // סגירת הרקע קודמת לניתוב — לחיצה על הרקע אינה נושאת data-act.
 document.addEventListener('click', function (ev) {
+  comboOutside(ev);
   if (modalBackdrop(ev)) return;
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
   if (!el) return;
@@ -309,37 +312,19 @@ document.addEventListener('click', function (ev) {
 
 // שמירה בשדה עריכה קודמת לסגירת המודאל — אחרת Escape בשדה שבתוך מודאל היה סוגר אותו במקום לבטל את השדה.
 document.addEventListener('keydown', function (e) {
-  if (ksKey(e)) return;
+  if (comboKey(e) || ksKey(e)) return;
   modalEsc(e);
 });
 
-// בורר החיפוש מסנן בהאצלה — מטפל oninput בתגית אינו רואה שם שחי במודול.
-document.addEventListener('input', function (e) {
-  var el = e.target;
-  if (el && el.dataset && el.dataset.sd) sdFilter(el.dataset.sd);
-});
+document.addEventListener('input', comboInput);
 
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'txn-method') txnMethodHint();
 });
 
-// focus ו-blur אינם מתפשטים — ולכן focusin ו-focusout.
-document.addEventListener('focusin', function (e) {
-  var el = e.target;
-  if (el && el.dataset && el.dataset.sd) sdOpen(el.dataset.sd);
-});
-
-document.addEventListener('focusout', function (e) {
-  var el = e.target;
-  if (el && el.dataset && el.dataset.sd) sdBlur(el.dataset.sd);
-});
-
-// הבחירה נתפסת ב-mousedown ולא ב-click — focusout סוגר את הרשימה לפני שה-click מגיע.
-document.addEventListener('mousedown', function (e) {
-  var el = e.target && e.target.closest ? e.target.closest('[data-sd-opt]') : null;
-  if (el) sdSelectEl(el);
-});
+// focus אינו עולה בעץ — ולכן focusin.
+document.addEventListener('focusin', comboFocus);
 
 // אין שער סיסמה נפרד מעל מסך ההגדרות — ההרשאה נגזרת מתפקיד המשתמש המחובר, ושער כזה נופל בהתקנה טרייה לברירת מחדל שכל אחד מקליד.
 // אין לזרוע ברירת מחדל לסיסמה או לתפקיד — role הוא NOT NULL בלי DEFAULT, וכל מה שאינו בדיוק 'admin' נדחה.
@@ -356,8 +341,6 @@ function showPanel(key,btn){
 // כל הפעלות המודולים המשותפים יושבות כאן — הפעלה שתלויה במסלול אחר, כמו משיכה שהצליחה, נכבית בשקט כשהמסלול אינו רץ.
 async function slBoot(){
   shell.refreshUI = refreshUI;
-  shell.selectStudent = selectStudent;
-  shell.renderTxnLog = renderTxnLog;
   // המכסה משותפת ל-origin כולו — גם אפליקציה שכמעט אינה כותבת נפגעת ממה שאחרות מילאו, ולכן מודדים בעלייה.
   try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
   // הסימונים נטענים לפני הכניסה — רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.

@@ -335,24 +335,6 @@ function findListItem(key){var f=null;Object.keys(S.LISTS).forEach(function(c){(
 
 function hasCreditItem(){return Object.keys(S.LISTS).some(function(c){return (S.LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
 
-var _sdData={},_sdSelected={};
-
-function sdSetOptions(k,o){_sdData[k]=o;}
-
-function sdOpen(k){sdRenderList(k,document.getElementById('sd-input-'+k).value);document.getElementById('sd-list-'+k).classList.remove('hidden');}
-
-function sdFilter(k){var q=document.getElementById('sd-input-'+k).value;if(!q){document.getElementById('sd-val-'+k).value='';_sdSelected[k]=null;}sdRenderList(k,q);document.getElementById('sd-list-'+k).classList.remove('hidden');}
-
-// ה-label עובר ב-data-attributes דרך esc — קוד JS בתוך מאפיין HTML נשבר מכל מרכאה או סוגר בשם
-function sdRenderList(k,q){var l=document.getElementById('sd-list-'+k);if(!l)return;var o=(_sdData[k]||[]).filter(function(x){return!q||x.label.indexOf(q)!==-1;});l.innerHTML=o.length?o.map(function(x){return'<div class="sd-opt" data-sd-opt="'+esc(k)+'" data-id="'+esc(x.id)+'" data-label="'+esc(x.label)+'">'+esc(x.label)+'</div>';}).join(''):'<div class="sd-opt-empty sd-opt">אין תוצאות</div>';}
-
-// המזהה נקרא כמחרוזת — client_id הוא text, ו-parseInt עליו מחזיר NaN
-function sdSelectEl(el){sdSelect(el.getAttribute('data-sd-opt'),el.getAttribute('data-id'),el.getAttribute('data-label'));}
-
-function sdSelect(k,id,label){document.getElementById('sd-input-'+k).value=label;document.getElementById('sd-val-'+k).value=id;document.getElementById('sd-list-'+k).classList.add('hidden');_sdSelected[k]={id:id,label:label};if(k==='sc')shell.selectStudent(id);if(k==='txnfilter')shell.renderTxnLog();}
-
-function sdBlur(k){setTimeout(function(){var e=document.getElementById('sd-list-'+k);if(e)e.classList.add('hidden');},160);}
-
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 
 // שליפה בעמודים חייבת סדר יציב — בלי ORDER BY פוסטגרס אינו מבטיח אותו
@@ -529,7 +511,6 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
          pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, sdBlur, sdFilter, sdOpen, sdSelectEl,
-         sdSetOptions, slApplyMirror, slDirtyRows, slIsAdmin, slKey, slKeyOf,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKey, slKeyOf,
          slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
          studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

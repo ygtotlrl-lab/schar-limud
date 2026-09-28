@@ -1,6 +1,6 @@
 // core/ui.js — שכבת התצוגה המשותפת
 
-import { MSG_SW_TIMEOUT, app } from './util.js';
+import { MSG_NO_MATCH, MSG_SW_TIMEOUT, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 
 // ── כפתור עסוק ──
@@ -258,8 +258,11 @@ function pullFlush() {
 // ── Enter שומר בשדה עריכה ──
 // ההיקף הוא הטופס ולא השדה — שדה שנוסף לטופס מקבל את המקש בלי שאיש ייגע בו.
 // textarea אינו נכנס — Enter בו הוא שורה חדשה.
+// הנבחר הוא הכפתור הראשון שגלוי — חלק שהוסתר נשאר בעץ עם כפתוריו, והמקש היה מפעיל פעולה שאינה על המסך.
 function ksFire(scope, attr) {
-  var b = scope.querySelector('[' + attr + ']');
+  var b = Array.prototype.find.call(scope.querySelectorAll('[' + attr + ']'), function (x) {
+    return x.getClientRects().length > 0;
+  });
   if (!b || b.disabled) return false;
   var act = b.getAttribute('data-act');
   var fn = app.DOM_ACTIONS[act];
@@ -287,7 +290,208 @@ function ksKey(e) {
   return true;
 }
 
+// ── רשימה נפתחת עם חיפוש ──
+// הרכיב נושא את השדה, הסינון, הרשימה והבחירה; האפליקציה מגדירה ב-comboDef את הפריטים ואת מה שקורה בבחירה.
+// הסגירה בלחיצה מחוץ לרכיב ולא ב-focusout — במגע הכפתור אינו מקבל מיקוד, ו-focusout היה סוגר את הרשימה לפני שהלחיצה נוחתת.
+var _combo = {}, _comboOpen = null;
+function comboDef(kind, cfg) { _combo[kind] = cfg; }
+function comboCfg(root) {
+  var kind = root.getAttribute('data-combo');
+  if (!_combo[kind]) console.error('[combo] סוג שלא הוגדר: ' + kind);
+  return _combo[kind];
+}
+function comboQ(root) { return root.querySelector('[data-combo-q]'); }
+// o: id · label · placeholder · value ({ id, label }) · qid · cls
+function comboHTML(kind, o) {
+  var cfg = _combo[kind] || {}, v = o.value || null;
+  return '<div class="combo' + (o.cls ? ' ' + o.cls : '') + '" id="' + esc(o.id) + '" data-combo="' + esc(kind) + '">' +
+    '<input type="text" class="combo-q" data-combo-q' + (o.qid ? ' id="' + esc(o.qid) + '"' : '') +
+      ' aria-label="' + esc(o.label) + '" placeholder="' + esc(o.placeholder || o.label) + '"' +
+      ' role="combobox" aria-expanded="false" aria-autocomplete="list" autocomplete="off"' +
+      ' value="' + esc(v ? v.label : '') + '">' +
+    (cfg.val ? '<input type="hidden" data-combo-val value="' + esc(v ? v.id : '') + '">' : '') +
+    '<div class="combo-list hidden" data-combo-list role="listbox"></div>' +
+  '</div>';
+}
+function comboValue(id) {
+  var el = document.getElementById(id), v = el ? el.querySelector('[data-combo-val]') : null;
+  if (!v) { console.error('[combo] אין ערך לרכיב #' + id); return ''; }
+  return v.value;
+}
+// ההדגשה נבנית על הטקסט הגולמי ורק אז עוברת בריחה — ביטוי על טקסט שכבר עבר בריחה אינו מוצא «&» או «"».
+function comboMark(label, q) {
+  var s = String(label), low = s.toLowerCase(), out = '', i = 0, j;
+  if (!q) return esc(s);
+  while ((j = low.indexOf(q, i)) >= 0) {
+    out += esc(s.slice(i, j)) + '<mark>' + esc(s.slice(j, j + q.length)) + '</mark>';
+    i = j + q.length;
+  }
+  return out + esc(s.slice(i));
+}
+function comboClose(root) {
+  var list = root.querySelector('[data-combo-list]'), q = comboQ(root);
+  if (list) { list.classList.add('hidden'); list.innerHTML = ''; }
+  if (q) q.setAttribute('aria-expanded', 'false');
+  if (_comboOpen === root) _comboOpen = null;
+}
+function comboPaint(root) {
+  var cfg = comboCfg(root), q = comboQ(root), list = root.querySelector('[data-combo-list]');
+  if (!cfg || !q || !list) { console.error('[combo] רכיב חסר חלק: #' + root.id); return; }
+  var ql = q.value.trim().toLowerCase();
+  if (!ql && cfg.focusOpen === false) { comboClose(root); return; }
+  var items = (cfg.items() || []).filter(function (it) {
+    return !ql || String(it.find != null ? it.find : it.label).toLowerCase().indexOf(ql) >= 0;
+  });
+  if (cfg.max) items = items.slice(0, cfg.max);
+  root._comboItems = items;
+  var h = items.map(function (it, i) {
+    return '<button type="button" class="combo-opt' + (i ? '' : ' is-on') + '" role="option" data-act="combo-pick" data-combo-opt="' + i + '">' +
+      '<span class="combo-lbl">' + (cfg.hl ? comboMark(it.label, ql) : esc(it.label)) + '</span>' +
+      (it.sub ? '<span class="combo-sub">' + esc(it.sub) + '</span>' : '') + '</button>';
+  }).join('');
+  if (cfg.make) h += '<button type="button" class="combo-opt combo-make' + (items.length ? '' : ' is-on') + '" data-act="combo-make" data-combo-opt="make">' + esc(cfg.makeLabel(q.value.trim())) + '</button>';
+  else if (!items.length) h = '<div class="combo-empty">' + esc(MSG_NO_MATCH) + '</div>';
+  if (_comboOpen && _comboOpen !== root) comboClose(_comboOpen);
+  list.innerHTML = h;
+  list.classList.remove('hidden');
+  q.setAttribute('aria-expanded', 'true');
+  _comboOpen = root;
+}
+// בחירה ממלאת את השדה ואת הערך הנסתר, ואז עוברת לאפליקציה — ו-null מנקה את שניהם.
+function comboChoose(root, it) {
+  var cfg = comboCfg(root), q = comboQ(root), v = root.querySelector('[data-combo-val]');
+  if (q) q.value = it ? it.label : '';
+  if (v) v.value = it ? it.id : '';
+  comboClose(root);
+  return cfg && cfg.pick ? cfg.pick(it, root) : undefined;
+}
+function comboSet(id, it) {
+  var root = document.getElementById(id);
+  if (!root) { console.error('[combo] אין רכיב #' + id); return; }
+  return comboChoose(root, it);
+}
+function comboPick(el) {
+  var root = el.closest('[data-combo]');
+  var it = root && root._comboItems ? root._comboItems[+el.getAttribute('data-combo-opt')] : null;
+  if (!it) { console.error('[combo] פריט שאינו ברשימה'); return; }
+  return comboChoose(root, it);
+}
+function comboMake(el) {
+  var root = el.closest('[data-combo]'), cfg = root ? comboCfg(root) : null;
+  if (!cfg || !cfg.make) return;
+  var q = comboQ(root).value.trim();
+  comboClose(root);
+  return cfg.make(q, root);
+}
+// טקסט שנערך אחרי בחירה אינו הערך שנבחר — הערך מתנקה, והאפליקציה שומעת על כך.
+function comboInput(e) {
+  var t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute('data-combo-q')) return false;
+  var root = t.closest('[data-combo]'), cfg = comboCfg(root), v = root.querySelector('[data-combo-val]');
+  if (!cfg) return true;
+  if (v && v.value) { v.value = ''; if (cfg.pick) cfg.pick(null, root); }
+  if (cfg.query) cfg.query(t.value, root);
+  comboPaint(root);
+  return true;
+}
+function comboFocus(e) {
+  var t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute('data-combo-q')) return false;
+  var root = t.closest('[data-combo]'), cfg = comboCfg(root);
+  if (cfg && cfg.focusOpen !== false) comboPaint(root);
+  return true;
+}
+function comboOutside(e) {
+  if (!_comboOpen) return;
+  if (!_comboOpen.isConnected) { _comboOpen = null; return; }
+  var r = e.target && e.target.closest ? e.target.closest('[data-combo]') : null;
+  if (r !== _comboOpen) comboClose(_comboOpen);
+}
+// נקרא מהמאזין האחד לפני ksKey — Enter ברשימה פתוחה בוחר, ו-Escape סוגר אותה ולא את הדיאלוג.
+function comboKey(e) {
+  var t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute('data-combo-q') || e.isComposing) return false;
+  var root = t.closest('[data-combo]');
+  var open = _comboOpen === root;
+  if (e.key === 'Tab') { if (open) comboClose(root); return false; }
+  if (e.key === 'ArrowDown' && !open) { comboPaint(root); e.preventDefault(); return true; }
+  if (!open) return false;
+  var opts = Array.prototype.slice.call(root.querySelectorAll('[data-combo-opt]'));
+  var cur = root.querySelector('[data-combo-opt].is-on');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (!opts.length) return false;
+    var i = opts.indexOf(cur) + (e.key === 'ArrowDown' ? 1 : -1);
+    i = (i + opts.length) % opts.length;
+    if (cur) cur.classList.remove('is-on');
+    opts[i].classList.add('is-on');
+    opts[i].scrollIntoView({ block: 'nearest' });
+    e.preventDefault();
+    return true;
+  }
+  if (e.key === 'Escape') { comboClose(root); e.preventDefault(); return true; }
+  if (e.key !== 'Enter' || !cur) return false;
+  e.preventDefault();
+  if (cur.getAttribute('data-combo-opt') === 'make') comboMake(cur); else comboPick(cur);
+  return true;
+}
+
+// ── גרירה לסידור ──
+// על אירועי מצביע ולא HTML5 — dragstart, dragover ו-drop אינם נורים במגע. הגרירה מתחילה מהידית בלבד — שורה שכולה נגררת חוטפת את הגלילה.
+// המנגנון מזיז בעץ ומחיל בשחרור את מה שהאפליקציה הגדירה ב-dragDef לסוג; סוג בלי מחיל מסתיים בלי כתיבה.
+var _dragApply = {}, _drag = null;
+function dragDef(kind, apply) { _dragApply[kind] = apply; }
+function dragOrder(list, kind, attr) {
+  return Array.prototype.filter.call(list.children, function (x) {
+    return x.getAttribute('data-drag') === kind;
+  }).map(function (x) { return x.getAttribute(attr); });
+}
+function dragDown(e) {
+  var g = e.target && e.target.closest ? e.target.closest('[data-grip]') : null;
+  var el = g ? g.closest('[data-drag]') : null;
+  if (!el) return false;
+  _drag = { el: el, list: el.parentNode, home: el.nextSibling, kind: el.getAttribute('data-drag'), moved: false };
+  el.classList.add('dragging');
+  // בלי לכידת המצביע אצבע שיוצאת מגבול האלמנט מפסיקה לשדר, והגרירה נתקעת.
+  try { g.setPointerCapture(e.pointerId); } catch (e1) {}
+  e.preventDefault();
+  return true;
+}
+function dragMove(e) {
+  if (!_drag) return false;
+  e.preventDefault();
+  var over = document.elementFromPoint(e.clientX, e.clientY);
+  var el = over && over.closest ? over.closest('[data-drag="' + _drag.kind + '"]') : null;
+  if (!el || el === _drag.el || el.parentNode !== _drag.list) return true;
+  _drag.moved = true;
+  // הציר נקרא מ-data-drag-axis של המיכל; בציר האופקי הכיוון מהמסמך — בימין-לשמאל nextSibling יושב משמאל.
+  var r = el.getBoundingClientRect(), after;
+  if (_drag.list.getAttribute('data-drag-axis') === 'x') {
+    var rtl = getComputedStyle(_drag.list).direction === 'rtl';
+    after = rtl ? e.clientX < r.left + r.width / 2 : e.clientX > r.left + r.width / 2;
+  } else after = e.clientY > r.top + r.height / 2;
+  _drag.list.insertBefore(_drag.el, after ? el.nextSibling : el);
+  return true;
+}
+function dragUp() {
+  if (!_drag) return false;
+  var d = _drag; _drag = null;
+  d.el.classList.remove('dragging');
+  var fn = _dragApply[d.kind];
+  if (d.moved && fn) fn(d.list, d.kind);
+  return true;
+}
+// גרירה שבוטלה — גלילה שהדפדפן לקח, שיחה נכנסת — מחזירה את הפריט למקומו ואינה מחילה.
+function dragCancel() {
+  if (!_drag) return false;
+  var d = _drag; _drag = null;
+  d.el.classList.remove('dragging');
+  if (d.moved) d.list.insertBefore(d.el, d.home);
+  return true;
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { actRun, ask, busy, closeAsk, closeModal, esc, ksKey, lsToast,
-         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply,
-         swHideUpdate, swShowUpdate, toast, uiNoDialog };
+export { actRun, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
+         comboInput, comboKey, comboMake, comboOutside, comboPick, comboSet, comboValue,
+         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lsToast,
+         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         swShowUpdate, toast, uiNoDialog };
