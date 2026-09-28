@@ -4,7 +4,7 @@
 - **ריפו:** `ygtotlrl-lab/schar-limud`
 - **GitHub Pages:** כתובת האפליקציה — `android.url` שבתצורה
 - **טוקן:** מנוהל ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ
-- **קובץ ראשי:** `index.html`
+- **הקוד:** `index.html` (הקליפה) · `app/` · `core/`
 - **Supabase:** project — `supabase.url` שבתצורה | טבלאות `sl_*`
 
 ---
@@ -26,7 +26,7 @@ alter table public.TABLE_NAME enable row level security;
 סטנדרטי מגיע עם `alter default privileges … grant all on tables` — כלומר
 **כל טבלה נולדת עם `DELETE` ו-`TRUNCATE`**. מחיקה כאן היא תמיד `deleted=true`,
 ולכן ההרשאות האלה מיותרות בהגדרה ומסוכנות בפועל: מפתח ה-anon יושב גלוי
-ב-`index.html` הציבורי.
+ב-`app.config.js` הציבורי.
 
 ⚠️ **ושמות הטבלאות נגזרים מתפקידן** — ⭐ `<תחילית>_settings` · `_users` ·
 `_entries`: ⛔ ולא לפי מה שנשמע טוב.
