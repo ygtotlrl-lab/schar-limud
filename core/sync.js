@@ -1,6 +1,6 @@
 // core/sync.js — סנכרון, מיזוג ודחיפה
 
-import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, isNetErr,
+import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, withTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
@@ -81,6 +81,28 @@ function tombStamp(r) {
 // אל תקרא לשעון כשיש חותמת — דחיפה חוזרת של אותה מצבה הייתה מזיזה את זמן המחיקה.
 function tombAt(ts) {
   return new Date((typeof ts === 'number' && isFinite(ts)) ? ts : Date.now()).toISOString();
+}
+
+// ── מחיקה ──
+// כל מחיקה — רשומה או פריט בתוך JSON — עוברת כאן: ארבעת השדות ברגע אחד, ו-deleted_at הוא רגע ה-updated_at שלה.
+// ts משותף למחיקה של כמה רשומות באירוע אחד — שתי חותמות לאירוע אחד הן שתי הכרעות במנוע המיזוג.
+function tombKill(r, ts) {
+  if (!r || typeof r !== 'object') return r;
+  var t = (typeof ts === 'number' && isFinite(ts)) ? ts : Date.now();
+  r.deleted = true;
+  r.updated_at = t;
+  r.deleted_at = tombAt(t);
+  r.deleted_by = getDeviceId();
+  return r;
+}
+// הבן יורש את ארבעת השדות מהאב — מחיקת אב ובניו היא אירוע אחד.
+function tombInherit(parent, kid) {
+  if (!kid || typeof kid !== 'object' || !parent) return kid;
+  kid.deleted = true;
+  kid.updated_at = parent.updated_at;
+  kid.deleted_at = parent.deleted_at;
+  kid.deleted_by = parent.deleted_by;
+  return kid;
 }
 
 function prunePastTombstones(arr, nowTs) {
@@ -944,7 +966,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, tombAt, TOMBSTONE_TTL_MS,
+export { newClientId, idEq, mergeCore, tombAt, tombInherit, tombKill, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,

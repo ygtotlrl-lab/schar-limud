@@ -3,7 +3,7 @@ import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
          kvParse } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
-         pendTag, pushDirty, rtyNote, schedulePush } from '../core/sync.js';
+         pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
@@ -158,11 +158,12 @@ function slApplyMirror() {
 }
 
 // מחזירה false כשהכתיבה ל-localStorage נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
-function slLocalWrite(tbl, row) {
+// ts — חותמת המחיקה, כדי ש-deleted_at יישאר רגע ה-updated_at שלה.
+function slLocalWrite(tbl, row, ts) {
   if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
   // localStorage משותף ל-origin כולו — שורת סוד אינה נכתבת מקומית לעולם
   if (tbl === KV_TABLE && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
-  row.updated_at = Date.now(); // חותמת המכשיר ולא של השרת
+  row.updated_at = (typeof ts === 'number') ? ts : Date.now(); // חותמת המכשיר ולא של השרת
   var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
   for (var i = 0; i < arr.length; i++) {
     if (slKeyOf(tbl, arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
@@ -174,16 +175,6 @@ function slLocalWrite(tbl, row) {
   rtyNote();
   schedulePush();
   return true;
-}
-
-// הבן מקבל את חותמת המחיקה של האב ולא Date.now() — שתי חותמות לאותה מחיקה הן שתי הכרעות נפרדות במנוע המיזוג
-function pcChildKill(parent, kid) {
-  return Object.assign({}, kid, {
-    deleted: !!parent.deleted,
-    deleted_at: (parent.deleted_at === undefined) ? null : parent.deleted_at,
-    deleted_by: (parent.deleted_by === undefined) ? null : parent.deleted_by,
-    updated_at: parent.updated_at
-  });
 }
 
 // המקום היחיד שאומר מי הבן — בן שיש לו מפתח אב במסד ואינו כאן לא יקבל את מחיקת האב
@@ -198,7 +189,7 @@ function pcCascadeDelete(table, parent) {
     var k = kids[i], arr = MIRROR[k.t] || [], c = 0;
     for (var j = 0; j < arr.length; j++) {
       if (arr[j].deleted || !idEq(arr[j][k.fk], pid)) continue;
-      arr[j] = pcChildKill(parent, arr[j]);
+      arr[j] = tombInherit(parent, Object.assign({}, arr[j]));
       pendMark(k.pk + arr[j].client_id);
       c++;
     }

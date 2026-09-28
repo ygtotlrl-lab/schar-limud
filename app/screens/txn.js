@@ -1,6 +1,6 @@
 // app/screens/txn.js — מסך התשלומים
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
-import { idEq, pendMark, schedulePush, tombAt } from '../../core/sync.js';
+import { idEq, pendMark, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, comboDef, comboHTML, comboValue, esc, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
@@ -108,8 +108,8 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
-  var row=Object.assign({},t,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
-  if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
+  var row=tombKill(Object.assign({},t));
+  if(!slLocalWrite('sl_transactions',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
   shell.refreshUI();
   toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
