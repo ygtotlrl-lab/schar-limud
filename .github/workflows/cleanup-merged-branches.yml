@@ -1,6 +1,6 @@
 name: cleanup-merged-branches
 
-# .github/workflows/cleanup-merged-branches.yml — מחיקת ענפי claude/ שמוזגו ל-main
+# .github/workflows/cleanup-merged-branches.yml — מחיקת ענפי claude/ ו-ccr- שמוזגו ל-main
 
 on:
   push:
@@ -19,16 +19,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Delete fully-merged claude/ branches
+      - name: Delete fully-merged claude/ and ccr- branches
         run: |
           set -u
           git fetch origin --prune --quiet
           deleted=0; skipped=0
           for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/); do
             branch="${ref#refs/remotes/origin/}"
-            # קו הגנה ראשון: רק ענפי claude/ — כל ענף אחר, כולל main, אינו נבדק כלל.
+            # קו הגנה ראשון: רק ענפי claude/ ו-ccr- — כל ענף אחר, כולל main, אינו נבדק כלל.
             case "$branch" in
-              claude/*) ;;
+              claude/*|ccr-*) ;;
               *) continue ;;
             esac
             # קו הגנה שני: נמחק רק ענף שה-HEAD שלו כבר בתוך main.
