@@ -3,8 +3,7 @@ import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
          kvParse } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
-         pendTag, pushDirty, rtyNote, schedulePush,
-         tombPruneMerged } from '../core/sync.js';
+         pendTag, pushDirty, rtyNote, schedulePush } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
@@ -112,18 +111,6 @@ function slKeyOf(t, r) {
 function slTs(r) {
   var x = r && r.updated_at != null ? Number(r.updated_at) : NaN;
   return isFinite(x) ? x : 0;
-}
-
-// isPending מנצח בלי תלות בחותמת — חותמת שווה נופלת לענף «הענן מנצח», ועריכה שלא אושרה הייתה נעלמת בשקט
-// dedupe: false — בכסף כפילות גלויה עדיפה על איחוד שקט שמעלים תנועה
-// keyOf(r) || null — slKey מחזירה '' והליבה בודקת == null; מחרוזת ריקה הייתה מפתח שכל חסרי-הזהות מתנגשים בו
-function slMerge(local, remote, isPending, keyOf) {
-  var kf = keyOf || slKey;
-  return tombPruneMerged(mergeCore(local, remote, {
-    getKey: function (r) { return kf(r) || null; },
-    ts: slTs, isPending: isPending, keepUnversionedLocal: true,
-    dedupe: false, keyless: 'keep-remote', localPick: 'last'
-  }));
 }
 
 // שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות, כדי שגם נתיב כתיבה חדש לא ידליף ל-localStorage המשותף ל-origin
@@ -373,25 +360,25 @@ async function syncAll(){
     if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
       pulledStu=true;
       rs[0].data.forEach(function(r){ remoteStu[slKey(r)]=r; });
-      MIRROR.sl_students=slMerge(MIRROR.sl_students,rs[0].data,function(k){return pendHas(PK_STU+k);}); mirrorSave('sl_students');
+      MIRROR.sl_students=mergeCore(MIRROR.sl_students,rs[0].data,{isPending:function(k){return pendHas(PK_STU+slKey({client_id:k}));}}); mirrorSave('sl_students');
     }
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
       rs[1].data.forEach(function(r){ remoteTxn[slKey(r)]=r; });
       hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
-      MIRROR.sl_transactions=slMerge(MIRROR.sl_transactions,rs[1].data,function(k){return pendHas(PK_TXN+k);}); mirrorSave('sl_transactions');
+      MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+slKey({client_id:k}));}}); mirrorSave('sl_transactions');
     }
     // slStripSecrets רץ לפני המיזוג — admin_pass אינה נכנסת למראה בשום מסלול.
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
       setRows.forEach(function(r){ remoteSet[slKeyOf(KV_TABLE,r)]=r; });
-      MIRROR[KV_TABLE]=slMerge(MIRROR[KV_TABLE],setRows,function(k){return pendHas(PK_SET+k);},function(r){return slKeyOf(KV_TABLE,r);}); mirrorSave(KV_TABLE);
+      MIRROR[KV_TABLE]=mergeCore(MIRROR[KV_TABLE],setRows,{key:'key',isPending:function(k){return pendHas(PK_SET+slKeyOf(KV_TABLE,{key:k}));}}); mirrorSave(KV_TABLE);
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
       pulledLst=true;
       rs[3].data.forEach(function(r){ remoteLst[slKey(r)]=r; });
-      MIRROR.sl_lists=slMerge(MIRROR.sl_lists,rs[3].data,function(k){return pendHas(PK_LST+k);}); mirrorSave('sl_lists');
+      MIRROR.sl_lists=mergeCore(MIRROR.sl_lists,rs[3].data,{isPending:function(k){return pendHas(PK_LST+slKey({client_id:k}));}}); mirrorSave('sl_lists');
     }
     slApplyMirror();
     pullRender(shell.refreshUI);

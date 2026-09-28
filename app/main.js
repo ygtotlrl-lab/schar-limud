@@ -7,7 +7,7 @@ import { _eraPush, ctxEpoch, ctxStale, eraKeys, eraKick, pendAlertDismiss, pendB
 import { hwBoot, lsBoot, lsClearHorizons, lsRemove } from '../core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorTables,
          mirrorWrite } from '../core/mirror.js';
-import { bkBoot } from '../core/backup.js';
+import { bkBoot, logAwait } from '../core/backup.js';
 import { authUsersTable, lkBoot, lkReset, sessActive, sessGet, sessSet,
          usersSaveAll } from '../core/auth.js';
 import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
@@ -54,7 +54,6 @@ appConfigure({
 // tables היא פונקציה ולא מערך — PUSH_TABLES מוצהר אחרי הבלוק, וקריאה כאן הייתה מקבלת undefined
 var MIRROR_CFG = {
   prefix: self.APP.prefix + 'mirror_',
-  app:    self.APP.prefix,
   tables: function () { return PUSH_TABLES.concat([authUsersTable()]); },
   noPush: [{ t: 'sl_users', via: 'writeUser', adds: 'secret' }],
   empty:  function () { return []; },
@@ -125,7 +124,7 @@ var BK_CFG = {
 };
 
 var PEND_CFG = {
-  app: 'schar-limud', key: 'sl_pending',
+  key: 'sl_pending',
   // סימון שקידומתו אינה כאן יורד בעלייה — אין לו כותב ואין שורה שתידחף ותוריד אותו
   marks: function () { return PUSH_TABLES.map(function (t) { return _slPushOf(t).pk; }); },
   // בתום ההחזקה, תגית ממתין שנותרה צריכה להיכנס לשורות שכבר צוירו בלעדיה
@@ -219,7 +218,8 @@ var ERA_CFG = {
   },
   // מחזור הסנכרון בונה את מפות הענן, ובלעדיהן שכבת הדחיפה מחזירה «אין ראיה» — ולכן התוצאה נאספת ממנו
   push:   function () { return syncAll().then(function () { return _eraPush; }); },
-  refresh: function () { return syncAll(); }
+  refresh: function () { return syncAll(); },
+  log:    function (action, entries) { return logAwait(action, entries); }
 };
 
 var USER_CFG = {

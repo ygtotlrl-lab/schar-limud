@@ -55,11 +55,11 @@ function screenTxnHTML() {
 `;
 }
 
-function studentOpts(a){return a.map(function(s){return{id:s.client_id,label:s.name};});}
+function studentOpts(a){return a.map(function(s){return{value:s.client_id,label:s.name};});}
 
 // תשלום נרשם לתלמיד פעיל בלבד; הסינון ביומן — לכל תלמיד, ו«כולם» הוא ערך ריק.
 comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return s.active;}));}});
-comboDef('txn-filter',{val:true,items:function(){return [{id:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
+comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
 function updateDropdowns(){
   var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;

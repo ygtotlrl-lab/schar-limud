@@ -235,7 +235,7 @@ function swNetworkFirst(request) {
   });
 }
 
-// מטמון-קודם ורענון ברקע — ידית שנמדדה; אין להפוך ל-network-first «לשם אחידות».
+// מטמון-קודם ורענון ברקע — תת-משאב נענה מהמכשיר גם ברשת איטית, והרענון ברקע מביא את הגרסה הבאה בלי להמתין לה.
 // קובץ מהקליפה אינו מתרענן ברקע — קוד חדש במטמון הישן פוגש בטעינה הבאה את הדף הישן.
 function swCacheFirst(request, u) {
   return caches.open(CACHE_NAME).then(function (cache) {

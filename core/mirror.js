@@ -9,7 +9,7 @@ import { hwDiskFilter, lsGet, lsSetArray } from './storage.js';
 var MIRROR = {};
 // תחילית האפליקציה נגרעת משם הטבלה — היא כבר ב-MIRROR_CFG.prefix, ושמה פעמיים מייצר מפתח שאיש אינו מחפש.
 function mirrorKey(t) {
-  var s = String(t), p = app.MIRROR_CFG.app;
+  var s = String(t), p = self.APP.prefix;
   return app.MIRROR_CFG.prefix + (p && s.indexOf(p) === 0 ? s.slice(p.length) : s);
 }
 function mirrorTables() { return app.MIRROR_CFG.tables(); }

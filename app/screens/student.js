@@ -97,7 +97,7 @@ function screenStudentHTML() {
 }
 
 // המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
-comboDef('student-card',{val:true,items:function(){return S.STUDENTS.map(function(s){return{id:s.client_id,label:s.name};});},pick:function(it){if(it)selectStudent(it.id);}});
+comboDef('student-card',{val:true,items:function(){return S.STUDENTS.map(function(s){return{value:s.client_id,label:s.name};});},pick:function(it){if(it)selectStudent(it.value);}});
 
 function selectStudent(id){S.SC_STUDENT_ID=String(id);S.SC_YEAR=null;document.getElementById('sc-main').classList.remove('hidden');renderStudentCard();}
 
