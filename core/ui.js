@@ -432,8 +432,63 @@ function comboKey(e) {
   return true;
 }
 
+// ── גרירה לסידור ──
+// על אירועי מצביע ולא HTML5 — dragstart, dragover ו-drop אינם נורים במגע. הגרירה מתחילה מהידית בלבד — שורה שכולה נגררת חוטפת את הגלילה.
+// המנגנון מזיז בעץ ומחיל בשחרור את מה שהאפליקציה הגדירה ב-dragDef לסוג; סוג בלי מחיל מסתיים בלי כתיבה.
+var _dragApply = {}, _drag = null;
+function dragDef(kind, apply) { _dragApply[kind] = apply; }
+function dragOrder(list, kind, attr) {
+  return Array.prototype.filter.call(list.children, function (x) {
+    return x.getAttribute('data-drag') === kind;
+  }).map(function (x) { return x.getAttribute(attr); });
+}
+function dragDown(e) {
+  var g = e.target && e.target.closest ? e.target.closest('[data-grip]') : null;
+  var el = g ? g.closest('[data-drag]') : null;
+  if (!el) return false;
+  _drag = { el: el, list: el.parentNode, home: el.nextSibling, kind: el.getAttribute('data-drag'), moved: false };
+  el.classList.add('dragging');
+  // בלי לכידת המצביע אצבע שיוצאת מגבול האלמנט מפסיקה לשדר, והגרירה נתקעת.
+  try { g.setPointerCapture(e.pointerId); } catch (e1) {}
+  e.preventDefault();
+  return true;
+}
+function dragMove(e) {
+  if (!_drag) return false;
+  e.preventDefault();
+  var over = document.elementFromPoint(e.clientX, e.clientY);
+  var el = over && over.closest ? over.closest('[data-drag="' + _drag.kind + '"]') : null;
+  if (!el || el === _drag.el || el.parentNode !== _drag.list) return true;
+  _drag.moved = true;
+  // הציר נקרא מ-data-drag-axis של המיכל; בציר האופקי הכיוון מהמסמך — בימין-לשמאל nextSibling יושב משמאל.
+  var r = el.getBoundingClientRect(), after;
+  if (_drag.list.getAttribute('data-drag-axis') === 'x') {
+    var rtl = getComputedStyle(_drag.list).direction === 'rtl';
+    after = rtl ? e.clientX < r.left + r.width / 2 : e.clientX > r.left + r.width / 2;
+  } else after = e.clientY > r.top + r.height / 2;
+  _drag.list.insertBefore(_drag.el, after ? el.nextSibling : el);
+  return true;
+}
+function dragUp() {
+  if (!_drag) return false;
+  var d = _drag; _drag = null;
+  d.el.classList.remove('dragging');
+  var fn = _dragApply[d.kind];
+  if (d.moved && fn) fn(d.list, d.kind);
+  return true;
+}
+// גרירה שבוטלה — גלילה שהדפדפן לקח, שיחה נכנסת — מחזירה את הפריט למקומו ואינה מחילה.
+function dragCancel() {
+  if (!_drag) return false;
+  var d = _drag; _drag = null;
+  d.el.classList.remove('dragging');
+  if (d.moved) d.list.insertBefore(d.el, d.home);
+  return true;
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
          comboInput, comboKey, comboMake, comboOutside, comboPick, comboSet, comboValue,
-         esc, ksKey, lsToast, modalBackdrop, modalEsc, openModal, pullRender, shellBare,
-         swApply, swHideUpdate, swShowUpdate, toast, uiNoDialog };
+         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lsToast,
+         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         swShowUpdate, toast, uiNoDialog };
