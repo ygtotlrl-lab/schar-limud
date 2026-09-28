@@ -184,7 +184,7 @@ function swCachePut(cache, url, opts) {
   });
 }
 
-// install אינו רץ שוב לאותו CACHE_NAME, והדף מבקש סקריפט CDN כ-no-cors (opaque, לא נשמר) —
+// install אינו רץ שוב לאותו CACHE_NAME, ונכס CDN שנכשל בו חסר במטמון עד הגרסה הבאה —
 // לכן משלימים כאן את מה שחסר, ב-activate ובכל עליית SW; כשל בו שקט.
 function ensureCdnCached() {
   return caches.open(CACHE_NAME).then(function (cache) {
