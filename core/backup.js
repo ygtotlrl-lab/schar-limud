@@ -73,6 +73,16 @@ function logAction(action, key, count, details) {
     );
   } catch (e) { if (row) _bkLogQueue(row); }
 }
+// רישום שהמסלול תלוי בו — הזריקה בעידן מחכה לו, ולכן הוא ממתין לתשובה ואינו נופל לתור.
+// entries: [{ key, details }] — שורה לכל אחד, בבקשה אחת; true רק כשהמסד קיבל את כולן.
+function logAwait(action, entries) {
+  var c = _bkClient();
+  if (!c || !Array.isArray(entries)) return Promise.resolve(false);
+  var rows = entries.map(function (e) { return _bkLogRow(action, e.key, 1, e.details); });
+  return withTimeout(c.from(BK_LOG_TABLE).insert(rows)).then(
+    function (r) { if (r && r.error) { _bkWriteFail('logAwait', r.error); return false; } return true; },
+    function (e) { _bkWriteFail('logAwait', e); return false; });
+}
 async function logFlush() {
   var qk, q;
   try { qk = _bkVal(app.BK_CFG.logQueueKey); q = JSON.parse(lsGet(qk, '[]') || '[]'); } catch (e) { return 0; }
@@ -274,4 +284,4 @@ function bkBoot() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { bkBoot, logAction, logFlush };
+export { bkBoot, logAction, logAwait, logFlush };

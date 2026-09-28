@@ -53,7 +53,7 @@ function dashNextYear(){S.DASH_YEAR++;renderDash();}
 // ── לוח הבקרה ──
 // כל חודש מציג את סך התנועות לפי תאריך התנועה, בלי פריסה — השאלה כאן היא «כמה נגבה בחודש הזה».
 // תנועה בסעיף CREDIT_METHOD אינה כסף שהתקבל ואינה נכנסת לסכום.
-function txnMonth(t){var d=new Date(t.date+'T00:00:00');return d.getMonth();}
+function txnMonth(t){var d=new Date(t.txn_date+'T00:00:00');return d.getMonth();}
 
 // הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
 function studentTuition(s){
@@ -65,7 +65,7 @@ function studentTuition(s){
 function actualByMonth(year){
   var map={};
   S.TRANSACTIONS.forEach(function(t){
-    if(isCreditTxn(t)||!t.date||acadYearOf(t.date)!==year)return;
+    if(isCreditTxn(t)||!t.txn_date||acadYearOf(t.txn_date)!==year)return;
     var a=parseFloat(t.amount)||0;if(!a)return;
     var m=txnMonth(t);if(isNaN(m))return;
     if(!map[t.student_client_id])map[t.student_client_id]={};

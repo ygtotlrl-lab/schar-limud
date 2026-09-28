@@ -28,83 +28,54 @@ function idEq(a, b) {
 }
 
 // ── מיזוג רשומות ──
+// מנוע אחד לכולן — המפתח client_id, ובטבלת הגדרות key, והחותמת updated_at; חותמת חסרה נקראת 0.
 // הסימון הממתין שובר שוויון בלבד ואינו גובר על חותמת חדשה יותר — אחרת עריכה מקומית ישנה שלא נדחפה מוחקת עריכה מאוחרת שכבר סונכרנה.
 // mergePair, כשהוא קיים, מקבל את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
-function _mergePick(loc, rem, k, isPend, tsOf, mergePair) {
-  if (mergePair) return mergePair(loc, rem, k, isPend);
-  return tsOf(loc) > tsOf(rem) ? loc
-       : (tsOf(loc) === tsOf(rem) && isPend ? loc : rem);
+function mergeTs(r) {
+  var t = r ? Number(r.updated_at) : NaN;
+  return isFinite(t) ? t : 0;
 }
+function _mergePick(loc, rem, k, isPend, mergePair) {
+  if (mergePair) return mergePair(loc, rem, k, isPend);
+  return mergeTs(loc) > mergeTs(rem) ? loc
+       : (mergeTs(loc) === mergeTs(rem) && isPend ? loc : rem);
+}
+// opts: key ('client_id' כברירת מחדל) · isPending(k) · mergePair — והפלט עובר בגריעת המצבות.
+// כפילות מפתח בתוך צד אחד מוכרעת בחותמת, כמו בין הצדדים — בענן השוויון נופל על המאוחר במערך.
+// רשומה מקומית-בלבד נשארת — היעדרות אצל הצד השני אינה מחיקה.
 function mergeCore(local, remote, opts) {
   var o = opts || {};
-  var getKey = o.getKey, tsOf = o.ts, mergePair = o.mergePair || null;
-  var keepUnversionedLocal = !!o.keepUnversionedLocal, onDrop = o.onDrop || null;
-  var dedupe = o.dedupe !== false;
-  var remoteDupe = o.remoteDupe || 'ts'; // 'ts' | 'last'
-  var keyless = o.keyless || 'drop'; // 'drop' | 'keep-remote'
-  var localPick = o.localPick || 'last'; // 'last' | 'first'
+  var keyName = o.key || 'client_id', mergePair = o.mergePair || null;
   var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
-  var L = Array.isArray(local) ? local : [];
-  var R = Array.isArray(remote) ? remote : [];
-
-  // ── איחוד כפילויות ──
-  if (dedupe) {
-    var map = {}, order = [];
-    R.forEach(function (r) {
-      if (!r) return;
-      var k = getKey(r); if (k == null) return; k = String(k);
-      if (!(k in map)) { order.push(k); map[k] = r; return; }
-      // הסדר (הקיים, החדש) — שוויון נופל על המאוחר במערך, והיפוך הארגומנטים הופך את שובר-השוויון בשקט.
-      map[k] = (remoteDupe === 'last') ? r
-             : _mergePick(map[k], r, k, false, tsOf, mergePair);
-    });
-    L.forEach(function (r) {
-      if (!r) return;
-      var k = getKey(r); if (k == null) return; k = String(k);
-      if (!(k in map)) {
-        // רשומה מקומית-בלבד — היעדרות אצל הצד השני אינה מחיקה.
-        if (tsOf(r) > 0 || keepUnversionedLocal || remote == null) { order.push(k); map[k] = r; }
-        else if (onDrop) { try { onDrop(r, k); } catch (eD) {} }
-      } else { map[k] = _mergePick(r, map[k], k, pend(k), tsOf, mergePair); }
-    });
-    return order.map(function (k) { return map[k]; });
-  }
-
-  // ── שימור כפילויות (דחיפה זורמת) ──
-  var out = [], seen = {}, byKey = {};
-  L.forEach(function (l) {
-    var k = getKey(l); if (k == null) return; k = String(k);
-    if (localPick === 'last' || !(k in byKey)) byKey[k] = l;
+  var keyOf = function (r) {
+    var k = r ? r[keyName] : null;
+    return (k == null || k === '') ? null : String(k);
+  };
+  var map = {}, order = [];
+  (Array.isArray(remote) ? remote : []).forEach(function (r) {
+    var k = keyOf(r); if (k == null) return;
+    if (!(k in map)) { order.push(k); map[k] = r; return; }
+    map[k] = _mergePick(map[k], r, k, false, mergePair);
   });
-  R.forEach(function (r) {
-    var k = getKey(r);
-    if (k == null) { if (keyless === 'keep-remote') out.push(r); return; }
-    k = String(k); seen[k] = 1;
-    var l = byKey[k];
-    if (!l) { out.push(r); return; }
-    out.push(_mergePick(l, r, k, pend(k), tsOf, mergePair));
+  (Array.isArray(local) ? local : []).forEach(function (r) {
+    var k = keyOf(r); if (k == null) return;
+    if (!(k in map)) { order.push(k); map[k] = r; return; }
+    map[k] = _mergePick(r, map[k], k, pend(k), mergePair);
   });
-  L.forEach(function (l) {
-    var k = getKey(l); if (k == null) return; k = String(k);
-    if (!seen[k]) out.push(l);
-  });
-  return out;
+  return tombPruneMerged(order.map(function (k) { return map[k]; }));
 }
 
 // ── גריעת tombstones ──
 // רק tombstone עם חותמת מספרית נגרע — חותמת חסרה נקראת 0, וגריעה לפיה הייתה מוחקת דווקא את הישנים ביותר.
-// המחיר: מכשיר שנותק מעבר לסף מחזיר רשומה מחוקה פעם אחת.
+// המסד גורע באותו סף, ולכן מכשיר שלא נמשך בתוכו — עותקו אינו תקף (עידן הנתונים).
 var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 // הגריעה רצה על תוצאת המיזוג, פעם אחת לעלייה — גריעה מקומית בלבד הייתה מוחזרת מהענן תוך שניות.
 var _tombPrunePending = false;
 
-// נקראות שתי צורות החותמת, updatedAt ו-updated_at — אחרת רשומה בצורה השנייה נקראת «בלי חותמת» וה-tombstone שלה נשאר לעולם.
 function tombStamp(r) {
   if (!r || typeof r !== 'object') return null;
-  if (typeof r.updatedAt === 'number') return r.updatedAt;
-  if (typeof r.updated_at === 'number') return r.updated_at;
-  return null;
+  return typeof r.updated_at === 'number' ? r.updated_at : null;
 }
 
 // אל תקרא לשעון כשיש חותמת — דחיפה חוזרת של אותה מצבה הייתה מזיזה את זמן המחיקה.
@@ -642,7 +613,7 @@ function _plFull() {
   try { lsHorizonRelease(); } catch (e0) { }
   try {
     return Promise.resolve(app.PL_CFG.pull()).then(
-      function () { _plFullAt = Date.now(); return done(true); },
+      function () { _plFullAt = Date.now(); eraNotePull(); return done(true); },
       function () { return done(false); });
   } catch (e) { return Promise.resolve(done(false)); }
 }
@@ -666,6 +637,7 @@ function plTick() {
     }
     var ts = plNum(r.ts);
     if (ts > _plSeen()) { try { app.PL_CFG.note(ts); } catch (e) { } return _plFull(); }
+    eraNotePull();
     return done(false);
   }, function () { return done(false); });
 }
@@ -688,7 +660,7 @@ function plBoot() {
 // ── שכבת הדחיפה ──
 // מנה שנכשלה נדחפת שוב שורה-שורה — כתיבת מנה היא הכל-או-כלום.
 // dirty שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נמשכה היה מתיר לפנות רשומה שלא עלתה.
-var _pushTimer = null;
+var _pushTimer = null, _eraHoldSaid = false;
 
 // תשובה שנושאת error אינה זורקת מעצמה — הבדיקה שלה היא כאן.
 function pushRow(t, rows) {
@@ -699,7 +671,12 @@ function pushRow(t, rows) {
 }
 
 // כשל רשת משאיר את הסימון וננסה שוב; כשל סמכותי (ולידציה, מפתח זר, הרשאה, סכימה) יחזור לנצח, ולכן הסימון יורד והסיבה נרשמת.
+// עותק שאינו תקף אינו נדחף — הוא נרשם ונזרק בעידן, ושורה ממנו הייתה מחזירה נתון שנמחק או נופלת על הסכימה.
 function pushTable(t, ctx) {
+  if (!eraValid()) {
+    if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
+    return Promise.resolve({ ok: false, still: [], n: 0 });
+  }
   return Promise.resolve(app.PUSH_CFG.dirty(t, ctx)).then(function (rows) {
     if (!rows) return { ok: false, still: [], n: 0 };
     if (!rows.length) { app.PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
@@ -770,11 +747,15 @@ function schedulePush() {
 }
 
 // ── עידן הנתונים ──
-// זו הפעולה ההרסנית היחידה — נתון שלא נדחף ונזרק אבוד, ולכן כל שלושת התנאים חובה.
-// תנאי שאינו מתקיים פירושו «ננסה שוב בעלייה הבאה» ולא «נזרוק בכל זאת».
+// זו הפעולה ההרסנית היחידה — נתון שלא נדחף ונזרק אבוד, ולכן אין זריקה בלי רשת ובלי ראיה.
+// שני מסלולים: עותק תקף שהענן עבר את עידנו — נזרק רק כשכל ממתין עלה; ועותק שאינו תקף — הממתין נרשם ביומן, ורק אחר כך נזרק.
 var ERA_CLOUD_KEY = 'data_era';
+// ברישום ביומן — שדה שנראה כסוד אינו עוזב את המכשיר.
+var ERA_SECRET_RX = /pass|secret|token/i;
+// כתיבת חותמת המשיכה מוגבלת — הפולינג רץ כל שלוש שניות, והחותמת נמדדת בימים.
+var ERA_PULLED_EVERY_MS = 60 * 60 * 1000;
 var _eraPush = null;
-var _eraTried = false;
+var _eraBusy = false, _eraDone = false, _eraWired = false;
 // «הדחיפה הצליחה» אינה «אין מה לדחוף» — שורה שנכתבה אחרי המחזור אינה ב-still והיא בתור, ושורה שנדחתה ברשת היא ב-still ואינה בתור.
 function eraMayThrow(o) {
   var s = o || {};
@@ -799,26 +780,33 @@ function eraBehind(local, cloud) {
   if (!isFinite(c) || !isFinite(l)) return false;
   return c > l;
 }
-// המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
-function eraThrow(o) {
-  var s = o || {};
-  if (!eraBehind(s.local, s.cloud)) return false;
-  if (!eraMayThrow(s)) return false;
-  s.wipe();
-  s.save(Number(s.cloud), eraResetKey(s.prefix), eraStamp());
-  return true;
-}
 // התקנה טרייה נושאת את עידן הקוד — אין בה עותק ישן, ואפס היה זורק אותה בעלייה הראשונה.
 function eraLocalKey() { return app.ERA_CFG.prefix + 'era'; }
+function eraPulledKey() { return app.ERA_CFG.prefix + 'era_pulled'; }
 // המרשם קורא את המפתחות מכאן — שם מוקלד במקום שני מתיישן, והניקוי בעלייה מוחק אותו.
-function eraKeys() { return [eraLocalKey(), eraResetKey(app.ERA_CFG.prefix)]; }
+function eraKeys() { return [eraLocalKey(), eraResetKey(app.ERA_CFG.prefix), eraPulledKey()]; }
 function eraLocal() {
   var v = parseInt(lsGet(eraLocalKey(), ''), 10);
   return isFinite(v) ? v : app.DATA_ERA;
 }
-function eraSave(era, stampKey, stamp) {
+function eraSave(era) {
   lsSet(eraLocalKey(), String(era));
-  lsSet(stampKey, JSON.stringify(stamp));
+  lsSet(eraResetKey(app.ERA_CFG.prefix), JSON.stringify(eraStamp()));
+}
+// חותמת המשיכה המלאה האחרונה, או של פולינג שראה שאין מה למשוך — שניהם «העותק ראה את הענן».
+function eraNotePull(force) {
+  try {
+    var now = Date.now(), was = Number(lsGet(eraPulledKey(), '')) || 0;
+    if (force || now - was >= ERA_PULLED_EVERY_MS) lsSet(eraPulledKey(), String(now));
+  } catch (e) { console.warn('[era] חותמת המשיכה', e); }
+}
+// עותק שאינו תקף: עידנו ישן מעידן הקוד — צורת הרשומה השתנתה, ודחיפה שלו נופלת על הסכימה —
+// או שלא נמשך בחלון המצבות — המסד גרע מצבה שהייתה עוצרת רשומה שנמחקה, והדחיפה הייתה מחזירה אותה.
+// חותמת חסרה אינה ראיה — עותק שנוצר לפני החותמת נבדק בעידנו.
+function eraValid() {
+  if (eraLocal() < Number(app.DATA_ERA)) return false;
+  var was = Number(lsGet(eraPulledKey(), '')) || 0;
+  return !(was && Date.now() - was > TOMBSTONE_TTL_MS);
 }
 // כל אפליקציה נושאת מספר עידן משלה — צורת השורה נבדלת, ומספר משותף היה זורק על שינוי שלא נעשה כאן.
 // הקריאה אינה ב-single — שם שורה שאינה קיימת מסומנת כשגיאה, ומסד בלי עידן הוא המצב הרגיל.
@@ -833,19 +821,92 @@ function eraCloudRead() {
       return raw == null ? null : Number(raw);
     }, function () { return null; });
 }
-// פעם אחת לעלייה ולא בפולינג — קידום עידן הוא פעולת מנהל נדירה.
+// הממתין כמות שהוא במכשיר: המפתח, רגע הסימון והרשומה שמזהה הסימון מוצא במרחב האפליקציה.
+// המזהה הוא מה שאחרי הקידומת המוצהרת — client_id, או key בטבלת הגדרות; רשומה שלא נמצאה נרשמת בלי גוף.
+function _eraClean(r) {
+  var out = {};
+  Object.keys(r).forEach(function (f) { if (!ERA_SECRET_RX.test(f)) out[f] = r[f]; });
+  return out;
+}
+// כל מפות הממתינים של האפליקציה — סימונים פר-הקשר נזרקים יחד עם העותק, ולכן נרשמים כולם.
+function _eraPendKeys() {
+  var ks = null;
+  try { ks = (typeof app.PEND_CFG.keys === 'function') ? app.PEND_CFG.keys() : null; } catch (e) { ks = null; }
+  return (Array.isArray(ks) && ks.length) ? ks : [pendKeyName()];
+}
+function _eraPendMap(lk) {
+  if (lk === pendKeyName()) return pendAll();
+  try { var v = JSON.parse(lsGet(lk, null) || '{}'); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }
+  catch (e) { return {}; }
+}
+function eraPendingRows() {
+  var m = {}, marks = [], found = {};
+  _eraPendKeys().forEach(function (lk) {
+    var pm = _eraPendMap(lk);
+    Object.keys(pm).forEach(function (k) { m[k] = pm[k]; });
+  });
+  try { marks = app.PEND_CFG.marks() || []; } catch (e) { marks = []; }
+  var ids = {};
+  Object.keys(m).forEach(function (k) {
+    var p = marks.filter(function (x) { return typeof x === 'string' && x && k.indexOf(x) === 0; })
+                 .sort(function (a, b) { return b.length - a.length; })[0];
+    ids[k] = p ? k.slice(p.length) : k;
+  });
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var lk = localStorage.key(i);
+      if (!lk || lk.indexOf(app.ERA_CFG.prefix) !== 0) continue;
+      var v = null;
+      try { v = JSON.parse(localStorage.getItem(lk)); } catch (e1) { continue; }
+      var rows = Array.isArray(v) ? v : (v && Array.isArray(v.rows) ? v.rows : null);
+      if (!rows) continue;
+      rows.forEach(function (r) {
+        if (!r || typeof r !== 'object') return;
+        Object.keys(ids).forEach(function (k) {
+          if (found[k]) return;
+          if (String(r.client_id) === ids[k] || String(r.key) === ids[k]) found[k] = { ls: lk, row: _eraClean(r) };
+        });
+      });
+    }
+  } catch (e) { console.warn('[era] סריקת העותק המקומי', e); }
+  return Object.keys(m).map(function (k) {
+    return { key: k, since: m[k], ls: found[k] ? found[k].ls : null, row: found[k] ? found[k].row : null };
+  });
+}
+// הזריקה: מחיקת העותק והממתינים, העידן נכתב, והמשיכה המלאה ממלאת.
+// המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
+function _eraWipe(era) {
+  app.ERA_CFG.wipe();
+  _eraPendKeys().forEach(function (lk) { if (lk !== pendKeyName()) lsSet(lk, '{}'); });
+  var m = pendAll();
+  Object.keys(m).forEach(function (k) { delete m[k]; });
+  _pendDrawHold = {};
+  pendSave(); pendRender();
+  eraSave(era);
+  return Promise.resolve(app.ERA_CFG.refresh()).then(function (v) { eraNotePull(true); return v; });
+}
+// עותק שאינו תקף אינו נדחף; הממתין נרשם ב-sh_sync_log, ורק רישום שהצליח מתיר את הזריקה.
+function eraDiscard(ep) {
+  if (!navigator.onLine) return Promise.resolve(false);
+  var rows = eraPendingRows(), era = Number(app.DATA_ERA);
+  var logged = !rows.length ? Promise.resolve(true)
+    : Promise.resolve(app.ERA_CFG.log('era_discard', rows.map(function (r) {
+        return { key: r.key, details: { since: r.since, ls: r.ls, row: r.row } };
+      })));
+  return logged.then(function (ok) {
+    if (!ok || ctxStale(ep)) return false;
+    console.log('[era] עותק שאינו תקף — ' + rows.length + ' ממתינים נרשמו, העותק נזרק ונמשך מלא');
+    return _eraWipe(era).then(function () { return true; });
+  }, function () { return false; });
+}
 // תוצאת הדחיפה נמסרת כארגומנט — גלובלי אחרי המתנה מחזיר את מה שהמחזור הבא כתב.
 function eraBoot(push, ep) {
   return eraCloudRead().then(function (cloud) {
     if (ctxStale(ep)) return false;
-    var threw = eraThrow({
-      local: eraLocal(), cloud: cloud, prefix: app.ERA_CFG.prefix,
-      online: navigator.onLine, push: push, pending: pendAll(),
-      wipe: app.ERA_CFG.wipe, save: eraSave
-    });
-    if (!threw) return false;
+    if (!eraBehind(eraLocal(), cloud)) return false;
+    if (!eraMayThrow({ online: navigator.onLine, push: push, pending: pendAll() })) return false;
     console.log('[era] עידן ' + cloud + ' — העותק המקומי נזרק ונמשך מלא');
-    return app.ERA_CFG.refresh();
+    return _eraWipe(Number(cloud)).then(function () { return true; });
   }, function () { return false; });
 }
 // לאפליקציה שמחזור הדחיפה שלה אינו מחזיר תוצאה; תוצאה שאינה אובייקט נקראת «אין ראיה» ולא «הצליח».
@@ -853,19 +914,27 @@ function eraNotePush(r) {
   _eraPush = (r && typeof r === 'object') ? r : null;
   return r;
 }
+// פעם אחת לעלייה ולא בפולינג, ושוב בחזרת הרשת עד שהוכרע — קידום עידן הוא פעולת מנהל נדירה.
 // ההקשר נלכד לפני הדחיפה ונבדק אחריה — מחזור שמתעורר בהקשר אחר היה זורק את העותק של האחר.
 function eraKick() {
-  if (_eraTried) return Promise.resolve(false);
-  _eraTried = true;
+  if (!_eraWired) {
+    _eraWired = true;
+    try { window.addEventListener('online', function () { eraKick(); }); }
+    catch (e) { console.warn('[era] wiring', e); }
+  }
+  if (_eraDone || _eraBusy) return Promise.resolve(false);
+  _eraBusy = true;
   var ep = ctxEpoch();
-  return Promise.resolve(app.ERA_CFG.push()).then(function (r) { return eraBoot(r, ep); },
-                                              function () { return false; });
+  var p = !eraValid() ? eraDiscard(ep).then(function (threw) { if (threw) _eraDone = true; return threw; })
+    : Promise.resolve(app.ERA_CFG.push()).then(function (r) { _eraDone = true; return eraBoot(r, ep); });
+  return p.then(function (v) { _eraBusy = false; if (v) schedulePush(); return v; },
+                function () { _eraBusy = false; return false; });
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { newClientId, idEq, mergeCore, tombAt, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
-         ctxSwitch, ctxStale, _eraPush, _rowsPaged, afterSave, eraKeys, eraKick,
+         ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendReload, pendRender, pendTag,

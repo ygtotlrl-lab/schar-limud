@@ -195,6 +195,7 @@ function closeAsk(v) {
   if (askResolve) { askResolve(v); askResolve = null; }
 }
 // kind הוא שם מחלקה ולא משך — מי שאין לו ערך מוסר null; המשך ב-TOAST_DEFAULT_MS.
+var TOAST_DEFAULT_MS = 2500;
 function toast(msg, dur, kind) {
   // אין טוסט הצלחה אחרי כישלון שמירה מקומית — אין להסיר.
   if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
@@ -208,7 +209,7 @@ function toast(msg, dur, kind) {
   setTimeout(function () {
     el.classList.add('out');
     setTimeout(function () { el.remove(); }, 260);
-  }, dur || app.TOAST_DEFAULT_MS);
+  }, dur || TOAST_DEFAULT_MS);
 }
 // ארוך מברירת המחדל — הודעה על כשל כתיבה, והקורא חייב זמן לקרוא אותה.
 var LS_TOAST_MS = 5000;
@@ -301,15 +302,16 @@ function comboCfg(root) {
   return _combo[kind];
 }
 function comboQ(root) { return root.querySelector('[data-combo-q]'); }
-// o: id · label · placeholder · value ({ id, label }) · qid · cls
+// פריט: { value, label } — הערך הוא מה שהשדה הנסתר מחזיק, כמו <option value>, ואינו רשומה.
+// o: id · label · placeholder · picked ({ value, label }) · qid · cls
 function comboHTML(kind, o) {
-  var cfg = _combo[kind] || {}, v = o.value || null;
+  var cfg = _combo[kind] || {}, v = o.picked || null;
   return '<div class="combo' + (o.cls ? ' ' + o.cls : '') + '" id="' + esc(o.id) + '" data-combo="' + esc(kind) + '">' +
     '<input type="text" class="combo-q" data-combo-q' + (o.qid ? ' id="' + esc(o.qid) + '"' : '') +
       ' aria-label="' + esc(o.label) + '" placeholder="' + esc(o.placeholder || o.label) + '"' +
       ' role="combobox" aria-expanded="false" aria-autocomplete="list" autocomplete="off"' +
       ' value="' + esc(v ? v.label : '') + '">' +
-    (cfg.val ? '<input type="hidden" data-combo-val value="' + esc(v ? v.id : '') + '">' : '') +
+    (cfg.val ? '<input type="hidden" data-combo-val value="' + esc(v ? v.value : '') + '">' : '') +
     '<div class="combo-list hidden" data-combo-list role="listbox"></div>' +
   '</div>';
 }
@@ -361,7 +363,7 @@ function comboPaint(root) {
 function comboChoose(root, it) {
   var cfg = comboCfg(root), q = comboQ(root), v = root.querySelector('[data-combo-val]');
   if (q) q.value = it ? it.label : '';
-  if (v) v.value = it ? it.id : '';
+  if (v) v.value = it ? it.value : '';
   comboClose(root);
   return cfg && cfg.pick ? cfg.pick(it, root) : undefined;
 }

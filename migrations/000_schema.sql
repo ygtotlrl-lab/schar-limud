@@ -38,12 +38,12 @@ create table if not exists public.sl_students (
   client_id text not null,
   updated_at bigint not null,
   constraint sl_students_pkey PRIMARY KEY (client_id),
-  constraint sl_students_months_format_chk CHECK ((((start_month IS NULL) OR (start_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)) AND ((end_month IS NULL) OR (end_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)))),
-  constraint sl_students_months_order_chk CHECK (((start_month IS NULL) OR (end_month IS NULL) OR (end_month >= start_month)))
+  constraint sl_students_months_format_check CHECK ((((start_month IS NULL) OR (start_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)) AND ((end_month IS NULL) OR (end_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)))),
+  constraint sl_students_months_order_check CHECK (((start_month IS NULL) OR (end_month IS NULL) OR (end_month >= start_month)))
 );
 
 create table if not exists public.sl_transactions (
-  date date not null,
+  txn_date date not null,
   amount numeric(10,2) not null,
   payment_method text,
   note text,
@@ -76,7 +76,7 @@ create table if not exists public.sl_users (
 
 create UNIQUE index if not exists sl_settings_client_id_key ON public.sl_settings USING btree (client_id);
 create index if not exists sl_students_name_idx ON public.sl_students USING btree (name);
-create index if not exists sl_transactions_student_date_idx ON public.sl_transactions USING btree (student_client_id, date);
+create index if not exists sl_transactions_student_date_idx ON public.sl_transactions USING btree (student_client_id, txn_date);
 
 -- revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת עם DELETE ו-TRUNCATE ל-anon.
 revoke all on table public.sl_lists from anon, authenticated;

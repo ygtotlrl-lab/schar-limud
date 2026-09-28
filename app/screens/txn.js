@@ -9,7 +9,7 @@ import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnKey, pendTxnTag, pendingCid,
-         releaseCid, slKey, slLocalWrite, slWhoName, txnAmountHtml,
+         releaseCid, slLocalWrite, slWhoName, txnAmountHtml,
          txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
@@ -55,11 +55,11 @@ function screenTxnHTML() {
 `;
 }
 
-function studentOpts(a){return a.map(function(s){return{id:s.client_id,label:s.name};});}
+function studentOpts(a){return a.map(function(s){return{value:s.client_id,label:s.name};});}
 
 // תשלום נרשם לתלמיד פעיל בלבד; הסינון ביומן — לכל תלמיד, ו«כולם» הוא ערך ריק.
 comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return s.active;}));}});
-comboDef('txn-filter',{val:true,items:function(){return [{id:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
+comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
 function updateDropdowns(){
   var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
@@ -87,7 +87,7 @@ async function saveTxn(){
   if(!sid){toast(MSG_PICK_STUDENT_PLAIN, null, 'bad');return;}if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
   // client_id נוצר במכשיר ונקשר לתוכן הטופס — שליחה חוזרת מעדכנת את אותה שורה ואינה מכפילה תשלום.
   var cid=pendingCid('txn',[sid,date,amount,method,note].join(' '));
-  var row={client_id:cid,student_client_id:sid,date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:cid,student_client_id:sid,txn_date:date,amount:amount,payment_method:method||null,note:note||null,created_by:slWhoName(),deleted:false,deleted_at:null,deleted_by:null};
   // כשל כתיבה מקומית עוצר כאן ברעש — בכסף אסור להציג «נשמר» על משהו שלא נכתב.
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
   pendMark(pendTxnKey(row));
@@ -99,14 +99,14 @@ async function saveTxn(){
 
 function renderTxnLog(){
   var fid=comboValue('txn-filter');
-  var txns=S.TRANSACTIONS.slice().sort(function(a,b){return a.date>b.date?-1:1;}).slice(0,60);
+  var txns=S.TRANSACTIONS.slice().sort(function(a,b){return a.txn_date>b.txn_date?-1:1;}).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(slKey(t))+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
-  var t=(MIRROR.sl_transactions||[]).filter(function(x){return slKey(x)===String(key);})[0];
+  var t=(MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
   var row=Object.assign({},t,{deleted:true,deleted_at:tombAt(),deleted_by:slWhoName()});
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
