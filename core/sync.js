@@ -828,8 +828,23 @@ function _eraClean(r) {
   Object.keys(r).forEach(function (f) { if (!ERA_SECRET_RX.test(f)) out[f] = r[f]; });
   return out;
 }
+// כל מפות הממתינים של האפליקציה — סימונים פר-הקשר נזרקים יחד עם העותק, ולכן נרשמים כולם.
+function _eraPendKeys() {
+  var ks = null;
+  try { ks = (typeof app.PEND_CFG.keys === 'function') ? app.PEND_CFG.keys() : null; } catch (e) { ks = null; }
+  return (Array.isArray(ks) && ks.length) ? ks : [pendKeyName()];
+}
+function _eraPendMap(lk) {
+  if (lk === pendKeyName()) return pendAll();
+  try { var v = JSON.parse(lsGet(lk, null) || '{}'); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }
+  catch (e) { return {}; }
+}
 function eraPendingRows() {
-  var m = pendAll(), marks = [], found = {};
+  var m = {}, marks = [], found = {};
+  _eraPendKeys().forEach(function (lk) {
+    var pm = _eraPendMap(lk);
+    Object.keys(pm).forEach(function (k) { m[k] = pm[k]; });
+  });
   try { marks = app.PEND_CFG.marks() || []; } catch (e) { marks = []; }
   var ids = {};
   Object.keys(m).forEach(function (k) {
@@ -862,6 +877,7 @@ function eraPendingRows() {
 // המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
 function _eraWipe(era) {
   app.ERA_CFG.wipe();
+  _eraPendKeys().forEach(function (lk) { if (lk !== pendKeyName()) lsSet(lk, '{}'); });
   var m = pendAll();
   Object.keys(m).forEach(function (k) { delete m[k]; });
   _pendDrawHold = {};
