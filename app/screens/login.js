@@ -14,7 +14,7 @@ import { ensureCreditMethod, slApplyMirror, syncAll } from '../domain.js';
 function screenLoginHTML() {
   return `
 <div id="auth-screen">
-  <div class="auth-box ksave">
+  <div class="auth-box" data-ks>
     <div class="auth-title">שכר לימוד</div>
     <div class="auth-sub">מערכת ניהול תשלומי שכר לימוד</div>
     <div class="auth-field">

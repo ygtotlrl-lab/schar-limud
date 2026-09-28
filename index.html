@@ -47,8 +47,8 @@
   <main id="view"><div class="view-loading" role="status" aria-label="טוען"><span class="view-spin"></span></div></main>
 </div>
 
-<div id="modal" class="veil">
-  <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+<div id="modal" class="veil" data-veil="modal">
+  <div class="sheet" data-ks role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
@@ -57,7 +57,7 @@
     <div class="sheet-ft" id="modal-foot"></div>
   </div>
 </div>
-<div id="ask" class="veil">
+<div id="ask" class="veil" data-veil="ask">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
     <div class="sheet-hd"><h3 id="ask-title"></h3></div>
     <div class="sheet-bd" id="ask-body"></div>

@@ -216,8 +216,9 @@ function lsToast(msg, dur, kind) { try { toast(msg, dur || LS_TOAST_MS, kind); }
 // לחיצה על הרקע ו-Escape נקראים מהמאזין האחד — מאזין נפרד לכל אחד היה מפזר את הסגירה.
 function modalBackdrop(e) {
   if (!e.target) return false;
-  if (e.target.id === 'modal') { closeModal(); return true; }
-  if (e.target.id === 'ask') { closeAsk(false); return true; }
+  var v = e.target.getAttribute ? e.target.getAttribute('data-veil') : null;
+  if (v === 'modal') { closeModal(); return true; }
+  if (v === 'ask') { closeAsk(false); return true; }
   return false;
 }
 function modalEsc(e) {
@@ -279,7 +280,7 @@ function ksKey(e) {
   if (e.key !== 'Enter' && e.key !== 'Escape') return false;
   var t = e.target;
   if (!t || t.tagName !== 'INPUT' || !t.closest) return false;
-  var scope = t.closest('.ksave');
+  var scope = t.closest('[data-ks]');
   if (!scope) return kentKey(e, t);
   if (!ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) return false;
   e.preventDefault();

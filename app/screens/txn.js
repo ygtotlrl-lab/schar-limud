@@ -17,7 +17,7 @@ function screenTxnHTML() {
 <div id="panel-txn" class="panel">
   <div class="card">
     <div class="card-hdr"><h3>הוספת תשלום</h3></div>
-    <div class="card-body ksave">
+    <div class="card-body" data-ks>
       <div class="frm-row">
         <label>תלמיד</label>
         <div class="sd-wrap">

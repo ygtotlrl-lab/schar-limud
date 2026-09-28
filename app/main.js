@@ -337,7 +337,7 @@ document.addEventListener('focusout', function (e) {
 
 // הבחירה נתפסת ב-mousedown ולא ב-click — focusout סוגר את הרשימה לפני שה-click מגיע.
 document.addEventListener('mousedown', function (e) {
-  var el = e.target && e.target.closest ? e.target.closest('.sd-opt[data-k]') : null;
+  var el = e.target && e.target.closest ? e.target.closest('[data-sd-opt]') : null;
   if (el) sdSelectEl(el);
 });
 
