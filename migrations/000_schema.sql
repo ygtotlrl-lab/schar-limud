@@ -51,7 +51,7 @@ create table if not exists public.sl_transactions (
   deleted boolean not null default false,
   deleted_at timestamp with time zone,
   deleted_by text,
-  created_by text,
+  created_by_client_id text,
   client_id text not null,
   updated_at bigint not null,
   student_client_id text,

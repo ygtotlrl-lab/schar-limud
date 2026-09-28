@@ -16,7 +16,7 @@ import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
 import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearOf,
-         pendTxnKey, slApplyMirror, slDirtyRows,
+         pendTxnKey, slApplyMirror,
          slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
 import { closeDashMonth, dashNextYear, dashPrevYear, renderDash, screenDashHTML,
@@ -165,11 +165,10 @@ var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
   delay:  400,
-  dirty:  function (t, ctx) {
-    var c = _slPushOf(t), remote = ctx && ctx[t];
-    if (!remote) return null;
+  rows:   function (t, ctx) {
+    if (!ctx || !ctx[t]) return null;
     S._slPushEp = ctxEpoch();
-    return slDirtyRows(t, remote, function (k) { return pendHas(c.pk + k); });
+    return MIRROR[t] || [];
   },
   key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(t, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },

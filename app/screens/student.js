@@ -1,6 +1,6 @@
 // app/screens/student.js — כרטיס התלמיד
 import { dayToday } from '../../core/util.js';
-import { idEq, pendMark, schedulePush } from '../../core/sync.js';
+import { idEq, schedulePush } from '../../core/sync.js';
 import { hwPastLoad } from '../../core/storage.js';
 import { mirrorKey } from '../../core/mirror.js';
 import { comboDef, comboHTML, esc, toast } from '../../core/ui.js';
@@ -9,7 +9,7 @@ import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIR
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit,
-         enrollText, fmt, isCreditTxn, monthLabel, normMonth, pendStuKey, pendTxnTag,
+         enrollText, fmt, isCreditTxn, monthLabel, normMonth, pendTxnTag,
          readMonthRange, slLocalWrite, txnAmountHtml,
          txnMethodPill } from '../domain.js';
 
@@ -168,7 +168,7 @@ async function scPastShow(){
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{active:!s.active});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
-  pendMark(pendStuKey(row));shell.refreshUI();
+  shell.refreshUI();
   toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
 
 function saveStudentSettings(){
@@ -189,7 +189,6 @@ function saveStudentSettings(){
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
   var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
   if(!slLocalWrite('sl_students',row)){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
-  pendMark(pendStuKey(row));
   return true;
 }
 

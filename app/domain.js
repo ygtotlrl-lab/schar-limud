@@ -3,7 +3,7 @@ import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
          kvParse } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
-         pendTag, pushDirty, rtyNote, schedulePush } from '../core/sync.js';
+         pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
@@ -61,11 +61,6 @@ function pendTxnKey(row) { return PK_TXN + row.client_id; }
 
 function pendStuKey(row) { return PK_STU + row.client_id; }
 
-// מפתח ההגדרה הוא key ולא client_id — מיפתוח לפי client_id יוצר שתי שורות לאותה הגדרה
-function pendSetKey(row) { return PK_SET + row.key; }
-
-function pendLstKey(row) { return PK_LST + row.client_id; }
-
 // כשל רשת אינו ראיה — הסימון נשאר; כשל סמכותי מוריד אותו, אחרת הוא נתקע לנצח ומזייף את התרעת 24 השעות
 function pendResolveErr(pk, e) { if (!isNetErr(e)) pendFailed(pk); }
 
@@ -91,7 +86,7 @@ function pendLstTag(i) { return (i && i.client_id) ? pendTag(PK_LST + i.client_i
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
-  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
+  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by_client_id','deleted','deleted_at','deleted_by','updated_at'],
   sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
@@ -158,32 +153,25 @@ function slApplyMirror() {
 }
 
 // מחזירה false כשהכתיבה ל-localStorage נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
-function slLocalWrite(tbl, row) {
+// ts — חותמת המחיקה, כדי ש-deleted_at יישאר רגע ה-updated_at שלה.
+function slLocalWrite(tbl, row, ts) {
   if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
   // localStorage משותף ל-origin כולו — שורת סוד אינה נכתבת מקומית לעולם
   if (tbl === KV_TABLE && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
-  row.updated_at = Date.now(); // חותמת המכשיר ולא של השרת
+  row.updated_at = (typeof ts === 'number') ? ts : Date.now(); // חותמת המכשיר ולא של השרת
   var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
   for (var i = 0; i < arr.length; i++) {
     if (slKeyOf(tbl, arr[i]) === k) { arr[i] = Object.assign({}, arr[i], row); hit = true; break; }
   }
   if (!hit) arr.push(row);
   if (!mirrorSave(tbl)) return false;
+  // הסימון בפונקציה שכותבת — מפתח הסימון הוא מפתח המיזוג, ואתר שישכח לסמן לא יעלה לענן לעולם.
+  pendMark(_slPushOf(tbl).pk + k);
   slApplyMirror();
   // המשפך היחיד של הכתיבה המקומית — ולכן כאן, ולא בכל קורא, נדרכים הניסיון החוזר והמתזמן; המתזמן מושהה ומאחד, וקריאה כפולה אינה מחזור נוסף
   rtyNote();
   schedulePush();
   return true;
-}
-
-// הבן מקבל את חותמת המחיקה של האב ולא Date.now() — שתי חותמות לאותה מחיקה הן שתי הכרעות נפרדות במנוע המיזוג
-function pcChildKill(parent, kid) {
-  return Object.assign({}, kid, {
-    deleted: !!parent.deleted,
-    deleted_at: (parent.deleted_at === undefined) ? null : parent.deleted_at,
-    deleted_by: (parent.deleted_by === undefined) ? null : parent.deleted_by,
-    updated_at: parent.updated_at
-  });
 }
 
 // המקום היחיד שאומר מי הבן — בן שיש לו מפתח אב במסד ואינו כאן לא יקבל את מחיקת האב
@@ -198,7 +186,7 @@ function pcCascadeDelete(table, parent) {
     var k = kids[i], arr = MIRROR[k.t] || [], c = 0;
     for (var j = 0; j < arr.length; j++) {
       if (arr[j].deleted || !idEq(arr[j][k.fk], pid)) continue;
-      arr[j] = pcChildKill(parent, arr[j]);
+      arr[j] = tombInherit(parent, Object.assign({}, arr[j]));
       pendMark(k.pk + arr[j].client_id);
       c++;
     }
@@ -230,18 +218,6 @@ async function slSendRows(tbl, rows) {
   var res = await S.SB.from(tbl).upsert(out, { onConflict: conflict });
   if (!(res && res.error)) slSyncLog('push', tbl, out.length);
   return res;
-}
-
-// אין להסיר את תנאי הסימון — בחותמת שווה שני התנאים הראשונים שקטים, והרשומה הייתה נשארת ממתינה לנצח ולעולם לא נדחפת
-function slDirtyRows(t, remoteByKey, isPending) {
-  var out = [];
-  (MIRROR[t] || []).forEach(function (l) {
-    var k = slKeyOf(t, l);
-    if (!k) return;
-    var r = remoteByKey[k];
-    if (!r || slTs(l) > slTs(r) || (isPending && isPending(k))) out.push(l);
-  });
-  return out;
 }
 
 // client_id הוא המפתח הראשי ולא SERIAL — מזהה שהמסד מקצה נולד אחרי ההגעה לשרת, ושליחה חוזרת אחרי תשובה שאבדה הייתה יוצרת תשלום כפול
@@ -350,16 +326,13 @@ async function syncAll(){
     S._lastSyncOk=!errs.length;
 
     // ממוזגת רק קטגוריה שנמשכה בהצלחה — מיזוג מול ענן ריק שנובע מכשל רשת נראה כמחיקה של הכול.
-    var remoteStu={}, remoteTxn={}, remoteSet={}, remoteLst={};
     var pulledStu=false, pulledTxn=false, pulledSet=false, pulledLst=false;
     if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
       pulledStu=true;
-      rs[0].data.forEach(function(r){ remoteStu[r.client_id]=r; });
       MIRROR.sl_students=mergeCore(MIRROR.sl_students,rs[0].data,{isPending:function(k){return pendHas(PK_STU+k);}}); mirrorSave('sl_students');
     }
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
-      rs[1].data.forEach(function(r){ remoteTxn[r.client_id]=r; });
       hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
       MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+k);}}); mirrorSave('sl_transactions');
     }
@@ -367,25 +340,23 @@ async function syncAll(){
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
-      setRows.forEach(function(r){ remoteSet[r.key]=r; });
       MIRROR[KV_TABLE]=mergeCore(MIRROR[KV_TABLE],setRows,{key:'key',isPending:function(k){return pendHas(PK_SET+k);}}); mirrorSave(KV_TABLE);
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
       pulledLst=true;
-      rs[3].data.forEach(function(r){ remoteLst[r.client_id]=r; });
       MIRROR.sl_lists=mergeCore(MIRROR.sl_lists,rs[3].data,{isPending:function(k){return pendHas(PK_LST+k);}}); mirrorSave('sl_lists');
     }
     slApplyMirror();
     pullRender(shell.refreshUI);
 
     // נדחפת רק טבלה שנמשכה בהצלחה — בלי תמונת הענן, דחיפה עיוורת מחזירה לחיים שורה שנמחקה במכשיר אחר.
-    // קטגוריה שלא נמשכה נמסרת כ-null ולא כמפה ריקה — מפה ריקה נקראת «הענן ריק» ומסמנת את עד הפינוי.
+    // קטגוריה שלא נמשכה אינה נדחפת ואינה מסמנת את עד הפינוי.
     if(ctxStale(_ep)) return;
     var _pushRes=await pushDirty({
-      sl_students:     pulledStu?remoteStu:null,
-      sl_transactions: pulledTxn?remoteTxn:null,
-      [KV_TABLE]:      pulledSet?remoteSet:null,
-      sl_lists:        pulledLst?remoteLst:null
+      sl_students:     pulledStu,
+      sl_transactions: pulledTxn,
+      [KV_TABLE]:      pulledSet,
+      sl_lists:        pulledLst
     });
     // שניים משלושת תנאי זריקת העידן נמדדים רק בתוצאת הדחיפה הזו.
     eraNotePush(_pushRes);
@@ -430,7 +401,6 @@ async function ensureCreditMethod(){
     // כתיבה מקומית עם client_id ודחיפה ב-upsert — insert ישיר יוצר שורה שנייה בכל ניסיון חוזר אחרי תשובה שאבדה.
     var row={client_id:slListId('payment_methods',CREDIT_METHOD),category:'payment_methods',value:CREDIT_METHOD,deleted:false,deleted_at:null,deleted_by:null};
     if(!slLocalWrite('sl_lists',row)){S._creditSeedDone=false;return;}
-    pendMark(pendLstKey(row));
     await syncAll();
   }catch(e){S._creditSeedDone=false;console.warn('[credit]',e);}
 }
@@ -468,8 +438,6 @@ function calcDistribution(sid,year){
 }
 
 // ── משותף למסכים ──
-function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
-
 // פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
 function readMonthRange(startId,endId){
   var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
@@ -494,8 +462,8 @@ function txnMethodPill(t){
 export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLabel,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
-         isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
-         pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKeyOf, slListId,
-         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
+         isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete,
+         pendLstTag, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slListId,
+         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs,
          studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

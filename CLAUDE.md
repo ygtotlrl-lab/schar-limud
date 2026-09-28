@@ -12,7 +12,7 @@
 - זיכוי מיתרה — תנועה ב-`CREDIT_METHOD`; מקטינה חוב ואינה כסף שהתקבל.
 
 ## הכרעות מוצר
-- מחיקה רכה בלבד בשתי הטבלאות (`deleted`+`deleted_at`+`deleted_by`); הוספה ממלאת `created_by`. הסינון בנקודה אחת — `syncAll`. `ON DELETE RESTRICT` על `sl_transactions`.
+- מחיקה רכה בלבד בשתי הטבלאות (`deleted`+`deleted_at`+`deleted_by`, והאחרון — מזהה המכשיר); הוספה ממלאת `created_by_client_id` — מזהה המשתמש, והשם נגזר בתצוגה. הסינון בנקודה אחת — `syncAll`. `ON DELETE RESTRICT` על `sl_transactions`.
 - כל תנועה ותלמיד חדשים מקבלים `client_id` מ-`newClientId()`, והכתיבה `upsert` עם `onConflict:'client_id'`.
 - `pendingCid(slot, fp)` — אותו תוכן אחרי כשל ⇒ אותו מזהה ⇒ שורה אחת; תוכן שהשתנה ⇒ מזהה חדש. בלעדיו תשלום שני דורס את הראשון.
 - מפתח המיזוג של `sl_settings` הוא `key` (`k:<key>`), וכך ה-`upsert`.

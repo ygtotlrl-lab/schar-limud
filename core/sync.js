@@ -1,6 +1,6 @@
 // core/sync.js — סנכרון, מיזוג ודחיפה
 
-import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, isNetErr,
+import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, withTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
@@ -28,22 +28,34 @@ function idEq(a, b) {
 }
 
 // ── מיזוג רשומות ──
-// מנוע אחד לכולן — המפתח client_id, ובטבלת הגדרות key, והחותמת updated_at; חותמת חסרה נקראת 0.
+// מנוע אחד לכולן, גם פריט-פריט בתוך רשומה — המפתח client_id, ובטבלת הגדרות key, ובפריט בתוך ערך JSON id, והחותמת updated_at; חותמת חסרה נקראת 0.
 // הסימון הממתין שובר שוויון בלבד ואינו גובר על חותמת חדשה יותר — אחרת עריכה מקומית ישנה שלא נדחפה מוחקת עריכה מאוחרת שכבר סונכרנה.
-// mergePair, כשהוא קיים, מקבל את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
+// mergePair, כשהוא קיים, מכריע את הבסיס ב-mergeWinner וממזג ב-mergeCore את האוסף שבתוך הרשומה.
 function mergeTs(r) {
   var t = r ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
 }
-function _mergePick(loc, rem, k, isPend, mergePair) {
-  if (mergePair) return mergePair(loc, rem, k, isPend);
+// הכרעת הבסיס — אחת לכל המנוע ולכל פונקציית זוג: החותמת, והממתין שובר שוויון בלבד.
+function mergeWinner(loc, rem, isPend) {
   return mergeTs(loc) > mergeTs(rem) ? loc
        : (mergeTs(loc) === mergeTs(rem) && isPend ? loc : rem);
 }
-// opts: key ('client_id' כברירת מחדל) · isPending(k) · mergePair — והפלט עובר בגריעת המצבות.
+function _mergePick(loc, rem, k, isPend, mergePair) {
+  if (mergePair) return mergePair(loc, rem, k, isPend);
+  return mergeWinner(loc, rem, isPend);
+}
+// opts: key ('client_id' כברירת מחדל, ובפריט בתוך ערך JSON — id) · isPending(k) · mergePair — והפלט עובר בגריעת המצבות.
 // כפילות מפתח בתוך צד אחד מוכרעת בחותמת, כמו בין הצדדים — בענן השוויון נופל על המאוחר במערך.
 // רשומה מקומית-בלבד נשארת — היעדרות אצל הצד השני אינה מחיקה.
+// הגריעה על המיזוג החיצוני בלבד — מיזוג פנימי מתוך mergePair היה צורך את דגל העלייה לפני הרשומות עצמן.
+var _mergeDepth = 0;
 function mergeCore(local, remote, opts) {
+  _mergeDepth++;
+  var out;
+  try { out = _mergeRun(local, remote, opts); } finally { _mergeDepth--; }
+  return _mergeDepth ? out : tombPruneMerged(out);
+}
+function _mergeRun(local, remote, opts) {
   var o = opts || {};
   var keyName = o.key || 'client_id', mergePair = o.mergePair || null;
   var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
@@ -62,7 +74,7 @@ function mergeCore(local, remote, opts) {
     if (!(k in map)) { order.push(k); map[k] = r; return; }
     map[k] = _mergePick(r, map[k], k, pend(k), mergePair);
   });
-  return tombPruneMerged(order.map(function (k) { return map[k]; }));
+  return order.map(function (k) { return map[k]; });
 }
 
 // ── גריעת tombstones ──
@@ -81,6 +93,28 @@ function tombStamp(r) {
 // אל תקרא לשעון כשיש חותמת — דחיפה חוזרת של אותה מצבה הייתה מזיזה את זמן המחיקה.
 function tombAt(ts) {
   return new Date((typeof ts === 'number' && isFinite(ts)) ? ts : Date.now()).toISOString();
+}
+
+// ── מחיקה ──
+// כל מחיקה — רשומה או פריט בתוך JSON — עוברת כאן: ארבעת השדות ברגע אחד, ו-deleted_at הוא רגע ה-updated_at שלה.
+// ts משותף למחיקה של כמה רשומות באירוע אחד — שתי חותמות לאירוע אחד הן שתי הכרעות במנוע המיזוג.
+function tombKill(r, ts) {
+  if (!r || typeof r !== 'object') return r;
+  var t = (typeof ts === 'number' && isFinite(ts)) ? ts : Date.now();
+  r.deleted = true;
+  r.updated_at = t;
+  r.deleted_at = tombAt(t);
+  r.deleted_by = getDeviceId();
+  return r;
+}
+// הבן יורש את ארבעת השדות מהאב — מחיקת אב ובניו היא אירוע אחד.
+function tombInherit(parent, kid) {
+  if (!kid || typeof kid !== 'object' || !parent) return kid;
+  kid.deleted = true;
+  kid.updated_at = parent.updated_at;
+  kid.deleted_at = parent.deleted_at;
+  kid.deleted_by = parent.deleted_by;
+  return kid;
 }
 
 function prunePastTombstones(arr, nowTs) {
@@ -671,8 +705,20 @@ function plBoot() {
 
 // ── שכבת הדחיפה ──
 // מנה שנכשלה נדחפת שוב שורה-שורה — כתיבת מנה היא הכל-או-כלום.
-// dirty שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נמשכה היה מתיר לפנות רשומה שלא עלתה.
+// rows שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נטענה היה מתיר לפנות רשומה שלא עלתה.
 var _pushTimer = null, _eraHoldSaid = false;
+
+// נדחף רק מה שמסומן ⏳ — הסימון הוא הראיה שהרשומה טרם עלתה, והפינוי והעידן כבר נשענים עליו.
+// האפליקציה מוסרת את הרשומות המקומיות ואת מפתח הסימון בלבד; השוואה לחותמות הענן הייתה מקור אמת שני.
+function pushPending(t, ctx) {
+  return Promise.resolve(app.PUSH_CFG.rows(t, ctx)).then(function (rows) {
+    if (!Array.isArray(rows)) return null;
+    return rows.filter(function (r) {
+      var k = r ? app.PUSH_CFG.key(t, r) : null;
+      return k != null && pendHas(k);
+    });
+  });
+}
 
 // תשובה שנושאת error אינה זורקת מעצמה — הבדיקה שלה היא כאן.
 function pushRow(t, rows) {
@@ -689,7 +735,7 @@ function pushTable(t, ctx) {
     if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
     return Promise.resolve({ ok: false, still: [], n: 0 });
   }
-  return Promise.resolve(app.PUSH_CFG.dirty(t, ctx)).then(function (rows) {
+  return pushPending(t, ctx).then(function (rows) {
     if (!rows) return { ok: false, still: [], n: 0 };
     if (!rows.length) { app.PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
     var still = [], n = 0, bad = 0, i = 0;
@@ -944,7 +990,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, tombAt, TOMBSTONE_TTL_MS,
+export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKill, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
