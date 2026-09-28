@@ -28,22 +28,34 @@ function idEq(a, b) {
 }
 
 // ── מיזוג רשומות ──
-// מנוע אחד לכולן — המפתח client_id, ובטבלת הגדרות key, והחותמת updated_at; חותמת חסרה נקראת 0.
+// מנוע אחד לכולן, גם פריט-פריט בתוך רשומה — המפתח client_id, ובטבלת הגדרות key, ובפריט בתוך ערך JSON id, והחותמת updated_at; חותמת חסרה נקראת 0.
 // הסימון הממתין שובר שוויון בלבד ואינו גובר על חותמת חדשה יותר — אחרת עריכה מקומית ישנה שלא נדחפה מוחקת עריכה מאוחרת שכבר סונכרנה.
-// mergePair, כשהוא קיים, מקבל את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
+// mergePair, כשהוא קיים, מכריע את הבסיס ב-mergeWinner וממזג ב-mergeCore את האוסף שבתוך הרשומה.
 function mergeTs(r) {
   var t = r ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
 }
-function _mergePick(loc, rem, k, isPend, mergePair) {
-  if (mergePair) return mergePair(loc, rem, k, isPend);
+// הכרעת הבסיס — אחת לכל המנוע ולכל פונקציית זוג: החותמת, והממתין שובר שוויון בלבד.
+function mergeWinner(loc, rem, isPend) {
   return mergeTs(loc) > mergeTs(rem) ? loc
        : (mergeTs(loc) === mergeTs(rem) && isPend ? loc : rem);
 }
-// opts: key ('client_id' כברירת מחדל) · isPending(k) · mergePair — והפלט עובר בגריעת המצבות.
+function _mergePick(loc, rem, k, isPend, mergePair) {
+  if (mergePair) return mergePair(loc, rem, k, isPend);
+  return mergeWinner(loc, rem, isPend);
+}
+// opts: key ('client_id' כברירת מחדל, ובפריט בתוך ערך JSON — id) · isPending(k) · mergePair — והפלט עובר בגריעת המצבות.
 // כפילות מפתח בתוך צד אחד מוכרעת בחותמת, כמו בין הצדדים — בענן השוויון נופל על המאוחר במערך.
 // רשומה מקומית-בלבד נשארת — היעדרות אצל הצד השני אינה מחיקה.
+// הגריעה על המיזוג החיצוני בלבד — מיזוג פנימי מתוך mergePair היה צורך את דגל העלייה לפני הרשומות עצמן.
+var _mergeDepth = 0;
 function mergeCore(local, remote, opts) {
+  _mergeDepth++;
+  var out;
+  try { out = _mergeRun(local, remote, opts); } finally { _mergeDepth--; }
+  return _mergeDepth ? out : tombPruneMerged(out);
+}
+function _mergeRun(local, remote, opts) {
   var o = opts || {};
   var keyName = o.key || 'client_id', mergePair = o.mergePair || null;
   var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
@@ -62,7 +74,7 @@ function mergeCore(local, remote, opts) {
     if (!(k in map)) { order.push(k); map[k] = r; return; }
     map[k] = _mergePick(r, map[k], k, pend(k), mergePair);
   });
-  return tombPruneMerged(order.map(function (k) { return map[k]; }));
+  return order.map(function (k) { return map[k]; });
 }
 
 // ── גריעת tombstones ──
@@ -978,7 +990,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, tombAt, tombInherit, tombKill, TOMBSTONE_TTL_MS,
+export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKill, TOMBSTONE_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
