@@ -40,7 +40,7 @@ function screenStudentHTML() {
       <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
         <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
       </div>
-      <div class="acc-body ksave" id="acc-sc-settings">
+      <div class="acc-body" data-ks id="acc-sc-settings">
         <div class="frm-row">
           <label for="sc-edit-name">שם</label>
           <input id="sc-edit-name" type="text">
