@@ -91,7 +91,7 @@ function pendLstTag(i) { return (i && i.client_id) ? pendTag(PK_LST + i.client_i
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
-  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by','deleted','deleted_at','deleted_by','updated_at'],
+  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by_client_id','deleted','deleted_at','deleted_by','updated_at'],
   sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
@@ -459,8 +459,6 @@ function calcDistribution(sid,year){
 }
 
 // ── משותף למסכים ──
-function slWhoName(){ var u=sessGet(); return (u&&u.username)?u.username:null; }
-
 // פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
 function readMonthRange(startId,endId){
   var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
@@ -488,5 +486,5 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete, pendLstKey,
          pendLstTag, pendSetKey, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slDirtyRows, slIsAdmin, slKeyOf, slListId,
-         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs, slWhoName,
+         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs,
          studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };

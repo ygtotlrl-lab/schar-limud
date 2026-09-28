@@ -108,6 +108,19 @@ function sessGet() { return _sessUser; }
 function sessClear() { _sessUser = null; }
 function sessActive() { return !!_sessUser; }
 
+// ── מי ביצע ──
+// פעולה נושאת את מזהה המשתמש ולא את שמו — שם שמור מתיישן, והמשתמש אינו נמחק ולכן המזהה תמיד נפתר.
+function sessUserId() { var u = sessGet(); return (u && u.client_id != null) ? String(u.client_id) : null; }
+// מזהה שאינו במראה נפתר לריק — הצג מחליט מה מוצג במקומו.
+function usersNameOf(id) {
+  if (id == null || id === '') return '';
+  var arr = usersGet();
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && String(arr[i].client_id) === String(id)) return arr[i].full_name || arr[i].username || '';
+  }
+  return '';
+}
+
 // ── מודל ההרשאות ──
 // ההשוואה היא ל-admin בדיוק ולא «שונה מ-manager» — תפקיד שגוי או ריק שולל הרשאה ולעולם אינו מעניק אותה.
 var ROLE_ADMIN = 'admin';
@@ -307,5 +320,5 @@ function authLog(ok, branch, username) {
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
          authUsersTable, authVerify, isAdmin, isAdminOf, lkBoot, lkReset, lkStop,
-         sessActive, sessClear, sessGet, sessSet, usersByName, usersGet,
-         usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };
+         sessActive, sessClear, sessGet, sessSet, sessUserId, usersByName, usersGet,
+         usersNameOf, usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };
