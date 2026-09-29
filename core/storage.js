@@ -597,6 +597,30 @@ function lsKeyKnown(k, own) {
   var hz = app.LS_CFG.hzPrefix;
   return k.indexOf(hz) === 0 && own[k.slice(hz.length)] === true;
 }
+// ── רישום לפני מחיקה ──
+// מי שיודע מה ממתין (הסנכרון) ומי שמחזיק את תור היומן (הגיבוי) נרשמים כאן — הליבה אינה מייבאת אותם.
+// מפתח שנמחק כשיש ממתין הוא אולי העותק היחיד של מה שממתין, ולכן הוא נרשם כמות שהוא לפני המחיקה, בפעולה של זריקת העידן.
+var LS_DROP_ACTION = 'era_discard';
+var _lsDrop = { pending: null, log: null };
+function lsDropWire(o) {
+  if (o && typeof o.pending === 'function') _lsDrop.pending = o.pending;
+  if (o && typeof o.log === 'function') _lsDrop.log = o.log;
+}
+// כשל בבדיקה נקרא «יש ממתין» — רישום מיותר זול ממחיקה בלי רישום.
+function lsDropPending() {
+  try { if (app.LS_CFG.pending && app.LS_CFG.pending()) return true; } catch (e) { return true; }
+  try { return !!(_lsDrop.pending && _lsDrop.pending()); } catch (e1) { return true; }
+}
+// true רק כשהתור קיבל את כולם — רישום שנכשל משאיר את המפתחות לעלייה הבאה.
+function lsDropLog(keys) {
+  if (!lsDropPending()) return true;
+  if (!_lsDrop.log) { console.error('[ls] אין תור יומן — המפתחות נשארים'); return false; }
+  try {
+    return _lsDrop.log(LS_DROP_ACTION, keys.map(function (k) {
+      return { key: k, details: { ls: k, value: lsGet(k, null) } };
+    })) === true;
+  } catch (e) { console.error('[ls] הרישום לפני המחיקה נכשל — המפתחות נשארים', e); return false; }
+}
 function lsKeySweep() {
   var pre = self.APP.prefix, own = null, live = [], drop = [], i, k;
   try { own = lsKeyRegistry(); } catch (e) { console.error('[ls] המרשם אינו נקרא — אין ניקוי', e); return 0; }
@@ -613,6 +637,7 @@ function lsKeySweep() {
       if (k != null && mine(k) && !lsKeyKnown(k, own)) drop.push(k);
     }
   } catch (e1) { console.error('[ls] סריקת המפתחות נכשלה — אין ניקוי', e1); return 0; }
+  if (drop.length && !lsDropLog(drop)) return 0;
   drop.forEach(lsRemove);
   if (drop.length) lsLog('מפתח שאינו מוצהר נמחק', drop.join(' · '), 0);
   return drop.length;
@@ -792,5 +817,5 @@ function hwBoot() {
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { MSG_LS_FULL, hwBoot, hwDiskFilter, hwForget, hwNoteCloud,
          hwPastLoad, lsBoot, lsClearHorizons, lsGet, lsGuardToast,
-         lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray, lsSetRaw,
-         lsSpace };
+         lsDropWire, lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray,
+         lsSetRaw, lsSpace };
