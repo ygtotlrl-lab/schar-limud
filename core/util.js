@@ -68,7 +68,7 @@ function dayDiff(a, b) {
                      Date.UTC(x.getFullYear(), x.getMonth(), x.getDate())) / 86400000);
 }
 // שמות החודשים הלועזיים — רשימה אחת; צורה מקוצרת נגזרת ממנה אצל הצרכן.
-var GREG_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+var DAY_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 // ── מסירת התצורה ──
 // המסירה מצטברת — קריאה לכל שכבה שמוסרת, ושומרי get לחיווט שמוגדר אחרי המסירה.
@@ -122,7 +122,7 @@ function isNetErr(e) {
   return m.indexOf('fetch') !== -1 || m.indexOf('network') !== -1 ||
          m.indexOf('failed to') !== -1 || m.indexOf('timeout') !== -1;
 }
-function withTimeout(p, ms) {
+function netTimeout(p, ms) {
   return Promise.race([
     Promise.resolve(p),
     new Promise(function(_, reject) {
@@ -168,13 +168,14 @@ function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 // ── משווה עברי ──
 // אחד לכל העץ — localeCompare בונה משווה בכל קריאה, ובתוך sort זה O(n log n) פעמים;
 // בלי Intl.Collator — נפילה-חזרה ל-localeCompare עם אותו he, באותו סדר.
-var HE_COLLATOR = (function () {
+var SORT_COLLATOR = (function () {
   try { return new Intl.Collator('he'); }
   catch (e) { return { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } }; }
 })();
+function sortCompare(a, b) { return SORT_COLLATOR.compare(a, b); }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { app, appConfigure, HE_COLLATOR, readNum, uniqList, uniqHas,
+export { app, appConfigure, readNum, sortCompare, uniqList, uniqHas,
          MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
@@ -184,6 +185,6 @@ export { app, appConfigure, HE_COLLATOR, readNum, uniqList, uniqHas,
          MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR, MSG_STALE_CODE,
          MSG_SWITCHED_TO, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
          MSG_USER_DISABLED_OUT,
-         errMsg, getDeviceId, isNetErr, kvParse, withTimeout, GREG_MONTHS, dayAdd, dayDiff, dayIso,
+         errMsg, getDeviceId, isNetErr, kvParse, netTimeout, DAY_MONTHS, dayAdd, dayDiff, dayIso,
          dayNoon,
          dayToday };

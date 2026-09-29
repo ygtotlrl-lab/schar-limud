@@ -1,5 +1,5 @@
 // app/screens/dash.js — לוח הבקרה
-import { GREG_MONTHS, dayNoon, dayToday } from '../../core/util.js';
+import { DAY_MONTHS, dayNoon, dayToday } from '../../core/util.js';
 import { esc } from '../../core/ui.js';
 import { barChart } from '../../core/chart.js';
 import { YEAR_MONTHS } from '../constants.js';
@@ -8,7 +8,7 @@ import { acadYearLabel, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
          studentInMonth } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
-var MONTH_HE_SHORT=GREG_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
+var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
 
 function screenDashHTML() {
   return `

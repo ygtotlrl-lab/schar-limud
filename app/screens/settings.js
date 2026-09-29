@@ -2,7 +2,7 @@
 import { MSG_FILL_ALL, MSG_MY_PASS_TITLE, MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP,
          MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
-         dayToday, uniqHas, withTimeout } from '../../core/util.js';
+         dayToday, uniqHas, netTimeout } from '../../core/util.js';
 import { idEq, newClientId, plTouch, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
@@ -108,7 +108,7 @@ async function slSaveMyPassword() {
   if (!S.SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
   // מאומת מול הטביעה שבענן ולא מול המראה — מראה שהתיישנה הייתה מאשרת סיסמה שכבר הוחלפה במכשיר אחר
   var chk;
-  try { chk = await withTimeout(S.SB.from(authUsersTable()).select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
+  try { chk = await netTimeout(S.SB.from(authUsersTable()).select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
   catch (e) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
   if (chk && chk.error) { toast(MSG_PASS_VERIFY_FAIL + (chk.error.message || MSG_SERVER_ERR), null, 'bad'); return; }
   var row = chk && Array.isArray(chk.data) && chk.data[0];

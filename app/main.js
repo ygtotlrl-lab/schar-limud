@@ -1,11 +1,12 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
 import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayNoon, getDeviceId,
-         withTimeout } from '../core/util.js';
+         netTimeout } from '../core/util.js';
 import { _eraPush, eraKeys, pendAlertDismiss, pendCount, pendHas, pushedFor, rowsVerify, runSave,
          sbWatch } from '../core/sync.js';
 import { lsWindowFrom } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables, mirrorWrite } from '../core/mirror.js';
-import { coreBoot, logAwait } from '../core/backup.js';
+import { logAwait } from '../core/backup.js';
+import { bootRun } from '../core/boot-run.js';
 import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, swApply, swHideUpdate,
          toast } from '../core/ui.js';
@@ -187,7 +188,7 @@ var HW_CFG = {
     isPending: function (r) { return pendHas(pendTxnKey(r)); },
     fetch: async function () {
       try {
-        var res = await withTimeout(S.SB.from('sl_transactions').select('*'));
+        var res = await netTimeout(S.SB.from('sl_transactions').select('*'));
         return (res && !res.error && Array.isArray(res.data))
           ? { ok: true, rows: res.data } : { ok: false, rows: [] };
       } catch (e) { return { ok: false, rows: [] }; }
@@ -212,7 +213,7 @@ var USER_CFG = {
   // נקראת בזמן הקריאה ולא בהשמה — הקבוע מוצהר מתחת לבלוק, וקריאה בהשמה נותנת undefined בשקט
   offMsg: function () { return MSG_OFF_USER_WRITE; },
   from: function () { return S.SB.from(authUsersTable()); },
-  run: function (q) { return withTimeout(q); },
+  run: function (q) { return netTimeout(q); },
   after: function (res) { return res; },
   // המשתמש המחובר מסונכרן מול המראה אחרי שנשמרה — הפוך מזה קורא ערך שטרם נכתב
   refreshed: function () { var cu = sessGet(); if (cu) sessSet(slResolveUser(cu)); },
@@ -312,7 +313,7 @@ function showPanel(key,btn){
 async function slBoot(){
   shell.refreshUI = refreshUI;
   // הליבה עולה לפני הכניסה — הסימונים, הגיבוי והמראה אינם תלויים בה, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
-  coreBoot();
+  bootRun();
   // מראת המשתמשים נטענת לפני מסך הכניסה — אחרת לכניסה אופליין אין מול מה לאמת.
   try { usersSaveAll(mirrorLoadOne(authUsersTable()) || []); } catch (e) { console.warn('[users] load', e); }
   // אין כאן שחזור סשן — סשן שנשמר בלי תפוגה הוא כניסה קבועה על מכשיר משותף.

@@ -1,7 +1,7 @@
 // core/sync.js — סנכרון, מיזוג ודחיפה
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
-         kvParse, withTimeout } from './util.js';
+         kvParse, netTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack, lsWire } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 import { mirrorWipe } from './mirror.js';
@@ -167,7 +167,7 @@ async function _rowsPaged(mkQuery, order, win) {
       if (win.to) q = q.lte(win.col, win.to);
     }
     if (order) q = q.order(order, { ascending: true });
-    var res = await withTimeout(q.range(from, from + ROWS_PAGE - 1));
+    var res = await netTimeout(q.range(from, from + ROWS_PAGE - 1));
     if (!res || res.error || !Array.isArray(res.data)) return null;
     out = out.concat(res.data);
     if (res.data.length < ROWS_PAGE) return out;
@@ -646,7 +646,7 @@ function plStampWrite(ts) {
     return { ok: false, error: e };
   };
   try {
-    return withTimeout(c.from(tbl).upsert(row, { onConflict: 'key' })).then(function (r) {
+    return netTimeout(c.from(tbl).upsert(row, { onConflict: 'key' })).then(function (r) {
       if (!r || r.error) return fail(r && r.error);
       return { ok: true };
     }, fail);
@@ -658,7 +658,7 @@ function plStampRead() {
   try { c = app.PL_CFG.client(); tbl = app.PL_CFG.table(); } catch (e) { c = null; }
   if (!c || !tbl) return Promise.resolve({ ok: false, ts: null });
   try {
-    return withTimeout(c.from(tbl).select('value').eq('key', PL_STAMP_KEY).maybeSingle())
+    return netTimeout(c.from(tbl).select('value').eq('key', PL_STAMP_KEY).maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
         return { ok: true, ts: r.data ? plNum(kvParse(PL_STAMP_KEY, r.data.value).value) : null };
@@ -892,7 +892,7 @@ function eraValid() {
 function eraCloudRead() {
   var c = app.ERA_CFG.client(), eraTbl = app.ERA_CFG.table();
   if (!c || !eraTbl) return Promise.resolve(null);
-  return withTimeout(c.from(eraTbl).select('value').eq('key', ERA_CLOUD_KEY).maybeSingle())
+  return netTimeout(c.from(eraTbl).select('value').eq('key', ERA_CLOUD_KEY).maybeSingle())
     .then(function (r) {
       if (!r || r.error || !r.data) return null;
       var pr = kvParse(ERA_CLOUD_KEY, r.data.value);

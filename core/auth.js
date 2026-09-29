@@ -3,7 +3,8 @@
 import { MSG_PASS_CHANGED_OUT, MSG_USER_DISABLED_OUT, app } from './util.js';
 import { MIRROR, mirrorSave } from './mirror.js';
 import { newClientId } from './sync.js';
-import { coreBootWire, logAction, logFlush } from './backup.js';
+import { logAction, logFlush } from './backup.js';
+import { bootWire } from './boot-run.js';
 
 // ── נעילת חוסר-פעילות ──
 var LK_LOCK_MS = 5 * 60 * 1000;
@@ -100,7 +101,7 @@ function lkBoot() {
   return lkReset();
 }
 // הנעילה עולה בעליית הליבה — מכל אפליקציה שיש בה כניסה, כי רק היא טוענת את המודול הזה.
-coreBootWire({ lk: lkBoot });
+bootWire({ lk: lkBoot });
 
 // ── הסשן ──
 var _sessUser = null;
@@ -125,8 +126,8 @@ function usersNameOf(id) {
 
 // ── מודל ההרשאות ──
 // ההשוואה היא ל-admin בדיוק ולא «שונה מ-manager» — תפקיד שגוי או ריק שולל הרשאה ולעולם אינו מעניק אותה.
-var ROLE_ADMIN = 'admin';
-function isAdminOf(u) { return !!u && String(u.role) === ROLE_ADMIN; }
+var AUTH_ROLE_ADMIN = 'admin';
+function isAdminOf(u) { return !!u && String(u.role) === AUTH_ROLE_ADMIN; }
 function isAdmin() { return isAdminOf(sessGet()); }
 
 // ── טביעת הסיסמה ──
@@ -320,7 +321,7 @@ function authLog(ok, branch, username) {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
+export { AUTH_USER_COLS, AUTH_ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
          authUsersTable, authVerify, isAdmin, isAdminOf, lkReset, lkStop,
          sessActive, sessClear, sessGet, sessSet, sessUserId, usersByName, usersGet,
          usersNameOf, usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };
