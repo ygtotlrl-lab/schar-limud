@@ -3,7 +3,8 @@
 import { MSG_PASS_CHANGED_OUT, MSG_USER_DISABLED_OUT, app } from './util.js';
 import { MIRROR, mirrorSave } from './mirror.js';
 import { newClientId } from './sync.js';
-import { coreBootWire, logAction, logFlush } from './backup.js';
+import { logAction, logFlush } from './backup.js';
+import { bootWire } from './boot-run.js';
 
 // ── נעילת חוסר-פעילות ──
 var LK_LOCK_MS = 5 * 60 * 1000;
@@ -100,7 +101,7 @@ function lkBoot() {
   return lkReset();
 }
 // הנעילה עולה בעליית הליבה — מכל אפליקציה שיש בה כניסה, כי רק היא טוענת את המודול הזה.
-coreBootWire({ lk: lkBoot });
+bootWire({ lk: lkBoot });
 
 // ── הסשן ──
 var _sessUser = null;

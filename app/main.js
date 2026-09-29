@@ -5,7 +5,8 @@ import { _eraPush, eraKeys, pendAlertDismiss, pendCount, pendHas, pushedFor, row
          sbWatch } from '../core/sync.js';
 import { lsWindowFrom } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables, mirrorWrite } from '../core/mirror.js';
-import { coreBoot, logAwait } from '../core/backup.js';
+import { logAwait } from '../core/backup.js';
+import { bootRun } from '../core/boot-run.js';
 import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, swApply, swHideUpdate,
          toast } from '../core/ui.js';
@@ -312,7 +313,7 @@ function showPanel(key,btn){
 async function slBoot(){
   shell.refreshUI = refreshUI;
   // הליבה עולה לפני הכניסה — הסימונים, הגיבוי והמראה אינם תלויים בה, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
-  coreBoot();
+  bootRun();
   // מראת המשתמשים נטענת לפני מסך הכניסה — אחרת לכניסה אופליין אין מול מה לאמת.
   try { usersSaveAll(mirrorLoadOne(authUsersTable()) || []); } catch (e) { console.warn('[users] load', e); }
   // אין כאן שחזור סשן — סשן שנשמר בלי תפוגה הוא כניסה קבועה על מכשיר משותף.
