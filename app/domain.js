@@ -129,12 +129,33 @@ function slSettingsAccess(u) {
 
 function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 
+// ── המיון ──
+// תלמידים — לפי השם, בסדר הא״ב.
+function slSortStudents(list) {
+  return list.slice().sort(function (a, b) { return HE_COLLATOR.compare(a.name || '', b.name || ''); });
+}
+
+// תנועות — לפי התאריך, והיציבות שומרת את סדר הקלט בשוויון; desc — החדשה ראשונה.
+function slSortTxns(list, desc) {
+  var dir = desc ? -1 : 1;
+  return list.slice().sort(function (a, b) {
+    var x = String(a.txn_date || ''), y = String(b.txn_date || '');
+    return (x < y ? -1 : x > y ? 1 : 0) * dir;
+  });
+}
+
+// פריטי הרשימות — לפי הערך, בסדר הא״ב.
+function slSortListItems(list) {
+  return list.slice().sort(function (a, b) { return HE_COLLATOR.compare(a.value || '', b.value || ''); });
+}
+
+// שנות הלימודים — הראשונה ראשונה.
+function slSortYears(list) { return list.slice().sort(function (a, b) { return a - b; }); }
+
 // נקודת הסינון היחידה של המחוקים — כל קוראי STUDENTS מקבלים אותו מכאן
 function slApplyMirror() {
-  S.STUDENTS = (MIRROR.sl_students || []).filter(function (s) { return !s.deleted; })
-    .sort(function (a, b) { return HE_COLLATOR.compare(a.name || '', b.name || ''); });
-  S.TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
-    .sort(function (a, b) { return String(a.txn_date || '') < String(b.txn_date || '') ? -1 : 1; });
+  S.STUDENTS = slSortStudents((MIRROR.sl_students || []).filter(function (s) { return !s.deleted; }));
+  S.TRANSACTIONS = slSortTxns((MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; }));
   S.SETTINGS = {};
   // הערך בעמודה הוא JSON — קורא שמתייחס אליו כטקסט היה קורא "5" עם הגרשיים ולא כחמש
   (MIRROR[KV_TABLE] || []).forEach(function (r) {
@@ -142,8 +163,7 @@ function slApplyMirror() {
   });
   S.LISTS = {};
   // כפתור המחיקה מצביע על key, מפתח המיזוג — לפריט שנוצר במכשיר אין שדה אחר
-  (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
-    .slice().sort(function (a, b) { return HE_COLLATOR.compare(a.value || '', b.value || ''); })
+  slSortListItems((MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; }))
     .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ client_id: r.client_id, value: r.value }); });
 }
 
@@ -405,7 +425,7 @@ async function ensureCreditMethod(){
 function calcDistribution(sid,year){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
   var cs=s.card_settings||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
-  var txns=S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}).sort(function(a,b){return a.txn_date>b.txn_date?1:-1;});
+  var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}));
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
   function draw(n){
@@ -460,5 +480,5 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete,
          pendLstTag, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slListId,
-         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs,
+         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears, slTs,
          studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

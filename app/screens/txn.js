@@ -9,9 +9,8 @@ import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
-import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid,
-         releaseCid, slLocalWrite, txnAmountHTML,
-         txnMethodPill } from '../domain.js';
+import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
+         slLocalWrite, slSortTxns, txnAmountHTML, txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
   return `
@@ -99,7 +98,7 @@ async function saveTxn(){
 
 function renderTxnLog(){
   var fid=comboValue('txn-filter');
-  var txns=S.TRANSACTIONS.slice().sort(function(a,b){return a.txn_date>b.txn_date?-1:1;}).slice(0,60);
+  var txns=slSortTxns(S.TRANSACTIONS, true).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
   document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
