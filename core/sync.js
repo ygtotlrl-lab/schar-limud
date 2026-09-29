@@ -2,7 +2,7 @@
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, withTimeout } from './util.js';
-import { lsDropWire, lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
+import { lsDropWire, lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 
 // ── מזהי רשומות ──
@@ -916,7 +916,7 @@ function eraPendingRows() {
       if (!lk || lk.indexOf(app.ERA_CFG.prefix) !== 0) continue;
       var v = null;
       try { v = JSON.parse(localStorage.getItem(lk)); } catch (e1) { continue; }
-      var rows = Array.isArray(v) ? v : (v && Array.isArray(v.rows) ? v.rows : null);
+      var rows = lsUnpack(v) || (v && Array.isArray(v.rows) ? v.rows : null);
       if (!rows) continue;
       rows.forEach(function (r) {
         if (!r || typeof r !== 'object') return;
