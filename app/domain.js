@@ -1,6 +1,6 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
-import { GREG_MONTHS, HE_COLLATOR, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, errMsg, isNetErr,
-         kvParse } from '../core/util.js';
+import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, errMsg, isNetErr,
+         kvParse, sortCompare } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
@@ -110,7 +110,7 @@ function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 // ── המיון ──
 // תלמידים — לפי השם, בסדר הא״ב.
 function slSortStudents(list) {
-  return list.slice().sort(function (a, b) { return HE_COLLATOR.compare(a.name || '', b.name || ''); });
+  return list.slice().sort(function (a, b) { return sortCompare(a.name || '', b.name || ''); });
 }
 
 // תנועות — לפי התאריך, והיציבות שומרת את סדר הקלט בשוויון; desc — החדשה ראשונה.
@@ -124,7 +124,7 @@ function slSortTxns(list, desc) {
 
 // פריטי הרשימות — לפי הערך, בסדר הא״ב.
 function slSortListItems(list) {
-  return list.slice().sort(function (a, b) { return HE_COLLATOR.compare(a.value || '', b.value || ''); });
+  return list.slice().sort(function (a, b) { return sortCompare(a.value || '', b.value || ''); });
 }
 
 // שנות הלימודים — הראשונה ראשונה.
@@ -233,7 +233,7 @@ function acadYearOf(s){var d=dayNoon(String(s));return d.getMonth()>=8?d.getFull
 
 function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
 
-function monthLabel(y,m){return GREG_MONTHS[m]+' '+(m>=8?y:y+1);}
+function monthLabel(y,m){return DAY_MONTHS[m]+' '+(m>=8?y:y+1);}
 
 // ── טווח פעילות התלמיד ──
 // YYYY-MM ממוין כרונולוגית כמחרוזת — ולכן ההשוואה לקסיקוגרפית בלי המרה לתאריך
@@ -247,7 +247,7 @@ function monthKeyOf(iso){return String(iso||'').slice(0,7);}
 // ערך שאינו YYYY-MM היה משתתף בהשוואה ומחזיר טווח שגוי בשקט — ולכן ערך פסול נחשב «לא הוגדר»
 function normMonth(v){v=(v==null?'':String(v)).trim();return MONTH_RE.test(v)?v:'';}
 
-function monthKeyLabel(k){var p=normMonth(k);return p?GREG_MONTHS[parseInt(p.slice(5,7),10)-1]+' '+p.slice(0,4):'';}
+function monthKeyLabel(k){var p=normMonth(k);return p?DAY_MONTHS[parseInt(p.slice(5,7),10)-1]+' '+p.slice(0,4):'';}
 
 // הטווח כולל את שני קצותיו; בלי start_month אין גבול תחתון, בלי end_month אין גבול עליון
 function studentInMonth(s,y,m){

@@ -1,6 +1,6 @@
 // core/backup.js — הגיבוי היומי ויומן הפעולות
 
-import { app, dayToday, withTimeout } from './util.js';
+import { app, dayToday, netTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
 import { lsGet, lsSet, lsSpace, lsWire } from './storage.js';
 
@@ -79,7 +79,7 @@ function logAwait(action, entries) {
   var c = _bkClient();
   if (!c || !Array.isArray(entries)) return Promise.resolve(false);
   var rows = entries.map(function (e) { return _bkLogRow(action, e.key, 1, e.details); });
-  return withTimeout(c.from(BK_LOG_TABLE).insert(rows)).then(
+  return netTimeout(c.from(BK_LOG_TABLE).insert(rows)).then(
     function (r) { if (r && r.error) { _bkWriteFail('logAwait', r.error); return false; } return true; },
     function (e) { _bkWriteFail('logAwait', e); return false; });
 }
@@ -194,7 +194,7 @@ async function _bkReadRows(c, s, win) {
       if (win.from) cq = cq.gte(win.col, win.from);
       if (win.to) cq = cq.lte(win.col, win.to);
     }
-    var cr = await withTimeout(cq);
+    var cr = await netTimeout(cq);
     if (!cr || cr.error || typeof cr.count !== 'number') return null;
     if (cr.count !== rows.length) {
       console.error('[bk] הגיבוי נחתך — ' + s.name + ': נמדדו ' + rows.length +

@@ -126,8 +126,8 @@ function usersNameOf(id) {
 
 // ── מודל ההרשאות ──
 // ההשוואה היא ל-admin בדיוק ולא «שונה מ-manager» — תפקיד שגוי או ריק שולל הרשאה ולעולם אינו מעניק אותה.
-var ROLE_ADMIN = 'admin';
-function isAdminOf(u) { return !!u && String(u.role) === ROLE_ADMIN; }
+var AUTH_ROLE_ADMIN = 'admin';
+function isAdminOf(u) { return !!u && String(u.role) === AUTH_ROLE_ADMIN; }
 function isAdmin() { return isAdminOf(sessGet()); }
 
 // ── טביעת הסיסמה ──
@@ -321,7 +321,7 @@ function authLog(ok, branch, username) {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
+export { AUTH_USER_COLS, AUTH_ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
          authUsersTable, authVerify, isAdmin, isAdminOf, lkReset, lkStop,
          sessActive, sessClear, sessGet, sessSet, sessUserId, usersByName, usersGet,
          usersNameOf, usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };
