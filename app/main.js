@@ -1,9 +1,8 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
 import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayNoon, getDeviceId,
          withTimeout } from '../core/util.js';
-import { _eraPush, ctxEpoch, ctxStale, eraKeys, eraKick, pendAlertDismiss, pendBoot,
-         pendCount, pendHas, plBoot, rtyBoot, runSave, sbWatch,
-         tombBoot } from '../core/sync.js';
+import { _eraPush, eraKeys, eraKick, pendAlertDismiss, pendBoot, pendCount, pendHas, plBoot,
+         pushedFor, rowsVerify, rtyBoot, runSave, sbWatch, tombBoot } from '../core/sync.js';
 import { hwBoot, lsBoot, lsClearHorizons, lsRemove, lsWindowFrom } from '../core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorTables,
          mirrorWrite } from '../core/mirror.js';
@@ -15,7 +14,7 @@ import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
          toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify,
+import { _slPushOf, _slRowId,
          pendTxnKey, slApplyMirror,
          slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
@@ -84,20 +83,17 @@ var LS_CFG = {
   // החותמת היא updated_at, אותה שהמראה מסננת בה את האופק — שתי חותמות היו מוחקות תנועה שלא פונתה
   oldRecords: [
     { key: mirrorKey('sl_transactions'), label: 'תנועות', ts: slTs,
-      idOf: _slRowId, syncedThrough: _slPushedFor('sl_transactions'), verify: _slVerify(function () { return S.SB.from('sl_transactions').select('client_id,updated_at'); }) }
+      idOf: _slRowId, syncedThrough: pushedFor('sl_transactions'), verify: rowsVerify(function () { return S.SB; }, 'sl_transactions') }
   ],
+  // ריק ומוצהר — התנועות בפינוי, ואין טבלה שנדרשת במלואה לחישוב.
+  fullHistory: [],
   // טבלה שגדלה ואינה בפינוי ממלאת אחסון של origin משותף — לכן כאן רק טבלה קבועה בגודלה, עם נימוקה.
   fixedSize: [
     { t: 'sl_students', why: 'תלמידים — שורה לתלמיד, ⛔ והם אבות התנועות שנשארות' },
     { t: KV_TABLE,      why: 'הגדרות — שורה למפתח, ⛔ ומספר המפתחות קבוע בקוד' },
     { t: 'sl_lists',    why: 'רשימות בחירה — פריטים שנערכים בהגדרות, ⛔ ואינם גדלים עם התנועות' },
     { t: 'sl_users',    why: 'משתמשים — שורה למשתמש, ⚠️ והיא מסלול הכניסה האופליין' }
-  ],
-
-  // ספק נחשב «יש ממתין» — ואז אין פינוי כלל
-  pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
-  // 0 בכוונה — sl_synced_at היא חותמת משיכה, ופינוי שנשען עליה מוחק רשומה שמעולם לא עלתה; העֵד הוא _slPushedAt פר-מפתח
-  syncedThrough: function () { return 0; }
+  ]
 };
 
 // sl_users אינה ברשימה — sh_backup קריא ל-anon, וגיבוי שלה היה מעתיק את pass_salt ו-pass_fp למקום שני
@@ -167,12 +163,10 @@ var PUSH_CFG = {
   delay:  400,
   rows:   function (t, ctx) {
     if (!ctx || !ctx[t]) return null;
-    S._slPushEp = ctxEpoch();
     return MIRROR[t] || [];
   },
   key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(t, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },
-  mark:   function (t) { if (!ctxStale(S._slPushEp)) _slMarkPushed(t); },
   run:    function () { syncAll(); },
 };
 

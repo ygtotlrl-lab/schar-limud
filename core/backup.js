@@ -2,7 +2,7 @@
 
 import { app, dayToday, withTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
-import { lsDropWire, lsGet, lsSet, lsSpace } from './storage.js';
+import { lsGet, lsSet, lsSpace, lsWire } from './storage.js';
 
 // ── גיבוי יומי ויומן פעולות ──
 var BK_TABLE = 'sh_backup'; // הכתיבה היא insert בלבד
@@ -84,7 +84,7 @@ function logAwait(action, entries) {
     function (e) { _bkWriteFail('logAwait', e); return false; });
 }
 // מפתח שנמחק בעלייה כשיש ממתין נרשם דרך התור — העלייה אינה ממתינה לרשת, והתור נשלח בעלייה ובחזרת הרשת.
-lsDropWire({ log: function (action, entries) {
+lsWire({ log: function (action, entries) {
   return _bkLogQueue(entries.map(function (e) { return _bkLogRow(action, e.key, 1, e.details); }));
 } });
 async function logFlush() {

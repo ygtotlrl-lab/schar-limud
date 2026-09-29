@@ -17,27 +17,7 @@ import { S, shell } from './state.js';
 
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
-// ── עֵד הדחיפה פר-מפתח ──
-// נכתב רק בסוף מעבר דחיפה נקי שבא אחרי משיכה מוצלחת, גם במכשיר שרק קורא — אין לגזור אותו ממשיכה לבדה
-var _slPushedAt = {};
-
-function _slMarkPushed(t) { _slPushedAt[t] = Date.now(); }
-
-function _slPushedThrough(t) { return _slPushedAt[t] || 0; }
-
-function _slPushedFor(t) { return function () { return _slPushedThrough(t); }; }
-
 function _slRowId(r) { return r ? r.client_id : null; }
-
-// נכשל סגור — עמוד שנכשל מחזיר null, ו«אין ראיה» אינו «הענן ריק»
-function _slVerify(mkQuery) {
-  return function () {
-    if (!S.SB) return Promise.resolve({ ok: false, rows: [] });
-    return _rowsPaged(mkQuery, 'client_id', null)
-      .then(function (rs) { return Array.isArray(rs) ? { ok: true, rows: rs } : { ok: false, rows: [] }; },
-            function () { return { ok: false, rows: [] }; });
-  };
-}
 
 // התחילית נקראת בזמן ריצה ולא בהצהרה — הקבועים מוגדרים בהמשך הדף
 function _slPushOf(t) {
@@ -474,7 +454,7 @@ function txnMethodPill(t){
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
 
-export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLabel,
+export { _slPushOf, _slRowId, acadYearLabel,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete,

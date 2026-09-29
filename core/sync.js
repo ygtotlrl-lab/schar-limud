@@ -2,7 +2,7 @@
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, withTimeout } from './util.js';
-import { lsDropWire, lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack } from './storage.js';
+import { lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack, lsWire } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 
 // ── מזהי רשומות ──
@@ -147,7 +147,8 @@ function tombBoot() { _tombPrunePending = true; }
 var _ctxEpoch = 0;
 function ctxEpoch() { return _ctxEpoch; }
 // נקרא לפני הטעינה החדשה — קידום אחריה משאיר את המחזור הרץ סבור שהוא עדיין בהקשר שלו.
-function ctxSwitch() { _ctxEpoch++; return _ctxEpoch; }
+// עֵדי הדחיפה מתאפסים איתו — עֵד של הקשר אחד אינו מעיד על השני.
+function ctxSwitch() { _ctxEpoch++; _pushedAt = {}; return _ctxEpoch; }
 // הקורא לוכד את הערך בכניסה ומוסר אותו כאן, ואינו קורא את הגלובלי פעמיים.
 function ctxStale(ep) { return ep !== _ctxEpoch; }
 
@@ -172,6 +173,16 @@ async function _rowsPaged(mkQuery, order, win) {
     from += ROWS_PAGE;
     if (from > ROWS_CAP) return out;
   }
+}
+
+// אימות פינוי מול הענן בשורות טבלה — אחד לכל האפליקציות.
+// נכשל סגור: עמוד שנכשל מחזיר null, ולקוח שאינו קיים זורק — «אין ראיה» אינו «הענן ריק».
+function rowsVerify(client, t) {
+  return function () {
+    return _rowsPaged(function () { return client().from(t).select('client_id,updated_at'); }, 'client_id', null)
+      .then(function (rs) { return Array.isArray(rs) ? { ok: true, rows: rs } : { ok: false, rows: [] }; },
+            function () { return { ok: false, rows: [] }; });
+  };
 }
 
 // ── האזנת הסכימה ──
@@ -708,6 +719,13 @@ function plBoot() {
 // rows שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נטענה היה מתיר לפנות רשומה שלא עלתה.
 var _pushTimer = null, _eraHoldSaid = false;
 
+// ── עֵד הפינוי ──
+// פר-טבלה, בזיכרון, ונרשם רק כאן — בסוף מעבר דחיפה בלי שורה בכשל רשת, ולא במשיכה: עֵד שמתעדכן גם במשיכה מוחק מהדיסק רשומה שמעולם לא עלתה.
+// החותמת היא רגע הכניסה למעבר — כל מה שסומן ⏳ לפניו נשלח בו; ומעבר שההקשר התחלף בתוכו אינו מעיד דבר.
+var _pushedAt = {};
+function pushedFor(t) { return function () { return _pushedAt[t] || 0; }; }
+function _pushWitness(t, ep, t0) { if (!ctxStale(ep)) _pushedAt[t] = t0; }
+
 // נדחף רק מה שמסומן ⏳ — הסימון הוא הראיה שהרשומה טרם עלתה, והפינוי והעידן כבר נשענים עליו.
 // האפליקציה מוסרת את הרשומות המקומיות ואת מפתח הסימון בלבד; השוואה לחותמות הענן הייתה מקור אמת שני.
 function pushPending(t, ctx) {
@@ -735,9 +753,10 @@ function pushTable(t, ctx) {
     if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
     return Promise.resolve({ ok: false, still: [], n: 0 });
   }
+  var ep = ctxEpoch(), t0 = Date.now();
   return pushPending(t, ctx).then(function (rows) {
     if (!rows) return { ok: false, still: [], n: 0 };
-    if (!rows.length) { app.PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
+    if (!rows.length) { _pushWitness(t, ep, t0); return { ok: true, still: [], n: 0 }; }
     var still = [], n = 0, bad = 0, i = 0;
     function won(row) {
       var k = app.PUSH_CFG.key(t, row);
@@ -770,7 +789,7 @@ function pushTable(t, ctx) {
       // בלי קידום החותמת הדחיפה נשארת בלתי-נראית למכשירים האחרים — הם מושכים רק כשהיא מתקדמת.
       if (n) plTouch();
       // עֵד הפינוי מסומן רק כשלא נשארה שורה בכשל רשת — זה התנאי שמתיר לפנות מהדיסק רשומה ישנה של הטבלה.
-      if (!still.length) app.PUSH_CFG.mark(t);
+      if (!still.length) _pushWitness(t, ep, t0);
       return { ok: !still.length && !bad, still: still, n: n };
     });
   });
@@ -939,7 +958,7 @@ function eraPendAny() {
     return !!v && typeof v === 'object' && Object.keys(v).length > 0;
   });
 }
-lsDropWire({ pending: eraPendAny });
+lsWire({ pending: eraPendAny });
 // הזריקה: מחיקת העותק והממתינים, העידן נכתב, והמשיכה המלאה ממלאת.
 // המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
 function _eraWipe(era) {
@@ -1006,5 +1025,5 @@ export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKil
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendReload, pendRender, pendTag,
          PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,
-         plTick, plTouch, pushDirty, pushTable,
-         rtyBoot, rtyNote, runSave, sbWatch, schedulePush };
+         plTick, plTouch, pushDirty, pushTable, pushedFor,
+         rowsVerify, rtyBoot, rtyNote, runSave, sbWatch, schedulePush };
