@@ -1,5 +1,5 @@
 // app/screens/dash.js — לוח הבקרה
-import { dayToday } from '../../core/util.js';
+import { GREG_MONTHS, dayNoon, dayToday } from '../../core/util.js';
 import { esc } from '../../core/ui.js';
 import { barChart } from '../../core/chart.js';
 import { YEAR_MONTHS } from '../constants.js';
@@ -7,7 +7,8 @@ import { S } from '../state.js';
 import { acadYearLabel, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
          studentInMonth } from '../domain.js';
 
-var MONTH_HE_SHORT=['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
+// הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
+var MONTH_HE_SHORT=GREG_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
 
 function screenDashHTML() {
   return `
@@ -53,7 +54,7 @@ function dashNextYear(){S.DASH_YEAR++;renderDash();}
 // ── לוח הבקרה ──
 // כל חודש מציג את סך התנועות לפי תאריך התנועה, בלי פריסה — השאלה כאן היא «כמה נגבה בחודש הזה».
 // תנועה בסעיף CREDIT_METHOD אינה כסף שהתקבל ואינה נכנסת לסכום.
-function txnMonth(t){var d=new Date(t.txn_date+'T00:00:00');return d.getMonth();}
+function txnMonth(t){return dayNoon(String(t.txn_date)).getMonth();}
 
 // הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
 function studentTuition(s){
