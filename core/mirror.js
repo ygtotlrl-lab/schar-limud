@@ -1,7 +1,7 @@
 // core/mirror.js — שכבת המראה
 
 import { app } from './util.js';
-import { hwDiskFilter, lsGet, lsSetArray } from './storage.js';
+import { hwDiskFilter, lsGet, lsSetArray, lsUnpack } from './storage.js';
 
 // ── שכבת המראה ──
 // שער החלון החם יושב ב-mirrorSave; mirrorWrite היא הכתיבה הגולמית היחידה, למסלול שכבר סינן —
@@ -16,7 +16,7 @@ function mirrorTables() { return app.MIRROR_CFG.tables(); }
 // מסלול שרץ לפני העלייה זקוק לטבלה שלו לבדה.
 function mirrorLoadOne(t) {
   var v = null;
-  try { var raw = lsGet(mirrorKey(t), null); v = raw == null ? null : JSON.parse(raw); }
+  try { var raw = lsGet(mirrorKey(t), null); v = raw == null ? null : lsUnpack(JSON.parse(raw)); }
   catch (e) { console.warn('[mirror] ' + t + ' פגום — נטען ריק', e); v = null; }
   if (!Array.isArray(v)) { MIRROR[t] = app.MIRROR_CFG.empty(); return MIRROR[t]; }
   MIRROR[t] = v.filter(function (r) { return r && typeof r === 'object'; });
@@ -25,13 +25,13 @@ function mirrorLoadOne(t) {
 function mirrorLoad() { mirrorTables().forEach(mirrorLoadOne); }
 function mirrorSave(t) {
   var k = mirrorKey(t);
-  return lsSetArray(k, app.MIRROR_CFG.clean(t, hwDiskFilter(k, MIRROR[t] || [])), app.MIRROR_CFG.ts);
+  return lsSetArray(k, app.MIRROR_CFG.clean(t, hwDiskFilter(k, MIRROR[t] || [])), app.MIRROR_CFG.ts, true);
 }
 // אינה נוגעת בזיכרון — הפינוי מצמצם את הדיסק, והמסך הפתוח ממשיך להציג את מה שכבר נטען.
 function mirrorWrite(t, rows) {
-  return lsSetArray(mirrorKey(t), app.MIRROR_CFG.clean(t, rows || []), app.MIRROR_CFG.ts);
+  return lsSetArray(mirrorKey(t), app.MIRROR_CFG.clean(t, rows || []), app.MIRROR_CFG.ts, true);
 }
-// אין כאן הגירה — מפתחות המראה נקראים בשמם הנוכחי בלבד.
+// אין כאן הגירה — מפתחות המראה נקראים בשמם הנוכחי ובצורתם הדחוסה; עותק בצורה אחרת עובר בעידן הנתונים.
 function mirrorBoot() { mirrorLoad(); }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.

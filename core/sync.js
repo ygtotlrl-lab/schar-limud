@@ -2,7 +2,7 @@
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, withTimeout } from './util.js';
-import { lsGet, lsHorizonRelease, lsLog, lsSet } from './storage.js';
+import { lsDropWire, lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 
 // ── מזהי רשומות ──
@@ -916,7 +916,7 @@ function eraPendingRows() {
       if (!lk || lk.indexOf(app.ERA_CFG.prefix) !== 0) continue;
       var v = null;
       try { v = JSON.parse(localStorage.getItem(lk)); } catch (e1) { continue; }
-      var rows = Array.isArray(v) ? v : (v && Array.isArray(v.rows) ? v.rows : null);
+      var rows = lsUnpack(v) || (v && Array.isArray(v.rows) ? v.rows : null);
       if (!rows) continue;
       rows.forEach(function (r) {
         if (!r || typeof r !== 'object') return;
@@ -931,6 +931,15 @@ function eraPendingRows() {
     return { key: k, since: m[k], ls: found[k] ? found[k].ls : null, row: found[k] ? found[k].row : null };
   });
 }
+// קריאה בלבד מהדיסק — רצה בעלייה לפני שמפת ההקשר נטענה, וטעינה שלה כאן הייתה נלכדת בהקשר הלא נכון.
+function eraPendAny() {
+  return _eraPendKeys().some(function (lk) {
+    var v = null;
+    try { v = JSON.parse(lsGet(lk, null) || '{}'); } catch (e) { return true; }
+    return !!v && typeof v === 'object' && Object.keys(v).length > 0;
+  });
+}
+lsDropWire({ pending: eraPendAny });
 // הזריקה: מחיקת העותק והממתינים, העידן נכתב, והמשיכה המלאה ממלאת.
 // המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
 function _eraWipe(era) {

@@ -2,7 +2,7 @@
 
 import { app, dayToday, withTimeout } from './util.js';
 import { _rowsPaged } from './sync.js';
-import { lsGet, lsSet, lsSpace } from './storage.js';
+import { lsDropWire, lsGet, lsSet, lsSpace } from './storage.js';
 
 // ── גיבוי יומי ויומן פעולות ──
 var BK_TABLE = 'sh_backup'; // הכתיבה היא insert בלבד
@@ -50,15 +50,15 @@ function _bkLogRow(action, key, count, details) {
 function _bkWriteFail(where, e) {
   try { console.warn('[bk] ' + where, (e && e.message) ? e.message : e); } catch (e0) { }
 }
-function _bkLogQueue(row) {
+function _bkLogQueue(rows) {
   try {
     var qk = _bkVal(app.BK_CFG.logQueueKey);
     var q = JSON.parse(lsGet(qk, '[]') || '[]');
     if (!Array.isArray(q)) q = [];
-    q.push(row);
+    q = q.concat(rows);
     if (q.length > BK_LOG_MAX) q = q.slice(-BK_LOG_MAX);
-    lsSet(qk, JSON.stringify(q));
-  } catch (e) { _bkWriteFail('_bkLogQueue', e); }
+    return lsSet(qk, JSON.stringify(q));
+  } catch (e) { _bkWriteFail('_bkLogQueue', e); return false; }
 }
 // לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו — תיעוד שמפיל כניסה או שמירה גרוע מהיעדרו.
 function logAction(action, key, count, details) {
@@ -66,12 +66,12 @@ function logAction(action, key, count, details) {
   try {
     row = _bkLogRow(action, key, count, details);
     var c = _bkClient();
-    if (!c) { _bkLogQueue(row); return; }
+    if (!c) { _bkLogQueue([row]); return; }
     c.from(BK_LOG_TABLE).insert(row).then(
-      function (r) { if (r && r.error) _bkLogQueue(row); },
-      function () { _bkLogQueue(row); }
+      function (r) { if (r && r.error) _bkLogQueue([row]); },
+      function () { _bkLogQueue([row]); }
     );
-  } catch (e) { if (row) _bkLogQueue(row); }
+  } catch (e) { if (row) _bkLogQueue([row]); }
 }
 // רישום שהמסלול תלוי בו — הזריקה בעידן מחכה לו, ולכן הוא ממתין לתשובה ואינו נופל לתור.
 // entries: [{ key, details }] — שורה לכל אחד, בבקשה אחת; true רק כשהמסד קיבל את כולן.
@@ -83,6 +83,10 @@ function logAwait(action, entries) {
     function (r) { if (r && r.error) { _bkWriteFail('logAwait', r.error); return false; } return true; },
     function (e) { _bkWriteFail('logAwait', e); return false; });
 }
+// מפתח שנמחק בעלייה כשיש ממתין נרשם דרך התור — העלייה אינה ממתינה לרשת, והתור נשלח בעלייה ובחזרת הרשת.
+lsDropWire({ log: function (action, entries) {
+  return _bkLogQueue(entries.map(function (e) { return _bkLogRow(action, e.key, 1, e.details); }));
+} });
 async function logFlush() {
   var qk, q;
   try { qk = _bkVal(app.BK_CFG.logQueueKey); q = JSON.parse(lsGet(qk, '[]') || '[]'); } catch (e) { return 0; }

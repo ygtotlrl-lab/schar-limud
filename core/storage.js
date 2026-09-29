@@ -25,6 +25,8 @@ function lsWindowMs() {
   var d = Object.prototype.hasOwnProperty.call(LS_APP_TYPES, t) ? LS_APP_TYPES[t] : 0;
   return d > 0 ? d * LS_DAY_MS : Infinity;
 }
+// תחילת החלון — חלון חם שנגזר ממנו קורא מכאן, ואינו מקליד מספר ימים משלו.
+function lsWindowFrom() { var w = lsWindowMs(); return isFinite(w) ? Date.now() - w : -Infinity; }
 
 // נוסח אחיד: סמל הצלחה, אזהרה או שגיאה בתחילת ההודעה.
 var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו והמקום יתפנה.';
@@ -232,8 +234,41 @@ function lsHorizonRelease() {
     return n;
   } catch (e) { return 0; }
 }
-// tsOf(rec) מחזירה חותמת במילישניות.
-function lsSetArray(key, arr, tsOf) {
+// ── כתיבה דחוסה ──
+// שורת מראה נכתבת כמערך ערכים, ושמות העמודות פעם אחת למפתח — שם עמודה שחוזר בכל שורה הוא רוב הנפח.
+// כל סדר עמודות נרשם פעם אחת כצורה, והשורה נפתחת במספר צורתה — שדה נעדר ושדה null נשארים שניים, והמיזוג משווה ביניהם.
+function lsPack(rows) {
+  var cols = [], at = {}, out = [];
+  (Array.isArray(rows) ? rows : []).forEach(function (r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return;
+    var ks = Object.keys(r).filter(function (k) { return r[k] !== undefined; });
+    var sig = ks.join('\u0001'), n = at[sig];
+    if (n === undefined) { n = at[sig] = cols.length; cols.push(ks); }
+    var a = [n];
+    for (var j = 0; j < ks.length; j++) a.push(r[ks[j]]);
+    out.push(a);
+  });
+  return { cols: cols, rows: out };
+}
+// מערך רשומות נקרא כמות שהוא — מפתח שאינו מראה נכתב כך, ועותק מעידן קודם נזרק במנגנון העידן.
+// null — «אינו מערך רשומות».
+function lsUnpack(v) {
+  if (Array.isArray(v)) return v;
+  if (!v || !Array.isArray(v.cols) || !Array.isArray(v.rows)) return null;
+  var out = [];
+  v.rows.forEach(function (a) {
+    var ks = Array.isArray(a) ? v.cols[a[0]] : null;
+    if (!Array.isArray(ks)) return;
+    var o = {};
+    for (var j = 0; j < ks.length; j++) o[ks[j]] = a[j + 1];
+    out.push(o);
+  });
+  return out;
+}
+function lsIsPacked(v) { return !!v && !Array.isArray(v) && Array.isArray(v.cols); }
+function lsArrJson(arr, packed) { return JSON.stringify(packed ? lsPack(arr) : arr); }
+// tsOf(rec) מחזירה חותמת במילישניות · packed — שורות מראה, בכתיבה הדחוסה.
+function lsSetArray(key, arr, tsOf, packed) {
   var list = Array.isArray(arr) ? arr : [];
   var hz = lsHorizon(key), keep = list;
   if (hz > 0 && typeof tsOf === 'function') {
@@ -242,7 +277,7 @@ function lsSetArray(key, arr, tsOf) {
       return !(isFinite(t) && t > 0 && t <= hz);
     });
   }
-  return lsSet(key, JSON.stringify(keep));
+  return lsSet(key, lsArrJson(keep, packed));
 }
 
 // ── פינוי יזום ──
@@ -307,8 +342,8 @@ function lsSweep(reason, needBytes) {
 function lsPruneKey(spec, through, want) {
   var raw = lsGet(spec.key, null);
   if (raw == null) return 0;
-  var arr;
-  try { arr = JSON.parse(raw); } catch (e) { return 0; }
+  var arr, v;
+  try { v = JSON.parse(raw); arr = lsUnpack(v); } catch (e) { return 0; }
   if (!Array.isArray(arr) || arr.length < 2) return 0;
 
   // גם רשומה מסונכרנת אינה מפונה אם היא טרייה מדי — אחרת מפנים את מה שהמשתמש עובד עליו עכשיו.
@@ -339,7 +374,7 @@ function lsPruneKey(spec, through, want) {
   }
   if (!hz) return 0;
   var next = arr.filter(function (r, ix) { return !drop[ix]; });
-  var json = JSON.stringify(next);
+  var json = lsArrJson(next, lsIsPacked(v));
   if (!lsSetRaw(spec.key, json)) return 0;
   lsSetRaw(app.LS_CFG.hzPrefix + spec.key, String(hz));
   var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
@@ -362,12 +397,12 @@ function lsChildrenOf(spec) {
 function lsDropOrphans(c, parent, proven) {
   var hz = lsHorizon(parent.key), parr, arr, alive = {};
   if (!hz || typeof parent.idOf !== 'function') return 0;
-  try { parr = JSON.parse(lsGet(parent.key, null) || '[]'); } catch (e) { return 0; }
+  try { parr = lsUnpack(JSON.parse(lsGet(parent.key, null) || '[]')); } catch (e) { return 0; }
   if (!Array.isArray(parr)) return 0;
   parr.forEach(function (r) { var id = parent.idOf(r); if (id != null) alive[String(id)] = 1; });
-  var raw = lsGet(c.key, null);
+  var raw = lsGet(c.key, null), v;
   if (raw == null) return 0;
-  try { arr = JSON.parse(raw); } catch (e2) { return 0; }
+  try { v = JSON.parse(raw); arr = lsUnpack(v); } catch (e2) { return 0; }
   if (!Array.isArray(arr)) return 0;
   var keep = arr.filter(function (r) {
     var p = c.parentOf(r), t = Number(c.ts(r));
@@ -375,7 +410,7 @@ function lsDropOrphans(c, parent, proven) {
     return !proven(r);
   });
   if (keep.length === arr.length) return 0;
-  var json = JSON.stringify(keep);
+  var json = lsArrJson(keep, lsIsPacked(v));
   if (!lsSetRaw(c.key, json)) return 0;
   if (hz > lsHorizon(c.key)) lsSetRaw(app.LS_CFG.hzPrefix + c.key, String(hz));
   var g = Math.max(0, lsEntryBytes(c.key, raw) - lsEntryBytes(c.key, json));
@@ -455,8 +490,8 @@ function lsPruneKeyVerified(spec, idx, want) {
   if (!idx || !spec || typeof spec.idOf !== 'function') return 0;
   var raw = lsGet(spec.key, null);
   if (raw == null) return 0;
-  var arr;
-  try { arr = JSON.parse(raw); } catch (e) { return 0; }
+  var arr, v;
+  try { v = JSON.parse(raw); arr = lsUnpack(v); } catch (e) { return 0; }
   if (!Array.isArray(arr) || arr.length < 2) return 0;
 
   // הראיה מחליפה את העֵד, לא את חלון הגיל.
@@ -494,7 +529,7 @@ function lsPruneKeyVerified(spec, idx, want) {
     return 0;
   }
   var next = arr.filter(function (r, ix) { return !drop[ix]; });
-  var json = JSON.stringify(next);
+  var json = lsArrJson(next, lsIsPacked(v));
   if (!lsSetRaw(spec.key, json)) return 0;
   lsSetRaw(app.LS_CFG.hzPrefix + spec.key, String(hz));
   var gained = Math.max(0, before - lsEntryBytes(spec.key, json));
@@ -597,6 +632,30 @@ function lsKeyKnown(k, own) {
   var hz = app.LS_CFG.hzPrefix;
   return k.indexOf(hz) === 0 && own[k.slice(hz.length)] === true;
 }
+// ── רישום לפני מחיקה ──
+// מי שיודע מה ממתין (הסנכרון) ומי שמחזיק את תור היומן (הגיבוי) נרשמים כאן — הליבה אינה מייבאת אותם.
+// מפתח שנמחק כשיש ממתין הוא אולי העותק היחיד של מה שממתין, ולכן הוא נרשם כמות שהוא לפני המחיקה, בפעולה של זריקת העידן.
+var LS_DROP_ACTION = 'era_discard';
+var _lsDrop = { pending: null, log: null };
+function lsDropWire(o) {
+  if (o && typeof o.pending === 'function') _lsDrop.pending = o.pending;
+  if (o && typeof o.log === 'function') _lsDrop.log = o.log;
+}
+// כשל בבדיקה נקרא «יש ממתין» — רישום מיותר זול ממחיקה בלי רישום.
+function lsDropPending() {
+  try { if (app.LS_CFG.pending && app.LS_CFG.pending()) return true; } catch (e) { return true; }
+  try { return !!(_lsDrop.pending && _lsDrop.pending()); } catch (e1) { return true; }
+}
+// true רק כשהתור קיבל את כולם — רישום שנכשל משאיר את המפתחות לעלייה הבאה.
+function lsDropLog(keys) {
+  if (!lsDropPending()) return true;
+  if (!_lsDrop.log) { console.error('[ls] אין תור יומן — המפתחות נשארים'); return false; }
+  try {
+    return _lsDrop.log(LS_DROP_ACTION, keys.map(function (k) {
+      return { key: k, details: { ls: k, value: lsGet(k, null) } };
+    })) === true;
+  } catch (e) { console.error('[ls] הרישום לפני המחיקה נכשל — המפתחות נשארים', e); return false; }
+}
 function lsKeySweep() {
   var pre = self.APP.prefix, own = null, live = [], drop = [], i, k;
   try { own = lsKeyRegistry(); } catch (e) { console.error('[ls] המרשם אינו נקרא — אין ניקוי', e); return 0; }
@@ -613,6 +672,7 @@ function lsKeySweep() {
       if (k != null && mine(k) && !lsKeyKnown(k, own)) drop.push(k);
     }
   } catch (e1) { console.error('[ls] סריקת המפתחות נכשלה — אין ניקוי', e1); return 0; }
+  if (drop.length && !lsDropLog(drop)) return 0;
   drop.forEach(lsRemove);
   if (drop.length) lsLog('מפתח שאינו מוצהר נמחק', drop.join(' · '), 0);
   return drop.length;
@@ -792,5 +852,5 @@ function hwBoot() {
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { MSG_LS_FULL, hwBoot, hwDiskFilter, hwForget, hwNoteCloud,
          hwPastLoad, lsBoot, lsClearHorizons, lsGet, lsGuardToast,
-         lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray, lsSetRaw,
-         lsSpace };
+         lsDropWire, lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray,
+         lsSetRaw, lsSpace, lsUnpack, lsWindowFrom };
