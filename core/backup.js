@@ -1,8 +1,9 @@
-// core/backup.js — הגיבוי היומי ויומן הפעולות
+// core/backup.js — הגיבוי היומי, יומן הפעולות ועליית הליבה
 
 import { app, dayToday, withTimeout } from './util.js';
-import { _rowsPaged } from './sync.js';
-import { lsGet, lsSet, lsSpace, lsWire } from './storage.js';
+import { _rowsPaged, eraKick, pendBoot, plBoot, rtyBoot, tombBoot } from './sync.js';
+import { hwBoot, lsBoot, lsGet, lsSet, lsSpace, lsWire } from './storage.js';
+import { mirrorBoot } from './mirror.js';
 
 // ── גיבוי יומי ויומן פעולות ──
 var BK_TABLE = 'sh_backup'; // הכתיבה היא insert בלבד
@@ -279,5 +280,21 @@ function bkBoot() {
   catch (e) { console.warn('[bk] online', e); }
 }
 
+// ── עליית הליבה ──
+// כל מנגנוני הליבה עולים בקריאה אחת, בסדר אחד בכל האפליקציות, וכל אחד בשומר משלו — כשל באחד אינו עוצר את הבאים.
+// המדידה והפינוי לפני המראה — שהטעינה והמשיכה יכתבו לאחסון שיש בו מקום; המראה לפני הסימונים והעידן — הדחיפה קוראת ממנו.
+// הגיבוי כאן ולא במסלול הדחיפה — שם הוא רץ רק כשמישהו כותב, ונעצר ביום בלי כתיבה.
+// הנעילה נרשמת מ-core/auth.js — באפליקציה שיש בה כניסה בלבד, והאפליקציה אינה שואלת.
+// הקריאה חוזרת בבטחה — כל מנגנון נדרך פעם אחת, ובקריאה חוזרת רק טוען את ההקשר הנוכחי.
+var _bootLk = null;
+function coreBootWire(o) { if (o && typeof o.lk === 'function') _bootLk = o.lk; }
+function coreBoot() {
+  [['ls', lsBoot], ['mirror', mirrorBoot], ['pend', pendBoot], ['tomb', tombBoot], ['era', eraKick],
+   ['bk', bkBoot], ['rty', rtyBoot], ['lk', _bootLk], ['pl', plBoot], ['hw', hwBoot]].forEach(function (m) {
+    if (!m[1]) return;
+    try { m[1](); } catch (e) { console.warn('[' + m[0] + '] boot', e); }
+  });
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { bkBoot, logAction, logAwait, logFlush };
+export { coreBoot, coreBootWire, logAction, logAwait, logFlush };

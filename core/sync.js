@@ -4,6 +4,7 @@ import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNet
          kvParse, withTimeout } from './util.js';
 import { lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack, lsWire } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
+import { mirrorWipe } from './mirror.js';
 
 // ── מזהי רשומות ──
 function newClientId(){
@@ -537,11 +538,12 @@ function pendRenderAlert() {
 }
 
 // רענון תקופתי — סף ה-24 שעות חייב להיחצות גם כשהמשתמש לא נגע בכלום.
+// המפה נטענת מחדש בכל קריאה — מפתח הסימונים יכול לשאת את ההקשר; הטיימר והמאזינים נדרכים פעם אחת.
 var _pendTick = null;
 function pendBoot() {
-  pendPrune();
-  pendRender();
-  if (!_pendTick) _pendTick = setInterval(pendRender, 60000);
+  pendReload();
+  if (_pendTick) return;
+  _pendTick = setInterval(pendRender, 60000);
   if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('online', pendRender);
     window.addEventListener('offline', pendRender);
@@ -961,8 +963,10 @@ function eraPendAny() {
 lsWire({ pending: eraPendAny });
 // הזריקה: מחיקת העותק והממתינים, העידן נכתב, והמשיכה המלאה ממלאת.
 // המחיקה קודמת לכתיבה — זריקה שנקטעת משאירה עידן ישן והעלייה הבאה זורקת שוב; הסדר ההפוך משאיר מכשיר חצי-ריק שסבור שהוא מעודכן.
+// ERA_CFG.wipe — מה שהאפליקציה מחזיקה מעבר למראה (זיכרון שנבנה ממנה, מפתחות של הקשר שאינו פתוח); בלעדיו — המראה לבדה.
 function _eraWipe(era) {
-  app.ERA_CFG.wipe();
+  mirrorWipe();
+  if (typeof app.ERA_CFG.wipe === 'function') app.ERA_CFG.wipe();
   _eraPendKeys().forEach(function (lk) { if (lk !== pendKeyName()) lsSet(lk, '{}'); });
   var m = pendAll();
   Object.keys(m).forEach(function (k) { delete m[k]; });
@@ -1023,7 +1027,7 @@ export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKil
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
-         pendHas, pendMark, pendMarkMany, pendReload, pendRender, pendTag,
+         pendHas, pendMark, pendMarkMany, pendRender, pendTag,
          PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,
          plTick, plTouch, pushDirty, pushTable, pushedFor,
          rowsVerify, rtyBoot, rtyNote, runSave, sbWatch, schedulePush };
