@@ -295,17 +295,16 @@ function lsSweep(reason, needBytes) {
 
   // יש משהו בתור שטרם עלה — אי אפשר לדעת מה כבר בענן, ולא מפנים דבר; מחסום אחד לשתי הרשימות ולא שניים.
   // פינוי מפתחות שלמים הוא המסוכן מהשניים — מפתח מקומי-תחילה שפונה לפני שנדחף אינו חוזר משום מקום.
-  if (app.LS_CFG.pending && app.LS_CFG.pending()) {
+  if (lsPending()) {
     lsLog('פינוי דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
     return 0;
   }
 
   // ── מפתחות שלמים: מטמונים שניתן לשחזר מהענן ──
-  // העֵד נבדק פר-פריט (syncedThrough), ו-pending() אינו מחליף אותו — «התור ריק» הוא ראיה על התור ולא על המפתח.
-  var through = lsGlobalWitness();
+  // העֵד נבדק פר-פריט (syncedThrough), ו«אין ממתין» אינו מחליף אותו — «התור ריק» הוא ראיה על התור ולא על המפתח.
   var sized = [];
   (app.LS_CFG.wholeKeys || []).forEach(function (spec) {
-    if (!lsSpecWitness(spec, through)) return;
+    if (!lsSpecWitness(spec)) return;
     var v = lsGet(spec.key, null);
     if (v != null) sized.push({ k: spec.key, b: lsEntryBytes(spec.key, v) });
   });
@@ -321,25 +320,25 @@ function lsSweep(reason, needBytes) {
   // ── רשומות ישנות מסונכרנות ──
   var specs = (app.LS_CFG.oldRecords || []).filter(function (s) { return !lsIsChild(s); });
   // מפתח בלי עֵד מקומי אך עם אימות מול הענן אינו מפונה כאן — האימות אסינכרוני ורץ ב-lsBootDeferred.
-  var defer = lsVerifySpecs(through);
+  var defer = lsVerifySpecs();
   if (defer.length) lsLog('פינוי רשומות ישנות — ' + defer.length + ' מפתחות ללא עֵד מקומי', 'ימשיכו באימות מול הענן', 0);
-  // spec.syncedThrough — עֵד משלו כשהחותמת הגלובלית אינה מעידה עליו, למשל מערך שנדחף בנפרד.
+  // spec.syncedThrough — עֵד הדחיפה של הטבלה שהפריט נדחף איתה, מהליבה; פריט בלעדיו — רק האימות מול הענן מפנה אותו.
   var anyOwn = false;
   for (i = 0; i < specs.length; i++) if (typeof specs[i].syncedThrough === 'function') anyOwn = true;
-  if (!through && !anyOwn) {
-    lsLog('פינוי רשומות ישנות דולג', 'אין חותמת סנכרון מאומתת', 0);
+  if (!anyOwn) {
+    lsLog('פינוי רשומות ישנות דולג', 'אין עֵד דחיפה', 0);
     return freed;
   }
   for (i = 0; i < specs.length; i++) specs[i]._b = lsEntryBytes(specs[i].key, lsGet(specs[i].key, ''));
   specs.sort(function (a, b) { return b._b - a._b; });
   for (i = 0; i < specs.length; i++) {
     if (need && freed >= need) break;
-    freed += lsPruneKey(specs[i], through, need ? Math.max(0, need - freed) : 0);
+    freed += lsPruneKey(specs[i], need ? Math.max(0, need - freed) : 0);
     freed += lsPruneChildren(specs[i]);
   }
   return freed;
 }
-function lsPruneKey(spec, through, want) {
+function lsPruneKey(spec, want) {
   var raw = lsGet(spec.key, null);
   if (raw == null) return 0;
   var arr, v;
@@ -347,7 +346,7 @@ function lsPruneKey(spec, through, want) {
   if (!Array.isArray(arr) || arr.length < 2) return 0;
 
   // גם רשומה מסונכרנת אינה מפונה אם היא טרייה מדי — אחרת מפנים את מה שהמשתמש עובד עליו עכשיו.
-  var cut = lsSpecWitness(spec, through);
+  var cut = lsSpecWitness(spec);
   if (!cut) return 0; // אין עֵד מקומי — המסלול הנכון הוא האימות מול הענן
   cut = Math.min(cut, Date.now() - lsWindowMs());
   if (cut <= 0) return 0;
@@ -419,9 +418,9 @@ function lsDropOrphans(c, parent, proven) {
   return g;
 }
 function lsPruneChildren(spec) {
-  var through = lsGlobalWitness(), gained = 0;
+  var gained = 0;
   lsChildrenOf(spec).forEach(function (c) {
-    var w = lsSpecWitness(c, through);
+    var w = lsSpecWitness(c);
     if (!w) return;
     gained += lsDropOrphans(c, spec, function (r) { return Number(c.ts(r)) <= w; });
   });
@@ -449,25 +448,21 @@ function lsVerifyChildren(spec) {
 }
 
 // ── עֵד חלופי: אימות ישיר מול הענן ──
-// למכשיר שרק קורא אין עֵד דחיפה; כאן שואלים את הענן. נכשל סגור, וחלון הגיל ו-pending() חלים גם כאן.
+// למכשיר שרק קורא אין עֵד דחיפה; כאן שואלים את הענן. נכשל סגור, וחלון הגיל ו«יש ממתין» חלים גם כאן.
 // פינוי רצף בלבד, נעצר בראשונה שלא אומתה — lsSetArray מסננת כל חותמת ≤ hz, ודילוג היה מוחק רשומה שאינה בענן.
 
 var LS_DEFER_MS = 3000; // שהאפליקציה תספיק לעלות לפני הרשת
 
-function lsGlobalWitness() {
-  try { return Number(app.LS_CFG.syncedThrough && app.LS_CFG.syncedThrough()) || 0; } catch (e) { return 0; }
-}
-// מפתח שהגדיר syncedThrough משלו אינו נופל חזרה לגלובלי — עֵד של מערך אחד אינו מעיד על אחר.
-function lsSpecWitness(spec, through) {
+// אין עֵד כללי — חותמת סנכרון אחת מתקדמת גם במשיכה, ועֵד של טבלה אחת אינו מעיד על אחרת.
+function lsSpecWitness(spec) {
   if (spec && typeof spec.syncedThrough === 'function') {
     try { return Number(spec.syncedThrough()) || 0; } catch (e) { return 0; }
   }
-  return Number(through) || 0;
+  return 0;
 }
-function lsVerifySpecs(through) {
-  var t = (through === undefined) ? lsGlobalWitness() : through;
+function lsVerifySpecs() {
   return (app.LS_CFG.oldRecords || []).filter(function (s) {
-    return !!s && !lsIsChild(s) && typeof s.verify === 'function' && typeof s.idOf === 'function' && !lsSpecWitness(s, t);
+    return !!s && !lsIsChild(s) && typeof s.verify === 'function' && typeof s.idOf === 'function' && !lsSpecWitness(s);
   });
 }
 function lsHasVerifiers() { return lsVerifySpecs().length > 0; }
@@ -552,7 +547,7 @@ function lsSweepVerified(reason, needBytes) {
   if (_lsVerifying) return Promise.resolve(0);
   var specs = lsVerifySpecs();
   if (!specs.length) return Promise.resolve(0);
-  if (app.LS_CFG.pending && app.LS_CFG.pending()) {
+  if (lsPending()) {
     lsLog('אימות מול הענן דולג', 'יש נתונים שטרם סונכרנו — לא מפנים דבר', 0);
     return Promise.resolve(0);
   }
@@ -632,26 +627,27 @@ function lsKeyKnown(k, own) {
   var hz = app.LS_CFG.hzPrefix;
   return k.indexOf(hz) === 0 && own[k.slice(hz.length)] === true;
 }
-// ── רישום לפני מחיקה ──
+// ── «יש ממתין» והרישום לפני מחיקה ──
 // מי שיודע מה ממתין (הסנכרון) ומי שמחזיק את תור היומן (הגיבוי) נרשמים כאן — הליבה אינה מייבאת אותם.
+// «יש ממתין» אחד לכל השערים — הפינוי, האימות מול הענן, החלון החם והמחיקה בעלייה; האפליקציה אינה מצהירה משלה.
 // מפתח שנמחק כשיש ממתין הוא אולי העותק היחיד של מה שממתין, ולכן הוא נרשם כמות שהוא לפני המחיקה, בפעולה של זריקת העידן.
 var LS_DROP_ACTION = 'era_discard';
-var _lsDrop = { pending: null, log: null };
-function lsDropWire(o) {
-  if (o && typeof o.pending === 'function') _lsDrop.pending = o.pending;
-  if (o && typeof o.log === 'function') _lsDrop.log = o.log;
+var _lsWire = { pending: null, log: null };
+function lsWire(o) {
+  if (o && typeof o.pending === 'function') _lsWire.pending = o.pending;
+  if (o && typeof o.log === 'function') _lsWire.log = o.log;
 }
-// כשל בבדיקה נקרא «יש ממתין» — רישום מיותר זול ממחיקה בלי רישום.
-function lsDropPending() {
-  try { if (app.LS_CFG.pending && app.LS_CFG.pending()) return true; } catch (e) { return true; }
-  try { return !!(_lsDrop.pending && _lsDrop.pending()); } catch (e1) { return true; }
+// כשל בבדיקה, או בדיקה שלא חווטה, נקראים «יש ממתין» — בספק לא מפנים, ורישום מיותר זול ממחיקה בלי רישום.
+function lsPending() {
+  if (!_lsWire.pending) return true;
+  try { return !!_lsWire.pending(); } catch (e) { return true; }
 }
 // true רק כשהתור קיבל את כולם — רישום שנכשל משאיר את המפתחות לעלייה הבאה.
 function lsDropLog(keys) {
-  if (!lsDropPending()) return true;
-  if (!_lsDrop.log) { console.error('[ls] אין תור יומן — המפתחות נשארים'); return false; }
+  if (!lsPending()) return true;
+  if (!_lsWire.log) { console.error('[ls] אין תור יומן — המפתחות נשארים'); return false; }
   try {
-    return _lsDrop.log(LS_DROP_ACTION, keys.map(function (k) {
+    return _lsWire.log(LS_DROP_ACTION, keys.map(function (k) {
       return { key: k, details: { ls: k, value: lsGet(k, null) } };
     })) === true;
   } catch (e) { console.error('[ls] הרישום לפני המחיקה נכשל — המפתחות נשארים', e); return false; }
@@ -715,12 +711,9 @@ var _hwSweepBusy = false;
 var _hwSwept = 0; // לתיעוד בלבד
 
 function _hwVal(v) { return (typeof v === 'function') ? v() : v; }
-function hwEnabled() {
-  try { return !!(typeof app.HW_CFG !== 'undefined' && app.HW_CFG && app.HW_CFG.enabled); }
-  catch (e) { return false; }
-}
+// התצורה היא הרשימה בלבד — רשימה ריקה היא חלון כבוי, ואין מתג לצידה.
 function _hwSpecs() {
-  try { return (typeof app.HW_CFG !== 'undefined' && app.HW_CFG && app.HW_CFG.specs) || []; }
+  try { return (typeof app.HW_CFG !== 'undefined' && app.HW_CFG && Array.isArray(app.HW_CFG.specs)) ? app.HW_CFG.specs : []; }
   catch (e) { return []; }
 }
 function _hwSpecFor(key) {
@@ -736,7 +729,7 @@ function _hwLive(spec, rec) {
 }
 
 function hwNoteCloud(key, rows) {
-  if (!hwEnabled() || !Array.isArray(rows)) return;
+  if (!Array.isArray(rows)) return;
   var spec = _hwSpecFor(key);
   if (!spec) return;
   var idx = _hwCloudSeen[key] || (_hwCloudSeen[key] = {});
@@ -751,7 +744,7 @@ function hwNoteCloud(key, rows) {
 
 // כל ספק משאיר את הרשומה — רק ראיה עננית עדכנית לרשומה עצמה מפנה.
 function hwDiskFilter(key, rows) {
-  if (!hwEnabled() || !Array.isArray(rows)) return rows;
+  if (!Array.isArray(rows)) return rows;
   var spec = _hwSpecFor(key);
   if (!spec) return rows;
   var idx = _hwCloudSeen[key];
@@ -779,14 +772,11 @@ function hwDiskFilter(key, rows) {
 }
 
 async function hwSweep() {
-  if (!hwEnabled() || _hwSweepBusy) return { swept: 0 };
-  try {
-    if (typeof app.LS_CFG !== 'undefined' && app.LS_CFG &&
-        typeof app.LS_CFG.pending === 'function' && app.LS_CFG.pending()) {
-      try { lsLog('hw-skip', 'תור יוצא לא ריק'); } catch (e0) { }
-      return { swept: 0 };
-    }
-  } catch (e) { return { swept: 0 }; }
+  if (!_hwSpecs().length || _hwSweepBusy) return { swept: 0 };
+  if (lsPending()) {
+    try { lsLog('hw-skip', 'תור יוצא לא ריק'); } catch (e0) { }
+    return { swept: 0 };
+  }
   _hwSweepBusy = true;
   var swept = 0;
   try {
@@ -843,14 +833,14 @@ async function hwPastLoad(key, filter) {
 }
 
 // ── נקודת ההפעלה ──
-// הפינוי מושהה כי הוא דורש רשת; כשהמודול רדום היציאה מיידית, וכפתור השחזור נשאר פעיל בנפרד.
+// הפינוי מושהה כי הוא דורש רשת; ברשימה ריקה היציאה מיידית, וכפתור השחזור נשאר פעיל בנפרד.
 function hwBoot() {
-  if (!hwEnabled()) return;
+  if (!_hwSpecs().length) return;
   try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { MSG_LS_FULL, hwBoot, hwDiskFilter, hwForget, hwNoteCloud,
          hwPastLoad, lsBoot, lsClearHorizons, lsGet, lsGuardToast,
-         lsDropWire, lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray,
-         lsSetRaw, lsSpace, lsUnpack, lsWindowFrom };
+         lsHorizonRelease, lsLog, lsRemove, lsSet, lsSetArray,
+         lsSetRaw, lsSpace, lsUnpack, lsWindowFrom, lsWire };

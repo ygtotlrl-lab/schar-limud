@@ -36,6 +36,38 @@ function actRun(el, fn) {
   });
 }
 
+// ── ניתוב הלחיצה והמקלדת ──
+// מאזין אחד לכל אירוע ב-document, בהאצלה — המסכים נבנים מחדש בכל ציור, ומאזין שנקשר לאלמנט מת איתו; והמפה (DOM_ACTIONS) — של האפליקציה.
+// במקלדת: בורר פתוח ושדה עריכה קודמים לסגירת חלון הדו-שיח — אחרת Escape בשדה שבתוך חלון היה סוגר אותו במקום לבטל את השדה.
+// הסדר: סגירת התפריטים הצפים והבורר שהלחיצה מחוצה להם · סגירת הרקע, שאינו נושא data-act · ידית גרירה — סופה של גרירה
+// ולא בחירה בשורה · ורק אז הניתוב. רכיב data-act שהוא קישור אינו מנותב — הניווט הוא פעולתו.
+function menuOutside(ev) {
+  var inside = ev.target && ev.target.closest ? ev.target.closest('[data-menu]') : null;
+  document.querySelectorAll('[data-menu]').forEach(function (m) {
+    if (m === inside) return;
+    m.querySelectorAll('[data-menu-pop]').forEach(function (p) { p.classList.add('hidden'); });
+  });
+}
+function actWire(actions) {
+  document.addEventListener('click', function (ev) {
+    var t = ev.target && ev.target.closest ? ev.target : null;
+    menuOutside(ev);
+    comboOutside(ev);
+    if (modalBackdrop(ev)) return;
+    if (!t || t.closest('[data-grip]')) return;
+    var el = t.closest('[data-act]');
+    if (!el || el.tagName === 'A') return;
+    var fn = actions[el.getAttribute('data-act')];
+    if (!fn) return;
+    ev.preventDefault();
+    actRun(el, fn);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (comboKey(e) || ksKey(e)) return;
+    modalEsc(e);
+  });
+}
+
 // מסך שמשתמש במסגרת חושף אותה יחד עם הציור שלו, ולא לפניו.
 function shellBare(on) {
   var v = document.getElementById('view');
@@ -492,8 +524,8 @@ function dragCancel() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { actRun, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
-         comboInput, comboKey, comboMake, comboOutside, comboPick, comboSet, comboValue,
+export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
+         comboInput, comboMake, comboPick, comboSet, comboValue,
          dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lsToast,
-         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         openModal, pullRender, shellBare, swApply, swHideUpdate,
          swShowUpdate, toast, uiNoDialog };

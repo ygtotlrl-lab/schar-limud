@@ -27,4 +27,4 @@
 - משתמש בלי טביעה מקבל הודעה משלו. השבתה היא `active=false`, ואין עמודת `deleted` ב-`sl_users`.
 - `'admin'` בלבד פותח את ההגדרות — `slSettingsAccess(u)`: `'ok'` / `'denied'`; אין נפילה-חזרה ל-`'admin'`.
 - שש ספרות נאכפות רק ב-`slSaveMyPassword`, לא בכניסה.
-- `sl_mirror_transactions` מתפנה בחלון השנתי (שנת הלימודים תמיד בתוכו; שנים סגורות נשלפות לפי דרישה). `sl_mirror_students` אינה מתפנה. `wholeKeys` ריק. עֵד הפינוי — `_slPushedAt` פר-מפתח.
+- `sl_mirror_transactions` מתפנה בחלון השנתי (שנת הלימודים תמיד בתוכו; מה שמחוצה לו נשלף לפי דרישה). `sl_mirror_students` אינה מתפנה. `wholeKeys` ריק. עֵד הפינוי — בליבה, ב-`pushTable`, פר-טבלה (`pushedFor`).

@@ -56,6 +56,19 @@ function dayToday(n) {
 function dayIso(d) {
   return d.getFullYear() + '-' + _dayPad(d.getMonth() + 1) + '-' + _dayPad(d.getDate());
 }
+// חשבון ימים בלוח ולא במילישניות — יום אינו תמיד 24 שעות, וחיבור שלהן חוצה את גבול שעון-הקיץ ליום הלא נכון.
+function dayAdd(iso, n) {
+  var d = dayNoon(iso);
+  return dayIso(dayNoon(d.getFullYear(), d.getMonth(), d.getDate() + (+n || 0)));
+}
+// הפרש ימים בין שני תאריכים (ISO או Date) — ב-UTC של רכיבי הלוח, שאין בו מעבר שעון.
+function dayDiff(a, b) {
+  var x = dayNoon(a), y = dayNoon(b);
+  return Math.round((Date.UTC(y.getFullYear(), y.getMonth(), y.getDate()) -
+                     Date.UTC(x.getFullYear(), x.getMonth(), x.getDate())) / 86400000);
+}
+// שמות החודשים הלועזיים — רשימה אחת; צורה מקוצרת נגזרת ממנה אצל הצרכן.
+var GREG_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 // ── מסירת התצורה ──
 // המסירה מצטברת — קריאה לכל שכבה שמוסרת, ושומרי get לחיווט שמוגדר אחרי המסירה.
@@ -171,6 +184,6 @@ export { app, appConfigure, HE_COLLATOR, readNum, uniqList, uniqHas,
          MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_SERVER_ERR, MSG_STALE_CODE,
          MSG_SWITCHED_TO, MSG_SW_TIMEOUT, MSG_SYNC_BACK,
          MSG_USER_DISABLED_OUT,
-         errMsg, getDeviceId, isNetErr, kvParse, withTimeout, dayIso,
+         errMsg, getDeviceId, isNetErr, kvParse, withTimeout, GREG_MONTHS, dayAdd, dayDiff, dayIso,
          dayNoon,
          dayToday };

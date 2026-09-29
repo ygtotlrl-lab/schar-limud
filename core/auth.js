@@ -3,7 +3,7 @@
 import { MSG_PASS_CHANGED_OUT, MSG_USER_DISABLED_OUT, app } from './util.js';
 import { MIRROR, mirrorSave } from './mirror.js';
 import { newClientId } from './sync.js';
-import { logAction, logFlush } from './backup.js';
+import { coreBootWire, logAction, logFlush } from './backup.js';
 
 // ── נעילת חוסר-פעילות ──
 var LK_LOCK_MS = 5 * 60 * 1000;
@@ -99,6 +99,8 @@ function lkBoot() {
   }
   return lkReset();
 }
+// הנעילה עולה בעליית הליבה — מכל אפליקציה שיש בה כניסה, כי רק היא טוענת את המודול הזה.
+coreBootWire({ lk: lkBoot });
 
 // ── הסשן ──
 var _sessUser = null;
@@ -319,6 +321,6 @@ function authLog(ok, branch, username) {
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { AUTH_USER_COLS, ROLE_ADMIN, authLog, authMakePassFp, authPassFields,
-         authUsersTable, authVerify, isAdmin, isAdminOf, lkBoot, lkReset, lkStop,
+         authUsersTable, authVerify, isAdmin, isAdminOf, lkReset, lkStop,
          sessActive, sessClear, sessGet, sessSet, sessUserId, usersByName, usersGet,
          usersNameOf, usersRefresh, usersSanitize, usersSaveAll, usersSaveOne, writeUser };

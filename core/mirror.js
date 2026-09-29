@@ -1,7 +1,7 @@
 // core/mirror.js — שכבת המראה
 
 import { app } from './util.js';
-import { hwDiskFilter, lsGet, lsSetArray, lsUnpack } from './storage.js';
+import { hwDiskFilter, lsClearHorizons, lsGet, lsRemove, lsSetArray, lsUnpack } from './storage.js';
 
 // ── שכבת המראה ──
 // שער החלון החם יושב ב-mirrorSave; mirrorWrite היא הכתיבה הגולמית היחידה, למסלול שכבר סינן —
@@ -31,9 +31,18 @@ function mirrorSave(t) {
 function mirrorWrite(t, rows) {
   return lsSetArray(mirrorKey(t), app.MIRROR_CFG.clean(t, rows || []), app.MIRROR_CFG.ts, true);
 }
+// העותק נזרק כולו — הזיכרון, הדיסק ואופק הפינוי: אופק ששרד מסנן את מה שהמשיכה מחזירה, והמכשיר היה נשאר ריק.
+function mirrorWipe() {
+  mirrorTables().forEach(function (t) { MIRROR[t] = app.MIRROR_CFG.empty(); lsRemove(mirrorKey(t)); });
+  lsClearHorizons();
+}
 // אין כאן הגירה — מפתחות המראה נקראים בשמם הנוכחי ובצורתם הדחוסה; עותק בצורה אחרת עובר בעידן הנתונים.
-function mirrorBoot() { mirrorLoad(); }
+// MIRROR_CFG.loaded — מה שהאפליקציה בונה מהמראה, לפני כל מנגנון שדוחף ממנו.
+function mirrorBoot() {
+  mirrorLoad();
+  if (typeof app.MIRROR_CFG.loaded === 'function') app.MIRROR_CFG.loaded();
+}
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorSave,
-         mirrorTables, mirrorWrite };
+         mirrorTables, mirrorWipe, mirrorWrite };

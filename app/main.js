@@ -1,21 +1,17 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayToday, getDeviceId,
+import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayNoon, getDeviceId,
          withTimeout } from '../core/util.js';
-import { _eraPush, ctxEpoch, ctxStale, eraKeys, eraKick, pendAlertDismiss, pendBoot,
-         pendCount, pendHas, plBoot, rtyBoot, runSave, sbWatch,
-         tombBoot } from '../core/sync.js';
-import { hwBoot, lsBoot, lsClearHorizons, lsRemove } from '../core/storage.js';
-import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorTables,
-         mirrorWrite } from '../core/mirror.js';
-import { bkBoot, logAwait } from '../core/backup.js';
-import { authUsersTable, lkBoot, lkReset, sessActive, sessGet, sessSet,
-         usersSaveAll } from '../core/auth.js';
-import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
-         comboOutside, comboPick, ksKey, modalBackdrop, modalEsc, swApply, swHideUpdate,
+import { _eraPush, eraKeys, pendAlertDismiss, pendCount, pendHas, pushedFor, rowsVerify, runSave,
+         sbWatch } from '../core/sync.js';
+import { lsWindowFrom } from '../core/storage.js';
+import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables, mirrorWrite } from '../core/mirror.js';
+import { coreBoot, logAwait } from '../core/backup.js';
+import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
+import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, swApply, swHideUpdate,
          toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearOf,
+import { _slPushOf, _slRowId,
          pendTxnKey, slApplyMirror,
          slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
@@ -60,6 +56,8 @@ var MIRROR_CFG = {
   ts:     function (r) { return slTs(r); },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
+  // הזיכרון נבנה מהמראה לפני כל מנגנון שדוחף — העותק המקומי לפני כל נגיעה ברשת.
+  loaded: function () { slApplyMirror(); },
 };
 
 var LS_CFG = {
@@ -84,20 +82,17 @@ var LS_CFG = {
   // החותמת היא updated_at, אותה שהמראה מסננת בה את האופק — שתי חותמות היו מוחקות תנועה שלא פונתה
   oldRecords: [
     { key: mirrorKey('sl_transactions'), label: 'תנועות', ts: slTs,
-      idOf: _slRowId, syncedThrough: _slPushedFor('sl_transactions'), verify: _slVerify(function () { return S.SB.from('sl_transactions').select('client_id,updated_at'); }) }
+      idOf: _slRowId, syncedThrough: pushedFor('sl_transactions'), verify: rowsVerify(function () { return S.SB; }, 'sl_transactions') }
   ],
+  // ריק ומוצהר — התנועות בפינוי, ואין טבלה שנדרשת במלואה לחישוב.
+  fullHistory: [],
   // טבלה שגדלה ואינה בפינוי ממלאת אחסון של origin משותף — לכן כאן רק טבלה קבועה בגודלה, עם נימוקה.
   fixedSize: [
     { t: 'sl_students', why: 'תלמידים — שורה לתלמיד, ⛔ והם אבות התנועות שנשארות' },
     { t: KV_TABLE,      why: 'הגדרות — שורה למפתח, ⛔ ומספר המפתחות קבוע בקוד' },
     { t: 'sl_lists',    why: 'רשימות בחירה — פריטים שנערכים בהגדרות, ⛔ ואינם גדלים עם התנועות' },
     { t: 'sl_users',    why: 'משתמשים — שורה למשתמש, ⚠️ והיא מסלול הכניסה האופליין' }
-  ],
-
-  // ספק נחשב «יש ממתין» — ואז אין פינוי כלל
-  pending: function () { try { return pendCount() > 0; } catch (e) { return true; } },
-  // 0 בכוונה — sl_synced_at היא חותמת משיכה, ופינוי שנשען עליה מוחק רשומה שמעולם לא עלתה; העֵד הוא _slPushedAt פר-מפתח
-  syncedThrough: function () { return 0; }
+  ]
 };
 
 // sl_users אינה ברשימה — sh_backup קריא ל-anon, וגיבוי שלה היה מעתיק את pass_salt ו-pass_fp למקום שני
@@ -167,29 +162,25 @@ var PUSH_CFG = {
   delay:  400,
   rows:   function (t, ctx) {
     if (!ctx || !ctx[t]) return null;
-    S._slPushEp = ctxEpoch();
     return MIRROR[t] || [];
   },
   key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(t, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },
-  mark:   function (t) { if (!ctxStale(S._slPushEp)) _slMarkPushed(t); },
   run:    function () { syncAll(); },
 };
 
-// החלון הוא גבול שנת לימודים מפורש ולא פינוי לפי גיל — תנועה ישנה שנעלמת משנה סכום כספי
+// החלון החם הוא חלון הפינוי של האפליקציה — מהליבה, ולא מספר ימים משלו; שנת הלימודים תמיד בתוכו.
 // תנועה בלי תאריך תקין נשארת חמה — ספק אינו מפנה
 var HW_CFG = {
-  enabled: true,
-  admin: function () { return slIsAdmin(); },
   specs: [{
     key: mirrorKey('sl_transactions'),
-    label: 'תנועות שנים סגורות',
+    label: 'תנועות מחוץ לחלון',
     inWindow: function (t) {
       var d = t && t.txn_date;
       if (!d) return true;
-      var y = acadYearOf(String(d).slice(0, 10));
-      if (!isFinite(y)) return true;
-      return y >= acadYearOf(dayToday());
+      var ms = dayNoon(String(d)).getTime();
+      if (!isFinite(ms)) return true;
+      return ms >= lsWindowFrom();
     },
     idOf: function (r) { return r.client_id; },
     ts: function (r) { return slTs(r); },
@@ -210,11 +201,6 @@ var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return S.SB; },
   table:  function () { return KV_TABLE; },
-  // גם אופק הפינוי נמחק — אופק ששרד מסנן את מה שהמשיכה מחזירה, והמכשיר היה נשאר ריק.
-  wipe:   function () {
-    mirrorTables().forEach(function (t) { MIRROR[t] = MIRROR_CFG.empty(); lsRemove(mirrorKey(t)); });
-    lsClearHorizons();
-  },
   // מחזור הסנכרון בונה את מפות הענן, ובלעדיהן שכבת הדחיפה מחזירה «אין ראיה» — ולכן התוצאה נאספת ממנו
   push:   function () { return syncAll().then(function () { return _eraPush; }); },
   refresh: function () { return syncAll(); },
@@ -297,23 +283,8 @@ var DOM_ACTIONS = {
   'logout':                  function () { doLogout(); },
 };
 
-// סגירת הרקע קודמת לניתוב — לחיצה על הרקע אינה נושאת data-act.
-document.addEventListener('click', function (ev) {
-  comboOutside(ev);
-  if (modalBackdrop(ev)) return;
-  var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
-  if (!el) return;
-  var fn = DOM_ACTIONS[el.getAttribute('data-act')];
-  if (!fn) return;
-  ev.preventDefault();
-  actRun(el, fn);
-});
+actWire(DOM_ACTIONS);
 
-// שמירה בשדה עריכה קודמת לסגירת חלון הדו-שיח — אחרת Escape בשדה שבתוך חלון דו-שיח היה סוגר אותו במקום לבטל את השדה.
-document.addEventListener('keydown', function (e) {
-  if (comboKey(e) || ksKey(e)) return;
-  modalEsc(e);
-});
 
 document.addEventListener('input', comboInput);
 
@@ -340,20 +311,8 @@ function showPanel(key,btn){
 // כל הפעלות המודולים המשותפים יושבות כאן — הפעלה שתלויה במסלול אחר, כמו משיכה שהצליחה, נכבית בשקט כשהמסלול אינו רץ.
 async function slBoot(){
   shell.refreshUI = refreshUI;
-  // המכסה משותפת ל-origin כולו — גם אפליקציה שכמעט אינה כותבת נפגעת ממה שאחרות מילאו, ולכן מודדים בעלייה.
-  try { lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
-  // הסימונים נטענים לפני הכניסה — רשומה שלא אושרה בסשן הקודם חייבת להיראות ככזו גם אחרי רענון.
-  try { pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
-  try { tombBoot(); } catch (e) { console.warn('[tomb] tombBoot', e); }
-  try { eraKick(); } catch (e) { console.warn('[era] eraKick', e); }
-  // כאן ולא אחרי הכניסה — הגיבוי אינו תלוי בכניסה, ורץ גם במכשיר שנשאר במסך הכניסה.
-  try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
-  try { rtyBoot(); } catch (e) { console.warn('[rty] rtyBoot', e); }
-  try { lkBoot(); } catch (e) { console.warn('[lk] lkBoot', e); }
-  try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
-  try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
-  // העותק המקומי נטען ראשון — לפני כל נגיעה ברשת.
-  try { mirrorBoot(); slApplyMirror(); } catch (e) { console.warn('[mirror] load', e); }
+  // הליבה עולה לפני הכניסה — הסימונים, הגיבוי והמראה אינם תלויים בה, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
+  coreBoot();
   // מראת המשתמשים נטענת לפני מסך הכניסה — אחרת לכניסה אופליין אין מול מה לאמת.
   try { usersSaveAll(mirrorLoadOne(authUsersTable()) || []); } catch (e) { console.warn('[users] load', e); }
   // אין כאן שחזור סשן — סשן שנשמר בלי תפוגה הוא כניסה קבועה על מכשיר משותף.
