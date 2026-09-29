@@ -309,7 +309,7 @@ document.addEventListener('click', function (ev) {
   actRun(el, fn);
 });
 
-// שמירה בשדה עריכה קודמת לסגירת המודאל — אחרת Escape בשדה שבתוך מודאל היה סוגר אותו במקום לבטל את השדה.
+// שמירה בשדה עריכה קודמת לסגירת חלון הדו-שיח — אחרת Escape בשדה שבתוך חלון דו-שיח היה סוגר אותו במקום לבטל את השדה.
 document.addEventListener('keydown', function (e) {
   if (comboKey(e) || ksKey(e)) return;
   modalEsc(e);

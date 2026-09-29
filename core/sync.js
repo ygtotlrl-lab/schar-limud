@@ -129,7 +129,7 @@ function prunePastTombstones(arr, nowTs) {
   });
 }
 
-// נקודת ההפעלה האחת — עוטף שני היה מאפשר לגרוע מכל מקום בקוד ובכל פולינג.
+// נקודת ההפעלה האחת — עוטף שני היה מאפשר לגרוע מכל מקום בקוד ובכל בדיקה מחזורית.
 function tombPruneMerged(arr) {
   if (!_tombPrunePending) return arr;
   _tombPrunePending = false;
@@ -138,7 +138,7 @@ function tombPruneMerged(arr) {
   if (before !== out.length) console.log('[tomb] נגרעו ' + (before - out.length) + ' tombstones מעבר לסף');
   return out;
 }
-// הדגל מורם פעם אחת בעלייה — הרמה בכל פולינג הייתה גורעת בכל מחזור.
+// הדגל מורם פעם אחת בעלייה — הרמה בכל בדיקה מחזורית הייתה גורעת בכל מחזור.
 function tombBoot() { _tombPrunePending = true; }
 
 // ── שומר ההקשר ──
@@ -229,7 +229,7 @@ function sbWatch(c) {
 
 // ── צינור השמירה ──
 // runSave מחזירה את ההבטחה — בלעדיה השומר שבניתוב אינו מנטרל דבר.
-// undefined מהמטפל פירושו שהוולידציה עצרה והמודאל נשאר פתוח; כל ערך אחר הוא הצלחה.
+// undefined מהמטפל פירושו שהוולידציה עצרה וחלון הדו-שיח נשאר פתוח; כל ערך אחר הוא הצלחה.
 function errToast(e) {
   console.error('[save]', e);
   toast((e && (e.message || e.error_description)) || MSG_SAVE_FAIL, null, 'bad');
@@ -810,7 +810,7 @@ function schedulePush() {
 var ERA_CLOUD_KEY = 'data_era';
 // ברישום ביומן — שדה שנראה כסוד אינו עוזב את המכשיר.
 var ERA_SECRET_RX = /pass|secret|token/i;
-// כתיבת חותמת המשיכה מוגבלת — הפולינג רץ כל שלוש שניות, והחותמת נמדדת בימים.
+// כתיבת חותמת המשיכה מוגבלת — הבדיקה המחזורית רצה כל שלוש שניות, והחותמת נמדדת בימים.
 var ERA_PULLED_EVERY_MS = 60 * 60 * 1000;
 var _eraPush = null;
 var _eraBusy = false, _eraDone = false, _eraWired = false;
@@ -851,7 +851,7 @@ function eraSave(era) {
   lsSet(eraLocalKey(), String(era));
   lsSet(eraResetKey(app.ERA_CFG.prefix), JSON.stringify(eraStamp()));
 }
-// חותמת המשיכה המלאה האחרונה, או של פולינג שראה שאין מה למשוך — שניהם «העותק ראה את הענן».
+// חותמת המשיכה המלאה האחרונה, או של בדיקה מחזורית שראתה שאין מה למשוך — שניהם «העותק ראה את הענן».
 function eraNotePull(force) {
   try {
     var now = Date.now(), was = Number(lsGet(eraPulledKey(), '')) || 0;
@@ -972,7 +972,7 @@ function eraNotePush(r) {
   _eraPush = (r && typeof r === 'object') ? r : null;
   return r;
 }
-// פעם אחת לעלייה ולא בפולינג, ושוב בחזרת הרשת עד שהוכרע — קידום עידן הוא פעולת מנהל נדירה.
+// פעם אחת לעלייה ולא בבדיקה המחזורית, ושוב בחזרת הרשת עד שהוכרע — קידום עידן הוא פעולת מנהל נדירה.
 // ההקשר נלכד לפני הדחיפה ונבדק אחריה — מחזור שמתעורר בהקשר אחר היה זורק את העותק של האחר.
 function eraKick() {
   if (!_eraWired) {

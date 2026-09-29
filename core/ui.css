@@ -18,7 +18,7 @@
 @media (prefers-reduced-motion:reduce){
   :root{--dur-1:0s;--dur-2:0s;--dur-3:0s;--dur-4:0s;--dur-5:0s;--dur-6:0s}
 }
-/* ── משטח לחיץ ומודאל ── */
+/* ── משטח לחיץ וחלון דו-שיח ── */
 button,[data-act]{-webkit-user-select:none;user-select:none}
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;z-index:var(--z-4);background:var(--veil);display:none;justify-content:center}
