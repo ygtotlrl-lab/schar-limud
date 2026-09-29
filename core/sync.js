@@ -81,7 +81,7 @@ function _mergeRun(local, remote, opts) {
 // ── גריעת tombstones ──
 // רק tombstone עם חותמת מספרית נגרע — חותמת חסרה נקראת 0, וגריעה לפיה הייתה מוחקת דווקא את הישנים ביותר.
 // המסד גורע באותו סף, ולכן מכשיר שלא נמשך בתוכו — עותקו אינו תקף (עידן הנתונים).
-var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+var TOMB_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 // הגריעה רצה על תוצאת המיזוג, פעם אחת לעלייה — גריעה מקומית בלבד הייתה מוחזרת מהענן תוך שניות.
 var _tombPrunePending = false;
@@ -120,7 +120,7 @@ function tombInherit(parent, kid) {
 
 function prunePastTombstones(arr, nowTs) {
   if (!Array.isArray(arr)) return [];
-  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
+  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMB_TTL_MS;
   return arr.filter(function (r) {
     if (!r || typeof r !== 'object') return false;
     if (!r.deleted) return true;
@@ -885,7 +885,7 @@ function eraNotePull(force) {
 function eraValid() {
   if (eraLocal() < Number(app.DATA_ERA)) return false;
   var was = Number(lsGet(eraPulledKey(), '')) || 0;
-  return !(was && Date.now() - was > TOMBSTONE_TTL_MS);
+  return !(was && Date.now() - was > TOMB_TTL_MS);
 }
 // כל אפליקציה נושאת מספר עידן משלה — צורת השורה נבדלת, ומספר משותף היה זורק על שינוי שלא נעשה כאן.
 // הקריאה אינה ב-single — שם שורה שאינה קיימת מסומנת כשגיאה, ומסד בלי עידן הוא המצב הרגיל.
@@ -1022,7 +1022,7 @@ function eraKick() {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKill, TOMBSTONE_TTL_MS,
+export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKill, TOMB_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
          ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
          eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
