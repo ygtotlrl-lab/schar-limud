@@ -8,10 +8,9 @@ import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIR
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
-import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit,
-         enrollText, fmt, isCreditTxn, monthLabel, normMonth, pendTxnTag,
-         readMonthRange, slLocalWrite, txnAmountHtml,
-         txnMethodPill } from '../domain.js';
+import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit, enrollText, fmt,
+         isCreditTxn, monthLabel, normMonth, pendTxnTag, readMonthRange, slLocalWrite, slSortTxns,
+         slSortYears, txnAmountHTML, txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
@@ -120,7 +119,7 @@ function renderStudentCard(){
 
 function renderScYearTabs(){
   var y={};S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.txn_date)]=1;});y[acadYearOf(dayToday())]=1;
-  var sorted=Object.keys(y).map(Number).sort();if(!S.SC_YEAR||!y[S.SC_YEAR])S.SC_YEAR=acadYearOf(dayToday());
+  var sorted=slSortYears(Object.keys(y).map(Number));if(!S.SC_YEAR||!y[S.SC_YEAR])S.SC_YEAR=acadYearOf(dayToday());
   document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===S.SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+acadYearLabel(yr)+'</button>';}).join('');
 }
 
@@ -150,8 +149,8 @@ function renderScAnnual(){
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
   if(applied>0)ch+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
-  var yt=S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID&&acadYearOf(t.txn_date)===S.SC_YEAR;}).sort(function(a,b){return a.txn_date>b.txn_date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID&&acadYearOf(t.txn_date)===S.SC_YEAR;}), true);
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 
 async function scPastShow(){
@@ -162,7 +161,7 @@ async function scPastShow(){
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
   box.innerHTML='<div class="ro-note">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
+    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;

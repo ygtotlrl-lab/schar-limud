@@ -115,10 +115,10 @@ var BK_CFG = {
   // אין כאן id: order על עמודה שאינה בסכימה מחזיר 42703, שנקרא «סכימה מיושנת» ומציג באנר עדכון
   sources: function () {
     return [
-      { kind: 'table', name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
-      { kind: 'table', name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
-      { kind: 'table', name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
-      { kind: 'table', name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
+      { name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
+      { name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
+      { name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
+      { name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
     ];
   }
 };
@@ -309,7 +309,7 @@ document.addEventListener('click', function (ev) {
   actRun(el, fn);
 });
 
-// שמירה בשדה עריכה קודמת לסגירת המודאל — אחרת Escape בשדה שבתוך מודאל היה סוגר אותו במקום לבטל את השדה.
+// שמירה בשדה עריכה קודמת לסגירת חלון הדו-שיח — אחרת Escape בשדה שבתוך חלון דו-שיח היה סוגר אותו במקום לבטל את השדה.
 document.addEventListener('keydown', function (e) {
   if (comboKey(e) || ksKey(e)) return;
   modalEsc(e);

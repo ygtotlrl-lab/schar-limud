@@ -99,18 +99,18 @@ function renderDash(){
 
   var rows='',colT={},grand=0;
   act.forEach(function(s){
-    var mm=actual[s.client_id]||{},tot=0,cellsHtml='';
+    var mm=actual[s.client_id]||{},tot=0,cellsHTML='';
     YEAR_MONTHS.forEach(function(m){
       var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
       // חודש מחוץ לטווח מוצג כ-'·' רק כשאין בו תנועה — כך סכום העמודה שווה בדיוק לסך תנועות החודש.
       if(!v&&!studentInMonth(s,S.DASH_YEAR,m)){
-        cellsHtml+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" data-act="dash-month" data-year="'+S.DASH_YEAR+'" data-month="'+m+'">·</td>';return;
+        cellsHTML+='<td class="num mo off" title="מחוץ לטווח הפעילות של התלמיד" data-act="dash-month" data-year="'+S.DASH_YEAR+'" data-month="'+m+'">·</td>';return;
       }
       var extra=v&&!studentInMonth(s,S.DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לטווח הפעילות של התלמיד"':'';
-      cellsHtml+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' data-act="dash-month" data-year="'+S.DASH_YEAR+'" data-month="'+m+'">'+(v?fmt(v):'—')+'</td>';
+      cellsHTML+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+' data-act="dash-month" data-year="'+S.DASH_YEAR+'" data-month="'+m+'">'+(v?fmt(v):'—')+'</td>';
     });
     grand=Math.round((grand+tot)*100)/100;
-    rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHtml+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
+    rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHTML+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
   });
   document.getElementById('dash-tbody').innerHTML=rows||'<tr><td class="stu">—</td><td class="num" colspan="13">אין תלמידים פעילים</td></tr>';
 

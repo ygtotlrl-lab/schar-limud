@@ -76,7 +76,7 @@ async function doLogin(){
     // navigator.onLine משקר לא פעם ב-WebView — בכשל רשת מנסים אופליין ולא מציגים שגיאה
     authLog(false,isNetErr(e)?'net_error':'server_error',u);
     if(isNetErr(e)) return doLoginOffline(u,p);
-    // .auth-err שמור למה שהמשתמש יכול לתקן בהקלדה — כשל מערכת עובר בטוסט, והמשטח מתאפס כדי שהטופס יהיה שמיש
+    // .auth-err שמור למה שהמשתמש יכול לתקן בהקלדה — כשל מערכת עובר בטוסט, והאזור מתאפס כדי שהטופס יהיה שמיש
     showAuthErr('');
     toast(MSG_LOGIN_ERR+((e&&e.message)||MSG_SERVER_ERR),null,'bad');
   }
@@ -117,7 +117,7 @@ function enterApp(){
   slApplyMirror();
   shell.refreshUI();
   syncAll();
-  // אין כאן פולינג שדוחף — הוא היה מושך הכול ודוחף כל שלוש שניות בלי ראיה לשינוי
+  // אין כאן בדיקה מחזורית שדוחפת — הוא היה מושך הכול ודוחף כל שלוש שניות בלי ראיה לשינוי
   // הדחיפה מונעת-אירוע, הניסיון החוזר רץ רק כשהתור אינו ריק, ו-plTick מושך רק כשהחותמת התקדמה
   plTick();
   // אין לקרוא כאן ל-bkMaybeDaily() — הגיבוי אינו תלוי בכניסה, ונקודת ההפעלה שלו היא bkBoot() בעלייה

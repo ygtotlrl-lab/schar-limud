@@ -133,7 +133,7 @@ function swRegister() {
 }
 window.addEventListener('load', swRegister);
 
-// ── שכבת המודאל ──
+// ── שכבת חלון הדו-שיח ──
 // הכותרת ב-textContent ולא ב-HTML — היא מגיעה גם משם שהמשתמש הקליד.
 // הסרת locked מותנית בכך שהדיאלוג השני סגור — אחרת סגירת אחד משחררת את גלילת השני.
 function esc(s) {
