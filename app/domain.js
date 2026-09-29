@@ -1,5 +1,5 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
-import { MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
+import { HE_COLLATOR, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, errMsg, isNetErr,
          kvParse } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
@@ -14,11 +14,6 @@ import { CREDIT_METHOD, KV_TABLE, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
-
-// ── מיון עברי ──
-try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
-
-var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 
 var MONTH_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -137,7 +132,7 @@ function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 // נקודת הסינון היחידה של המחוקים — כל קוראי STUDENTS מקבלים אותו מכאן
 function slApplyMirror() {
   S.STUDENTS = (MIRROR.sl_students || []).filter(function (s) { return !s.deleted; })
-    .sort(function (a, b) { return HE.compare(a.name || '', b.name || ''); });
+    .sort(function (a, b) { return HE_COLLATOR.compare(a.name || '', b.name || ''); });
   S.TRANSACTIONS = (MIRROR.sl_transactions || []).filter(function (t) { return !t.deleted; })
     .sort(function (a, b) { return String(a.txn_date || '') < String(b.txn_date || '') ? -1 : 1; });
   S.SETTINGS = {};
@@ -148,7 +143,7 @@ function slApplyMirror() {
   S.LISTS = {};
   // כפתור המחיקה מצביע על key, מפתח המיזוג — לפריט שנוצר במכשיר אין שדה אחר
   (MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; })
-    .slice().sort(function (a, b) { return HE.compare(a.value || '', b.value || ''); })
+    .slice().sort(function (a, b) { return HE_COLLATOR.compare(a.value || '', b.value || ''); })
     .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ client_id: r.client_id, value: r.value }); });
 }
 
@@ -449,7 +444,7 @@ function readMonthRange(startId,endId){
 }
 
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
-function txnAmountHtml(t){
+function txnAmountHTML(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
@@ -466,4 +461,4 @@ export { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearLa
          pendLstTag, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slListId,
          slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slTs,
-         studentCredit, studentInMonth, syncAll, txnAmountHtml, txnMethodPill };
+         studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

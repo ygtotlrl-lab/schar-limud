@@ -152,8 +152,16 @@ function kvParse(key, raw) {
 }
 function kvBadLabel(name) { return name + ' (' + MSG_KV_BAD + ')'; }
 
+// ── משווה עברי ──
+// אחד לכל העץ — localeCompare בונה משווה בכל קריאה, ובתוך sort זה O(n log n) פעמים;
+// בלי Intl.Collator — נפילה-חזרה ל-localeCompare עם אותו he, באותו סדר.
+var HE_COLLATOR = (function () {
+  try { return new Intl.Collator('he'); }
+  catch (e) { return { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } }; }
+})();
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { app, appConfigure, readNum, uniqList, uniqHas,
+export { app, appConfigure, HE_COLLATOR, readNum, uniqList, uniqHas,
          MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,

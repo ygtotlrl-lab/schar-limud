@@ -202,12 +202,12 @@ function deleteListItem(key){
 
 function openAddStudent(){
   // מזהי השדות הם אלה ש-saveNewStudent קוראת — שינוי שם כאן שובר את השמירה.
-  var optsHtml='<option value="">-- ללא --</option>';
-  (S.LISTS['sections']||[]).forEach(function(s){optsHtml+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
+  var optsHTML='<option value="">-- ללא --</option>';
+  (S.LISTS['sections']||[]).forEach(function(s){optsHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
   var body=''
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
-    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+optsHtml+'</select></div>'
+    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+optsHTML+'</select></div>'
     +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
     +'<div class="frm-row-last frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp"></div>'
     +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';

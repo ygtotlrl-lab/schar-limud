@@ -10,7 +10,7 @@ import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIR
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit,
          enrollText, fmt, isCreditTxn, monthLabel, normMonth, pendTxnTag,
-         readMonthRange, slLocalWrite, txnAmountHtml,
+         readMonthRange, slLocalWrite, txnAmountHTML,
          txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
@@ -151,7 +151,7 @@ function renderScAnnual(){
   if(applied>0)ch+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   if(ce)ce.innerHTML=ch;
   var yt=S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID&&acadYearOf(t.txn_date)===S.SC_YEAR;}).sort(function(a,b){return a.txn_date>b.txn_date?-1:1;});
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 
 async function scPastShow(){
@@ -162,7 +162,7 @@ async function scPastShow(){
   if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
   if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
   box.innerHTML='<div class="ro-note">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHtml(t)+txnMethodPill(t)+'</div>';}).join('');
+    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
