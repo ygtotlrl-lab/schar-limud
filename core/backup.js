@@ -130,7 +130,7 @@ function bkKeys() {
   var src = _bkCfg('sources', []) || [], pres = _bkPrefixes(), out = [];
   pres.forEach(function (pre) {
     src.forEach(function (s) {
-      var bkey = pre + (s.key || s.name);
+      var bkey = pre + s.name;
       out.push(BK_LS.day + bkey);
       out.push(BK_LS.wm + bkey, BK_LS.anch + bkey,
                BK_LS.sig + BK_ANCHOR_PREFIX + bkey, BK_LS.sig + BK_DIFF_PREFIX + bkey);
@@ -169,10 +169,11 @@ function _bkMaxTs(rows, col) {
   }
   return mx;
 }
+// כל מקור הוא טבלה עם עמודת חותמת (ts), ושתי השכבות חלות על כולם.
 function _bkLayer(bkey, s) {
   var wm = lsGet(_bkMarkKey(bkey), '');
   var at = parseInt(lsGet(BK_LS.anch + bkey, '0'), 10) || 0;
-  if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
+  if (!wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
     return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
   return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
            win: { col: s.ts, from: wm } };
@@ -222,8 +223,8 @@ async function bkMaybeDaily() {
     var secrets = _bkSecrets();
     for (var i = 0; i < src.length; i++) {
       var s = src[i];
-      // מקור-טבלה שמפתחו מתנגש במקור אחר באותו שם מקבל מפתח גיבוי משלו.
-      var bkey = pre + (s.key || s.name);
+      // מפתח הגיבוי — שם הטבלה, ובאפליקציה רב-מוסדית המוסד לפניו.
+      var bkey = pre + s.name;
       // דגל-יום פר-מקור: הדגל הגלובלי נכתב רק כשכולם הצליחו, ובלעדיו מקור אחד שנכשל
       // גורם לגבות מחדש את כל השאר בכל עלייה באותו יום.
       var dayKey = BK_LS.day + bkey;
@@ -241,7 +242,7 @@ async function bkMaybeDaily() {
       if (layer.diff && !rows.length) { same++; continue; }
       var val = JSON.stringify(rows);
       // סימן העוגן נכתב רק אחרי שהעוגן נשמר — סימן שקדם לכתיבה שנכשלה פותח דיפרנציאלי בלי עוגן מתחתיו.
-      var mark = (!layer.diff && s.ts) ? _bkMaxTs(rows, s.ts) : null;
+      var mark = !layer.diff ? _bkMaxTs(rows, s.ts) : null;
       var sig = bkSig(val), sigKey = BK_LS.sig + bkey;
       if (lsGet(sigKey, '') === sig) { if (mark != null) _bkSetMark(layer.key, mark); same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
