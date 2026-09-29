@@ -128,7 +128,6 @@ function bkKeys() {
     src.forEach(function (s) {
       var bkey = pre + (s.key || s.name);
       out.push(BK_LS.day + bkey);
-      if (s.kind === 'kv') { out.push(BK_LS.sig + bkey); return; }
       out.push(BK_LS.wm + bkey, BK_LS.anch + bkey,
                BK_LS.sig + BK_ANCHOR_PREFIX + bkey, BK_LS.sig + BK_DIFF_PREFIX + bkey);
     });
@@ -218,40 +217,32 @@ async function bkMaybeDaily() {
     var pre = _bkCfg('prefix', '') || '';
     var secrets = _bkSecrets();
     for (var i = 0; i < src.length; i++) {
-      var s = src[i], val = null;
-      // סוד שנכתב לגיבוי שורד בו גם אחרי שנמחק מהמקור.
-      if (s.kind === 'kv' && secrets.indexOf(s.name) !== -1) continue;
+      var s = src[i];
       // מקור-טבלה שמפתחו מתנגש במקור אחר באותו שם מקבל מפתח גיבוי משלו.
       var bkey = pre + (s.key || s.name);
       // דגל-יום פר-מקור: הדגל הגלובלי נכתב רק כשכולם הצליחו, ובלעדיו מקור אחד שנכשל
       // גורם לגבות מחדש את כל השאר בכל עלייה באותו יום.
       var dayKey = BK_LS.day + bkey;
       if (lsGet(dayKey, '') === today) { same++; continue; }
-      if (s.kind === 'kv') {
-        var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
-        if (!res || res.error) { ok = false; failed.push(bkey); continue; }
-        val = (res.data && res.data.value != null) ? String(res.data.value) : null;
-      } else {
-        // Supabase מחזיר 1,000 שורות כברירת מחדל בלי שגיאה — בלי עימוד טבלה גדולה מגובה עד התקרה בלבד, בשקט.
-        var layer = _bkLayer(bkey, s);
-        var rows = await _bkReadRows(c, s, layer.win);
-        if (rows === null) { ok = false; failed.push(bkey); continue; }
-        bkey = layer.prefix + bkey;
-        // שורה שמפתחה (secretField, ברירת מחדל key) ברשימת הסודות אינה מגיעה לגיבוי, גם כשהיא עדיין במקור.
-        if (secrets.length) rows = rows.filter(function (r) {
-          return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
-        });
-        // דיפרנציאלי ריק אינו נכתב ואינו כישלון — עותק ריק בכל לילה מציף את הפינוי.
-        if (layer.diff && !rows.length) { same++; continue; }
-        val = JSON.stringify(rows);
-        if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
-      }
-      // מקור שאין לו ערך בענן אינו כישלון.
-      if (val == null) continue;
+      // Supabase מחזיר 1,000 שורות כברירת מחדל בלי שגיאה — בלי עימוד טבלה גדולה מגובה עד התקרה בלבד, בשקט.
+      var layer = _bkLayer(bkey, s);
+      var rows = await _bkReadRows(c, s, layer.win);
+      if (rows === null) { ok = false; failed.push(bkey); continue; }
+      bkey = layer.prefix + bkey;
+      // שורה שמפתחה (secretField, ברירת מחדל key) ברשימת הסודות אינה מגיעה לגיבוי, גם כשהיא עדיין במקור.
+      if (secrets.length) rows = rows.filter(function (r) {
+        return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
+      });
+      // דיפרנציאלי ריק אינו נכתב ואינו כישלון — עותק ריק בכל לילה מציף את הפינוי.
+      if (layer.diff && !rows.length) { same++; continue; }
+      var val = JSON.stringify(rows);
+      // סימן העוגן נכתב רק אחרי שהעוגן נשמר — סימן שקדם לכתיבה שנכשלה פותח דיפרנציאלי בלי עוגן מתחתיו.
+      var mark = (!layer.diff && s.ts) ? _bkMaxTs(rows, s.ts) : null;
       var sig = bkSig(val), sigKey = BK_LS.sig + bkey;
-      if (lsGet(sigKey, '') === sig) { same++; continue; }
+      if (lsGet(sigKey, '') === sig) { if (mark != null) _bkSetMark(layer.key, mark); same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
       if (!ins || ins.error) { ok = false; failed.push(bkey); continue; }
+      if (mark != null) _bkSetMark(layer.key, mark);
       lsSet(sigKey, sig);
       lsSet(dayKey, today);
       wrote++;
