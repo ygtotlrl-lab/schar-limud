@@ -1,10 +1,10 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayToday, getDeviceId,
+import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayNoon, getDeviceId,
          withTimeout } from '../core/util.js';
 import { _eraPush, ctxEpoch, ctxStale, eraKeys, eraKick, pendAlertDismiss, pendBoot,
          pendCount, pendHas, plBoot, rtyBoot, runSave, sbWatch,
          tombBoot } from '../core/sync.js';
-import { hwBoot, lsBoot, lsClearHorizons, lsRemove } from '../core/storage.js';
+import { hwBoot, lsBoot, lsClearHorizons, lsRemove, lsWindowFrom } from '../core/storage.js';
 import { MIRROR, mirrorBoot, mirrorKey, mirrorLoadOne, mirrorTables,
          mirrorWrite } from '../core/mirror.js';
 import { bkBoot, logAwait } from '../core/backup.js';
@@ -15,7 +15,7 @@ import { actRun, closeAsk, closeModal, comboFocus, comboInput, comboKey,
          toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify, acadYearOf,
+import { _slMarkPushed, _slPushOf, _slPushedFor, _slRowId, _slVerify,
          pendTxnKey, slApplyMirror,
          slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
          syncAll } from './domain.js';
@@ -176,20 +176,18 @@ var PUSH_CFG = {
   run:    function () { syncAll(); },
 };
 
-// החלון הוא גבול שנת לימודים מפורש ולא פינוי לפי גיל — תנועה ישנה שנעלמת משנה סכום כספי
+// החלון החם הוא חלון הפינוי של האפליקציה — מהליבה, ולא מספר ימים משלו; שנת הלימודים תמיד בתוכו.
 // תנועה בלי תאריך תקין נשארת חמה — ספק אינו מפנה
 var HW_CFG = {
-  enabled: true,
-  admin: function () { return slIsAdmin(); },
   specs: [{
     key: mirrorKey('sl_transactions'),
-    label: 'תנועות שנים סגורות',
+    label: 'תנועות מחוץ לחלון',
     inWindow: function (t) {
       var d = t && t.txn_date;
       if (!d) return true;
-      var y = acadYearOf(String(d).slice(0, 10));
-      if (!isFinite(y)) return true;
-      return y >= acadYearOf(dayToday());
+      var ms = dayNoon(String(d)).getTime();
+      if (!isFinite(ms)) return true;
+      return ms >= lsWindowFrom();
     },
     idOf: function (r) { return r.client_id; },
     ts: function (r) { return slTs(r); },

@@ -715,12 +715,9 @@ var _hwSweepBusy = false;
 var _hwSwept = 0; // לתיעוד בלבד
 
 function _hwVal(v) { return (typeof v === 'function') ? v() : v; }
-function hwEnabled() {
-  try { return !!(typeof app.HW_CFG !== 'undefined' && app.HW_CFG && app.HW_CFG.enabled); }
-  catch (e) { return false; }
-}
+// התצורה היא הרשימה בלבד — רשימה ריקה היא חלון כבוי, ואין מתג לצידה.
 function _hwSpecs() {
-  try { return (typeof app.HW_CFG !== 'undefined' && app.HW_CFG && app.HW_CFG.specs) || []; }
+  try { return (typeof app.HW_CFG !== 'undefined' && app.HW_CFG && Array.isArray(app.HW_CFG.specs)) ? app.HW_CFG.specs : []; }
   catch (e) { return []; }
 }
 function _hwSpecFor(key) {
@@ -736,7 +733,7 @@ function _hwLive(spec, rec) {
 }
 
 function hwNoteCloud(key, rows) {
-  if (!hwEnabled() || !Array.isArray(rows)) return;
+  if (!Array.isArray(rows)) return;
   var spec = _hwSpecFor(key);
   if (!spec) return;
   var idx = _hwCloudSeen[key] || (_hwCloudSeen[key] = {});
@@ -751,7 +748,7 @@ function hwNoteCloud(key, rows) {
 
 // כל ספק משאיר את הרשומה — רק ראיה עננית עדכנית לרשומה עצמה מפנה.
 function hwDiskFilter(key, rows) {
-  if (!hwEnabled() || !Array.isArray(rows)) return rows;
+  if (!Array.isArray(rows)) return rows;
   var spec = _hwSpecFor(key);
   if (!spec) return rows;
   var idx = _hwCloudSeen[key];
@@ -779,7 +776,7 @@ function hwDiskFilter(key, rows) {
 }
 
 async function hwSweep() {
-  if (!hwEnabled() || _hwSweepBusy) return { swept: 0 };
+  if (!_hwSpecs().length || _hwSweepBusy) return { swept: 0 };
   try {
     if (typeof app.LS_CFG !== 'undefined' && app.LS_CFG &&
         typeof app.LS_CFG.pending === 'function' && app.LS_CFG.pending()) {
@@ -843,9 +840,9 @@ async function hwPastLoad(key, filter) {
 }
 
 // ── נקודת ההפעלה ──
-// הפינוי מושהה כי הוא דורש רשת; כשהמודול רדום היציאה מיידית, וכפתור השחזור נשאר פעיל בנפרד.
+// הפינוי מושהה כי הוא דורש רשת; ברשימה ריקה היציאה מיידית, וכפתור השחזור נשאר פעיל בנפרד.
 function hwBoot() {
-  if (!hwEnabled()) return;
+  if (!_hwSpecs().length) return;
   try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
 }
 
