@@ -33,17 +33,14 @@ function screenStudentHTML() {
     <button class="sc-arch-btn" id="sc-arch-btn" data-act="sc-archive"></button>
   </div>
   <div id="sc-main" class="hidden">
-    <button class="sc-back" data-act="sc-back">&#8250; כל התלמידים</button>
-    <div class="card">
+    <div class="card" id="sc-card">
       <div class="sc-hdr">
         <div class="sc-head">
-          <div>
-            <div class="sc-name" id="sc-name"></div>
-            <div class="sc-meta" id="sc-meta"></div>
-          </div>
+          <div class="sc-meta" id="sc-meta"></div>
           <div class="sc-togs">
             <button class="sc-tog tog-act-off" id="sc-handled-tog" data-act="student-handled" aria-pressed="false">טופל</button>
             <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
+            <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">&#10005;</button>
           </div>
         </div>
       </div>
@@ -139,9 +136,9 @@ function renderStudentList(){
     '<div class="sc-line"><span>טופלו החודש · '+done.length+'</span></div>'+groupsHTML(slStudentGroups(done),true,'');
 }
 
-function studentSearch(v){S.SC_Q=v;renderStudentList();}
+function studentSearch(v){S.SC_Q=v;renderStudentPanel();}
 
-function studentArchiveToggle(){S.SC_ARCH=!S.SC_ARCH;renderStudentList();window.scrollTo(0,0);}
+function studentArchiveToggle(){S.SC_ARCH=!S.SC_ARCH;renderStudentPanel();window.scrollTo(0,0);}
 
 // ── ניהול — הוספה ומעבר שנתי, כמו בהנהלה ──
 function openStudentsManage(){
@@ -227,16 +224,34 @@ function doYearTransition(){
 }
 
 // הרשימה והכרטיס מתחלפים בנקודה אחת — תלמיד שנמחק במכשיר אחר מחזיר לרשימה.
-function renderStudentPanel(){
-  if(S.SC_STUDENT_ID&&!scStudent())S.SC_STUDENT_ID=null;
-  var on=!!S.SC_STUDENT_ID;
-  document.getElementById('sc-list-view').classList.toggle('hidden',on);
-  document.getElementById('sc-main').classList.toggle('hidden',!on);
-  if(on)renderStudentCard();else renderStudentList();
+// הכרטיס נפתח בתוך הרשימה, מתחת לשורת התלמיד — הרשימה נשארת מעליו ומתחתיו. רכיב הכרטיס אחד,
+// וחונה ב-sc-main בין ציור לציור: ציור הרשימה מחליף את תוכנה, ורכיב שבתוכה היה נמחק.
+function scRowOf(id){
+  var rows=document.querySelectorAll('#sc-list .stu-open');
+  for(var i=0;i<rows.length;i++){if(idEq(rows[i].getAttribute('data-id'),id))return rows[i].parentNode;}
+  return null;
 }
 
-// המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
-function studentOpen(id){S.SC_STUDENT_ID=String(id);renderStudentPanel();window.scrollTo(0,0);}
+function renderStudentPanel(){
+  var card=document.getElementById('sc-card'),park=document.getElementById('sc-main');
+  if(card&&card.parentNode!==park)park.appendChild(card);
+  if(S.SC_STUDENT_ID&&!scStudent())S.SC_STUDENT_ID=null;
+  renderStudentList();
+  var row=S.SC_STUDENT_ID?scRowOf(S.SC_STUDENT_ID):null;
+  // תלמיד שאינו ברשימה המוצגת (חיפוש, ארכיון) — הכרטיס נסגר
+  if(!row){S.SC_STUDENT_ID=null;return;}
+  row.classList.add('is-open');
+  row.parentNode.insertBefore(card,row.nextSibling);
+  renderStudentCard();
+}
+
+// המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN. לחיצה על התלמיד הפתוח — סוגרת.
+function studentOpen(id){
+  S.SC_STUDENT_ID=idEq(S.SC_STUDENT_ID,id)?null:String(id);
+  renderStudentPanel();
+  var row=S.SC_STUDENT_ID?scRowOf(S.SC_STUDENT_ID):null;
+  if(row&&row.scrollIntoView)row.scrollIntoView({block:'nearest'});
+}
 
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
 
@@ -251,7 +266,6 @@ function toggleStudentHandled(){
 function renderStudentCard(){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{};
-  document.getElementById('sc-name').textContent=s.name;
   var meta=[];if(CLS_NAME[s.cls])meta.push(CLS_NAME[s.cls]);var cyl=cycleLabel(slCycleOf(s));if(cyl)meta.push(cyl);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
   var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.textContent=on?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
