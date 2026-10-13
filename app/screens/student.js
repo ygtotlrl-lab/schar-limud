@@ -1,8 +1,7 @@
 // app/screens/student.js — כרטיס התלמיד
 import { dayToday } from '../../core/util.js';
 import { idEq, schedulePush } from '../../core/sync.js';
-import { hwPastLoad } from '../../core/storage.js';
-import { mirrorKey } from '../../core/mirror.js';
+import { MIRROR } from '../../core/mirror.js';
 import { comboDef, comboHTML, esc, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
@@ -85,7 +84,7 @@ function screenStudentHTML() {
           <div id="sc-txn-list"></div>
         </div>
         <div class="sc-section">
-          <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות (מהענן, קריאה בלבד)</button>
+          <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות</button>
           <div id="sc-past"></div>
         </div>
       </div>
@@ -153,15 +152,13 @@ function renderScAnnual(){
   document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
 }
 
-async function scPastShow(){
+// מהמראה, שמחזיקה את כל התנועות — שנה קודמת היא שנת לימודים שלפני שנת היום.
+function scPastShow(){
   var box=document.getElementById('sc-past');if(!box||!S.SC_STUDENT_ID)return;
-  box.innerHTML='<div class="empty">טוען מהענן…</div>';
-  var sid=S.SC_STUDENT_ID;
-  var r=await hwPastLoad(mirrorKey('sl_transactions'),function(t){return t.student_client_id===sid;});
-  if(!r.ok){box.innerHTML='<div class="empty">⚠️ אין חיבור — ההיסטוריה זמינה כשיש רשת</div>';return;}
-  if(!r.rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
-  box.innerHTML='<div class="ro-note">קריאה בלבד — מהענן, לא נשמר במכשיר</div>'+
-    r.rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'</div>';}).join('');
+  var sid=S.SC_STUDENT_ID,cy=acadYearOf(dayToday());
+  var rows=slSortTxns((MIRROR.sl_transactions||[]).filter(function(t){return t&&!t.deleted&&t.student_client_id===sid&&t.txn_date&&acadYearOf(t.txn_date)<cy;}), true);
+  if(!rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
+  box.innerHTML=rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'</div>';}).join('');
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;

@@ -4,8 +4,7 @@ import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, errMsg, isNetErr
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
-import { hwNoteCloud } from '../core/storage.js';
-import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
+import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { authUsersTable, isAdminOf, sessGet, usersRefresh,
          usersSanitize } from '../core/auth.js';
@@ -14,8 +13,6 @@ import { CREDIT_METHOD, KV_TABLE, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
-
-function _slRowId(r) { return r ? r.client_id : null; }
 
 // התחילית נקראת בזמן ריצה ולא בהצהרה — הקבועים מוגדרים בהמשך הדף
 function _slPushOf(t) {
@@ -71,12 +68,7 @@ function slKeyOf(t, r) {
   return (k == null || k === '') ? '' : String(k);
 }
 
-function slTs(r) {
-  var x = r && r.updated_at != null ? Number(r.updated_at) : NaN;
-  return isFinite(x) ? x : 0;
-}
-
-// שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות, כדי שגם נתיב כתיבה חדש לא ידליף ל-localStorage המשותף ל-origin
+// שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות, כדי שגם נתיב כתיבה חדש לא ידליף סוד לדיסק
 function slSanitizeRows(t, rows) {
   if (t === KV_TABLE) return slStripMeta(rows);
   // רשימת-היתר ולא רשימת-איסור — נשארת נכונה כשתיווסף לטבלה עמודה רגישה
@@ -145,11 +137,11 @@ function slApplyMirror() {
     .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ client_id: r.client_id, value: r.value }); });
 }
 
-// מחזירה false כשהכתיבה ל-localStorage נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
+// מחזירה false כשהכתיבה לאחסון נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
 // ts — חותמת המחיקה, כדי ש-deleted_at יישאר רגע ה-updated_at שלה.
 function slLocalWrite(tbl, row, ts) {
   if (!MIRROR[tbl]) { console.error('[mirror] טבלה לא מוכרת:', tbl); return false; }
-  // localStorage משותף ל-origin כולו — שורת סוד אינה נכתבת מקומית לעולם
+  // שורת סוד אינה נכתבת מקומית לעולם
   if (tbl === KV_TABLE && slIsSecretSetting(row.key)) { console.error('[mirror] ניסיון לכתוב שורת סוד למראה נחסם'); return false; }
   row.updated_at = (typeof ts === 'number') ? ts : Date.now(); // חותמת המכשיר ולא של השרת
   var k = slKeyOf(tbl, row), arr = MIRROR[tbl], hit = false;
@@ -326,7 +318,6 @@ async function syncAll(){
     }
     if(rs[1]&&!rs[1].error&&Array.isArray(rs[1].data)){
       pulledTxn=true;
-      hwNoteCloud(mirrorKey('sl_transactions'), rs[1].data);
       MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+k);}}); mirrorSave('sl_transactions');
     }
     // slStripSecrets רץ לפני המיזוג — admin_pass אינה נכנסת למראה בשום מסלול.
@@ -343,7 +334,6 @@ async function syncAll(){
     pullRender(shell.refreshUI);
 
     // נדחפת רק טבלה שנמשכה בהצלחה — בלי תמונת הענן, דחיפה עיוורת מחזירה לחיים שורה שנמחקה במכשיר אחר.
-    // קטגוריה שלא נמשכה אינה נדחפת ואינה מסמנת את עד הפינוי.
     if(ctxStale(_ep)) return;
     var _pushRes=await pushDirty({
       sl_students:     pulledStu,
@@ -362,7 +352,6 @@ async function syncAll(){
 
     if(!errs.length){
       S._slLastPullOk=Date.now();
-      // אין כאן כתיבת עד פינוי — חותמת משיכה אומרת «ראיתי את הענן» ולא «מה שאצלי עלה לשם».
       if(!S._slPullLogged){S._slPullLogged=true;slSyncLog('pull',null,null);}
     }
     // אזהרה פעם אחת בלבד — הסנכרון רץ כל 3 שניות.
@@ -452,11 +441,11 @@ function txnMethodPill(t){
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
 
-export { _slPushOf, _slRowId, acadYearLabel,
+export { _slPushOf, acadYearLabel,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete,
-         pendLstTag, pendStuKey, pendStuTag, pendTxnKey, pendTxnTag,
+         pendLstTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slListId,
-         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears, slTs,
+         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
          studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

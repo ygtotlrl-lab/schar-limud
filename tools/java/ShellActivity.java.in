@@ -48,7 +48,7 @@ public abstract class ShellActivity extends Activity {
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true); // localStorage — העותק המקומי של האפליקציה יושב כאן
+        s.setDomStorageEnabled(true); // localStorage — הייבוא החד-פעמי לאחסון של האפליקציה קורא ממנו
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);

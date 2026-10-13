@@ -2,7 +2,7 @@
 
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, netTimeout } from './util.js';
-import { lsGet, lsHorizonRelease, lsLog, lsSet, lsUnpack, lsWire } from './storage.js';
+import { lsFlush, lsGet, lsKeys, lsLog, lsSet, lsWire } from './storage.js';
 import { closeModal, esc, swShowUpdate, toast } from './ui.js';
 import { mirrorWipe } from './mirror.js';
 
@@ -148,8 +148,7 @@ function tombBoot() { _tombPrunePending = true; }
 var _ctxEpoch = 0;
 function ctxEpoch() { return _ctxEpoch; }
 // נקרא לפני הטעינה החדשה — קידום אחריה משאיר את המחזור הרץ סבור שהוא עדיין בהקשר שלו.
-// עֵדי הדחיפה מתאפסים איתו — עֵד של הקשר אחד אינו מעיד על השני.
-function ctxSwitch() { _ctxEpoch++; _pushedAt = {}; return _ctxEpoch; }
+function ctxSwitch() { _ctxEpoch++; return _ctxEpoch; }
 // הקורא לוכד את הערך בכניסה ומוסר אותו כאן, ואינו קורא את הגלובלי פעמיים.
 function ctxStale(ep) { return ep !== _ctxEpoch; }
 
@@ -174,16 +173,6 @@ async function _rowsPaged(mkQuery, order, win) {
     from += ROWS_PAGE;
     if (from > ROWS_CAP) return out;
   }
-}
-
-// אימות פינוי מול הענן בשורות טבלה — אחד לכל האפליקציות.
-// נכשל סגור: עמוד שנכשל מחזיר null, ולקוח שאינו קיים זורק — «אין ראיה» אינו «הענן ריק».
-function rowsVerify(client, t) {
-  return function () {
-    return _rowsPaged(function () { return client().from(t).select('client_id,updated_at'); }, 'client_id', null)
-      .then(function (rs) { return Array.isArray(rs) ? { ok: true, rows: rs } : { ok: false, rows: [] }; },
-            function () { return { ok: false, rows: [] }; });
-  };
 }
 
 // ── האזנת הסכימה ──
@@ -254,13 +243,17 @@ function afterSave(msg) {
   schedulePush();
   return Promise.resolve();
 }
+// «נשמר» מוצג רק אחרי שהתור נכתב לדיסק — כתיבה שלא נכתבה היא שגיאה, והבאנר הקבוע כבר עלה.
 function runSave(fn, msg) {
   return Promise.resolve()
     .then(fn)
     .then(function (r) {
       if (r === undefined) return;
-      // מחרוזת מהמטפל היא ההודעה — יש הודעות שנגזרות מהנתון שנשמר וידועות רק בתוך המטפל.
-      return afterSave(typeof r === 'string' ? r : msg);
+      return lsFlush().then(function (ok) {
+        if (!ok) throw new Error(MSG_SAVE_FAIL);
+        // מחרוזת מהמטפל היא ההודעה — יש הודעות שנגזרות מהנתון שנשמר וידועות רק בתוך המטפל.
+        return afterSave(typeof r === 'string' ? r : msg);
+      });
     })
     .catch(function (e) { errToast(e); });
 }
@@ -668,8 +661,6 @@ function plStampRead() {
 
 function _plFull() {
   var done = function (v) { _plBusy = false; return v; };
-  // שחרור האופק לפני המשיכה ולא אחריה — הוא שמתיר לכתיבה שבסופה להחזיר את הישן.
-  try { lsHorizonRelease(); } catch (e0) { }
   try {
     return Promise.resolve(app.PL_CFG.pull()).then(
       function () { _plFullAt = Date.now(); eraNotePull(); return done(true); },
@@ -718,17 +709,10 @@ function plBoot() {
 
 // ── שכבת הדחיפה ──
 // מנה שנכשלה נדחפת שוב שורה-שורה — כתיבת מנה היא הכל-או-כלום.
-// rows שמחזירה null מדלגת בלי לסמן עֵד פינוי — סימון על טבלה שלא נטענה היה מתיר לפנות רשומה שלא עלתה.
+// rows שמחזירה null מדלגת — טבלה שלא נטענה אינה נדחפת.
 var _pushTimer = null, _eraHoldSaid = false;
 
-// ── עֵד הפינוי ──
-// פר-טבלה, בזיכרון, ונרשם רק כאן — בסוף מעבר דחיפה בלי שורה בכשל רשת, ולא במשיכה: עֵד שמתעדכן גם במשיכה מוחק מהדיסק רשומה שמעולם לא עלתה.
-// החותמת היא רגע הכניסה למעבר — כל מה שסומן ⏳ לפניו נשלח בו; ומעבר שההקשר התחלף בתוכו אינו מעיד דבר.
-var _pushedAt = {};
-function pushedFor(t) { return function () { return _pushedAt[t] || 0; }; }
-function _pushWitness(t, ep, t0) { if (!ctxStale(ep)) _pushedAt[t] = t0; }
-
-// נדחף רק מה שמסומן ⏳ — הסימון הוא הראיה שהרשומה טרם עלתה, והפינוי והעידן כבר נשענים עליו.
+// נדחף רק מה שמסומן ⏳ — הסימון הוא הראיה שהרשומה טרם עלתה, והעידן כבר נשען עליו.
 // האפליקציה מוסרת את הרשומות המקומיות ואת מפתח הסימון בלבד; השוואה לחותמות הענן הייתה מקור אמת שני.
 function pushPending(t, ctx) {
   return Promise.resolve(app.PUSH_CFG.rows(t, ctx)).then(function (rows) {
@@ -755,10 +739,9 @@ function pushTable(t, ctx) {
     if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
     return Promise.resolve({ ok: false, still: [], n: 0 });
   }
-  var ep = ctxEpoch(), t0 = Date.now();
   return pushPending(t, ctx).then(function (rows) {
     if (!rows) return { ok: false, still: [], n: 0 };
-    if (!rows.length) { _pushWitness(t, ep, t0); return { ok: true, still: [], n: 0 }; }
+    if (!rows.length) return { ok: true, still: [], n: 0 };
     var still = [], n = 0, bad = 0, i = 0;
     function won(row) {
       var k = app.PUSH_CFG.key(t, row);
@@ -790,8 +773,6 @@ function pushTable(t, ctx) {
     return batch().then(function () {
       // בלי קידום החותמת הדחיפה נשארת בלתי-נראית למכשירים האחרים — הם מושכים רק כשהיא מתקדמת.
       if (n) plTouch();
-      // עֵד הפינוי מסומן רק כשלא נשארה שורה בכשל רשת — זה התנאי שמתיר לפנות מהדיסק רשומה ישנה של הטבלה.
-      if (!still.length) _pushWitness(t, ep, t0);
       return { ok: !still.length && !bad, still: still, n: n };
     });
   });
@@ -932,13 +913,12 @@ function eraPendingRows() {
     ids[k] = p ? k.slice(p.length) : k;
   });
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var lk = localStorage.key(i);
-      if (!lk || lk.indexOf(app.ERA_CFG.prefix) !== 0) continue;
+    lsKeys().forEach(function (lk) {
+      if (lk.indexOf(app.ERA_CFG.prefix) !== 0) return;
       var v = null;
-      try { v = JSON.parse(localStorage.getItem(lk)); } catch (e1) { continue; }
-      var rows = lsUnpack(v) || (v && Array.isArray(v.rows) ? v.rows : null);
-      if (!rows) continue;
+      try { v = JSON.parse(lsGet(lk, null)); } catch (e1) { return; }
+      var rows = Array.isArray(v) ? v : (v && Array.isArray(v.rows) ? v.rows : null);
+      if (!rows) return;
       rows.forEach(function (r) {
         if (!r || typeof r !== 'object') return;
         Object.keys(ids).forEach(function (k) {
@@ -946,7 +926,7 @@ function eraPendingRows() {
           if (String(r.client_id) === ids[k] || String(r.key) === ids[k]) found[k] = { ls: lk, row: _eraClean(r) };
         });
       });
-    }
+    });
   } catch (e) { console.warn('[era] סריקת העותק המקומי', e); }
   return Object.keys(m).map(function (k) {
     return { key: k, since: m[k], ls: found[k] ? found[k].ls : null, row: found[k] ? found[k].row : null };
@@ -1029,5 +1009,5 @@ export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKil
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendRender, pendTag,
          PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,
-         plTick, plTouch, pushDirty, pushTable, pushedFor,
-         rowsVerify, rtyBoot, rtyNote, runSave, sbWatch, schedulePush };
+         plTick, plTouch, pushDirty, pushTable,
+         rtyBoot, rtyNote, runSave, sbWatch, schedulePush };

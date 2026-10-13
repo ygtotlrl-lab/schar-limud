@@ -11,7 +11,7 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 | **טוען** | כתובת האפליקציה — `android.url` שבתצורה — **מהרשת**, לא מנכסים מוטבעים |
 | **versionCode** | ⛔ עולה בכל שינוי ב-APK: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
 | **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ ואינם נערכים ביד |
-| **WebView** | JavaScript, DOM storage (localStorage — שם יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
+| **WebView** | JavaScript, DOM storage ו-IndexedDB (במסד יושבים `sl_mirror_*`/`sl_pending`), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד, `usesCleartextTraffic=false` |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `mailto:`, `whatsapp:`, …) נמסרות למערכת |
 | **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` (תשתית — ⚠️ אין בדף `input` כזה) |
 | **אופליין** | ה-service worker + שכבת ה-MIRROR של האתר. המעטפת מציגה דף שגיאה בעברית **רק** בהפעלה ראשונה בלי רשת |
@@ -26,7 +26,7 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 ## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK
 
 ה-WebView של האפליקציה מחזיק **מחיצת אחסון משלו**, נפרדת מזו של הדפדפן באותו
-מכשיר. מי שעובד בדפדפן ועובר ל-APK מתחיל עם localStorage **ריק**:
+מכשיר. מי שעובד בדפדפן ועובר ל-APK מתחיל עם אחסון **ריק**:
 כניסה מחדש, והעותק המקומי נטען מהענן — שהוא ממילא מקור האמת.
 
 ⛔ **מה שכן יכול ללכת לאיבוד: רשומה שנרשמה במכשיר וטרם עלתה לענן.** לכן —

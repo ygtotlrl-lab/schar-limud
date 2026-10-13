@@ -12,7 +12,7 @@ const S = {
   DASH_YEAR: null,
   SC_STUDENT_ID: null,
   SC_YEAR: null,
-  // _slLastSeenOk היא חותמת תצוגה בלבד — ושתיהן מתקדמות גם במשיכה, ולכן אינן עֵד פינוי
+  // _slLastSeenOk היא חותמת תצוגה בלבד
   _slSeenTs: 0,
   _slLastSeenOk: 0,
   _slLastPullOk: 0,
