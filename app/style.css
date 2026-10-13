@@ -240,18 +240,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sc-grp-hd{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-2)}
 .sc-grp-hd h3{font-size:var(--fs-4);font-weight:800;color:var(--brand-ink)}
 .sc-grp-cnt{background:var(--brand-soft);color:var(--brand-ink);font-size:var(--fs-1);font-weight:800;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);white-space:nowrap}
-.sc-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);width:100%;background:none;border:none;padding:var(--sp-4) 0;font-family:Heebo;font-size:var(--fs-4);color:var(--text);text-align:right;cursor:pointer}
-.sc-row:active{color:var(--brand-ink)}
-.sc-row:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px;border-radius:var(--r-3)}
 @media (hover:hover){
-  .sc-row:hover .sc-row-name{color:var(--brand-ink)}
+  .stu-row:hover .student-name{color:var(--brand-ink)}
 }
-.sc-row-name{font-weight:700;flex:1;min-width:0;display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
 .sc-row-debt{font-weight:800;white-space:nowrap}
 .sc-row-ok{font-size:var(--fs-2);color:var(--text-3);white-space:nowrap}
 .sc-grp.is-done .sc-grp-hd h3{font-size:var(--fs-3);color:var(--text-2)}
-.sc-grp.is-done .sc-row{font-size:var(--fs-3);color:var(--text-2)}
-.sc-grp.is-done .sc-row-name{font-weight:500}
+.sc-grp.is-done .stu-row{font-size:var(--fs-3);color:var(--text-2)}
+.sc-grp.is-done .student-name{font-weight:500}
+.sc-tools{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-5)}
+.sc-tools h3{font-size:var(--fs-4);font-weight:800;color:var(--brand-ink)}
+.sc-arch-btn{display:block;width:100%;margin-top:var(--sp-6);background:var(--card);border:2px solid var(--brand-soft);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;color:var(--brand-ink);cursor:pointer}
+.sc-arch-btn:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
+/* תפריט הניהול והמעבר השנתי — כמו בהנהלה */
+.admin-list{display:flex;flex-direction:column}
+.admin-item{display:flex;align-items:center;gap:var(--sp-6);width:100%;background:var(--card);border:none;border-bottom:1px solid var(--card-2);cursor:pointer;font-family:Heebo;font-size:var(--fs-4);font-weight:600;padding:var(--sp-5) var(--sp-2);text-align:right}
+.admin-item:last-child{border-bottom:none}
+.admin-ico{font-size:var(--fs-5);text-align:center;width:28px}
+.menu-plain{color:var(--brand-ink)}
+.menu-warn{color:var(--warn)}
+.year-note{font-size:var(--fs-3);color:var(--text-2);line-height:1.7;margin-bottom:var(--sp-6)}
+.danger-strong{color:var(--bad)}
+.year-danger{font-size:var(--fs-3);background:var(--bad-soft);color:var(--bad);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-3)}
 .sc-line{display:flex;align-items:center;gap:var(--sp-5);color:var(--kicker);font-size:var(--fs-2);font-weight:700;margin:var(--sp-6) 0 var(--sp-5)}
 .sc-line::before,.sc-line::after{content:"";flex:1;height:2px;background:var(--brand-soft)}
 .sc-back{background:none;border:none;color:var(--brand-ink);font-family:Heebo;font-size:var(--fs-3);font-weight:700;padding:var(--sp-2) 0 var(--sp-5);cursor:pointer}
@@ -276,17 +286,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .grip{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex:none;
   color:var(--text-3);font-size:var(--fs-4);touch-action:none;cursor:grab}
 .grip:active{cursor:grabbing;color:var(--text)}
-/* רשימת התלמידים — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה; בטלפון השם בשורה משלו. */
-.stu-grp-hd{padding:var(--sp-3) var(--sp-6);background:var(--bg);border-bottom:1px solid var(--border);font-size:var(--fs-2);font-weight:700;color:var(--text-2)}
-.stu-row{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem 4.5rem 4.5rem;grid-template-areas:"name name name del" "range credit state del";
-  align-items:center;gap:var(--sp-2) var(--sp-4);padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border)}
+/* שורת התלמיד — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה; בטלפון השם והחוב בשורה אחת, והתקופות והזכות מתחתיהם. */
+.stu-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name debt" "range credit";
+  align-items:center;gap:var(--sp-2) var(--sp-4);width:100%;background:none;border:none;border-bottom:1px solid var(--border);
+  padding:var(--sp-4) 0;font-family:Heebo;font-size:var(--fs-4);color:var(--text);text-align:right;cursor:pointer}
 .stu-row:last-child{border-bottom:none}
+.stu-row:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px;border-radius:var(--r-3)}
 .stu-name{grid-area:name;display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
 .stu-range{grid-area:range;font-size:var(--fs-2);color:var(--text-2);min-width:0}
-.stu-credit{grid-area:credit}
-.stu-state{grid-area:state}
-.stu-del{grid-area:del;justify-self:end}
-.pill.shiur{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
+.stu-credit{grid-area:credit;justify-self:end}
+.stu-debt{grid-area:debt;justify-self:end}
+.pill.cycle{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
 .sc-hdr{background:var(--card);color:var(--text);padding:var(--sp-7) var(--sp-6);border-bottom:1px solid var(--border)}
 .sc-name{font-size:var(--fs-5);font-weight:900;color:var(--brand-ink)}
 .sc-meta{font-size:var(--fs-3);color:var(--text-2);margin-top:var(--sp-2)}
@@ -323,7 +333,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   .st-row{grid-template-columns:1fr auto auto auto}
 }
 @media (min-width:640px){
-  .stu-row{grid-template-columns:minmax(0,1fr) minmax(0,15rem) 6.5rem 5rem 5rem;grid-template-areas:"name range credit state del"}
+  .stu-row{grid-template-columns:minmax(0,1fr) minmax(0,15rem) 6.5rem 6.5rem;grid-template-areas:"name range credit debt"}
 }
 @media (min-width:640px){
   .st-total{display:inline}

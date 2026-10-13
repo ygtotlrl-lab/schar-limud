@@ -14,12 +14,12 @@ import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, 
          slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
-import { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
-         renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
-         toggleAcc } from './screens/settings.js';
-import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
-         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentBack, studentOpen,
-         studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
+import { addListItem, deleteListItem, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
+         screenSettingsHTML, toggleAcc } from './screens/settings.js';
+import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
+         periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
+         saveNewStudent, saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentArchiveToggle,
+         studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
 
@@ -185,7 +185,7 @@ var DOM_ACTIONS = {
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
-  'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
+  'student-del': function () { deleteStudent(); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
   'modal-close':  function () { closeModal(); },
   'ask-no':       function () { closeAsk(false); },
@@ -204,6 +204,10 @@ var DOM_ACTIONS = {
   'student-handled':         function () { toggleStudentHandled(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
   'sc-back':                 function () { studentBack(); },
+  'sc-archive':              function () { studentArchiveToggle(); },
+  'sc-manage':               function () { openStudentsManage(); },
+  'year-open':               function () { openYearTransition(); },
+  'year-go':                 function () { closeModal(); doYearTransition(); },
   'handled-toggle':          function (el) {
     if (!slHandledToggle(el.getAttribute('data-id'), el.getAttribute('data-month'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
     refreshUI();
