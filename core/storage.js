@@ -183,7 +183,6 @@ function lsRegistry() {
 // מי שיודע מה ממתין (הסנכרון) ומי שמחזיק את תור היומן (הגיבוי) נרשמים כאן — הליבה אינה מייבאת אותם.
 // מפתח שנמחק כשיש ממתין הוא אולי העותק היחיד של מה שממתין, ולכן הוא נרשם כמות שהוא לפני המחיקה, בפעולה של זריקת העידן.
 var LS_DROP_ACTION = 'era_discard';
-var LS_IMPORT_ACTION = 'ls_import';
 var _lsWire = { pending: null, log: null };
 function lsWire(o) {
   if (o && typeof o.pending === 'function') _lsWire.pending = o.pending;
@@ -212,85 +211,6 @@ function lsKeySweep() {
   drop.forEach(lsRemove);
   if (drop.length) lsLog('מפתח שאינו מוצהר נמחק', drop.join(' · '), 0);
   return drop.length;
-}
-
-// ── ייבוא האחסון הישן — localStorage ──
-// מכשיר שמחזיק עוד localStorage מייבא ממנו פעם אחת: כל מפתח מוצהר במרחב האפליקציה, כמות שהוא, ושורת מראה דחוסה נפרשת —
-// בטרנזקציה אחת, והמחיקה מ-localStorage רק אחרי שהושלמה: מחיקה לפני הכתיבה היא נתון שאבד.
-// מפתח שכבר במסד חדש מהעותק הישן ואינו נדרס. מפתח של אפליקציה אחרת אינו נגע — ה-origin משותף.
-// שורת מראה נכתבה כמערך ערכים, ושמות העמודות פעם אחת למפתח; כל שורה נפתחת במספר צורתה.
-function lsUnpack(v) {
-  if (Array.isArray(v)) return v;
-  if (!v || !Array.isArray(v.cols) || !Array.isArray(v.rows)) return null;
-  var out = [];
-  v.rows.forEach(function (a) {
-    var ks = Array.isArray(a) ? v.cols[a[0]] : null;
-    if (!Array.isArray(ks)) return;
-    var o = {};
-    for (var j = 0; j < ks.length; j++) o[ks[j]] = a[j + 1];
-    out.push(o);
-  });
-  return out;
-}
-function lsImportVal(raw) {
-  var v;
-  try { v = JSON.parse(raw); } catch (e) { return raw; }
-  if (!v || Array.isArray(v) || !Array.isArray(v.cols)) return raw;
-  var rows = lsUnpack(v);
-  return rows ? JSON.stringify(rows) : raw;
-}
-function lsLegacyKeys() {
-  var pre = self.APP.prefix, out = [], i, k;
-  if (!pre) return out;
-  try {
-    for (i = 0; i < localStorage.length; i++) {
-      k = localStorage.key(i);
-      if (k != null && (k.indexOf(pre) === 0 || lsOwnedBy(_lsSpaces, k))) out.push(k);
-    }
-  } catch (e) { return []; }
-  return out;
-}
-function lsImport() {
-  var ks = lsLegacyKeys();
-  if (!ks.length) return Promise.resolve(0);
-  var reg = lsRegistry();
-  if (!reg) return Promise.resolve(0);
-  var old = {}, take = [], rest = [];
-  ks.forEach(function (k) {
-    try { old[k] = localStorage.getItem(k); } catch (e) { old[k] = null; }
-    if (old[k] == null) return;
-    if (reg.known(k)) take.push(k); else rest.push(k);
-  });
-  var fresh = take.filter(function (k) { return !_lsMap.has(k); });
-  fresh.forEach(function (k) { _lsMap.set(k, lsImportVal(old[k])); });
-  // בלי מסד — הזיכרון בלבד, ו-localStorage נשאר לעלייה הבאה.
-  if (!_lsDb) return Promise.resolve(0);
-  return new Promise(function (res) {
-    var tx;
-    try {
-      tx = _lsDb.transaction(LS_STORE, 'readwrite');
-      var st = tx.objectStore(LS_STORE);
-      fresh.forEach(function (k) { st.put(_lsMap.get(k), k); });
-    } catch (e) { res(false); return; }
-    tx.oncomplete = function () { res(true); };
-    tx.onabort = function () { res(false); };
-  }).then(function (ok) {
-    if (!ok) {
-      // הזיכרון נשאר מלא והמפתחות מסומנים — הכתיבה הבאה מנסה שוב, ו-localStorage נשאר עד שתצליח.
-      fresh.forEach(lsMark);
-      lsLog('❌ ייבוא נכשל', fresh.length + ' מפתחות — localStorage נשאר', 0);
-      return 0;
-    }
-    var gone = take.slice();
-    if (rest.length && lsDropLog(rest, function (k) { return old[k]; })) gone = gone.concat(rest);
-    gone.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } });
-    lsLog('ייבוא מ-localStorage', fresh.length + ' מפתחות · ' + (gone.length - take.length) + ' שאינם מוצהרים ירדו', fresh.length);
-    if (_lsWire.log) {
-      try { _lsWire.log(LS_IMPORT_ACTION, [{ key: LS_IMPORT_ACTION, details: { keys: fresh.length, dropped: gone.length - take.length } }]); }
-      catch (e1) { }
-    }
-    return fresh.length;
-  });
 }
 
 // ── הפתיחה ──
@@ -335,8 +255,6 @@ function lsOpen() {
     }, function () { try { db.close(); } catch (e) { } });
   }).catch(function () { }).then(function () {
     if (!_lsDb) { _lsLastFailAt = Date.now(); lsAlert(MSG_LS_BLOCK); lsLog('❌ המסד לא נפתח', 'מצב זיכרון בלבד', 0); }
-    return lsImport().catch(function (e) { console.warn('[ls] ייבוא', e); });
-  }).then(function () {
     try { lsKeySweep(); } catch (e) { console.warn('[ls] ניקוי המרשם', e); }
     lsPersist();
     // התור נכתב גם כשהדף נסגר או מוסתר — ההבטחה אינה נשמרת, אך הטרנזקציה כבר בדרך.
