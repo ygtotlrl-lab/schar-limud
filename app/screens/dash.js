@@ -4,8 +4,8 @@ import { esc } from '../../core/ui.js';
 import { barChart } from '../../core/chart.js';
 import { YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
-import { acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel, slStudentGroups,
-         studentInMonth, studentTuition } from '../domain.js';
+import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
+         slStudentGroups, studentHandled, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -147,12 +147,15 @@ function showDashMonth(year,month){
   var actual=actualByMonth(year);
   // נכלל גם תלמיד מחוץ לטווח שנרשמה לו תנועה בחודש — כדי שהסכום יהיה זהה לעמודת החודש בטבלה.
   var act=S.STUDENTS.filter(function(s){return studentInMonth(s,year,month)||((actual[s.client_id]||{})[month]||0)>0;});
-  var html='',tot=0,target=0;
+  // «טופל» נלחץ לחודש שמוצג בפירוט — ולא לחודש של היום.
+  var html='',tot=0,target=0,mk=acadMonthKey(year,month);
   act.forEach(function(s){
     var v=(actual[s.client_id]||{})[month]||0,inM=studentInMonth(s,year,month),req=inM?studentTuition(s):0;
     tot+=v;target+=req;
     var c=!inM?'':v>=req?'amt-ok':v>0?'amt-warn':'amt-bad';
-    html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span></div>';
+    var hd=studentHandled(s,mk);
+    html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span>'+
+      '<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(mk)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל ✓':'טופל')+'</button></div>';
   });
   tot=Math.round(tot*100)/100;
   html+='<div class="dash-total">נגבה: <span class="got-amt">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+

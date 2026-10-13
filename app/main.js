@@ -1,5 +1,5 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { MSG_SAVED, appConfigure, getDeviceId } from '../core/util.js';
+import { DAY_MONTHS, MSG_SAVED, appConfigure, dayNoon, dayToday, getDeviceId } from '../core/util.js';
 import { eraKeys, pendAlertDismiss, pendCount, runSave, sbWatch,
          schedulePush } from '../core/sync.js';
 import { lsOpen } from '../core/storage.js';
@@ -7,19 +7,19 @@ import { MIRROR, mirrorKey, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragCancel, dragDown,
-         dragMove, dragUp, shellBare, swApply, swHideUpdate } from '../core/ui.js';
-import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
+         dragMove, dragUp, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slPushOf, ensureCreditMethod, slApplyMirror, slKeyOf, slLocalWrite, slLookups,
-         slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
+         slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
          renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
          toggleAcc } from './screens/settings.js';
-import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentCard,
-         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML,
-         toggleStudentActive } from './screens/student.js';
+import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
+         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentBack, studentOpen,
+         studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
 
@@ -171,7 +171,7 @@ S.SB = sbWatch(supabase.createClient(self.APP.supabase.url,self.APP.supabase.key
 // מסך ההגדרות מרונדר רק כשהפאנל פעיל — אחרת כל סנכרון בונה רשימות שאיש אינו רואה.
 function saveRefresh(){ refreshUI(); }
 
-function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(S.SC_STUDENT_ID)renderStudentCard();
+function refreshUI(){navHead();updateDropdowns();renderDash();renderTxnLog();renderStudentPanel();
   var sp=document.getElementById('panel-settings');
   if(sp&&sp.classList.contains('active'))renderSettingsLists();}
 
@@ -201,6 +201,13 @@ var DOM_ACTIONS = {
   'dash-next-year':          function () { dashNextYear(); },
   'sc-past-show':            function () { return scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
+  'student-handled':         function () { toggleStudentHandled(); },
+  'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
+  'sc-back':                 function () { studentBack(); },
+  'handled-toggle':          function (el) {
+    if (!slHandledToggle(el.getAttribute('data-id'), el.getAttribute('data-month'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
+    refreshUI();
+  },
   'period-open':             function (el) { periodOpen(el.getAttribute('data-id')); },
   'period-save':             function (el) { return runSave(function () { return periodSave(el.getAttribute('data-id')); }, '✅ התקופה נשמרה'); },
   'period-del':              function (el) { periodDelete(el.getAttribute('data-id')); },
@@ -213,7 +220,11 @@ var DOM_ACTIONS = {
 actWire(DOM_ACTIONS);
 
 
-document.addEventListener('input', comboInput);
+document.addEventListener('input', function (e) {
+  if (comboInput(e)) return;
+  var el = e.target;
+  if (el && el.dataset && el.dataset.inp === 'sc-q') studentSearch(el.value);
+});
 
 document.addEventListener('change', function (e) {
   var el = e.target;
@@ -234,7 +245,17 @@ function showPanel(key,btn){
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('panel-'+key).classList.add('active');
   if(btn)btn.classList.add('active');
+  navHead();
+  window.scrollTo(0,0);
   if(key==='settings')renderSettingsPanel();
+}
+
+// כותרת המסך בשתי שורות — שנת הלימודים והחודש קטן מעל, ושם המסך גדול; השם נקרא מהלשונית הפעילה ואינו מוקלד פעמיים.
+function navHead(){
+  var k=document.getElementById('nav-kicker'),h=document.getElementById('nav-title');
+  var tab=document.querySelector('.tab-btn.active .tl');
+  if(k)k.textContent=acadYearHeb(acadYearOf(dayToday()))+' · '+DAY_MONTHS[dayNoon(dayToday()).getMonth()];
+  if(h&&tab)h.textContent=tab.textContent;
 }
 
 // ── עליית האפליקציה ──

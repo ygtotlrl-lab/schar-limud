@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayToday, uniqHas } from '../../core/util.js';
 import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, comboSet, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
+import { ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
@@ -147,7 +147,7 @@ function openAddStudent(){
 
 function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,shiur=document.getElementById('new-st-shiur').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(shiur)cs.shiur=shiur;
   var cid=pendingCid('student',[name,tuition,shiur,rng.start,rng.end].join(' '));
-  var row={client_id:cid,name:name,card_settings:cs,periods:[rng],deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:cid,name:name,card_settings:cs,periods:[rng],handled:[],deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
   releaseCid('student');
   return true;}
@@ -160,7 +160,7 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
   var row=tombKill(Object.assign({},s));
   if(!slLocalWrite('sl_students',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pcCascadeDelete('sl_students',row);
-  if(idEq(S.SC_STUDENT_ID, s.client_id)){S.SC_STUDENT_ID=null;document.getElementById('sc-main').classList.add('hidden');comboSet('sc-student',null);}
+  if(idEq(S.SC_STUDENT_ID, s.client_id))S.SC_STUDENT_ID=null;
   shell.refreshUI();
   toast(navigator.onLine?MSG_STUDENT_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();

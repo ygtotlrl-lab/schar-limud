@@ -59,6 +59,7 @@ create table if not exists public.sl_students (
   client_id text not null,
   updated_at bigint not null,
   periods jsonb not null,
+  handled jsonb not null default '[]'::jsonb,
   constraint sl_students_pkey PRIMARY KEY (client_id),
   constraint sl_students_periods_check CHECK (public.sl_students_periods_ok(periods))
 );
