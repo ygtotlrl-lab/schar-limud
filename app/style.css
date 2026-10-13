@@ -235,6 +235,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sc-tools h3{font-size:var(--fs-4);font-weight:800;color:var(--brand-ink)}
 .sc-arch-btn{display:block;width:100%;margin-top:var(--sp-6);background:var(--card);border:2px solid var(--brand-soft);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;color:var(--brand-ink);cursor:pointer}
 .sc-arch-btn:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
+.txn-more{display:block;width:100%;margin-top:var(--sp-4);background:none;border:1.5px solid var(--brand-soft);border-radius:var(--r-5);padding:var(--sp-4) var(--sp-5);font-family:Heebo;font-size:var(--fs-3);font-weight:700;color:var(--brand-ink);cursor:pointer}
+.txn-more:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
+.txn-less{border-color:var(--border);color:var(--text-2)}
 /* תפריט הניהול והמעבר השנתי — כמו בהנהלה */
 .admin-list{display:flex;flex-direction:column}
 .admin-item{display:flex;align-items:center;gap:var(--sp-6);width:100%;background:var(--card);border:none;border-bottom:1px solid var(--card-2);cursor:pointer;font-family:Heebo;font-size:var(--fs-4);font-weight:600;padding:var(--sp-5) var(--sp-2);text-align:right}

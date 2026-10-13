@@ -20,7 +20,7 @@ import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, op
          periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
-import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
+import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
 
 // ── החיווט ──
@@ -185,6 +185,8 @@ var DOM_ACTIONS = {
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
+  'txn-log-more':          function () { txnLogMore(); },
+  'txn-log-less':          function () { txnLogLess(); },
   'student-del': function () { deleteStudent(); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
   'modal-close':  function () { closeModal(); },

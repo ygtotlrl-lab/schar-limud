@@ -8,7 +8,7 @@ import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_B
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
-import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
+import { acadYearOf, hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
          slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML,
          txnMethodPill } from '../domain.js';
 
@@ -102,11 +102,22 @@ async function saveTxn(){
   return true;
 }
 
+// היומן בשלוש דרגות: חמש האחרונות · ▾ עד תחילת שנת הלימודים · ארכיון — הכל. הסינון לפני החיתוך.
+var TXN_LOG_FIRST=5;
+function txnLogMore(){S.TXN_LOG_LEVEL=Math.min(2,(S.TXN_LOG_LEVEL||0)+1);renderTxnLog();}
+function txnLogLess(){S.TXN_LOG_LEVEL=0;renderTxnLog();}
+
 function renderTxnLog(){
-  var fid=comboValue('txn-filter');
-  var txns=slSortTxns(S.TRANSACTIONS, true).slice(0,60);
-  if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="txn-who"><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+(t.note?'<span class="txn-note">'+esc(t.note)+'</span>':'')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  var fid=comboValue('txn-filter'),lvl=S.TXN_LOG_LEVEL||0,cy=acadYearOf(dayToday());
+  var all=slSortTxns(S.TRANSACTIONS, true);
+  if(fid)all=all.filter(function(t){return idEq(t.student_client_id, fid);});
+  var year=all.filter(function(t){return t.txn_date&&acadYearOf(t.txn_date)>=cy;});
+  var txns=lvl>=2?all:lvl===1?year:all.slice(0,TXN_LOG_FIRST);
+  var more='';
+  if(lvl===0&&year.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">&#9662; עוד '+(year.length-txns.length)+' — עד תחילת השנה</button>';
+  else if(lvl<2&&all.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">&#128451; ארכיון — שנים קודמות ('+(all.length-txns.length)+')</button>';
+  if(lvl>0)more+='<button class="txn-more txn-less" data-act="txn-log-less">&#9652; צמצם</button>';
+  document.getElementById('txn-log').innerHTML=(txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="txn-who"><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+(t.note?'<span class="txn-note">'+esc(t.note)+'</span>':'')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>')+more;
 }
 
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
@@ -120,5 +131,4 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   schedulePush();
 });}
 
-export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
-         updateDropdowns };
+export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodHint, updateDropdowns };
