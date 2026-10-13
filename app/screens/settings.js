@@ -2,10 +2,10 @@
 import { MSG_SAVED_LOCAL, uniqHas } from '../../core/util.js';
 import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, dragDef, esc, lookupDragApply, toast } from '../../core/ui.js';
+import { ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
-         MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_VALUE_BAD, MSG_VALUE_EXISTS,
+         MSG_ADD_METHOD, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_METHOD_LABEL, MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_REQUIRED,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { isCreditValue, pendLkTag, slLocalWrite, slLookups } from '../domain.js';
@@ -64,11 +64,21 @@ function renderListItems(kind,elId){document.getElementById(elId).innerHTML=(slL
   return head+pendLkTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
 }).join(''))||'<div class="empty">ריק</div>';}
 
+// ההוספה בחלון של האפליקציה — דיאלוג הדפדפן אינו בעיצוב, ונראה כהודעה של אתר.
+function openListAdd(kind){
+  openModal(MSG_ADD_METHOD,
+    '<div data-ks><div class="frm-row frm-row-last"><label for="lk-new">'+esc(MSG_METHOD_LABEL)+'</label>'+
+    '<input id="lk-new" type="text" autocomplete="off"></div></div>',
+    '<button class="btn out" data-act="modal-close">ביטול</button>'+
+    '<button class="btn" data-act="list-save" data-list="'+esc(kind)+'" data-ksave>הוסף</button>');
+  var el=document.getElementById('lk-new');if(el)el.focus();
+}
+
 // client_id נוצר במכשיר לפני השליחה — בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת יוצר שורה שנייה.
 function addListItem(kind){
-  var v=prompt('הזן ערך חדש:');
-  if(!v||!v.trim())return;
-  var val=v.trim();
+  var el=document.getElementById('lk-new');if(!el)return;
+  var val=el.value.trim();
+  if(!val){toast(MSG_VALUE_REQUIRED, null, 'bad');return;}
   // ההשוואה על התווית ולא על client_id — הרשימה מזינה בוררים, ושתי אפשרויות באותו טקסט אינן ניתנות להבחנה.
   if(uniqHas(slLookups(kind), {label:val}, function(it){return it.label;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
   var row={client_id:newClientId(),kind:kind,label:val,sort:slLookups(kind).length+1,deleted:false,deleted_at:null,deleted_by:null};
@@ -91,5 +101,5 @@ function deleteListItem(key){
     schedulePush();
   });}
 
-export { addListItem, deleteListItem, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
+export { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc };

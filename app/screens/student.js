@@ -5,7 +5,7 @@ import { MIRROR } from '../../core/mirror.js';
 import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CLS_LIST, CLS_NAME, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
-         MSG_DEL_STUDENT_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
+         MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
          MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_HANDLED_OFF, MSG_HANDLED_ON,
          MSG_NAME_REQUIRED, MSG_PERIOD_MISSING,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
@@ -119,14 +119,13 @@ function screenStudentHTML() {
 // ── רשימת התלמידים ──
 // הרשימה — מי שיש לו תקופה בחודש הנוכחי או אחריו, מקובץ לפי שיעור: שלא טופלו החודש — מעל הקו, ושטופלו — מתחתיו.
 // הארכיון — מי שכל תקופותיו הסתיימו, מקובץ לפי מחזור, החדש ראשון. החיפוש מסנן בשתיהן, ואינו משנה סדר.
-// השורה — שם · מחזור · תקופות · יתרת זכות · וחוב השנה עד החודש הנוכחי.
+// השורה — שם · יתרת זכות · וחוב השנה עד החודש הנוכחי; המחזור והתקופות — בכרטיס בלבד.
 function studentRowHTML(s){
-  var d=studentYearDebt(s),t=studentTuition(s),cr=studentCredit(s.client_id,acadYearOf(dayToday())),cy=slCycleOf(s);
+  var d=studentYearDebt(s),t=studentTuition(s),cr=studentCredit(s.client_id,acadYearOf(dayToday()));
   var end=d>0?'<span class="sc-row-debt '+(t>0&&d>=t?'amt-bad':'amt-warn')+'">&#8722;&#8362;'+fmt(d)+'</span>'
              :'<span class="sc-row-ok">מסודר</span>';
   return '<button class="stu-row" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
-    '<span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+(cy?'<span class="pill cycle">'+esc(cycleLabel(cy))+'</span>':'')+pendStuTag(s)+'</span>'+
-    '<span class="stu-range">'+esc(enrollText(s))+'</span>'+
+    '<span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
     '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span>'+
     '<span class="stu-debt">'+end+'</span></button>';
 }
@@ -162,7 +161,7 @@ function studentArchiveToggle(){S.SC_ARCH=!S.SC_ARCH;renderStudentList();window.
 
 // ── ניהול — הוספה ומעבר שנתי, כמו בהנהלה ──
 function openStudentsManage(){
-  openModal('ניהול תלמידים','<div class="admin-list">'+
+  openModal(MSG_STUDENTS_MANAGE,'<div class="admin-list">'+
     '<button class="admin-item menu-plain" data-act="student-open-add"><span class="admin-ico">&#10133;</span>הוסף תלמיד</button>'+
     '<button class="admin-item menu-warn" data-act="year-open"><span class="admin-ico">&#128260;</span>מעבר שנתי</button>'+
   '</div>','');
@@ -221,7 +220,7 @@ function deleteStudent(){var s=scStudent();
 function openYearTransition(){
   var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'bad');return;}
   var nb=plan.up.filter(function(s){return s.cls==='b';}).length,na=plan.up.length-nb;
-  openModal('&#128260; מעבר שנתי',
+  openModal(MSG_YEAR_ROLL_TITLE,
     '<div class="year-note">'+
       '<strong class="danger-strong">⚠️ פעולה בלתי הפיכה!</strong><br>'+
       '• שיעור ג׳ ('+plan.grad.length+') — התקופה נסגרת ב'+esc(monthKeyLabel(plan.close))+', ועוברים לארכיון ('+esc(cycleLabel(plan.year))+')<br>'+
@@ -240,7 +239,7 @@ function doYearTransition(){
   var n=slYearApply(plan);
   shell.refreshUI();
   if(n<0){toast(MSG_CHANGE_NOT_SAVED,5000,'bad');return;}
-  toast(MSG_YEAR_ROLL_DONE+n+' תלמידים עודכנו', null, 'good');
+  toast(MSG_YEAR_ROLL_DONE+n+MSG_STUDENTS_UPDATED, null, 'good');
 }
 
 // הרשימה והכרטיס מתחלפים בנקודה אחת — תלמיד שנמחק במכשיר אחר מחזיר לרשימה.
