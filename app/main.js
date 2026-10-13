@@ -1,29 +1,25 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, getDeviceId,
-         netTimeout } from '../core/util.js';
+import { DAY_MONTHS, MSG_SAVED, appConfigure, dayNoon, dayToday, getDeviceId } from '../core/util.js';
 import { eraKeys, pendAlertDismiss, pendCount, runSave, sbWatch,
          schedulePush } from '../core/sync.js';
 import { lsOpen } from '../core/storage.js';
-import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables } from '../core/mirror.js';
+import { MIRROR, mirrorKey, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
-import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragCancel, dragDown,
-         dragMove, dragUp, swApply, swHideUpdate, toast } from '../core/ui.js';
-import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
+         dragMove, dragUp, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slPushOf, slApplyMirror, slIsAdmin, slKeyOf, slLocalWrite, slLookups,
-         slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
+         slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
-import { doLogin, doLogout, screenLoginHTML, slResolveUser,
-         slShowLogin } from './screens/login.js';
 import { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
          renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
-         slMyPassword, slSaveMyPassword, toggleAcc } from './screens/settings.js';
-import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentCard,
-         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML,
-         toggleStudentActive } from './screens/student.js';
+         toggleAcc } from './screens/settings.js';
+import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
+         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentBack, studentOpen,
+         studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
 
@@ -34,7 +30,6 @@ appConfigure({
   get DEV_CFG() { return DEV_CFG; },
   get DOM_ACTIONS() { return DOM_ACTIONS; },
   get ERA_CFG() { return ERA_CFG; },
-  get LK_CFG() { return LK_CFG; },
   get LOOKUP_CFG() { return LOOKUP_CFG; },
   get LS_CFG() { return LS_CFG; },
   get MIRROR_CFG() { return MIRROR_CFG; },
@@ -42,7 +37,6 @@ appConfigure({
   get PL_CFG() { return PL_CFG; },
   get PUSH_CFG() { return PUSH_CFG; },
   get RTY_CFG() { return RTY_CFG; },
-  get USER_CFG() { return USER_CFG; },
   get saveRefresh() { return saveRefresh; }
 });
 
@@ -57,8 +51,9 @@ var LOOKUP_CFG = {
 // tables היא פונקציה ולא מערך — PUSH_TABLES מוצהר אחרי הבלוק, וקריאה כאן הייתה מקבלת undefined
 var MIRROR_CFG = {
   prefix: self.APP.prefix + 'mirror_',
-  tables: function () { return PUSH_TABLES.concat([authUsersTable()]); },
-  noPush: [{ t: 'sl_users', via: 'writeUser', adds: 'secret' }],
+  tables: function () { return PUSH_TABLES.slice(); },
+  // ריק ומוצהר — שדה חסר נקרא «לא נשאל», וריק נקרא «נמדד ואין».
+  noPush: [],
   empty:  function () { return []; },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
@@ -80,15 +75,14 @@ var LS_CFG = {
   }
 };
 
-// sl_users אינה ברשימה — sh_backup קריא ל-anon, וגיבוי שלה היה מעתיק את pass_salt ו-pass_fp למקום שני
-// שחזור משתמשים נעשה ידנית מלוח הבקרה
 var BK_CFG = {
   client: function () { return S.SB; },
   flagKey: 'sl_last_backup',
   logQueueKey: 'sl_log_queue',
   prefix: '',
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
-  user: function () { try { var u = sessGet(); return (u && u.username) ? u.username : null; } catch (e) { return null; } },
+  // אין כניסה ולכן אין שם משתמש — המכשיר הוא הזהות היחידה, ושדה מומצא היה עדות שאיש לא מסר.
+  user: function () { return null; },
   // סוד שנכתב לגיבוי שורד בו גם אחרי שנמחק מהמקור — ולכן רשימת הסודות של הגיבוי היא רשימת המראה
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   // שליפה בעמודים חייבת סדר יציב — בלי ORDER BY פוסטגרס אינו מבטיח אותו
@@ -122,17 +116,12 @@ var RTY_CFG = {
   pending: function () { try { return pendCount() > 0; } catch (e) { return false; } },
 };
 
-// אין להוסיף כאן הודעה משלה — חלון האזהרה של הליבה הוא ההודעה
-var LK_CFG = {
-  active: function () { return sessActive(); },
-  lock:   function () { doLogout(); },
-};
-
 // שורת החותמת מוחרגת מהמראה ב-slStripMeta — דחיפת-מצב שלה הייתה מחזירה לענן חותמת ישנה
 // ok() אינו נוגע ב-_slLastPullOk — היא חותמת המשיכה המלאה, ו-ok() נקראת גם בבדיקה שלא משכה
 var PL_CFG = {
   every:  3000,
-  active: function () { return sessActive(); },
+  // אין כניסה — הבדיקה המחזורית פעילה כל עוד הלשונית גלויה, ותנאי של משתמש מחובר לא היה מתקיים כאן לעולם.
+  active: function () { return document.visibilityState !== 'hidden'; },
   seen:   function () { return S._slSeenTs; },
   note:   function (ts) { S._slSeenTs = ts; },
   ok:     function () { S._slLastSeenOk = Date.now(); },
@@ -162,19 +151,6 @@ var ERA_CFG = {
   log:    function (action, entries) { return logAwait(action, entries); }
 };
 
-var USER_CFG = {
-  ready: function () { return !!S.SB && navigator.onLine; },
-  // נקראת בזמן הקריאה ולא בהשמה — הקבוע מוצהר מתחת לבלוק, וקריאה בהשמה נותנת undefined בשקט
-  offMsg: function () { return MSG_OFF_USER_WRITE; },
-  from: function () { return S.SB.from(authUsersTable()); },
-  run: function (q) { return netTimeout(q); },
-  after: function (res) { return res; },
-  // המשתמש המחובר מסונכרן מול המראה אחרי שנשמרה — הפוך מזה קורא ערך שטרם נכתב
-  refreshed: function () { var cu = sessGet(); if (cu) sessSet(slResolveUser(cu)); },
-  revalidated: function (row) { sessSet(slResolveUser(Object.assign({}, sessGet(), row))); },
-  logout: function (msg) { doLogout(); toast(msg, null, 'bad'); }
-};
-
 var DEV_CFG = { key: 'sl_device_id' };
 
 document.title = self.APP.name;
@@ -183,7 +159,7 @@ document.title = self.APP.name;
 function mountView() {
   var v = document.getElementById('view');
   if (!v) { console.error('[ui] אין מיכל תוכן — #view'); return; }
-  v.innerHTML = screenLoginHTML() + '<div id="app" class="hidden">' + screenDashHTML() + screenTxnHTML() +
+  v.innerHTML = '<div id="app">' + screenDashHTML() + screenTxnHTML() +
     screenStudentHTML() + screenSettingsHTML() + '</div>';
 }
 
@@ -192,12 +168,12 @@ mountView();
 S.SB = sbWatch(supabase.createClient(self.APP.supabase.url,self.APP.supabase.key));
 
 // אין להמתין כאן לרשת — הכתיבה כבר במראה ובתור, והסנכרון מרנדר שוב כשהוא מביא משהו חדש.
-// מסך ההגדרות מרונדר רק כשיש הרשאה וגם הפאנל פעיל — אחרת כל סנכרון בונה רשימות שאיש אינו רואה.
+// מסך ההגדרות מרונדר רק כשהפאנל פעיל — אחרת כל סנכרון בונה רשימות שאיש אינו רואה.
 function saveRefresh(){ refreshUI(); }
 
-function refreshUI(){updateDropdowns();renderDash();renderTxnLog();if(S.SC_STUDENT_ID)renderStudentCard();
+function refreshUI(){navHead();updateDropdowns();renderDash();renderTxnLog();renderStudentPanel();
   var sp=document.getElementById('panel-settings');
-  if(slIsAdmin()&&sp&&sp.classList.contains('active'))renderSettingsLists();}
+  if(sp&&sp.classList.contains('active'))renderSettingsLists();}
 
 // ── העברת מזהה ל-DOM ──
 // data-id הוא תמיד מחרוזת — ההשוואות עוברות ב-String(key), ואין להחליפן ב-=== על מספר.
@@ -208,7 +184,6 @@ var DOM_ACTIONS = {
   // התראות התשתית נבנות ב-JS — לכן הן מנותבות במפה ולא במאזין ישיר על הכפתור.
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
-  'lk-stay':             function () { lkReset(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
   'student-del': function (el) { deleteStudent(el.getAttribute('data-id')); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
@@ -226,6 +201,13 @@ var DOM_ACTIONS = {
   'dash-next-year':          function () { dashNextYear(); },
   'sc-past-show':            function () { return scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
+  'student-handled':         function () { toggleStudentHandled(); },
+  'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
+  'sc-back':                 function () { studentBack(); },
+  'handled-toggle':          function (el) {
+    if (!slHandledToggle(el.getAttribute('data-id'), el.getAttribute('data-month'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
+    refreshUI();
+  },
   'period-open':             function (el) { periodOpen(el.getAttribute('data-id')); },
   'period-save':             function (el) { return runSave(function () { return periodSave(el.getAttribute('data-id')); }, '✅ התקופה נשמרה'); },
   'period-del':              function (el) { periodDelete(el.getAttribute('data-id')); },
@@ -233,16 +215,16 @@ var DOM_ACTIONS = {
   'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
   'txn-save':                function () { return runSave(saveTxn, '✅ תשלום נשמר'); },
   'tuition-save':            function () { return runSave(saveDefaultTuition, MSG_SAVED); },
-  'my-pass':                 function () { slMyPassword(); },
-  'my-pass-save':            function () { return slSaveMyPassword(); },
-  'login':                   function () { return doLogin(); },
-  'logout':                  function () { doLogout(); },
 };
 
 actWire(DOM_ACTIONS);
 
 
-document.addEventListener('input', comboInput);
+document.addEventListener('input', function (e) {
+  if (comboInput(e)) return;
+  var el = e.target;
+  if (el && el.dataset && el.dataset.inp === 'sc-q') studentSearch(el.value);
+});
 
 document.addEventListener('change', function (e) {
   var el = e.target;
@@ -258,29 +240,35 @@ document.addEventListener('pointermove', dragMove);
 document.addEventListener('pointerup', dragUp);
 document.addEventListener('pointercancel', dragCancel);
 
-// אין שער סיסמה נפרד מעל מסך ההגדרות — ההרשאה נגזרת מתפקיד המשתמש המחובר, ושער כזה נופל בהתקנה טרייה לברירת מחדל שכל אחד מקליד.
-// אין לזרוע ברירת מחדל לסיסמה או לתפקיד — role הוא NOT NULL בלי DEFAULT, וכל מה שאינו בדיוק 'admin' נדחה.
-// אין כאן קריאת רשת — התפקיד יורד עם מראת המשתמשים, ולכן ההרשאה עובדת אופליין כמו הכניסה.
 function showPanel(key,btn){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('panel-'+key).classList.add('active');
   if(btn)btn.classList.add('active');
+  navHead();
+  window.scrollTo(0,0);
   if(key==='settings')renderSettingsPanel();
+}
+
+// כותרת המסך בשתי שורות — שנת הלימודים והחודש קטן מעל, ושם המסך גדול; השם נקרא מהלשונית הפעילה ואינו מוקלד פעמיים.
+function navHead(){
+  var k=document.getElementById('nav-kicker'),h=document.getElementById('nav-title');
+  var tab=document.querySelector('.tab-btn.active .tl');
+  if(k)k.textContent=acadYearHeb(acadYearOf(dayToday()))+' · '+DAY_MONTHS[dayNoon(dayToday()).getMonth()];
+  if(h&&tab)h.textContent=tab.textContent;
 }
 
 // ── עליית האפליקציה ──
 // כל הפעלות המודולים המשותפים יושבות כאן — הפעלה שתלויה במסלול אחר, כמו משיכה שהצליחה, נכבית בשקט כשהמסלול אינו רץ.
-async function slBoot(){
+// אין await syncAll() חוסם — בלי רשת הוא תוקע את המסך, וברשת איטית משאיר ספינר במקום נתונים שכבר על הדיסק.
+function slBoot(){
   shell.refreshUI = refreshUI;
-  // הליבה עולה לפני הכניסה — הסימונים, הגיבוי והמראה אינם תלויים בה, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
+  // הזיכרון נבנה מהמראה (MIRROR_CFG.loaded) לפני כל מנגנון שדוחף, והמסך הראשון מצויר ממנו לפני הרשת.
   bootRun();
-  // מראת המשתמשים נטענת לפני מסך הכניסה — אחרת לכניסה אופליין אין מול מה לאמת.
-  try { usersSaveAll(mirrorLoadOne(authUsersTable()) || []); } catch (e) { console.warn('[users] load', e); }
-  // אין כאן שחזור סשן — סשן שנשמר בלי תפוגה הוא כניסה קבועה על מכשיר משותף.
-
-  slShowLogin(true);
-  setTimeout(function(){document.getElementById('au-user').focus();},50);
+  shellBare(false);
+  slApplyMirror();
+  refreshUI();
+  syncAll().then(function(){ ensureCreditMethod(); });
   window.bootOk();
 }
 

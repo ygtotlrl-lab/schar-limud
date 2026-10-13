@@ -1,30 +1,31 @@
-// app/screens/student.js — כרטיס התלמיד
+// app/screens/student.js — רשימת התלמידים וכרטיס התלמיד
 import { dayToday } from '../../core/util.js';
 import { idEq, schedulePush } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, comboDef, comboHTML, esc, openModal, toast,
-         uiNoDialog } from '../../core/ui.js';
+import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CREDIT_METHOD, LK_SHIUR, MSG_CHANGE_NOT_SAVED, MSG_CONFIRM, MSG_DEBT_POSITIVE,
-         MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_NAME_REQUIRED, MSG_PERIOD_MISSING,
+         MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_HANDLED_OFF, MSG_HANDLED_ON,
+         MSG_NAME_REQUIRED, MSG_PERIOD_MISSING,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { acadYearHeb, acadYearOf, calcDistribution, distCredApplied, distCredit, enrollText, fmt,
-         isCreditTxn, monthKeyOf, monthLabel, pendTxnTag, periodText, periodsProblem, periodsToggled,
-         readMonthRange, slLocalWrite, slLookups, slPeriods, slSortTxns, slSortYears,
-         studentContinues, studentInMonth, studentTuition, txnAmountHTML,
-         txnMethodPill } from '../domain.js';
+         isCreditTxn, monthKeyOf, monthLabel, pendStuTag, pendTxnTag, periodText, periodsProblem,
+         periodsToggled, readMonthRange, slHandledToggle, slLocalWrite, slLookups, slPeriods,
+         slSortTxns, slSortYears, slStudentGroups, studentContinues, studentHandled, studentInMonth,
+         studentTuition, studentYearDebt, txnAmountHTML, txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
 <div id="panel-student" class="panel">
-  <div class="card">
-    <div class="card-hdr"><h3>כרטיס תלמיד</h3></div>
-    <div class="sc-body card-body">
-      ${comboHTML('student-card', { id: 'sc-student', label: 'בחר תלמיד', placeholder: 'בחר תלמיד...' })}
+  <div id="sc-list-view">
+    <div class="sc-search">
+      <input id="sc-q" class="sc-q" type="search" data-inp="sc-q" placeholder="חיפוש" aria-label="חיפוש תלמיד" autocomplete="off">
     </div>
+    <div id="sc-list"></div>
   </div>
   <div id="sc-main" class="hidden">
+    <button class="sc-back" data-act="sc-back">&#8250; כל התלמידים</button>
     <div class="card">
       <div class="sc-hdr">
         <div class="sc-head">
@@ -32,7 +33,10 @@ function screenStudentHTML() {
             <div class="sc-name" id="sc-name"></div>
             <div class="sc-meta" id="sc-meta"></div>
           </div>
-          <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
+          <div class="sc-togs">
+            <button class="sc-tog tog-act-off" id="sc-handled-tog" data-act="student-handled" aria-pressed="false">טופל</button>
+            <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
+          </div>
         </div>
       </div>
       <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
@@ -96,10 +100,58 @@ function screenStudentHTML() {
 `;
 }
 
-// המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
-comboDef('student-card',{val:true,items:function(){return S.STUDENTS.map(function(s){return{value:s.client_id,label:s.name};});},pick:function(it){if(it)selectStudent(it.value);}});
+// ── רשימת התלמידים ──
+// כל הכרטיסים ברשימה אחת, מקובצים לפי שיעור: שלא טופלו החודש — מעל הקו, ושטופלו — מתחתיו, באותו קיבוץ.
+// החיפוש מסנן בלבד — הוא אינו משנה סדר ואינו בוחר.
+function studentRowHTML(s){
+  var d=studentYearDebt(s),t=studentTuition(s);
+  var end=d>0?'<span class="sc-row-debt '+(t>0&&d>=t?'amt-bad':'amt-warn')+'">&#8722;&#8362;'+fmt(d)+'</span>'
+             :'<span class="sc-row-ok">מסודר</span>';
+  return '<button class="sc-row" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
+    '<span class="sc-row-name">'+esc(s.name)+pendStuTag(s)+'</span>'+end+'</button>';
+}
 
-function selectStudent(id){S.SC_STUDENT_ID=String(id);S.SC_YEAR=null;document.getElementById('sc-main').classList.remove('hidden');renderStudentCard();}
+function studentGroupsHTML(list,done){
+  return slStudentGroups(list).map(function(g){
+    return '<section class="sc-grp'+(done?' is-done':'')+'">'+
+      '<div class="sc-grp-hd"><h3>'+esc(g.label||'ללא שיעור')+'</h3>'+
+      (done?'':'<span class="sc-grp-cnt">'+g.rows.length+' לטיפול</span>')+'</div>'+
+      g.rows.map(studentRowHTML).join('')+'</section>';
+  }).join('');
+}
+
+function renderStudentList(){
+  var box=document.getElementById('sc-list');if(!box)return;
+  var q=String(S.SC_Q||'').trim(),k=monthKeyOf(dayToday());
+  var list=S.STUDENTS.filter(function(s){return !q||String(s.name||'').indexOf(q)>=0;});
+  if(!list.length){box.innerHTML='<div class="empty">'+(S.STUDENTS.length?'אין תלמיד התואם את החיפוש':'אין תלמידים')+'</div>';return;}
+  var done=list.filter(function(s){return studentHandled(s,k);});
+  box.innerHTML=studentGroupsHTML(list.filter(function(s){return !studentHandled(s,k);}),false)+
+    '<div class="sc-line"><span>טופלו החודש · '+done.length+'</span></div>'+studentGroupsHTML(done,true);
+}
+
+function studentSearch(v){S.SC_Q=v;renderStudentList();}
+
+// הרשימה והכרטיס מתחלפים בנקודה אחת — תלמיד שנמחק במכשיר אחר מחזיר לרשימה.
+function renderStudentPanel(){
+  if(S.SC_STUDENT_ID&&!scStudent())S.SC_STUDENT_ID=null;
+  var on=!!S.SC_STUDENT_ID;
+  document.getElementById('sc-list-view').classList.toggle('hidden',on);
+  document.getElementById('sc-main').classList.toggle('hidden',!on);
+  if(on)renderStudentCard();else renderStudentList();
+}
+
+// המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
+function studentOpen(id){S.SC_STUDENT_ID=String(id);S.SC_YEAR=null;renderStudentPanel();window.scrollTo(0,0);}
+
+function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
+
+function toggleStudentHandled(){
+  var k=monthKeyOf(dayToday());
+  if(!slHandledToggle(S.SC_STUDENT_ID,k)){toast(MSG_CHANGE_NOT_SAVED,5000,'bad');return;}
+  shell.refreshUI();
+  toast(studentHandled(scStudent(),k)?MSG_HANDLED_ON:MSG_HANDLED_OFF,null,'good');
+}
 
 // ── כרטיס התלמיד ──
 function renderStudentCard(){
@@ -109,6 +161,7 @@ function renderStudentCard(){
   var meta=[];if(cs.shiur)meta.push(cs.shiur);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
   var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.textContent=on?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
+  var hd=studentHandled(s),ht=document.getElementById('sc-handled-tog');ht.textContent=hd?'טופל ✓':'טופל';ht.className='sc-tog '+(hd?'tog-act-on':'tog-act-off');ht.setAttribute('aria-pressed',hd?'true':'false');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   var pastBox=document.getElementById('sc-past');if(pastBox)pastBox.innerHTML='';
@@ -234,5 +287,6 @@ function saveStudentSettings(){
   return true;
 }
 
-export { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentCard,
-         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, toggleStudentActive };
+export { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
+         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentBack, studentOpen,
+         studentSearch, toggleStudentActive, toggleStudentHandled };

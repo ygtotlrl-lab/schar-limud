@@ -1,14 +1,12 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
 import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, dayToday, errMsg, isNetErr,
-         kvParse, sortCompare } from '../core/util.js';
+         kvParse, sortCompare, uniqHas } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
 import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
-import { authUsersTable, isAdminOf, sessGet, usersRefresh,
-         usersSanitize } from '../core/auth.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
@@ -57,8 +55,8 @@ function pendLkTag(i) { return (i && i.client_id) ? pendTag(PK_LK + i.client_id)
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
-  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by_client_id','deleted','deleted_at','deleted_by','updated_at'],
-  sl_students:     ['client_id','name','card_settings','periods','deleted','deleted_at','deleted_by','updated_at'],
+  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','deleted','deleted_at','deleted_by','updated_at'],
+  sl_students:     ['client_id','name','card_settings','periods','handled','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lookups:      ['client_id','kind','label','sort','deleted','deleted_at','deleted_by','updated_at']
 };
@@ -72,12 +70,10 @@ function slKeyOf(t, r) {
 // שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות, כדי שגם נתיב כתיבה חדש לא ידליף סוד לדיסק
 function slSanitizeRows(t, rows) {
   if (t === KV_TABLE) return slStripMeta(rows);
-  // רשימת-היתר ולא רשימת-איסור — נשארת נכונה כשתיווסף לטבלה עמודה רגישה
-  if (t === authUsersTable()) return usersSanitize(rows);
   return Array.isArray(rows) ? rows : [];
 }
 
-// ── משתמשים, סודות וכניסה ──
+// ── סודות ──
 
 function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
 
@@ -89,16 +85,6 @@ function slStripSecrets(rows) {
 function slStripMeta(rows) {
   return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === PL_STAMP_KEY); });
 }
-
-// ── הרשאה ──
-// נכשל סגור — כל מה שאינו בדיוק 'admin', כולל תפקיד שהוקלד בטעות, אינו מקבל גישה
-function slSettingsAccess(u) {
-  var who = (u === undefined) ? sessGet() : u;
-  if (!who) return 'denied';
-  return isAdminOf(who) ? 'ok' : 'denied';
-}
-
-function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 
 // ── המיון ──
 // תלמידים — לפי השם, בסדר הא״ב.
@@ -296,6 +282,26 @@ function periodsToggled(s){
   return ps.concat([{start:k,end:end}]).sort(function(a,b){return a.start<b.start?-1:1;});
 }
 
+// ── טופל ──
+// מערך חודשים YYYY-MM — החודש הוא המפתח הטבעי, וחודש חדש מתחיל ריק מעצמו, בלי איפוס.
+function slHandled(s){return ((s&&Array.isArray(s.handled))?s.handled:[]).map(normMonth).filter(Boolean);}
+
+// בלי חודש — החודש הנוכחי.
+function studentHandled(s,k){return slHandled(s).indexOf(k||monthKeyOf(dayToday()))>=0;}
+
+function handledToggled(s,k){
+  var l=slHandled(s);
+  if(uniqHas(l,k))return l.filter(function(x){return x!==k;});
+  return l.concat([k]).sort();
+}
+
+// מחזירה false כשהכתיבה לאחסון נכשלה — הקורא אומר זאת, ואינו מציג «טופל» על מה שלא נשמר.
+function slHandledToggle(sid,k){
+  var s=S.STUDENTS.find(function(x){return idEq(x.client_id,sid);});
+  if(!s||!normMonth(k))return false;
+  return slLocalWrite('sl_students',Object.assign({},s,{handled:handledToggled(s,k)}));
+}
+
 // ── שיעורים ──
 // קבוצה לכל שיעור, בסדר הגרירה, ותלמיד בלי שיעור — בקבוצה האחרונה; קבוצה ריקה אינה מוצגת.
 function slStudentGroups(list){
@@ -310,6 +316,13 @@ function slStudentGroups(list){
 function studentTuition(s){
   var cs=(s&&s.card_settings)||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0);
   return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+}
+
+// חוב השנה עד החודש הנוכחי — החיוב פחות מה שנפרס על החודשים שעד היום; חודש מחוץ לתקופות אינו מחויב.
+function studentYearDebt(s){
+  var y=acadYearOf(dayToday()),k=monthKeyOf(dayToday()),d=calcDistribution(s.client_id,y),t=0;
+  YEAR_MONTHS.forEach(function(m){var i=d[m];if(!i||i.off||acadMonthKey(y,m)>k)return;t+=i.req-i.paid;});
+  return Math.max(0,Math.round(t*100)/100);
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
@@ -349,7 +362,7 @@ async function syncAll(){
   if(S._syncBusy) return;
   S._syncBusy=true;
   var _t0=Date.now(); // סימון שנוצר אחרי תחילת המחזור אינו מוכרע בו
-  // המשתמש יכול להתחלף בין המשיכה לכתיבה — מה שנמזג עבור הקודם היה יורד לדיסק ועולה לענן בהקשר של החדש
+  // ההקשר נלכד בכניסה — עידן שנזרק בין המשיכה לכתיבה מבטל את מה שנמזג עבור העותק הקודם
   var _ep=ctxEpoch();
   try{
     var rs=await slPullAll();
@@ -369,7 +382,7 @@ async function syncAll(){
       pulledTxn=true;
       MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+k);}}); mirrorSave('sl_transactions');
     }
-    // slStripSecrets רץ לפני המיזוג — admin_pass אינה נכנסת למראה בשום מסלול.
+    // slStripSecrets רץ לפני המיזוג — סוד אינו נכנס למראה בשום מסלול.
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
@@ -394,8 +407,6 @@ async function syncAll(){
     // הסריקה מורידה סימון מכל מה שאינו ב-still — ולכן רצה רק כשכל הקטגוריות נמשכו, אחרת ההורדה היא הסקה ולא ראיה.
     if(ctxStale(_ep)) return;
     if(pulledStu&&pulledTxn&&pulledSet&&pulledLk) pendSyncScan(stillPending,_t0);
-    // מראת המשתמשים אינה נדחפת לעולם — היא מחזיקה טביעות בלבד, ודחיפה שלה הייתה כותבת password ריק לכל המשתמשים.
-    usersRefresh();
 
     if(!errs.length){
       S._slLastPullOk=Date.now();
@@ -487,12 +498,13 @@ function txnMethodPill(t){
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
 
-export { _slPushOf, acadYearHeb,
+export { _slPushOf, acadMonthKey, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slLookups,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
-         studentTuition, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
-         studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };
+         studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
+         studentCredit, studentHandled, studentInMonth, studentYearDebt, syncAll, txnAmountHTML,
+         txnMethodPill };
