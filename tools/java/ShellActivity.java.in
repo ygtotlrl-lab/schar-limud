@@ -48,7 +48,7 @@ public abstract class ShellActivity extends Activity {
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true); // localStorage — הייבוא החד-פעמי לאחסון של האפליקציה קורא ממנו
+        s.setDomStorageEnabled(true); // localStorage — supabase-js קורא ממנו בעלייה; האחסון של האפליקציה — IndexedDB
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
