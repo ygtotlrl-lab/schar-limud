@@ -4,13 +4,14 @@ import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { sessUserId } from '../../core/auth.js';
 import { ask, comboDef, comboHTML, comboValue, esc, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
-         slLocalWrite, slSortTxns, txnAmountHTML, txnMethodPill } from '../domain.js';
+         slLocalWrite, slLookups, slSortTxns, studentInMonth, txnAmountHTML,
+         txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
   return `
@@ -58,12 +59,12 @@ function screenTxnHTML() {
 function studentOpts(a){return a.map(function(s){return{value:s.client_id,label:s.name};});}
 
 // תשלום נרשם לתלמיד פעיל בלבד; הסינון ביומן — לכל תלמיד, ו«כולם» הוא ערך ריק.
-comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return s.active;}));}});
+comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return studentInMonth(s);}));}});
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
 function updateDropdowns(){
-  var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
-  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.value)+'">'+esc(m.value)+'</option>';});
+  var ml=slLookups(LK_METHOD),sel=document.getElementById('txn-method'),cur=sel.value;
+  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.label)+'">'+esc(m.label)+'</option>';});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
   if(cur)sel.value=cur;

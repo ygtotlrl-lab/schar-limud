@@ -253,7 +253,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tog-act-off{background:var(--fill-dark);color:var(--on-dark-3)}
 .sc-body{padding-bottom:var(--sp-5)}
 .sc-head{display:flex;gap:var(--sp-5);align-items:flex-start;justify-content:space-between}
-.sc-section{margin-top:var(--sp-5)}
+.sc-part{margin-top:var(--sp-5)}
 .sc-sub-title{font-size:var(--fs-3);font-weight:700;color:var(--text-2);margin-bottom:var(--sp-3);padding:0 var(--sp-2)}
 .tuition-inp{border:2px solid var(--border);font-family:Heebo;font-size:var(--fs-4);outline:none;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-4);width:130px}
 .tuition-row{align-items:center;display:flex;flex-wrap:wrap;gap:var(--sp-4)}

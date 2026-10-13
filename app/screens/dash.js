@@ -76,7 +76,7 @@ function actualByMonth(year){
 }
 
 function monthTarget(year,m){
-  return S.STUDENTS.reduce(function(a,s){return a+(s.active&&studentInMonth(s,year,m)?studentTuition(s):0);},0);
+  return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?studentTuition(s):0);},0);
 }
 
 function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
@@ -90,7 +90,9 @@ function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך 
 function renderDash(){
   if(S.DASH_YEAR===null)S.DASH_YEAR=acadYearOf(dayToday());
   document.getElementById('dash-year-label').textContent=acadYearLabel(S.DASH_YEAR);
-  var act=S.STUDENTS.filter(function(s){return s.active;}),actual=actualByMonth(S.DASH_YEAR);
+  // שורה לכל תלמיד שהיה פעיל בחודש כלשהו בשנה, או שנרשמה לו בה תנועה — כך סכום העמודה שווה לסך התנועות.
+  var actual=actualByMonth(S.DASH_YEAR);
+  var act=S.STUDENTS.filter(function(s){return actual[s.client_id]||YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});});
   var hdr='<tr><th class="stu">תלמיד</th>';
   YEAR_MONTHS.forEach(function(m){
     hdr+='<th class="num mo" title="'+esc(monthLabel(S.DASH_YEAR,m))+' — לחיצה לפירוט" data-act="dash-month" data-year="'+S.DASH_YEAR+'" data-month="'+m+'">'+MONTH_HE_SHORT[m]+'</th>';
@@ -127,10 +129,10 @@ function renderDash(){
   tf+='<tr class="sub"><td class="stu">אחוז גבייה</td>';
   YEAR_MONTHS.forEach(function(m){tf+='<td class="num '+pctClass(colT[m]||0,tgt[m])+'" title="'+ofTargetTitle(colT[m]||0,tgt[m])+'">'+pctText(colT[m]||0,tgt[m])+'</td>';});
   tf+='<td class="num tot '+pctClass(grand,grandTgt)+'" title="'+ofTargetTitle(grand,grandTgt)+'">'+pctText(grand,grandTgt)+'</td></tr>';
-  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש זה, לפי חודש ההצטרפות/עזיבה">פעילים</td>';
+  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש זה, לפי תקופות הפעילות">פעילים</td>';
   YEAR_MONTHS.forEach(function(m){var c=countInMonth(S.DASH_YEAR,m);tf+='<td class="num">'+(c||'—')+'</td>';});
   // כמה תלמידים היו פעילים בשלב כלשהו בשנה — ולא סכום החודשים.
-  var yearCnt=act.filter(function(s){return YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
+  var yearCnt=S.STUDENTS.filter(function(s){return YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
 
@@ -146,7 +148,7 @@ function showDashMonth(year,month){
   document.getElementById('dash-month-card').classList.remove('hidden');
   var actual=actualByMonth(year);
   // נכלל גם תלמיד מחוץ לטווח שנרשמה לו תנועה בחודש — כדי שהסכום יהיה זהה לעמודת החודש בטבלה.
-  var act=S.STUDENTS.filter(function(s){return s.active&&(studentInMonth(s,year,month)||((actual[s.client_id]||{})[month]||0)>0);});
+  var act=S.STUDENTS.filter(function(s){return studentInMonth(s,year,month)||((actual[s.client_id]||{})[month]||0)>0;});
   var html='',tot=0,target=0;
   act.forEach(function(s){
     var v=(actual[s.client_id]||{})[month]||0,inM=studentInMonth(s,year,month),req=inM?studentTuition(s):0;

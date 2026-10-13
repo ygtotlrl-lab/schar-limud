@@ -5,7 +5,7 @@ import { appConfigure } from '../core/util.js';
 // כאן הנתונים שהליבה קוראת, והחיווט — ב-main.js; הקובץ הזה נטען ראשון, לפני כל קריאה לליבה.
 // העידן עולה בשינוי צורת רשומה או מפתחה, ושינוי שם טבלה הוא שינוי כזה — המראה ממופתחת בשם.
 // עותק בעידן ישן אינו נדחף — הממתין בו נרשם ביומן, והוא נזרק ונמשך מלא.
-var DATA_ERA = 6;
+var DATA_ERA = 7;
 
 appConfigure({ DATA_ERA: DATA_ERA });
 
@@ -103,7 +103,10 @@ var KV_TABLE = 'sl_settings';
 // ── PUSH_CFG ──
 // sl_users אינה נדחפת לעולם — המראה מחזיקה טביעות בלבד, ודחיפת-מצב הייתה כותבת סיסמה ריקה; מסלולה writeUser
 // סדר הטבלאות שומר על המפתח הזר — תלמידים לפני תנועות
-var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lists'];
+var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lookups'];
+
+// סוגי הרשימות ב-sl_lookups — אמצעי תשלום ושיעורים.
+var LK_METHOD = 'method', LK_SHIUR = 'shiur';
 
 // ── ERA_CFG ──
 
@@ -129,7 +132,7 @@ var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
 // סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
 var SL_NEVER_MIRROR_SETTINGS = [];
 
-export { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_BAD_LOGIN, MSG_CHANGE_NOT_SAVED,
+export { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_BAD_LOGIN, MSG_CHANGE_NOT_SAVED,
          MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DEBT_POSITIVE, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,

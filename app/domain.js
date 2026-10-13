@@ -1,5 +1,5 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
-import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, errMsg, isNetErr,
+import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, dayToday, errMsg, isNetErr,
          kvParse, sortCompare } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
@@ -9,7 +9,7 @@ import { logAction } from '../core/backup.js';
 import { authUsersTable, isAdminOf, sessGet, usersRefresh,
          usersSanitize } from '../core/auth.js';
 import { esc, pullRender, toast } from '../core/ui.js';
-import { CREDIT_METHOD, KV_TABLE, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
+import { CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -19,13 +19,13 @@ function _slPushOf(t) {
   return { sl_students:     { pk: PK_STU },
            sl_transactions: { pk: PK_TXN },
            [KV_TABLE]:      { pk: PK_SET },
-           sl_lists:        { pk: PK_LST } }[t];
+           sl_lookups:      { pk: PK_LK } }[t];
 }
 
 // ── חיבור למודול הסימון ──
 // הסימון מכסה גם תשובה שאבדה ברשת — הוא נשאר עד שמשיכה מוצלחת תראה את ה-client_id בענן
 // מחיקה אינה מפתח נפרד — היא כתיבה של deleted=true על אותה רשומה
-var PK_TXN = 'txn:', PK_STU = 'student:', PK_SET = 'setting:', PK_LST = 'list:';
+var PK_TXN = 'txn:', PK_STU = 'student:', PK_SET = 'setting:', PK_LK = 'lookup:';
 
 function pendTxnKey(row) { return PK_TXN + row.client_id; }
 
@@ -50,16 +50,16 @@ function pendTxnTag(t) { return t ? pendTag(pendTxnKey(t)) : ''; }
 
 function pendStuTag(st) { return st ? pendTag(pendStuKey(st)) : ''; }
 
-function pendLstTag(i) { return (i && i.client_id) ? pendTag(PK_LST + i.client_id) : ''; }
+function pendLkTag(i) { return (i && i.client_id) ? pendTag(PK_LK + i.client_id) : ''; }
 
 // ── עבודה אופליין ──
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
   sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by_client_id','deleted','deleted_at','deleted_by','updated_at'],
-  sl_students:     ['client_id','name','active','card_settings','start_month','end_month','deleted','deleted_at','deleted_by','updated_at'],
+  sl_students:     ['client_id','name','card_settings','periods','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
-  sl_lists:        ['client_id','category','value','deleted','deleted_at','deleted_by','updated_at']
+  sl_lookups:      ['client_id','kind','label','sort','deleted','deleted_at','deleted_by','updated_at']
 };
 
 // sl_settings ממופתחת לפי key — שני מכשירים מגיעים לאותו key באופן עצמאי, ומיפתוח לפי client_id היה יוצר שני ערכים לאותה הגדרה
@@ -114,9 +114,11 @@ function slSortTxns(list, desc) {
   });
 }
 
-// פריטי הרשימות — לפי הערך, בסדר הא״ב.
-function slSortListItems(list) {
-  return list.slice().sort(function (a, b) { return sortCompare(a.value || '', b.value || ''); });
+// פריטי הרשימות — בסדר הגרירה, ובשוויון לפי התווית.
+function slSortLookups(list) {
+  return list.slice().sort(function (a, b) {
+    return ((+a.sort || 0) - (+b.sort || 0)) || sortCompare(a.label || '', b.label || '');
+  });
 }
 
 // שנות הלימודים — הראשונה ראשונה.
@@ -131,11 +133,13 @@ function slApplyMirror() {
   (MIRROR[KV_TABLE] || []).forEach(function (r) {
     if (r && !slIsSecretSetting(r.key)) S.SETTINGS[r.key] = kvParse(r.key, r.value).value;
   });
-  S.LISTS = {};
-  // כפתור המחיקה מצביע על key, מפתח המיזוג — לפריט שנוצר במכשיר אין שדה אחר
-  slSortListItems((MIRROR.sl_lists || []).filter(function (r) { return r && !r.deleted; }))
-    .forEach(function (r) { if (!S.LISTS[r.category]) S.LISTS[r.category] = []; S.LISTS[r.category].push({ client_id: r.client_id, value: r.value }); });
+  S.LOOKUPS = {};
+  slSortLookups((MIRROR.sl_lookups || []).filter(function (r) { return r && !r.deleted; }))
+    .forEach(function (r) { (S.LOOKUPS[r.kind] = S.LOOKUPS[r.kind] || []).push(r); });
 }
+
+// פריטי סוג אחד — אמצעי תשלום או שיעורים — בסדר הגרירה.
+function slLookups(kind) { return S.LOOKUPS[kind] || []; }
 
 // מחזירה false כשהכתיבה לאחסון נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
 // ts — חותמת המחיקה, כדי ש-deleted_at יישאר רגע ה-updated_at שלה.
@@ -227,7 +231,7 @@ function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב
 
 function monthLabel(y,m){return DAY_MONTHS[m]+' '+(m>=8?y:y+1);}
 
-// ── טווח פעילות התלמיד ──
+// ── תקופות הפעילות ──
 // YYYY-MM ממוין כרונולוגית כמחרוזת — ולכן ההשוואה לקסיקוגרפית בלי המרה לתאריך
 var MONTH_RE=/^[0-9]{4}-(0[1-9]|1[0-2])$/;
 
@@ -241,23 +245,43 @@ function normMonth(v){v=(v==null?'':String(v)).trim();return MONTH_RE.test(v)?v:
 
 function monthKeyLabel(k){var p=normMonth(k);return p?DAY_MONTHS[parseInt(p.slice(5,7),10)-1]+' '+p.slice(0,4):'';}
 
-// הטווח כולל את שני קצותיו; בלי start_month אין גבול תחתון, בלי end_month אין גבול עליון
-function studentInMonth(s,y,m){
-  if(!s)return false;
-  var sm=normMonth(s.start_month),em=normMonth(s.end_month);
-  if(!sm&&!em)return true;
-  var k=acadMonthKey(y,m);
-  return (!sm||k>=sm)&&(!em||k<=em);
+// תקופה — { start, end }, ו-end ריק לתקופה פתוחה; תקופה בלי התחלה תקינה אינה תקופה. המפתח — start.
+function slPeriods(s){
+  return ((s&&Array.isArray(s.periods))?s.periods:[]).map(function(p){
+    return {start:normMonth(p&&p.start),end:normMonth(p&&p.end)||null};
+  }).filter(function(p){return p.start;}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});
 }
 
-function countInMonth(y,m){return S.STUDENTS.filter(function(s){return s.active&&studentInMonth(s,y,m);}).length;}
+// חודש בתוך תקופה — פעיל; מחוץ לכולן — ריק: אין חיוב ואין שורה. בלי חודש — החודש הנוכחי.
+function studentInMonth(s,y,m){
+  if(!s)return false;
+  var k=(y==null)?monthKeyOf(dayToday()):acadMonthKey(y,m);
+  return slPeriods(s).some(function(p){return k>=p.start&&(!p.end||k<=p.end);});
+}
 
-function enrollText(s){
-  var sm=normMonth(s&&s.start_month),em=normMonth(s&&s.end_month);
-  if(!sm&&!em)return '';
-  if(sm&&em)return monthKeyLabel(sm)+' – '+monthKeyLabel(em);
-  if(sm)return 'מ-'+monthKeyLabel(sm);
-  return 'עד '+monthKeyLabel(em);
+function countInMonth(y,m){return S.STUDENTS.filter(function(s){return studentInMonth(s,y,m);}).length;}
+
+function periodText(p){return p.end?monthKeyLabel(p.start)+' – '+monthKeyLabel(p.end):'מ-'+monthKeyLabel(p.start);}
+
+function enrollText(s){return slPeriods(s).map(periodText).join(' · ');}
+
+function periodHas(p,k){return k>=p.start&&(!p.end||k<=p.end);}
+
+function monthKeyAdd(k,n){var y=+k.slice(0,4),m=+k.slice(5,7)-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;return y+'-'+String(m+1).padStart(2,'0');}
+
+// מצב הכפתור — תקופה שנמשכת מעבר לחודש הנוכחי; תלמיד שנסגר החודש עדיין נספר בו, אך הכפתור כבר כבוי.
+function studentContinues(s){var k=monthKeyOf(dayToday());return slPeriods(s).some(function(p){return periodHas(p,k)&&p.end!==k;});}
+
+// כיבוי — התקופה סגורה בחודש הנוכחי: התלמיד נספר החודש ויוצא מהבא.
+// הפעלה — תקופה שנסגרה החודש נפתחת מחדש, בלי תקופה שנייה; אחרת תקופה חדשה מהחודש הנוכחי, עד שלפני הבאה אם יש.
+function periodsToggled(s){
+  var k=monthKeyOf(dayToday()),ps=slPeriods(s);
+  if(studentContinues(s))return ps.map(function(p){return periodHas(p,k)?{start:p.start,end:k}:p;});
+  var hit=ps.filter(function(p){return periodHas(p,k);})[0];
+  var next=ps.filter(function(p){return p.start>k;})[0];
+  var end=next?monthKeyAdd(next.start,-1):null;
+  if(hit)return ps.map(function(p){return p===hit?{start:p.start,end:end}:p;});
+  return ps.concat([{start:k,end:end}]).sort(function(a,b){return a.start<b.start?-1:1;});
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
@@ -273,16 +297,13 @@ function distCredApplied(d){return YEAR_MONTHS.reduce(function(a,m){return a+((d
 
 function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 
-// לפי מפתח המיזוג ולא לפי id — לפריט שנוצר במכשיר אין עדיין id
-function findListItem(cid){var f=null;Object.keys(S.LISTS).forEach(function(c){(S.LISTS[c]||[]).forEach(function(i){if(idEq(i.client_id,cid))f=i;});});return f;}
-
-function hasCreditItem(){return Object.keys(S.LISTS).some(function(c){return (S.LISTS[c]||[]).some(function(i){return isCreditValue(i.value);});});}
+function hasCreditItem(){return slLookups(LK_METHOD).some(function(i){return isCreditValue(i.label);});}
 
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 
 // שליפה בעמודים חייבת סדר יציב — בלי ORDER BY פוסטגרס אינו מבטיח אותו
 // עמודה שאינה בסכימה מחזירה 42703, שנקרא «סכימה מיושנת»; sl_settings ממוינת ב-key כי אין לה id
-var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],[KV_TABLE,'key'],['sl_lists','client_id']];
+var SYNC_TABLES=[['sl_students','client_id'],['sl_transactions','client_id'],[KV_TABLE,'key'],['sl_lookups','client_id']];
 
 // הסנכרון מושך מלא — רשומה שלא נמשכה נקראת במיזוג כנמחקה
 // המשיכה מעומדת — select('*') בבקשה אחת נחתך בשקט בתקרת db-max-rows
@@ -311,7 +332,7 @@ async function syncAll(){
     S._lastSyncOk=!errs.length;
 
     // ממוזגת רק קטגוריה שנמשכה בהצלחה — מיזוג מול ענן ריק שנובע מכשל רשת נראה כמחיקה של הכול.
-    var pulledStu=false, pulledTxn=false, pulledSet=false, pulledLst=false;
+    var pulledStu=false, pulledTxn=false, pulledSet=false, pulledLk=false;
     if(rs[0]&&!rs[0].error&&Array.isArray(rs[0].data)){
       pulledStu=true;
       MIRROR.sl_students=mergeCore(MIRROR.sl_students,rs[0].data,{isPending:function(k){return pendHas(PK_STU+k);}}); mirrorSave('sl_students');
@@ -327,8 +348,8 @@ async function syncAll(){
       MIRROR[KV_TABLE]=mergeCore(MIRROR[KV_TABLE],setRows,{key:'key',isPending:function(k){return pendHas(PK_SET+k);}}); mirrorSave(KV_TABLE);
     }
     if(rs[3]&&!rs[3].error&&Array.isArray(rs[3].data)){
-      pulledLst=true;
-      MIRROR.sl_lists=mergeCore(MIRROR.sl_lists,rs[3].data,{isPending:function(k){return pendHas(PK_LST+k);}}); mirrorSave('sl_lists');
+      pulledLk=true;
+      MIRROR.sl_lookups=mergeCore(MIRROR.sl_lookups,rs[3].data,{isPending:function(k){return pendHas(PK_LK+k);}}); mirrorSave('sl_lookups');
     }
     slApplyMirror();
     pullRender(shell.refreshUI);
@@ -339,12 +360,12 @@ async function syncAll(){
       sl_students:     pulledStu,
       sl_transactions: pulledTxn,
       [KV_TABLE]:      pulledSet,
-      sl_lists:        pulledLst
+      sl_lookups:      pulledLk
     });
     var stillPending=_pushRes.still;
     // הסריקה מורידה סימון מכל מה שאינו ב-still — ולכן רצה רק כשכל הקטגוריות נמשכו, אחרת ההורדה היא הסקה ולא ראיה.
     if(ctxStale(_ep)) return;
-    if(pulledStu&&pulledTxn&&pulledSet&&pulledLst) pendSyncScan(stillPending,_t0);
+    if(pulledStu&&pulledTxn&&pulledSet&&pulledLk) pendSyncScan(stillPending,_t0);
     // מראת המשתמשים אינה נדחפת לעולם — היא מחזיקה טביעות בלבד, ודחיפה שלה הייתה כותבת password ריק לכל המשתמשים.
     usersRefresh();
 
@@ -370,17 +391,15 @@ function slSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
 
-// המזהה נגזר מהקטגוריה והערך — שני מכשירים שזורעים או מוסיפים את אותו פריט מגיעים לאותה שורה.
-function slListId(cat, val) { return cat + ':' + val; }
-
 async function ensureCreditMethod(){
   if(S._creditSeedDone||!S._lastSyncOk||!navigator.onLine)return;
   if(hasCreditItem()){S._creditSeedDone=true;return;}
   S._creditSeedDone=true;
   try{
     // כתיבה מקומית עם client_id ודחיפה ב-upsert — insert ישיר יוצר שורה שנייה בכל ניסיון חוזר אחרי תשובה שאבדה.
-    var row={client_id:slListId('payment_methods',CREDIT_METHOD),category:'payment_methods',value:CREDIT_METHOD,deleted:false,deleted_at:null,deleted_by:null};
-    if(!slLocalWrite('sl_lists',row)){S._creditSeedDone=false;return;}
+    // המזהה נגזר מהסוג והתווית — שני מכשירים שזורעים את הסעיף מגיעים לאותה שורה.
+    var row={client_id:LK_METHOD+':'+CREDIT_METHOD,kind:LK_METHOD,label:CREDIT_METHOD,sort:slLookups(LK_METHOD).length+1,deleted:false,deleted_at:null,deleted_by:null};
+    if(!slLocalWrite('sl_lookups',row)){S._creditSeedDone=false;return;}
     await syncAll();
   }catch(e){S._creditSeedDone=false;console.warn('[credit]',e);}
 }
@@ -419,13 +438,14 @@ function calcDistribution(sid,year){
 
 // ── משותף למסכים ──
 // פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
+// תקופה בלי התחלה אינה תקופה — חודש ההצטרפות חובה, והעזיבה ריקה לתקופה פתוחה.
 function readMonthRange(startId,endId){
   var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
   var sm=normMonth(rawS),em=normMonth(rawE);
-  if(rawS&&!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
+  if(!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
   if(rawE&&!em){toast(MSG_END_MONTH_BAD, null, 'bad');return null;}
-  if(sm&&em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
-  return {start_month:sm||null,end_month:em||null};
+  if(em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
+  return {start:sm,end:em||null};
 }
 
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
@@ -441,9 +461,9 @@ function txnMethodPill(t){
 
 export { _slPushOf, acadYearLabel,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
-         enrollText, ensureCreditMethod, findListItem, fmt, hasCreditItem, isCreditTxn,
-         isCreditValue, monthKeyOf, monthLabel, normMonth, pcCascadeDelete,
-         pendLstTag, pendStuKey, pendStuTag, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slListId,
-         slLocalWrite, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
+         enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
+         isCreditValue, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
+         pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slLookups,
+         slLocalWrite, studentContinues, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
          studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

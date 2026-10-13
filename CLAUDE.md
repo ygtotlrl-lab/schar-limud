@@ -3,11 +3,11 @@
 הטבלה ב-`TABLE.md` — מקור האמת היחיד ליכולת; סשן קורא ממנה את הפרקים שהסבב נוגע בהם.
 
 ## מפת המסכים
-- מסך ⟵ מודול: כניסה ⟵ `app/screens/login.js` · `dash` (לוח בקרה) ⟵ `app/screens/dash.js` · `txn` (תשלום ותנועות) ⟵ `app/screens/txn.js` · `student` (כרטיס תלמיד) ⟵ `app/screens/student.js` · `settings` (תלמידים, רשימות, סעיפים, יעד, «הסיסמה שלי») ⟵ `app/screens/settings.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, הכתיבה המקומית והחישוב — `app/domain.js`; החיווט, הניווט ומפת הפעולות — `app/main.js`.
+- מסך ⟵ מודול: כניסה ⟵ `app/screens/login.js` · `dash` (לוח בקרה) ⟵ `app/screens/dash.js` · `txn` (תשלום ותנועות) ⟵ `app/screens/txn.js` · `student` (כרטיס תלמיד) ⟵ `app/screens/student.js` · `settings` (תלמידים, רשימות — אמצעי תשלום ושיעורים, יעד, «הסיסמה שלי») ⟵ `app/screens/settings.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, הכתיבה המקומית והחישוב — `app/domain.js`; החיווט, הניווט ומפת הפעולות — `app/main.js`.
 
 ## מונחי התחום
 - תלמיד (`sl_students`) — אב התנועות. תנועה (`sl_transactions`) — כסף.
-- `start_month`/`end_month` — `YYYY-MM`; ריק = כל השנה. ההשוואה לקסיקוגרפית; הגשר לשנת הלימודים — `acadMonthKey(y,m)`.
+- תקופות הפעילות (`sl_students.periods`) — מערך `{start, end}` ב-`YYYY-MM`, ו-`end` ריק לתקופה פתוחה; בלי חפיפה, ותקופה פתוחה אחת לכל היותר — האחרונה. ההשוואה לקסיקוגרפית; הגשר לשנת הלימודים — `acadMonthKey(y,m)`.
 - יתרת זכות (`credit`) — שולם מעבר לחיוב בטווח; אינה חוב שלילי.
 - זיכוי מיתרה — תנועה ב-`CREDIT_METHOD`; מקטינה חוב ואינה כסף שהתקבל.
 
@@ -16,7 +16,7 @@
 - כל תנועה ותלמיד חדשים מקבלים `client_id` מ-`newClientId()`, והכתיבה `upsert` עם `onConflict:'client_id'`.
 - `pendingCid(slot, fp)` — אותו תוכן אחרי כשל ⇒ אותו מזהה ⇒ שורה אחת; תוכן שהשתנה ⇒ מזהה חדש. בלעדיו תשלום שני דורס את הראשון.
 - מפתח המיזוג של `sl_settings` הוא `key` (`k:<key>`), וכך ה-`upsert`.
-- `readMonthRange` מאמת חובה (פיירפוקס נופל לטקסט ב-`type=month`); המסד מגבה בשני CHECK.
+- `readMonthRange` מאמת חובה (פיירפוקס נופל לטקסט ב-`type=month`) — ההצטרפות חובה, העזיבה ריקה לתקופה פתוחה; המסד מגבה ב-`sl_students_periods_check`.
 - `calcDistribution` מסמן חודש מחוץ לטווח `{req:0,paid:0,off:true}`, והתשלומים מדלגים עליו; היא בכרטיס התלמיד בלבד.
 - יתרת זכות אינה מקוזזת, אינה נכנסת ל«סה"כ שולם» ולא לאף סיכום; שדה נפרד בצבע נפרד, בכרטיס התלמיד וברשימת ההגדרות בלבד — לא בדשבורד.
 - זיכוי מיתרה אינו נכנס ל-`actualByMonth`. הסיווג לפי המחרוזת שעל התנועה (`isCreditTxn`); `updateDropdowns` מזריק את האפשרות, `deleteListItem` מסרב למחוק אותה, `ensureCreditMethod()` זורע אותה אחרי סנכרון תקין.

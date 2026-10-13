@@ -3,13 +3,13 @@ import { dayToday } from '../../core/util.js';
 import { idEq, schedulePush } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { comboDef, comboHTML, esc, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
+import { CREDIT_METHOD, LK_SHIUR, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit, enrollText, fmt,
-         isCreditTxn, monthLabel, normMonth, pendTxnTag, readMonthRange, slLocalWrite, slSortTxns,
-         slSortYears, txnAmountHTML, txnMethodPill } from '../domain.js';
+         isCreditTxn, monthLabel, pendTxnTag, periodsToggled, slLocalWrite, slLookups, slSortTxns,
+         slSortYears, studentContinues, studentInMonth, txnAmountHTML, txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
@@ -44,16 +44,8 @@ function screenStudentHTML() {
           <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל">
         </div>
         <div class="frm-row">
-          <label for="sc-edit-section">סעיף</label>
-          <select id="sc-edit-section"></select>
-        </div>
-        <div class="frm-row">
-          <label for="sc-edit-start">חודש הצטרפות</label>
-          <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp">
-        </div>
-        <div class="frm-row-last frm-row">
-          <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
-          <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp">
+          <label for="sc-edit-shiur">שיעור</label>
+          <select id="sc-edit-shiur"></select>
         </div>
         <div class="frm-row">
           <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
@@ -63,7 +55,6 @@ function screenStudentHTML() {
           <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
           <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
         </div>
-        <div class="range-hint">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
         <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
       </div>
       <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
@@ -79,11 +70,11 @@ function screenStudentHTML() {
           </table>
         </div>
         <div id="sc-credit"></div>
-        <div class="sc-section">
+        <div class="sc-part">
           <div class="sc-sub-title">תשלומים בשנה זו</div>
           <div id="sc-txn-list"></div>
         </div>
-        <div class="sc-section">
+        <div class="sc-part">
           <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות</button>
           <div id="sc-past"></div>
         </div>
@@ -104,15 +95,14 @@ function renderStudentCard(){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{};
   document.getElementById('sc-name').textContent=s.name;
-  var meta=[];if(cs.section)meta.push(cs.section);meta.push(s.active?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
+  var meta=[];if(cs.shiur)meta.push(cs.shiur);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
-  var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
+  var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.textContent=on?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   var pastBox=document.getElementById('sc-past');if(pastBox)pastBox.innerHTML='';
-  document.getElementById('sc-edit-start').value=normMonth(s.start_month);document.getElementById('sc-edit-end').value=normMonth(s.end_month);
-  var ss=document.getElementById('sc-edit-section');ss.innerHTML='<option value="">-- ללא --</option>';
-  (S.LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+esc(sec.value)+'"'+(cs.section===sec.value?' selected':'')+'>'+esc(sec.value)+'</option>';});
+  var ss=document.getElementById('sc-edit-shiur');ss.innerHTML='<option value="">-- ללא --</option>';
+  slLookups(LK_SHIUR).forEach(function(sh){ss.innerHTML+='<option value="'+esc(sh.label)+'"'+(cs.shiur===sh.label?' selected':'')+'>'+esc(sh.label)+'</option>';});
   renderScYearTabs();renderScAnnual();
 }
 
@@ -162,28 +152,27 @@ function scPastShow(){
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
-  var row=Object.assign({},s,{active:!s.active});
+  var row=Object.assign({},s,{periods:periodsToggled(s)});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   shell.refreshUI();
-  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
+  toast(studentContinues(row)?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
 
 function saveStudentSettings(){
-  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
+  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,shiur=document.getElementById('sc-edit-shiur').value;
   if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
-  var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // אימות מפורש — שדה טקסט מעביר קלט פגום כמות שהוא, ו-parseInt בלי אימות כותב NaN לתוך card_settings.
   var tuitionVal=parseInt(tuition,10);
   if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}
   if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
-  if(section)cs.section=section;else delete cs.section;
+  if(shiur)cs.shiur=shiur;else delete cs.shiur;
   var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
   var debtVal=parseInt(debtRaw);
   if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast(MSG_DEBT_POSITIVE, null, 'bad');return;}
   if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
-  var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
+  var row=Object.assign({},s,{name:name,card_settings:cs});
   if(!slLocalWrite('sl_students',row)){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
   return true;
 }

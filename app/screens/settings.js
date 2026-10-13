@@ -8,7 +8,7 @@ import { MIRROR } from '../../core/mirror.js';
 import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
          writeUser } from '../../core/auth.js';
 import { ask, closeModal, comboSet, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
+import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_NAME_REQUIRED,
@@ -17,10 +17,10 @@ import { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_
          MSG_TUITION_POSITIVE, MSG_VALUE_BAD, MSG_VALUE_EXISTS,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
-import { acadYearLabel, acadYearOf, enrollText, findListItem, fmt, isCreditValue,
-         monthKeyOf, pcCascadeDelete, pendLstTag, pendStuTag, pendingCid, readMonthRange,
-         releaseCid, slListId,
-         slLocalWrite, slSettingsAccess, studentCredit } from '../domain.js';
+import { acadYearLabel, acadYearOf, enrollText, fmt, isCreditValue,
+         monthKeyOf, pcCascadeDelete, pendLkTag, pendStuTag, pendingCid, readMonthRange,
+         releaseCid, slLocalWrite, slLookups, slSettingsAccess, studentCredit,
+         studentInMonth } from '../domain.js';
 
 // נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
 var PASS_SIX_RE = /^[0-9]{6}$/;
@@ -64,16 +64,16 @@ function screenSettingsHTML() {
     <div class="card">
       <div class="card-hdr">
         <h3>אמצעי תשלום</h3>
-        <button class="btn sm" data-act="list-add" data-list="payment_methods">+ הוסף</button>
+        <button class="btn sm" data-act="list-add" data-list="method">+ הוסף</button>
       </div>
       <div id="set-methods-list"></div>
     </div>
     <div class="card">
       <div class="card-hdr">
-        <h3>סעיפים</h3>
-        <button class="btn sm" data-act="list-add" data-list="sections">+ הוסף</button>
+        <h3>שיעורים</h3>
+        <button class="btn sm" data-act="list-add" data-list="shiur">+ הוסף</button>
       </div>
-      <div id="set-sections-list"></div>
+      <div id="set-shiurim-list"></div>
     </div>
     <!-- אזור מצב — שני האלמנטים האחרונים במסך, בסדר הזה -->
   </div>
@@ -161,40 +161,39 @@ function saveDefaultTuition(){
 function renderSettingsLists(){
   // יתרת הזכות לשנת הלימודים הנוכחית — שדה נפרד שאינו מעורבב בשום סיכום חוב.
   var cy=acadYearOf(dayToday());
-  document.getElementById('set-students-list').innerHTML=S.STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.client_id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(s.active?'green':'gray')+'">'+(s.active?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(s.client_id)+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
-  renderListItems('payment_methods','set-methods-list');renderListItems('sections','set-sections-list');
+  document.getElementById('set-students-list').innerHTML=S.STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.client_id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(studentInMonth(s)?'green':'gray')+'">'+(studentInMonth(s)?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(s.client_id)+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  renderListItems(LK_METHOD,'set-methods-list');renderListItems(LK_SHIUR,'set-shiurim-list');
 }
 
 // סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה — מחיקתו מסתירה אותו מהטופס ומונעת רישום זיכויים חדשים.
 // הסיווג ההיסטורי אינו נשען על הפריט — הוא נקרא מהמחרוזת ששמורה על התנועה.
-function renderListItems(cat,elId){document.getElementById(elId).innerHTML=(S.LISTS[cat]||[]).map(function(i){
-  if(isCreditValue(i.value))return'<div class="set-list-item"><span>'+esc(i.value)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return'<div class="set-list-item"><span>'+esc(i.value)+'</span>'+pendLstTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
+function renderListItems(kind,elId){document.getElementById(elId).innerHTML=slLookups(kind).map(function(i){
+  if(isCreditValue(i.label))return'<div class="set-list-item"><span>'+esc(i.label)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
+  return'<div class="set-list-item"><span>'+esc(i.label)+'</span>'+pendLkTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
 }).join('')||'<div class="empty">ריק</div>';}
 
 // client_id נוצר במכשיר לפני השליחה — בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת יוצר שורה שנייה.
-function addListItem(cat){
+function addListItem(kind){
   var v=prompt('הזן ערך חדש:');
   if(!v||!v.trim())return;
   var val=v.trim();
-  // ההשוואה על הערך ולא על client_id — הרשימה מזינה בוררים, ושתי אפשרויות באותו טקסט אינן ניתנות להבחנה.
-  if(uniqHas(S.LISTS[cat]||[], {value:val}, function(it){return it.value;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
-  var row={client_id:slListId(cat,val),category:cat,value:val,deleted:false,deleted_at:null,deleted_by:null};
-  if(!slLocalWrite('sl_lists',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
+  // ההשוואה על התווית ולא על client_id — הרשימה מזינה בוררים, ושתי אפשרויות באותו טקסט אינן ניתנות להבחנה.
+  if(uniqHas(slLookups(kind), {label:val}, function(it){return it.label;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
+  var row={client_id:newClientId(),kind:kind,label:val,sort:slLookups(kind).length+1,deleted:false,deleted_at:null,deleted_by:null};
+  if(!slLocalWrite('sl_lookups',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
   return true;
 }
 
 // מחיקה פיזית מקומית חוזרת מהענן בסנכרון הבא — היעדר רשומה אצל צד אחד אינו מחיקה.
 function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט — הכפתור עשוי להופיע מרינדור ישן.
-  var it=findListItem(key);
-  if(it&&isCreditValue(it.value)){toast('⚠️ «'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'bad');return;}
+  var it=(MIRROR.sl_lookups||[]).filter(function(x){return idEq(x.client_id,key);})[0];
+  if(it&&isCreditValue(it.label)){toast('⚠️ «'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'bad');return;}
   ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM).then(function(yes){
     if(!yes)return;
-    var r0=(MIRROR.sl_lists||[]).filter(function(x){return idEq(x.client_id,key);})[0];
-    if(!r0){toast(MSG_ITEM_MISSING, null, 'bad');return;}
-    var row=tombKill(Object.assign({},r0));
-    if(!slLocalWrite('sl_lists',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
+    if(!it){toast(MSG_ITEM_MISSING, null, 'bad');return;}
+    var row=tombKill(Object.assign({},it));
+    if(!slLocalWrite('sl_lookups',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     shell.refreshUI();
     toast(navigator.onLine?MSG_DELETED_OK:MSG_SAVED_LOCAL,4000, 'good');
     schedulePush();
@@ -203,22 +202,22 @@ function deleteListItem(key){
 function openAddStudent(){
   // מזהי השדות הם אלה ש-saveNewStudent קוראת — שינוי שם כאן שובר את השמירה.
   var optsHTML='<option value="">-- ללא --</option>';
-  (S.LISTS['sections']||[]).forEach(function(s){optsHTML+='<option value="'+esc(s.value)+'">'+esc(s.value)+'</option>';});
+  slLookups(LK_SHIUR).forEach(function(s){optsHTML+='<option value="'+esc(s.label)+'">'+esc(s.label)+'</option>';});
   var body=''
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
     +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
-    +'<div class="frm-row"><label for="new-st-section">סעיף</label><select id="new-st-section">'+optsHTML+'</select></div>'
+    +'<div class="frm-row"><label for="new-st-shiur">שיעור</label><select id="new-st-shiur">'+optsHTML+'</select></div>'
     +'<div class="frm-row"><label for="new-st-start">חודש הצטרפות</label><input aria-label="2025-09" id="new-st-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp" value="'+esc(monthKeyOf(dayToday()))+'"></div>'
     +'<div class="frm-row-last frm-row"><label for="new-st-end">חודש עזיבה (ריק = עדיין פעיל)</label><input aria-label="2026-08" id="new-st-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp"></div>'
-    +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבטווח (כולל). ריק = חיוב לכל חודשי השנה.</div>';
+    +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבתקופה (כולל).</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
           +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
   openModal(MSG_ADD_STUDENT, body, foot);
 }
 
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,section=document.getElementById('new-st-section').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(section)cs.section=section;
-  var cid=pendingCid('student',[name,tuition,section,rng.start_month,rng.end_month].join(' '));
-  var row={client_id:cid,name:name,active:true,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month,deleted:false,deleted_at:null,deleted_by:null};
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,shiur=document.getElementById('new-st-shiur').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;if(shiur)cs.shiur=shiur;
+  var cid=pendingCid('student',[name,tuition,shiur,rng.start,rng.end].join(' '));
+  var row={client_id:cid,name:name,card_settings:cs,periods:[rng],deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
   releaseCid('student');
   return true;}

@@ -90,7 +90,7 @@ var BK_CFG = {
       { name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
       { name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
       { name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
-      { name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
+      { name: 'sl_lookups',      order: 'client_id', ts: 'updated_at' }
     ];
   }
 };
