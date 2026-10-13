@@ -16,7 +16,7 @@
   /* כיוון «רך»: אזורים לבנים על רקע ירקרק, בלי מסגרת ובלי צל; אזור שטופל — לבן שקוף למחצה. */
   --card-soft:rgba(255,255,255,.55);
   /* שורת הניווט — מילוי ירוק כהה, דיו בהיר, והלשונית הפעילה בירוק בהיר. */
-  --nav-bg:#1f5a24;--nav-ink:#cfe8c2;--nav-on:#9fe870;
+  --nav-bg:#3f7744;--nav-ink:#dcefd2;--nav-on:#b9f28a;
   /* השורה הקטנה שמעל שם המסך, וקו «טופלו החודש». */
   --kicker:#307535}
 
@@ -30,7 +30,7 @@
       --bg:#0f1a12; --card:#16241a; --card-2:#0f1a12; --card-soft:rgba(22,36,26,.55);
       --text:#e8f1e6; --text-2:#c2d3c0; --text-3:#93a894;
       --border:#24382a;
-      --nav-bg:#1f5a24; --nav-ink:#cfe8c2; --nav-on:#9fe870;
+      --nav-bg:#24502a; --nav-ink:#cfe8c2; --nav-on:#9fe870;
       --kicker:#9fe870;
       --brand-fill:#307535; --brand-ink:#9fe870; --brand-soft:#173a1d;
       --ok:#4ade80; --ok-soft:#12251c;
@@ -179,7 +179,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tbl.pivot tfoot tr.sub td.amt-warn{color:var(--warn)}
 .tbl.pivot tfoot tr.sub td.amt-bad{color:var(--bad)}
 /* השם עובר לשורה שנייה ואינו נחתך — וההרחבה ברוחב גדול היא שמבטלת זאת. */
-.tbl.pivot th.stu,.tbl.pivot td.stu{max-width:38vw;min-width:5rem;white-space:normal;overflow-wrap:anywhere;line-height:var(--lh-2)}
+/* השם בשורה אחת — העמודה מתרחבת לפי השם הארוך, וכל השורות באותו גובה. */
+.tbl.pivot th.stu,.tbl.pivot td.stu{white-space:nowrap}
 .tbl.pivot td,.tbl.pivot th{padding:var(--sp-3) var(--sp-3)}
 .paid-cell{color:var(--ok);font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text-2)}
@@ -305,9 +306,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
    בחלון רחב העמודה מתרחבת — המסכים כאן טבלאות, ורוחב קצוב מקפל את שורת התנועה לשתיים.
    הסרגל התחתון מתרחב איתה — הוא נמדד לרוחב העמודה ולא לרוחב החלון. */
 @media (min-width:1200px){:root{--col:1040px}}
-@media (min-width:640px){
-  .tbl.pivot th.stu,.tbl.pivot td.stu{max-width:none;min-width:6rem;white-space:nowrap;overflow-wrap:normal;line-height:inherit}
-}
 @media (min-width:640px){
   .tbl.pivot td,.tbl.pivot th{padding:var(--sp-4) var(--sp-5)}
 }
