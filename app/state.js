@@ -11,6 +11,7 @@ const S = {
   DASH_YEAR: null,
   SC_STUDENT_ID: null,
   SC_Q: '',
+  TXN_LOG_LEVEL: 0,
   // _slLastSeenOk היא חותמת תצוגה בלבד
   _slSeenTs: 0,
   _slLastSeenOk: 0,
