@@ -139,7 +139,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .month-off{opacity:var(--op-3)}
 .range-hint{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-6)}
 .range-hint-sm{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-2)}
-.ro-note{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-2)}
 .table-scroll{overflow-x:auto}
 
 /* ── מסכים ──

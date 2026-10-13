@@ -1,7 +1,7 @@
 // core/util.js — עוזרי הליבה
 // הסיומת .js ולא .mjs — שרת סטטי שאינו מכיר .mjs מחזיר application/octet-stream, והמודול נדחה כולו.
 
-import { lsGet, lsSetRaw } from './storage.js';
+import { lsGet, lsSet } from './storage.js';
 import { toast } from './ui.js';
 
 // ── קריאת ערך מספרי ──
@@ -140,7 +140,7 @@ function getDeviceId() {
   var id = lsGet(app.DEV_CFG.key, null);
   if (!id) {
     id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(app.DEV_CFG.key, id);
+    lsSet(app.DEV_CFG.key, id);
   }
   _deviceIdMem = id;
   return id;

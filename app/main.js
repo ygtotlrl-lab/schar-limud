@@ -1,10 +1,10 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, dayNoon, getDeviceId,
+import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, getDeviceId,
          netTimeout } from '../core/util.js';
-import { _eraPush, eraKeys, pendAlertDismiss, pendCount, pendHas, pushedFor, rowsVerify, runSave,
+import { _eraPush, eraKeys, pendAlertDismiss, pendCount, runSave,
          sbWatch } from '../core/sync.js';
-import { lsWindowFrom } from '../core/storage.js';
-import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables, mirrorWrite } from '../core/mirror.js';
+import { lsOpen } from '../core/storage.js';
+import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
@@ -12,9 +12,8 @@ import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, swApp
          toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slPushOf, _slRowId,
-         pendTxnKey, slApplyMirror,
-         slIsAdmin, slKeyOf, slSanitizeRows, slSendRows, slTs,
+import { _slPushOf, slApplyMirror,
+         slIsAdmin, slKeyOf, slSanitizeRows, slSendRows,
          syncAll } from './domain.js';
 import { closeDashMonth, dashNextYear, dashPrevYear, renderDash, screenDashHTML,
          showDashMonth } from './screens/dash.js';
@@ -36,7 +35,6 @@ appConfigure({
   get DEV_CFG() { return DEV_CFG; },
   get DOM_ACTIONS() { return DOM_ACTIONS; },
   get ERA_CFG() { return ERA_CFG; },
-  get HW_CFG() { return HW_CFG; },
   get LK_CFG() { return LK_CFG; },
   get LS_CFG() { return LS_CFG; },
   get MIRROR_CFG() { return MIRROR_CFG; },
@@ -54,7 +52,6 @@ var MIRROR_CFG = {
   tables: function () { return PUSH_TABLES.concat([authUsersTable()]); },
   noPush: [{ t: 'sl_users', via: 'writeUser', adds: 'secret' }],
   empty:  function () { return []; },
-  ts:     function (r) { return slTs(r); },
   clean:  function (t, rows) { return slSanitizeRows(t, rows); },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
   // הזיכרון נבנה מהמראה לפני כל מנגנון שדוחף — העותק המקומי לפני כל נגיעה ברשת.
@@ -65,7 +62,6 @@ var LS_CFG = {
   // cachePrefix נגזר משם האפליקציה שבתצורה ולא מקידומת האחסון — שם אחסון שישתנה היה מחזיר רשימה ריקה, והבאנר היה חוזר בכל טעינה.
   cachePrefix: self.APP.id + '-',
   logKey: 'sl_ls_log',
-  hzPrefix: 'sl_ls_hz_',
   // חובה בתחילית האפליקציה — ה-origin משותף, וסימן בלי תחילית נדרס בכל דחייה.
   dismissKey: 'sl_sw_dismissed',
   // מפתח שאינו במרשם נמחק בעלייה.
@@ -73,27 +69,7 @@ var LS_CFG = {
     return [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key, PEND_CFG.key,
             BK_CFG.flagKey, BK_CFG.logQueueKey]
       .concat(eraKeys(), mirrorTables().map(mirrorKey));
-  },
-
-  // חלון הפינוי נגזר מסוג האפליקציה — אין מספר ימים באף רשומה.
-  appType: { type: 'annual', why: 'החישוב שלה נפרש על שנה — ⚠️ דרישה, שולם ויתרה לתלמיד נסכמים מכל תנועות שנת הלימודים' },
-
-  // wholeKeys ריק בכוונה — ההגדרות והרשימות קבועות בגודלן, ומחיקת מפתח שלם מרוקנת את המסך אופליין
-  wholeKeys: [],
-  // החותמת היא updated_at, אותה שהמראה מסננת בה את האופק — שתי חותמות היו מוחקות תנועה שלא פונתה
-  oldRecords: [
-    { key: mirrorKey('sl_transactions'), label: 'תנועות', ts: slTs,
-      idOf: _slRowId, syncedThrough: pushedFor('sl_transactions'), verify: rowsVerify(function () { return S.SB; }, 'sl_transactions') }
-  ],
-  // ריק ומוצהר — התנועות בפינוי, ואין טבלה שנדרשת במלואה לחישוב.
-  fullHistory: [],
-  // טבלה שגדלה ואינה בפינוי ממלאת אחסון של origin משותף — לכן כאן רק טבלה קבועה בגודלה, עם נימוקה.
-  fixedSize: [
-    { t: 'sl_students', why: 'תלמידים — שורה לתלמיד, ⛔ והם אבות התנועות שנשארות' },
-    { t: KV_TABLE,      why: 'הגדרות — שורה למפתח, ⛔ ומספר המפתחות קבוע בקוד' },
-    { t: 'sl_lists',    why: 'רשימות בחירה — פריטים שנערכים בהגדרות, ⛔ ואינם גדלים עם התנועות' },
-    { t: 'sl_users',    why: 'משתמשים — שורה למשתמש, ⚠️ והיא מסלול הכניסה האופליין' }
-  ]
+  }
 };
 
 // sl_users אינה ברשימה — sh_backup קריא ל-anon, וגיבוי שלה היה מעתיק את pass_salt ו-pass_fp למקום שני
@@ -145,7 +121,7 @@ var LK_CFG = {
 };
 
 // שורת החותמת מוחרגת מהמראה ב-slStripMeta — דחיפת-מצב שלה הייתה מחזירה לענן חותמת ישנה
-// ok() אינו נוגע ב-_slLastPullOk — הזנתו משיחה שאינה משיכה מלאה הייתה הופכת חותמת תצוגה לעֵד פינוי
+// ok() אינו נוגע ב-_slLastPullOk — היא חותמת המשיכה המלאה, ו-ok() נקראת גם בבדיקה שלא משכה
 var PL_CFG = {
   every:  3000,
   active: function () { return sessActive(); },
@@ -168,34 +144,6 @@ var PUSH_CFG = {
   key:    function (t, row) { var c = _slPushOf(t); return c.pk + slKeyOf(t, row); },
   send:   function (t, rows) { return slSendRows(t, rows); },
   run:    function () { syncAll(); },
-};
-
-// החלון החם הוא חלון הפינוי של האפליקציה — מהליבה, ולא מספר ימים משלו; שנת הלימודים תמיד בתוכו.
-// תנועה בלי תאריך תקין נשארת חמה — ספק אינו מפנה
-var HW_CFG = {
-  specs: [{
-    key: mirrorKey('sl_transactions'),
-    label: 'תנועות מחוץ לחלון',
-    inWindow: function (t) {
-      var d = t && t.txn_date;
-      if (!d) return true;
-      var ms = dayNoon(String(d)).getTime();
-      if (!isFinite(ms)) return true;
-      return ms >= lsWindowFrom();
-    },
-    idOf: function (r) { return r.client_id; },
-    ts: function (r) { return slTs(r); },
-    isPending: function (r) { return pendHas(pendTxnKey(r)); },
-    fetch: async function () {
-      try {
-        var res = await netTimeout(S.SB.from('sl_transactions').select('*'));
-        return (res && !res.error && Array.isArray(res.data))
-          ? { ok: true, rows: res.data } : { ok: false, rows: [] };
-      } catch (e) { return { ok: false, rows: [] }; }
-    },
-    rows: function () { return MIRROR.sl_transactions; },
-    apply: function (kept) { return mirrorWrite('sl_transactions', kept); }
-  }]
 };
 
 var ERA_CFG = {
@@ -323,4 +271,7 @@ async function slBoot(){
   window.bootOk();
 }
 
-document.addEventListener('DOMContentLoaded', slBoot);
+// האחסון נפתח לפני כל קריאה ממנו — אחרי שה-CFG הוגדרו, כי המרשם והייבוא קוראים אותם.
+// העלייה בקריאה ולא ב-DOMContentLoaded — האירוע אינו ממתין ל-await שבראש המודול, ומאזין שנרשם אחריו אינו נקרא.
+await lsOpen();
+slBoot();
