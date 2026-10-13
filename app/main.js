@@ -12,7 +12,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS }
 import { S, shell } from './state.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
          slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
-import { dashNextYear, dashPrevYear, renderDash,
+import { dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
@@ -226,12 +226,14 @@ document.addEventListener('input', function (e) {
   if (comboInput(e)) return;
   var el = e.target;
   if (el && el.dataset && el.dataset.inp === 'sc-q') studentSearch(el.value);
+  if (el && el.dataset && el.dataset.inp === 'dash-notes') dashNotesInput();
 });
 
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'txn-method') txnMethodHint();
   if (el && el.dataset && el.dataset.chg === 'sc-cls') scClsChanged();
+  if (el && el.dataset && el.dataset.chg === 'dash-notes') dashNotesSave();
 });
 
 // focus אינו עולה בעץ — ולכן focusin.
