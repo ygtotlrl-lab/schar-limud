@@ -7,8 +7,6 @@ import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
 import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
-import { authUsersTable, isAdminOf, sessGet, usersRefresh,
-         usersSanitize } from '../core/auth.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
@@ -57,7 +55,7 @@ function pendLkTag(i) { return (i && i.client_id) ? pendTag(PK_LK + i.client_id)
 // המכשיר חותם updated_at בעצמו — חותמת שרת היא זמן ההגעה, והמיזוג היה מעדיף את מי שהגיע ראשון על פני מי שערך אחרון
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
-  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','created_by_client_id','deleted','deleted_at','deleted_by','updated_at'],
+  sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','deleted','deleted_at','deleted_by','updated_at'],
   sl_students:     ['client_id','name','card_settings','periods','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lookups:      ['client_id','kind','label','sort','deleted','deleted_at','deleted_by','updated_at']
@@ -72,12 +70,10 @@ function slKeyOf(t, r) {
 // שער הדיסק — נקודת האכיפה השלישית של הסרת הסודות, כדי שגם נתיב כתיבה חדש לא ידליף סוד לדיסק
 function slSanitizeRows(t, rows) {
   if (t === KV_TABLE) return slStripMeta(rows);
-  // רשימת-היתר ולא רשימת-איסור — נשארת נכונה כשתיווסף לטבלה עמודה רגישה
-  if (t === authUsersTable()) return usersSanitize(rows);
   return Array.isArray(rows) ? rows : [];
 }
 
-// ── משתמשים, סודות וכניסה ──
+// ── סודות ──
 
 function slIsSecretSetting(k) { return SL_NEVER_MIRROR_SETTINGS.indexOf(String(k == null ? '' : k)) >= 0; }
 
@@ -89,16 +85,6 @@ function slStripSecrets(rows) {
 function slStripMeta(rows) {
   return slStripSecrets(rows).filter(function (r) { return !(r && String(r.key) === PL_STAMP_KEY); });
 }
-
-// ── הרשאה ──
-// נכשל סגור — כל מה שאינו בדיוק 'admin', כולל תפקיד שהוקלד בטעות, אינו מקבל גישה
-function slSettingsAccess(u) {
-  var who = (u === undefined) ? sessGet() : u;
-  if (!who) return 'denied';
-  return isAdminOf(who) ? 'ok' : 'denied';
-}
-
-function slIsAdmin(u) { return slSettingsAccess(u) === 'ok'; }
 
 // ── המיון ──
 // תלמידים — לפי השם, בסדר הא״ב.
@@ -349,7 +335,7 @@ async function syncAll(){
   if(S._syncBusy) return;
   S._syncBusy=true;
   var _t0=Date.now(); // סימון שנוצר אחרי תחילת המחזור אינו מוכרע בו
-  // המשתמש יכול להתחלף בין המשיכה לכתיבה — מה שנמזג עבור הקודם היה יורד לדיסק ועולה לענן בהקשר של החדש
+  // ההקשר נלכד בכניסה — עידן שנזרק בין המשיכה לכתיבה מבטל את מה שנמזג עבור העותק הקודם
   var _ep=ctxEpoch();
   try{
     var rs=await slPullAll();
@@ -369,7 +355,7 @@ async function syncAll(){
       pulledTxn=true;
       MIRROR.sl_transactions=mergeCore(MIRROR.sl_transactions,rs[1].data,{isPending:function(k){return pendHas(PK_TXN+k);}}); mirrorSave('sl_transactions');
     }
-    // slStripSecrets רץ לפני המיזוג — admin_pass אינה נכנסת למראה בשום מסלול.
+    // slStripSecrets רץ לפני המיזוג — סוד אינו נכנס למראה בשום מסלול.
     if(rs[2]&&!rs[2].error&&Array.isArray(rs[2].data)){
       pulledSet=true;
       var setRows=slStripMeta(rs[2].data);
@@ -394,8 +380,6 @@ async function syncAll(){
     // הסריקה מורידה סימון מכל מה שאינו ב-still — ולכן רצה רק כשכל הקטגוריות נמשכו, אחרת ההורדה היא הסקה ולא ראיה.
     if(ctxStale(_ep)) return;
     if(pulledStu&&pulledTxn&&pulledSet&&pulledLk) pendSyncScan(stillPending,_t0);
-    // מראת המשתמשים אינה נדחפת לעולם — היא מחזיקה טביעות בלבד, ודחיפה שלה הייתה כותבת password ריק לכל המשתמשים.
-    usersRefresh();
 
     if(!errs.length){
       S._slLastPullOk=Date.now();
@@ -492,7 +476,7 @@ export { _slPushOf, acadYearHeb,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slLookups,
+         pendingCid, readMonthRange, releaseCid, slApplyMirror, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
-         studentTuition, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
+         studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
          studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

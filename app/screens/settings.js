@@ -1,58 +1,30 @@
 // app/screens/settings.js — מסך ההגדרות
-import { MSG_FILL_ALL, MSG_MY_PASS_TITLE, MSG_OFF_NO_CRYPTO, MSG_OFF_NO_FP,
-         MSG_OFF_USER_WRITE, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
-         MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
-         dayToday, uniqHas, netTimeout } from '../../core/util.js';
-import { idEq, newClientId, plTouch, schedulePush, tombKill } from '../../core/sync.js';
+import { MSG_SAVED_LOCAL, dayToday, uniqHas } from '../../core/util.js';
+import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
-         writeUser } from '../../core/auth.js';
-import { ask, closeModal, comboSet, dragDef, esc, lookupDragApply, openModal, toast,
-         uiNoDialog } from '../../core/ui.js';
+import { ask, comboSet, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_NAME_REQUIRED,
-         MSG_NO_USER_RELOGIN, MSG_PASS_UPDATED, MSG_PASS_UPDATED_NO_FP2, MSG_SET_DENIED,
          MSG_STUDENT_DELETED, MSG_STUDENT_MISSING2, MSG_STUDENT_SAVE_FAIL,
          MSG_TUITION_POSITIVE, MSG_VALUE_BAD, MSG_VALUE_EXISTS,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { acadYearHeb, acadYearOf, enrollText, fmt, isCreditValue,
          monthKeyOf, pcCascadeDelete, pendLkTag, pendStuTag, pendingCid, readMonthRange,
-         releaseCid, slLocalWrite, slLookups, slSettingsAccess, slStudentGroups, studentCredit,
+         releaseCid, slLocalWrite, slLookups, slStudentGroups, studentCredit,
          studentInMonth } from '../domain.js';
-
-// נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
-var PASS_SIX_RE = /^[0-9]{6}$/;
 
 function screenSettingsHTML() {
   return `
 <div id="panel-settings" class="panel">
-  <!-- ⭐ אין כאן שער סיסמה. ההרשאה נגזרת מ-\`sl_users.role\`
-       של המשתמש המחובר, ⛔ ולא מסיסמת שער. הכרטיס הזה הוא
-       ההודעה שמוצגת למי שאינו admin — לא טופס. -->
-  <div id="settings-denied" class="hidden card">
-    <div class="card-hdr"><h3>&#128274; הגדרות</h3></div>
-    <div class="card-body">
-      <div id="set-denied-msg" class="denied-msg"></div>
-    </div>
-  </div>
-  <div id="settings-main" class="hidden">
+  <div id="settings-main">
     <div class="card">
       <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
       <div class="tuition-row card-body" data-ks>
         <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר">
         <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
-      </div>
-    </div>
-    <!-- ⭐ שינוי הסיסמה של המשתמש המחובר. יצירת משתמש נשארה
-         בלוח הבקרה של Supabase — אין כאן מסך ניהול משתמשים, וזו
-         החלטה מתועדת; שינוי סיסמה אינו יצירה. -->
-    <div class="card">
-      <div class="card-hdr">
-        <h3>&#128273; הסיסמה שלי</h3>
-        <button class="btn sm" data-act="my-pass">שינוי סיסמה</button>
       </div>
     </div>
     <div class="card">
@@ -82,68 +54,9 @@ function screenSettingsHTML() {
 `;
 }
 
-// מסך שינוי סיסמה אף שהמשתמש יחיד — בלעדיו כל שינוי סיסמה תלוי ב-SQL Editor; יצירת משתמש נשארת בלוח הבקרה
-function slMyPassword() {
-  var body = ''
-    + '<div class="frm-row"><label for="mp-cur">סיסמה נוכחית</label><input id="mp-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>'
-    + '<div class="frm-row"><label for="mp-new">סיסמה חדשה (שש ספרות)</label><input id="mp-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>'
-    + '<div class="frm-row-last frm-row"><label for="mp-new2">אימות סיסמה חדשה</label><input id="mp-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
-  var foot = '<button class="btn out" data-act="modal-close">ביטול</button>'
-           + '<button class="btn" data-act="my-pass-save" data-ksave>שמירה</button>';
-  openModal(MSG_MY_PASS_TITLE, body, foot);
-  var el = document.getElementById('mp-cur');
-  if (el) el.focus();
-}
-
-async function slSaveMyPassword() {
-  var c1 = document.getElementById('mp-cur');
-  var n1 = document.getElementById('mp-new');
-  var n2 = document.getElementById('mp-new2');
-  if (!c1 || !n1 || !n2) { uiNoDialog('slSaveMyPassword', 'mp-cur'); return; }
-  var cur = c1.value.trim(), p1 = n1.value.trim(), p2 = n2.value.trim();
-  if (!cur || !p1 || !p2) { toast(MSG_FILL_ALL, null, 'bad'); return; }
-  if (!PASS_SIX_RE.test(p1)) { toast(MSG_PASS_SIX, null, 'bad'); return; }
-  if (p1 !== p2) { toast(MSG_PASS_MISMATCH, null, 'bad'); return; }
-  var u = sessGet();
-  if (!u || u.client_id == null) { toast(MSG_NO_USER_RELOGIN, null, 'bad'); return; }
-  if (!S.SB || !navigator.onLine) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
-  // מאומת מול הטביעה שבענן ולא מול המראה — מראה שהתיישנה הייתה מאשרת סיסמה שכבר הוחלפה במכשיר אחר
-  var chk;
-  try { chk = await netTimeout(S.SB.from(authUsersTable()).select('client_id,active,pass_salt,pass_fp').eq('client_id', u.client_id).limit(1)); }
-  catch (e) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
-  if (chk && chk.error) { toast(MSG_PASS_VERIFY_FAIL + (chk.error.message || MSG_SERVER_ERR), null, 'bad'); return; }
-  var row = chk && Array.isArray(chk.data) && chk.data[0];
-  if (!row) { toast(MSG_PASS_CUR_BAD, null, 'bad'); return; }
-  var v = await authVerify(row, cur);
-  if (v === 'no-fp')     { toast('❌ ' + MSG_OFF_NO_FP, null, 'bad'); return; }
-  if (v === 'no-crypto') { toast('❌ ' + MSG_OFF_NO_CRYPTO, null, 'bad'); return; }
-  if (v !== 'ok')        { toast(MSG_PASS_CUR_BAD, null, 'bad'); return; }
-  var body = await authPassFields(p1);
-  var res;
-  try { res = await writeUser(u.client_id, body); }
-  catch (e2) { toast(MSG_OFF_USER_WRITE, null, 'bad'); return; }
-  if (!res || res.error) { toast(MSG_PASS_UPDATE_FAIL + ((res && res.error && res.error.message) || MSG_SERVER_ERR), null, 'bad'); return; }
-  // בלי עדכון המראה הכניסה האופליין הבאה מאמתת מול הטביעה שזה עתה הוחלפה
-  u.pass_salt = body.pass_salt; u.pass_fp = body.pass_fp;
-  try { usersSaveOne(u); } catch (e3) { console.warn('[pass] כתיבה למראה נכשלה', e3); }
-  plTouch();
-  closeModal();
-  if (body.pass_fp) toast(MSG_PASS_UPDATED, null, 'good');
-  else toast(MSG_PASS_UPDATED_NO_FP2, null, 'bad');
-}
-
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=o?'&#9650;':'&#9660;';}
 
 function renderSettingsPanel(){
-  var acc=slSettingsAccess(), ok=(acc==='ok');
-  var denied=document.getElementById('settings-denied'), main=document.getElementById('settings-main');
-  if(denied)denied.classList.toggle('hidden',ok);
-  if(main)main.classList.toggle('hidden',!ok);
-  if(!ok){
-    var m=document.getElementById('set-denied-msg');
-    if(m)m.textContent=MSG_SET_DENIED;
-    return;
-  }
   document.getElementById('set-def-tuition').value=S.SETTINGS['default_tuition']||'';
   renderSettingsLists();
 }
@@ -158,7 +71,6 @@ function saveDefaultTuition(){
   return true;
 }
 
-// אין אכיפת פורמט שש ספרות כאן ובאף מסלול כניסה — היא נועלת בחוץ סיסמה קיימת ותקפה בלי מסלול שחזור.
 function renderSettingsLists(){
   // יתרת הזכות לשנת הלימודים הנוכחית — שדה נפרד שאינו מעורבב בשום סיכום חוב.
   // עמודות ברוחב קבוע — שם · תקופות · זכות · מצב · מחיקה — כל תגית באותו מקום בכל שורה.
@@ -256,4 +168,4 @@ function deleteStudent(key){var s=(MIRROR.sl_students||[]).filter(function(x){re
 
 export { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
          renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
-         slMyPassword, slSaveMyPassword, toggleAcc };
+         toggleAcc };
