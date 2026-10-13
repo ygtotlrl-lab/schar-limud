@@ -317,11 +317,10 @@ function cycleLabel(n){return n?'מחזור '+hebYearLabelFull(n):'';}
 // בארכיון — מי שכל תקופותיו הסתיימו לפני החודש הנוכחי; תקופה עתידית משאירה ברשימה.
 function studentArchived(s){var k=monthKeyOf(dayToday());return !slPeriods(s).some(function(p){return !p.end||p.end>=k;});}
 
-// קבוצה לכל שיעור, א׳ ⟵ ב׳ ⟵ ג׳, וכותרתה נושאת את המחזור הנגזר; קבוצה ריקה אינה מוצגת.
+// קבוצה לכל שיעור, א׳ ⟵ ב׳ ⟵ ג׳, והכותרת — שם השיעור בלבד; המחזור — בכרטיס. קבוצה ריקה אינה מוצגת.
 function slStudentGroups(list){
   return CLS_LIST.map(function(c){
-    var cy=slCycleFor(c);
-    return {label:CLS_NAME[c]+(cy?' · '+cycleLabel(cy):''),rows:list.filter(function(s){return s.cls===c;})};
+    return {label:CLS_NAME[c],rows:list.filter(function(s){return s.cls===c;})};
   }).filter(function(g){return g.rows.length;});
 }
 
