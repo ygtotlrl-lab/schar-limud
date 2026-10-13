@@ -60,7 +60,10 @@ create table if not exists public.sl_students (
   updated_at bigint not null,
   periods jsonb not null,
   handled jsonb not null default '[]'::jsonb,
+  cls text not null,
+  cycle integer,
   constraint sl_students_pkey PRIMARY KEY (client_id),
+  constraint sl_students_cls_check CHECK ((cls = ANY (ARRAY['a'::text, 'b'::text, 'g'::text]))),
   constraint sl_students_periods_check CHECK (public.sl_students_periods_ok(periods))
 );
 

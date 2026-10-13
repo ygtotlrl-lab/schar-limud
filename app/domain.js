@@ -8,7 +8,7 @@ import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
-import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -56,7 +56,7 @@ function pendLkTag(i) { return (i && i.client_id) ? pendTag(PK_LK + i.client_id)
 // רשימת היתר ולא איסור — עמודה חדשה אינה עולה עד שמישהו הכריז עליה
 var SL_COLS = {
   sl_transactions: ['client_id','student_client_id','txn_date','amount','payment_method','note','deleted','deleted_at','deleted_by','updated_at'],
-  sl_students:     ['client_id','name','card_settings','periods','handled','deleted','deleted_at','deleted_by','updated_at'],
+  sl_students:     ['client_id','name','card_settings','periods','handled','cls','cycle','deleted','deleted_at','deleted_by','updated_at'],
   [KV_TABLE]:      ['client_id','key','value','updated_at'],
   sl_lookups:      ['client_id','kind','label','sort','deleted','deleted_at','deleted_by','updated_at']
 };
@@ -125,7 +125,7 @@ function slApplyMirror() {
     .forEach(function (r) { (S.LOOKUPS[r.kind] = S.LOOKUPS[r.kind] || []).push(r); });
 }
 
-// פריטי סוג אחד — אמצעי תשלום או שיעורים — בסדר הגרירה.
+// פריטי סוג אחד בסדר הגרירה.
 function slLookups(kind) { return S.LOOKUPS[kind] || []; }
 
 // מחזירה false כשהכתיבה לאחסון נכשלה — בכסף אסור להציג «נשמר» על כתיבה שלא נכתבה
@@ -302,14 +302,67 @@ function slHandledToggle(sid,k){
   return slLocalWrite('sl_students',Object.assign({},s,{handled:handledToggled(s,k)}));
 }
 
-// ── שיעורים ──
-// קבוצה לכל שיעור, בסדר הגרירה, ותלמיד בלי שיעור — בקבוצה האחרונה; קבוצה ריקה אינה מוצגת.
+// ── שיעור ומחזור ──
+// שנת הלימודים של המצבה — school_year בהגדרות, שנה עברית כמספר. מתקדמת במעבר השנתי בלבד:
+// השעון אינו יודע אם המעבר כבר נעשה, ושנה שנגזרת ממנו מתחלפת לפני שהשיעורים עלו.
+function slSchoolYear(){var v=parseInt(S.SETTINGS['school_year'],10);return isFinite(v)&&v>0?v:0;}
+
+// מחזור — שנת הסיום. לפעיל נגזר מהשיעור; ערך שמור גובר — עקיפה ידנית, ומחזור שנרשם ביציאה.
+function slCycleFor(cls){var y=slSchoolYear();return (y&&CLS_CYCLE_ADD[cls]!=null)?y+CLS_CYCLE_ADD[cls]:0;}
+function slCycleOf(s){var v=parseInt(s&&s.cycle,10);return isFinite(v)&&v>0?v:slCycleFor(s&&s.cls);}
+
+// התווית מהמנוע — שנה נושאת תווית אחת.
+function cycleLabel(n){return n?'מחזור '+hebYearLabelFull(n):'';}
+
+// בארכיון — מי שכל תקופותיו הסתיימו לפני החודש הנוכחי; תקופה עתידית משאירה ברשימה.
+function studentArchived(s){var k=monthKeyOf(dayToday());return !slPeriods(s).some(function(p){return !p.end||p.end>=k;});}
+
+// קבוצה לכל שיעור, א׳ ⟵ ב׳ ⟵ ג׳, וכותרתה נושאת את המחזור הנגזר; קבוצה ריקה אינה מוצגת.
 function slStudentGroups(list){
-  var by={},out=[];
-  slLookups(LK_SHIUR).forEach(function(sh){by[sh.label]={label:sh.label,rows:[]};out.push(by[sh.label]);});
-  var rest={label:'',rows:[]};
-  list.forEach(function(st){var sh=(st.card_settings||{}).shiur;(by[sh]||rest).rows.push(st);});
-  return out.concat([rest]).filter(function(g){return g.rows.length;});
+  return CLS_LIST.map(function(c){
+    var cy=slCycleFor(c);
+    return {label:CLS_NAME[c]+(cy?' · '+cycleLabel(cy):''),rows:list.filter(function(s){return s.cls===c;})};
+  }).filter(function(g){return g.rows.length;});
+}
+
+// הארכיון — קבוצה לכל מחזור, החדש ראשון.
+function slArchiveGroups(list){
+  var by={};
+  list.forEach(function(s){var c=slCycleOf(s)||0;(by[c]=by[c]||[]).push(s);});
+  return Object.keys(by).map(Number).sort(function(a,b){return b-a;}).map(function(c){
+    return {label:cycleLabel(c)||'ללא מחזור',rows:by[c]};
+  });
+}
+
+// המעבר השנתי — ג׳ נסגרים באוגוסט של השנה שמסתיימת ועוברים לארכיון עם מחזורם; ב׳ ⟵ ג׳; א׳ ⟵ ב׳; והשנה מתקדמת.
+// שנה עברית Y מסתיימת באוגוסט של Y−3760. תקופה שמתחילה אחרי החודש הזה — אינה נוגעת.
+function slYearPlan(){
+  var y=slSchoolYear();if(!y)return null;
+  var close=(y-3760)+'-08',plan={year:y,close:close,grad:[],up:[],skip:[]};
+  S.STUDENTS.forEach(function(s){
+    if(studentArchived(s))return;
+    if(s.cls==='g'){
+      var open=slPeriods(s).filter(function(p){return !p.end||p.end>close;});
+      if(open.some(function(p){return p.start>close;}))plan.skip.push(s);else plan.grad.push(s);
+    } else if(s.cls==='b'||s.cls==='a')plan.up.push(s);
+  });
+  return plan;
+}
+
+// מחזירה את מספר השורות שנכתבו, או -1 כשכתיבה נכשלה.
+function slYearApply(plan){
+  var n=0,ok=true;
+  plan.grad.forEach(function(s){
+    var ps=slPeriods(s).map(function(p){return (!p.end||p.end>plan.close)?{start:p.start,end:plan.close}:p;});
+    if(slLocalWrite('sl_students',Object.assign({},s,{periods:ps,cycle:parseInt(s.cycle,10)||plan.year})))n++;else ok=false;
+  });
+  plan.up.forEach(function(s){
+    if(slLocalWrite('sl_students',Object.assign({},s,{cls:s.cls==='a'?'b':'g'})))n++;else ok=false;
+  });
+  var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='school_year';})[0];
+  var row=Object.assign({},cur||{client_id:newClientId()},{key:'school_year',value:JSON.stringify(plan.year+1)});
+  if(!slLocalWrite(KV_TABLE,row))ok=false;
+  return ok?n:-1;
 }
 
 // הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
@@ -501,10 +554,12 @@ function txnMethodPill(t){
 export { _slPushOf, acadMonthKey, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
-         isCreditValue, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
+         isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
+         cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
+         studentArchived,
          studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
          studentCredit, studentHandled, studentInMonth, studentYearDebt, syncAll, txnAmountHTML,
          txnMethodPill };
