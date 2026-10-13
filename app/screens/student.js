@@ -1,7 +1,6 @@
 // app/screens/student.js — רשימת התלמידים וכרטיס התלמיד
 import { MSG_SAVED_LOCAL, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
-import { MIRROR } from '../../core/mirror.js';
 import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CLS_LIST, CLS_NAME, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
@@ -48,7 +47,17 @@ function screenStudentHTML() {
           </div>
         </div>
       </div>
-      <div class="acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
+      <div class="sc-annual">
+        <div class="sc-sub-title" id="sc-annual-title"></div>
+        <div id="sc-annual"></div>
+      </div>
+      <div id="sc-past-wrap" class="hidden">
+        <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-past">
+          <span>&#128220; שנים קודמות</span><span id="acc-icon-sc-past">&#9660;</span>
+        </div>
+        <div class="acc-body" id="acc-sc-past"></div>
+      </div>
+      <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
         <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
       </div>
       <div class="acc-body" data-ks id="acc-sc-settings">
@@ -62,7 +71,7 @@ function screenStudentHTML() {
         </div>
         <div class="frm-row">
           <label for="sc-edit-cls">שיעור</label>
-          <select id="sc-edit-cls"></select>
+          <select id="sc-edit-cls" data-chg="sc-cls"></select>
         </div>
         <div class="frm-row">
           <label for="sc-edit-cycle">מחזור</label>
@@ -80,34 +89,10 @@ function screenStudentHTML() {
           <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
           <button class="btn sm danger" data-act="student-del">&#10005; מחיקת התלמיד</button>
         </div>
-      </div>
-      <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-periods">
-        <span>&#128197; תקופות פעילות</span><span id="acc-icon-sc-periods">&#9660;</span>
-      </div>
-      <div class="acc-body" id="acc-sc-periods">
-        <div id="sc-periods-list"></div>
-        <button class="btn sm" data-act="period-open" data-id="">+ הוסף תקופה</button>
-      </div>
-      <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
-        <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
-      </div>
-      <div class="acc-body" id="acc-sc-annual">
-        <div class="year-tabs" id="sc-year-tabs"></div>
-        <div class="table-scroll">
-          <table class="tbl">
-            <thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead>
-            <tbody id="sc-annual-tbody"></tbody>
-            <tfoot id="sc-annual-tfoot"></tfoot>
-          </table>
-        </div>
-        <div id="sc-credit"></div>
         <div class="sc-part">
-          <div class="sc-sub-title">תשלומים בשנה זו</div>
-          <div id="sc-txn-list"></div>
-        </div>
-        <div class="sc-part">
-          <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות</button>
-          <div id="sc-past"></div>
+          <div class="sc-sub-title">&#128197; תקופות פעילות</div>
+          <div id="sc-periods-list"></div>
+          <button class="btn sm" data-act="period-open" data-id="">+ הוסף תקופה</button>
         </div>
       </div>
     </div>
@@ -171,13 +156,13 @@ function clsOptions(cur){
   return '<option value="">-- בחר --</option>'+CLS_LIST.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+esc(CLS_NAME[c])+'</option>';}).join('');
 }
 
-// בורר המחזור — «נגזר» ראשון, ושבע שנים סביב שנת הלימודים; ערך שמור מחוץ לטווח נוסף כמות שהוא.
+// בורר המחזור — שבע שנים סביב שנת הלימודים; ערך שמור מחוץ לטווח נוסף כמות שהוא.
 function cycleOptions(cur){
   var y=slSchoolYear()||cur,ys=[];
   for(var i=-4;i<=3;i++){if(y)ys.push(y+i);}
   if(cur&&ys.indexOf(cur)<0)ys.push(cur);
   ys.sort(function(a,b){return b-a;});
-  return '<option value="">נגזר משיעור ושנת הלימודים</option>'+ys.map(function(n){
+  return (cur?'':'<option value="">-- בחר --</option>')+ys.map(function(n){
     return '<option value="'+n+'"'+(n===cur?' selected':'')+'>'+esc(cycleLabel(n))+'</option>';}).join('');
 }
 
@@ -197,7 +182,7 @@ function openAddStudent(){
 
 function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,cls=document.getElementById('new-st-cls').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}if(CLS_LIST.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}var rng=readMonthRange('new-st-start','new-st-end');if(!rng)return;var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;
   var cid=pendingCid('student',[name,tuition,cls,rng.start,rng.end].join(' '));
-  var row={client_id:cid,name:name,card_settings:cs,periods:[rng],handled:[],cls:cls,cycle:null,deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:cid,name:name,card_settings:cs,periods:[rng],handled:[],cls:cls,cycle:slCycleFor(cls)||null,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
   releaseCid('student');
   return true;}
@@ -252,7 +237,7 @@ function renderStudentPanel(){
 }
 
 // המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN.
-function studentOpen(id){S.SC_STUDENT_ID=String(id);S.SC_YEAR=null;renderStudentPanel();window.scrollTo(0,0);}
+function studentOpen(id){S.SC_STUDENT_ID=String(id);renderStudentPanel();window.scrollTo(0,0);}
 
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
 
@@ -274,10 +259,9 @@ function renderStudentCard(){
   var hd=studentHandled(s),ht=document.getElementById('sc-handled-tog');ht.textContent=hd?'טופל ✓':'טופל';ht.className='sc-tog '+(hd?'tog-act-on':'tog-act-off');ht.setAttribute('aria-pressed',hd?'true':'false');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
-  var pastBox=document.getElementById('sc-past');if(pastBox)pastBox.innerHTML='';
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
-  document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(parseInt(s.cycle,10)||0);
-  renderScPeriods(s);renderScYearTabs();renderScAnnual();
+  document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(slCycleOf(s));
+  renderScPeriods(s);renderScAnnual();
 }
 
 // ── תקופות הפעילות ──
@@ -326,58 +310,60 @@ function periodDelete(start){
   });
 }
 
-function renderScYearTabs(){
-  var y={};S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.txn_date)]=1;});y[acadYearOf(dayToday())]=1;
-  var sorted=slSortYears(Object.keys(y).map(Number));if(!S.SC_YEAR||!y[S.SC_YEAR])S.SC_YEAR=acadYearOf(dayToday());
-  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===S.SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+esc(acadYearHeb(yr))+'</button>';}).join('');
+// ── הכרטיס השנתי ──
+// השנה הנוכחית פרוסה תמיד; שנים קודמות — בהרחבה שמתחתיה, ורק כשיש בהן תנועה. כל שנה — אותו כרטיס.
+function scYearsWithTxns(){
+  var y={};S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===S.SC_STUDENT_ID&&t.txn_date)y[acadYearOf(t.txn_date)]=1;});
+  return Object.keys(y).map(Number);
 }
 
-function scSelectYear(y){S.SC_YEAR=y;renderScYearTabs();renderScAnnual();}
-
-function renderScAnnual(){
-  if(!S.SC_STUDENT_ID||!S.SC_YEAR)return;
-  var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
-  var cs=s.card_settings||{},stuT=studentTuition(s);
-  var dist=calcDistribution(S.SC_STUDENT_ID,S.SC_YEAR),rows='',tR=0,tP=0;
+function annualHTML(s,year){
+  var cs=s.card_settings||{},stuT=studentTuition(s),cur=year===acadYearOf(dayToday());
+  var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
-    if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(S.SC_YEAR,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
+    if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(year,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
     var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-ok':i.paid>0?'amt-warn':'amt-bad';
-    rows+='<tr><td class="month-cell">'+monthLabel(S.SC_YEAR,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
+    rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
-  document.getElementById('sc-annual-tbody').innerHTML=rows;
   var tb=tP-tR,tf='<tr class="sum-row"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="bal-cell '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
-  // חוב משנים קודמות מוזן ידנית ואינו נגרר אוטומטית — המנהל קובע מה נגרר.
-  // הוא אינו מתווסף לסה"כ השנה — כדי שיובחן חוב שנולד השנה מחוב שנגרר.
+  // חוב משנים קודמות מוזן ידנית ואינו נגרר אוטומטית — המנהל קובע מה נגרר; מוצג בשנה הנוכחית בלבד,
+  // ואינו מתווסף לסה"כ השנה — כדי שיובחן חוב שנולד השנה מחוב שנגרר.
   var pd=parseInt(cs.prev_debt)||0;
-  if(pd>0)tf+='<tr class="debt-row"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="bal-cell amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="debt-note">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
-  document.getElementById('sc-annual-tfoot').innerHTML=tf;
+  if(cur&&pd>0)tf+='<tr class="debt-row"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="bal-cell amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="debt-note">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
+  var html='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+tf+'</tfoot></table></div>';
   // יתרת זכות מוצגת בשורה נפרדת ובצבע נפרד — אינה נכנסת ל«סה״כ שולם» ואינה מקזזת את שורת החוב.
-  var cr=distCredit(dist),applied=distCredApplied(dist),ce=document.getElementById('sc-credit'),ch='';
-  if(cr>0)ch+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
+  var cr=distCredit(dist),applied=distCredApplied(dist);
+  if(cr>0)html+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)ch+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
-  if(ce)ce.innerHTML=ch;
-  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID&&acadYearOf(t.txn_date)===S.SC_YEAR;}), true);
-  document.getElementById('sc-txn-list').innerHTML=yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>';
+  if(applied>0)html+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
+  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
+  html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
+  return html;
 }
 
-// מהמראה, שמחזיקה את כל התנועות — שנה קודמת היא שנת לימודים שלפני שנת היום.
-function scPastShow(){
-  var box=document.getElementById('sc-past');if(!box||!S.SC_STUDENT_ID)return;
-  var sid=S.SC_STUDENT_ID,cy=acadYearOf(dayToday());
-  var rows=slSortTxns((MIRROR.sl_transactions||[]).filter(function(t){return t&&!t.deleted&&t.student_client_id===sid&&t.txn_date&&acadYearOf(t.txn_date)<cy;}), true);
-  if(!rows.length){box.innerHTML='<div class="empty">אין תנועות משנים קודמות</div>';return;}
-  box.innerHTML=rows.map(function(t){return'<div class="txn-row"><span class="txn-date">'+esc(t.txn_date||'')+'</span><span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'</div>';}).join('');
+function renderScAnnual(){
+  var s=scStudent();if(!s)return;
+  var cy=acadYearOf(dayToday());
+  document.getElementById('sc-annual-title').textContent='כרטיס שנתי · '+acadYearHeb(cy);
+  document.getElementById('sc-annual').innerHTML=annualHTML(s,cy);
+  var past=slSortYears(scYearsWithTxns().filter(function(y){return y<cy;})).reverse();
+  document.getElementById('sc-past-wrap').classList.toggle('hidden',!past.length);
+  document.getElementById('acc-sc-past').innerHTML=past.map(function(y){
+    return '<div class="sc-past-year"><div class="sc-sub-title">'+esc(acadYearHeb(y))+'</div>'+annualHTML(s,y)+'</div>';}).join('');
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var row=Object.assign({},s,{periods:periodsToggled(s)});
-  // ביציאה המחזור נשמר כשאין — כמו בהנהלה: תלמיד שיושב בארכיון אינו ממשיך לעלות עם שנת הלימודים.
-  if(!studentContinues(row)&&!(parseInt(s.cycle,10)>0))row.cycle=slCycleFor(s.cls)||null;
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   shell.refreshUI();
   toast(studentContinues(row)?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
+
+// בחירת שיעור בכרטיס ממלאת את המחזור מהחישוב — והבורר נשאר לעריכה ידנית.
+function scClsChanged(){
+  var c=slCycleFor(document.getElementById('sc-edit-cls').value);if(!c)return;
+  document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(c);
+}
 
 function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=parseInt(document.getElementById('sc-edit-cycle').value,10)||null;
@@ -401,5 +387,5 @@ function saveStudentSettings(){
 
 export { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
-         saveNewStudent, saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentArchiveToggle,
+         saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled };
