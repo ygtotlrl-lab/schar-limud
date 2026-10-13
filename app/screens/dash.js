@@ -4,8 +4,8 @@ import { esc } from '../../core/ui.js';
 import { barChart } from '../../core/chart.js';
 import { YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
-import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
-         slStudentGroups, studentHandled, studentInMonth, studentTuition } from '../domain.js';
+import { acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
+         slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -36,15 +36,10 @@ function screenDashHTML() {
     <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
     <div class="card-body"><div id="dash-chart"></div></div>
   </div>
-  <div class="card" id="dash-month-card">
-    <div class="card-hdr"><h3 id="dash-month-title">פירוט חודש</h3></div>
-    <div id="dash-month-list"></div>
-  </div>
 </div>
 `;
 }
 
-// הפירוט פתוח תמיד, על החודש הנוכחי — לחיצה על סכום בשורה «סה״כ נגבה» מחליפה אותו; מעבר שנה שומר את החודש.
 function dashPrevYear(){S.DASH_YEAR--;renderDash();}
 
 function dashNextYear(){S.DASH_YEAR++;renderDash();}
@@ -81,7 +76,6 @@ function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך 
 
 function renderDash(){
   if(S.DASH_YEAR===null)S.DASH_YEAR=acadYearOf(dayToday());
-  if(S.DASH_MONTH===null)S.DASH_MONTH=dayNoon(dayToday()).getMonth();
   document.getElementById('dash-year-label').textContent=acadYearHeb(S.DASH_YEAR);
   // שורה לכל תלמיד שהיה פעיל בחודש כלשהו בשנה, או שנרשמה לו בה תנועה — כך סכום העמודה שווה לסך התנועות.
   var actual=actualByMonth(S.DASH_YEAR);
@@ -118,7 +112,7 @@ function renderDash(){
   var tgt={},grandTgt=0;
   YEAR_MONTHS.forEach(function(m){tgt[m]=monthTarget(S.DASH_YEAR,m);grandTgt+=tgt[m];});
   var tf='<tr class="top"><td class="stu">סה"כ נגבה</td>';
-  YEAR_MONTHS.forEach(function(m){tf+='<td class="num mo-pick'+(m===S.DASH_MONTH?' is-on':'')+'" title="'+esc(monthLabel(S.DASH_YEAR,m))+' — לפירוט" data-act="dash-month" data-month="'+m+'">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
+  YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
   tf+='<td class="num tot">'+fmt(grand)+'</td></tr>';
   tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש × שכר הלימוד החודשי שלהם">יעד</td>';
   YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(tgt[m]?fmt(tgt[m]):'—')+'</td>';});
@@ -138,30 +132,6 @@ function renderDash(){
     return {lab:MONTH_HE_SHORT[m],val:v,tgt:t,end:pctText(v,t),
             txt:MONTH_HE_SHORT[m]+': נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
   }),'גבייה חודשית מול היעד');
-  showDashMonth(S.DASH_YEAR,S.DASH_MONTH);
 }
 
-function dashPickMonth(m){S.DASH_MONTH=m;renderDash();}
-
-function showDashMonth(year,month){
-  document.getElementById('dash-month-title').textContent=monthLabel(year,month);
-  var actual=actualByMonth(year);
-  // נכלל גם תלמיד מחוץ לטווח שנרשמה לו תנועה בחודש — כדי שהסכום יהיה זהה לעמודת החודש בטבלה.
-  var act=S.STUDENTS.filter(function(s){return studentInMonth(s,year,month)||((actual[s.client_id]||{})[month]||0)>0;});
-  // «טופל» נלחץ לחודש שמוצג בפירוט — ולא לחודש של היום.
-  var html='',tot=0,target=0,mk=acadMonthKey(year,month);
-  act.forEach(function(s){
-    var v=(actual[s.client_id]||{})[month]||0,inM=studentInMonth(s,year,month),req=inM?studentTuition(s):0;
-    tot+=v;target+=req;
-    var c=!inM?'':v>=req?'amt-ok':v>0?'amt-warn':'amt-bad';
-    var hd=studentHandled(s,mk);
-    html+='<div class="st-row"><span class="st-name">'+esc(s.name)+'</span><span class="st-paid '+c+'">'+fmt(v)+'</span><span class="st-total">('+(inM?fmt(req):'—')+')</span>'+
-      '<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(mk)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל ✓':'טופל')+'</button></div>';
-  });
-  tot=Math.round(tot*100)/100;
-  html+='<div class="dash-total">נגבה: <span class="got-amt">&#8362;'+fmt(tot)+'</span> מתוך יעד <span>&#8362;'+fmt(target)+'</span> <span class="'+pctClass(tot,target)+'">• '+pctText(tot,target)+'</span>'+
-    '<div class="dash-total-sub">'+countInMonth(year,month)+' תלמידים פעילים • סך התנועות שנרשמו בחודש זה, ללא פריסה</div></div>';
-  document.getElementById('dash-month-list').innerHTML=html||'<div class="empty">אין נתונים</div>';
-}
-
-export { dashNextYear, dashPickMonth, dashPrevYear, renderDash, screenDashHTML };
+export { dashNextYear, dashPrevYear, renderDash, screenDashHTML };
