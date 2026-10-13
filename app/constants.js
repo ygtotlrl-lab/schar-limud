@@ -5,7 +5,7 @@ import { appConfigure } from '../core/util.js';
 // כאן הנתונים שהליבה קוראת, והחיווט — ב-main.js; הקובץ הזה נטען ראשון, לפני כל קריאה לליבה.
 // העידן עולה בשינוי צורת רשומה או מפתחה, ושינוי שם טבלה הוא שינוי כזה — המראה ממופתחת בשם.
 // עותק בעידן ישן אינו נדחף — הממתין בו נרשם ביומן, והוא נזרק ונמשך מלא.
-var DATA_ERA = 6;
+var DATA_ERA = 7;
 
 appConfigure({ DATA_ERA: DATA_ERA });
 
@@ -48,6 +48,16 @@ var MSG_START_MONTH_BAD = '❌ חודש הצטרפות לא תקין — פור�
 var MSG_END_MONTH_BAD = '❌ חודש עזיבה לא תקין — פורמט YYYY-MM';
 
 var MSG_END_BEFORE_START = '❌ חודש העזיבה מוקדם מחודש ההצטרפות';
+
+var MSG_PERIOD_OVERLAP = '❌ התקופה חופפת לתקופה אחרת של התלמיד';
+
+var MSG_PERIOD_OPEN_LAST = '❌ תקופה פתוחה — רק האחרונה; לתקופה שלפני אחרת נדרש חודש עזיבה';
+
+var MSG_PERIOD_MISSING = '⚠️ התקופה לא נמצאה';
+
+var MSG_DEL_PERIOD_TITLE = 'מחיקת תקופה';
+
+var MSG_DEL_PERIOD_BODY = 'למחוק את התקופה? החודשים שבה לא יחויבו.';
 
 var MSG_NAME_REQUIRED = 'שם חובה';
 
@@ -103,7 +113,10 @@ var KV_TABLE = 'sl_settings';
 // ── PUSH_CFG ──
 // sl_users אינה נדחפת לעולם — המראה מחזיקה טביעות בלבד, ודחיפת-מצב הייתה כותבת סיסמה ריקה; מסלולה writeUser
 // סדר הטבלאות שומר על המפתח הזר — תלמידים לפני תנועות
-var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lists'];
+var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lookups'];
+
+// סוגי הרשימות ב-sl_lookups — אמצעי תשלום ושיעורים.
+var LK_METHOD = 'method', LK_SHIUR = 'shiur';
 
 // ── ERA_CFG ──
 
@@ -129,15 +142,15 @@ var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
 // סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
 var SL_NEVER_MIRROR_SETTINGS = [];
 
-export { CREDIT_METHOD, KV_TABLE, MSG_ADD_STUDENT, MSG_BAD_LOGIN, MSG_CHANGE_NOT_SAVED,
+export { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_BAD_LOGIN, MSG_CHANGE_NOT_SAVED,
          MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DEBT_POSITIVE, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,
          MSG_DEL_TXN_BODY, MSG_DEL_TXN_TITLE, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_LOAD_FAIL_POST, MSG_NAME_REQUIRED,
-         MSG_NEED_AMOUNT, MSG_NO_FP_ONLINE, MSG_NO_USERS, MSG_NO_USER_RELOGIN,
+         MSG_NEED_AMOUNT, MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_NO_FP_ONLINE, MSG_NO_USERS, MSG_NO_USER_RELOGIN,
          MSG_PASS_UPDATED, MSG_PASS_UPDATED_NO_FP2, MSG_PAY_DELETED, MSG_PAY_MISSING,
-         MSG_PAY_SAVE_FAIL, MSG_PICK_DATE, MSG_PICK_STUDENT_PLAIN, MSG_SETTINGS_NOT_SAVED,
+         MSG_PAY_SAVE_FAIL, MSG_PERIOD_MISSING, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_PICK_DATE, MSG_PICK_STUDENT_PLAIN, MSG_SETTINGS_NOT_SAVED,
          MSG_SET_DENIED, MSG_START_MONTH_BAD, MSG_STUDENT_DELETED, MSG_STUDENT_MISSING2,
          MSG_STUDENT_OFF, MSG_STUDENT_ON, MSG_STUDENT_SAVE_FAIL, MSG_TUITION_POSITIVE,
          MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_SAVE_FAIL, PUSH_TABLES,

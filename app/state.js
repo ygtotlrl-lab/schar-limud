@@ -7,9 +7,10 @@ const S = {
   STUDENTS: [],
   TRANSACTIONS: [],
   SETTINGS: {},
-  LISTS: {},
+  LOOKUPS: {},
   // המשתמש המחובר אינו משתנה כאן — הוא בזיכרון בלבד, והגישה אליו ב-sessGet/sessSet
   DASH_YEAR: null,
+  DASH_MONTH: null,
   SC_STUDENT_ID: null,
   SC_YEAR: null,
   // _slLastSeenOk היא חותמת תצוגה בלבד

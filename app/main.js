@@ -1,29 +1,28 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
 import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, getDeviceId,
          netTimeout } from '../core/util.js';
-import { _eraPush, eraKeys, pendAlertDismiss, pendCount, runSave,
-         sbWatch } from '../core/sync.js';
+import { eraKeys, pendAlertDismiss, pendCount, runSave, sbWatch,
+         schedulePush } from '../core/sync.js';
 import { lsOpen } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { authUsersTable, lkReset, sessActive, sessGet, sessSet, usersSaveAll } from '../core/auth.js';
-import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, swApply, swHideUpdate,
-         toast } from '../core/ui.js';
+import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragCancel, dragDown,
+         dragMove, dragUp, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { KV_TABLE, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
-import { _slPushOf, slApplyMirror,
-         slIsAdmin, slKeyOf, slSanitizeRows, slSendRows,
-         syncAll } from './domain.js';
-import { closeDashMonth, dashNextYear, dashPrevYear, renderDash, screenDashHTML,
-         showDashMonth } from './screens/dash.js';
+import { _slPushOf, slApplyMirror, slIsAdmin, slKeyOf, slLocalWrite, slLookups,
+         slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
+         screenDashHTML } from './screens/dash.js';
 import { doLogin, doLogout, screenLoginHTML, slResolveUser,
          slShowLogin } from './screens/login.js';
 import { addListItem, deleteListItem, deleteStudent, openAddStudent, renderSettingsLists,
          renderSettingsPanel, saveDefaultTuition, saveNewStudent, screenSettingsHTML,
          slMyPassword, slSaveMyPassword, toggleAcc } from './screens/settings.js';
-import { renderScAnnual, renderStudentCard, saveStudentSettings, scPastShow, scSelectYear,
-         screenStudentHTML,
+import { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentCard,
+         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML,
          toggleStudentActive } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
@@ -36,6 +35,7 @@ appConfigure({
   get DOM_ACTIONS() { return DOM_ACTIONS; },
   get ERA_CFG() { return ERA_CFG; },
   get LK_CFG() { return LK_CFG; },
+  get LOOKUP_CFG() { return LOOKUP_CFG; },
   get LS_CFG() { return LS_CFG; },
   get MIRROR_CFG() { return MIRROR_CFG; },
   get PEND_CFG() { return PEND_CFG; },
@@ -45,6 +45,14 @@ appConfigure({
   get USER_CFG() { return USER_CFG; },
   get saveRefresh() { return saveRefresh; }
 });
+
+// הרשימות לסידור — השורות והכתיבה של שכר הלימוד, והסידור בליבה; הכתיבה המקומית כבר דורכת את הדחיפה.
+var LOOKUP_CFG = {
+  rows:   function (kind) { return slLookups(kind); },
+  put:    function (row) { slLocalWrite('sl_lookups', row); },
+  after:  function () { schedulePush(); },
+  render: function () { refreshUI(); }
+};
 
 // tables היא פונקציה ולא מערך — PUSH_TABLES מוצהר אחרי הבלוק, וקריאה כאן הייתה מקבלת undefined
 var MIRROR_CFG = {
@@ -90,7 +98,7 @@ var BK_CFG = {
       { name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
       { name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
       { name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
-      { name: 'sl_lists',        order: 'client_id', ts: 'updated_at' }
+      { name: 'sl_lookups',      order: 'client_id', ts: 'updated_at' }
     ];
   }
 };
@@ -150,8 +158,6 @@ var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return S.SB; },
   table:  function () { return KV_TABLE; },
-  // מחזור הסנכרון בונה את מפות הענן, ובלעדיהן שכבת הדחיפה מחזירה «אין ראיה» — ולכן התוצאה נאספת ממנו
-  push:   function () { return syncAll().then(function () { return _eraPush; }); },
   refresh: function () { return syncAll(); },
   log:    function (action, entries) { return logAwait(action, entries); }
 };
@@ -214,14 +220,15 @@ var DOM_ACTIONS = {
   'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
   'list-add':     function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
-  'dash-month':   function (el) { showDashMonth(Number(el.getAttribute('data-year')),
-                                                Number(el.getAttribute('data-month'))); },
+  'dash-month':   function (el) { dashPickMonth(Number(el.getAttribute('data-month'))); },
   'sc-year':      function (el) { scSelectYear(Number(el.getAttribute('data-year'))); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
-  'dash-month-close':        function () { closeDashMonth(); },
   'sc-past-show':            function () { return scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
+  'period-open':             function (el) { periodOpen(el.getAttribute('data-id')); },
+  'period-save':             function (el) { return runSave(function () { return periodSave(el.getAttribute('data-id')); }, '✅ התקופה נשמרה'); },
+  'period-del':              function (el) { periodDelete(el.getAttribute('data-id')); },
   'student-open-add':        function () { openAddStudent(); },
   'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
   'txn-save':                function () { return runSave(saveTxn, '✅ תשלום נשמר'); },
@@ -244,6 +251,12 @@ document.addEventListener('change', function (e) {
 
 // focus אינו עולה בעץ — ולכן focusin.
 document.addEventListener('focusin', comboFocus);
+
+// הגרירה לסידור במנגנון שבליבה.
+document.addEventListener('pointerdown', dragDown);
+document.addEventListener('pointermove', dragMove);
+document.addEventListener('pointerup', dragUp);
+document.addEventListener('pointercancel', dragCancel);
 
 // אין שער סיסמה נפרד מעל מסך ההגדרות — ההרשאה נגזרת מתפקיד המשתמש המחובר, ושער כזה נופל בהתקנה טרייה לברירת מחדל שכל אחד מקליד.
 // אין לזרוע ברירת מחדל לסיסמה או לתפקיד — role הוא NOT NULL בלי DEFAULT, וכל מה שאינו בדיוק 'admin' נדחה.

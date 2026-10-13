@@ -2,14 +2,18 @@
 import { dayToday } from '../../core/util.js';
 import { idEq, schedulePush } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { comboDef, comboHTML, esc, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, MSG_CHANGE_NOT_SAVED, MSG_DEBT_POSITIVE, MSG_NAME_REQUIRED,
+import { ask, comboDef, comboHTML, esc, openModal, toast,
+         uiNoDialog } from '../../core/ui.js';
+import { CREDIT_METHOD, LK_SHIUR, MSG_CHANGE_NOT_SAVED, MSG_CONFIRM, MSG_DEBT_POSITIVE,
+         MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_NAME_REQUIRED, MSG_PERIOD_MISSING,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
-import { acadYearLabel, acadYearOf, calcDistribution, distCredApplied, distCredit, enrollText, fmt,
-         isCreditTxn, monthLabel, normMonth, pendTxnTag, readMonthRange, slLocalWrite, slSortTxns,
-         slSortYears, txnAmountHTML, txnMethodPill } from '../domain.js';
+import { acadYearHeb, acadYearOf, calcDistribution, distCredApplied, distCredit, enrollText, fmt,
+         isCreditTxn, monthKeyOf, monthLabel, pendTxnTag, periodText, periodsProblem, periodsToggled,
+         readMonthRange, slLocalWrite, slLookups, slPeriods, slSortTxns, slSortYears,
+         studentContinues, studentInMonth, studentTuition, txnAmountHTML,
+         txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
@@ -44,16 +48,8 @@ function screenStudentHTML() {
           <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל">
         </div>
         <div class="frm-row">
-          <label for="sc-edit-section">סעיף</label>
-          <select id="sc-edit-section"></select>
-        </div>
-        <div class="frm-row">
-          <label for="sc-edit-start">חודש הצטרפות</label>
-          <input aria-label="2025-09" id="sc-edit-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp">
-        </div>
-        <div class="frm-row-last frm-row">
-          <label for="sc-edit-end">חודש עזיבה (ריק = עדיין פעיל)</label>
-          <input aria-label="2026-08" id="sc-edit-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp">
+          <label for="sc-edit-shiur">שיעור</label>
+          <select id="sc-edit-shiur"></select>
         </div>
         <div class="frm-row">
           <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
@@ -63,8 +59,14 @@ function screenStudentHTML() {
           <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
           <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
         </div>
-        <div class="range-hint">החיוב מחושב רק לחודשים שבטווח (כולל). חודש הצטרפות ריק = חיוב לכל חודשי השנה, כמו קודם.</div>
         <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
+      </div>
+      <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-periods">
+        <span>&#128197; תקופות פעילות</span><span id="acc-icon-sc-periods">&#9660;</span>
+      </div>
+      <div class="acc-body" id="acc-sc-periods">
+        <div id="sc-periods-list"></div>
+        <button class="btn sm" data-act="period-open" data-id="">+ הוסף תקופה</button>
       </div>
       <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-annual">
         <span>&#128197; כרטיס שנתי</span><span id="acc-icon-sc-annual">&#9660;</span>
@@ -79,11 +81,11 @@ function screenStudentHTML() {
           </table>
         </div>
         <div id="sc-credit"></div>
-        <div class="sc-section">
+        <div class="sc-part">
           <div class="sc-sub-title">תשלומים בשנה זו</div>
           <div id="sc-txn-list"></div>
         </div>
-        <div class="sc-section">
+        <div class="sc-part">
           <button class="btn sm" data-act="sc-past-show">&#128220; שנים קודמות</button>
           <div id="sc-past"></div>
         </div>
@@ -104,22 +106,67 @@ function renderStudentCard(){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{};
   document.getElementById('sc-name').textContent=s.name;
-  var meta=[];if(cs.section)meta.push(cs.section);meta.push(s.active?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
+  var meta=[];if(cs.shiur)meta.push(cs.shiur);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
-  var tog=document.getElementById('sc-active-tog');tog.textContent=s.active?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(s.active?'tog-act-on':'tog-act-off');
+  var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.textContent=on?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   var pastBox=document.getElementById('sc-past');if(pastBox)pastBox.innerHTML='';
-  document.getElementById('sc-edit-start').value=normMonth(s.start_month);document.getElementById('sc-edit-end').value=normMonth(s.end_month);
-  var ss=document.getElementById('sc-edit-section');ss.innerHTML='<option value="">-- ללא --</option>';
-  (S.LISTS['sections']||[]).forEach(function(sec){ss.innerHTML+='<option value="'+esc(sec.value)+'"'+(cs.section===sec.value?' selected':'')+'>'+esc(sec.value)+'</option>';});
-  renderScYearTabs();renderScAnnual();
+  var ss=document.getElementById('sc-edit-shiur');ss.innerHTML='<option value="">-- ללא --</option>';
+  slLookups(LK_SHIUR).forEach(function(sh){ss.innerHTML+='<option value="'+esc(sh.label)+'"'+(cs.shiur===sh.label?' selected':'')+'>'+esc(sh.label)+'</option>';});
+  renderScPeriods(s);renderScYearTabs();renderScAnnual();
+}
+
+// ── תקופות הפעילות ──
+// המפתח של תקופה — start: מפתח טבעי שהוא ערכו, ואין שתי תקופות באותו חודש התחלה.
+function renderScPeriods(s){
+  document.getElementById('sc-periods-list').innerHTML=slPeriods(s).map(function(p){
+    return '<div class="set-list-item"><span>'+esc(periodText(p))+'</span><span class="row-acts">'+
+      '<button class="btn sm out" data-act="period-open" data-id="'+esc(p.start)+'">&#9998; עריכה</button>'+
+      '<button class="btn sm danger" data-act="period-del" data-id="'+esc(p.start)+'">&#10005; מחק</button></span></div>';
+  }).join('')||'<div class="empty">אין תקופות — התלמיד אינו מחויב באף חודש</div>';
+}
+
+function scStudent(){return S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});}
+
+function periodOpen(start){
+  var s=scStudent();if(!s)return;
+  var p=start?slPeriods(s).filter(function(x){return x.start===start;})[0]:{start:monthKeyOf(dayToday()),end:null};
+  if(!p){toast(MSG_PERIOD_MISSING, null, 'bad');return;}
+  var body=''
+    +'<div class="frm-row"><label for="per-start">חודש הצטרפות</label><input id="per-start" type="month" placeholder="2025-09" dir="ltr" class="month-inp" value="'+esc(p.start)+'"></div>'
+    +'<div class="frm-row-last frm-row"><label for="per-end">חודש עזיבה (ריק = עדיין פעיל)</label><input id="per-end" type="month" placeholder="2026-08" dir="ltr" class="month-inp" value="'+esc(p.end||'')+'"></div>';
+  var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
+          +'<button class="btn" data-act="period-save" data-id="'+esc(start||'')+'" data-ksave>שמירה</button>';
+  openModal(start?'עריכת תקופה':'תקופה חדשה', body, foot);
+}
+
+// התקופה שנערכה מוחלפת לפי המפתח שלה; הרשימה החדשה עוברת את בדיקת המסד לפני הכתיבה.
+function periodSave(start){
+  var s=scStudent();if(!s)return;
+  if(!document.getElementById('per-start')){uiNoDialog('periodSave','per-start');return;}
+  var rng=readMonthRange('per-start','per-end');if(!rng)return;
+  var ps=slPeriods(s).filter(function(p){return p.start!==start;}).concat([rng]);
+  var bad=periodsProblem(ps);if(bad){toast(bad, null, 'bad');return;}
+  var row=Object.assign({},s,{periods:slPeriods({periods:ps})});
+  if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
+  return true;
+}
+
+function periodDelete(start){
+  ask(MSG_DEL_PERIOD_TITLE,MSG_DEL_PERIOD_BODY,MSG_CONFIRM).then(function(yes){
+    if(!yes)return;
+    var s=scStudent();if(!s)return;
+    var ps=slPeriods(s).filter(function(p){return p.start!==start;});
+    if(!slLocalWrite('sl_students',Object.assign({},s,{periods:ps}))){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
+    shell.refreshUI();
+  });
 }
 
 function renderScYearTabs(){
   var y={};S.TRANSACTIONS.filter(function(t){return t.student_client_id===S.SC_STUDENT_ID;}).forEach(function(t){y[acadYearOf(t.txn_date)]=1;});y[acadYearOf(dayToday())]=1;
   var sorted=slSortYears(Object.keys(y).map(Number));if(!S.SC_YEAR||!y[S.SC_YEAR])S.SC_YEAR=acadYearOf(dayToday());
-  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===S.SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+acadYearLabel(yr)+'</button>';}).join('');
+  document.getElementById('sc-year-tabs').innerHTML=sorted.map(function(yr){return'<button class="ytab'+(yr===S.SC_YEAR?' active':'')+'" data-act="sc-year" data-year="'+yr+'">'+esc(acadYearHeb(yr))+'</button>';}).join('');
 }
 
 function scSelectYear(y){S.SC_YEAR=y;renderScYearTabs();renderScAnnual();}
@@ -127,7 +174,7 @@ function scSelectYear(y){S.SC_YEAR=y;renderScYearTabs();renderScAnnual();}
 function renderScAnnual(){
   if(!S.SC_STUDENT_ID||!S.SC_YEAR)return;
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
-  var cs=s.card_settings||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=s.card_settings||{},stuT=studentTuition(s);
   var dist=calcDistribution(S.SC_STUDENT_ID,S.SC_YEAR),rows='',tR=0,tP=0;
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
@@ -162,31 +209,30 @@ function scPastShow(){
 }
 
 function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
-  var row=Object.assign({},s,{active:!s.active});
+  var row=Object.assign({},s,{periods:periodsToggled(s)});
   if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
   shell.refreshUI();
-  toast(row.active?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
+  toast(studentContinues(row)?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
 
 function saveStudentSettings(){
-  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,section=document.getElementById('sc-edit-section').value;
+  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,shiur=document.getElementById('sc-edit-shiur').value;
   if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
-  var rng=readMonthRange('sc-edit-start','sc-edit-end');if(!rng)return;
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // אימות מפורש — שדה טקסט מעביר קלט פגום כמות שהוא, ו-parseInt בלי אימות כותב NaN לתוך card_settings.
   var tuitionVal=parseInt(tuition,10);
   if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}
   if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
-  if(section)cs.section=section;else delete cs.section;
+  if(shiur)cs.shiur=shiur;else delete cs.shiur;
   var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
   var debtVal=parseInt(debtRaw);
   if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast(MSG_DEBT_POSITIVE, null, 'bad');return;}
   if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
-  var row=Object.assign({},s,{name:name,card_settings:cs,start_month:rng.start_month,end_month:rng.end_month});
+  var row=Object.assign({},s,{name:name,card_settings:cs});
   if(!slLocalWrite('sl_students',row)){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
   return true;
 }
 
-export { renderScAnnual, renderStudentCard, saveStudentSettings, scPastShow, scSelectYear,
-         screenStudentHTML, selectStudent, toggleStudentActive };
+export { periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentCard,
+         saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, toggleStudentActive };

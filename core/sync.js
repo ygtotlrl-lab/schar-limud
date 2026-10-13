@@ -734,7 +734,9 @@ function pushRow(t, rows) {
 
 // כשל רשת משאיר את הסימון וננסה שוב; כשל סמכותי (ולידציה, מפתח זר, הרשאה, סכימה) יחזור לנצח, ולכן הסימון יורד והסיבה נרשמת.
 // עותק שאינו תקף אינו נדחף — הוא נרשם ונזרק בעידן, ושורה ממנו הייתה מחזירה נתון שנמחק או נופלת על הסכימה.
+// עד שעידן הענן נקרא בעלייה הזו — אין ראיה שהקוד אינו ישן, והדחיפה ממתינה וקוראת שוב.
 function pushTable(t, ctx) {
+  if (_eraCloud === undefined) { eraKick(); return Promise.resolve({ ok: false, still: [], n: 0 }); }
   if (!eraValid()) {
     if (!_eraHoldSaid) { _eraHoldSaid = true; console.warn('[push] העותק המקומי אינו תקף — הדחיפה ממתינה לעידן'); }
     return Promise.resolve({ ok: false, still: [], n: 0 });
@@ -808,27 +810,15 @@ function schedulePush() {
 
 // ── עידן הנתונים ──
 // זו הפעולה ההרסנית היחידה — נתון שלא נדחף ונזרק אבוד, ולכן אין זריקה בלי רשת ובלי ראיה.
-// שני מסלולים: עותק תקף שהענן עבר את עידנו — נזרק רק כשכל ממתין עלה; ועותק שאינו תקף — הממתין נרשם ביומן, ורק אחר כך נזרק.
+// עותק שאינו תקף — עידנו ישן מהקוד או מהענן — אינו נדחף: הממתין נרשם ביומן, ורק אחר כך נזרק.
 var ERA_CLOUD_KEY = 'data_era';
 // ברישום ביומן — שדה שנראה כסוד אינו עוזב את המכשיר.
 var ERA_SECRET_RX = /pass|secret|token/i;
 // כתיבת חותמת המשיכה מוגבלת — הבדיקה המחזורית רצה כל שלוש שניות, והחותמת נמדדת בימים.
 var ERA_PULLED_EVERY_MS = 60 * 60 * 1000;
-var _eraPush = null;
+// undefined — טרם נקרא בעלייה הזו; null — הענן אינו נושא עידן, ואינו חוסם.
+var _eraCloud;
 var _eraBusy = false, _eraDone = false, _eraWired = false;
-// «הדחיפה הצליחה» אינה «אין מה לדחוף» — שורה שנכתבה אחרי המחזור אינה ב-still והיא בתור, ושורה שנדחתה ברשת היא ב-still ואינה בתור.
-function eraMayThrow(o) {
-  var s = o || {};
-  // בלי רשת אין ראיה שהענן קיבל דבר.
-  if (!s.online) return false;
-  // still הוא מה שלא עלה — שורה אחת שנשארה בו היא נתון שיימחק ואינו ניתן לשחזור.
-  if (!s.push || s.push.ok !== true) return false;
-  if (!Array.isArray(s.push.still) || s.push.still.length !== 0) return false;
-  // מפת הממתינים היא מה שנכתב מקומית ולא הוכרע.
-  if (!s.pending || typeof s.pending !== 'object') return false;
-  if (Object.keys(s.pending).length !== 0) return false;
-  return true;
-}
 // הסימן הוא חותמת ולא מונה — מספר סידורי אינו אומר מה נוקה ומתי.
 function eraResetKey(prefix) { return String(prefix == null ? '' : prefix) + 'era_reset'; }
 function eraStamp(now) {
@@ -860,26 +850,31 @@ function eraNotePull(force) {
     if (force || now - was >= ERA_PULLED_EVERY_MS) lsSet(eraPulledKey(), String(now));
   } catch (e) { console.warn('[era] חותמת המשיכה', e); }
 }
-// עותק שאינו תקף: עידנו ישן מעידן הקוד — צורת הרשומה השתנתה, ודחיפה שלו נופלת על הסכימה —
+// עותק שאינו תקף: עידנו ישן מעידן הקוד או מעידן הענן — צורת הרשומה השתנתה, וקוד ישן נושא עידן ישן ורואה את עותקו תקף —
 // או שלא נמשך בחלון המצבות — המסד גרע מצבה שהייתה עוצרת רשומה שנמחקה, והדחיפה הייתה מחזירה אותה.
 // חותמת חסרה אינה ראיה — עותק שנוצר לפני החותמת נבדק בעידנו.
+function eraTarget() { return Math.max(Number(app.DATA_ERA), _eraCloud == null ? -Infinity : _eraCloud); }
 function eraValid() {
-  if (eraLocal() < Number(app.DATA_ERA)) return false;
+  if (eraLocal() < eraTarget()) return false;
   var was = Number(lsGet(eraPulledKey(), '')) || 0;
   return !(was && Date.now() - was > TOMB_TTL_MS);
 }
 // כל אפליקציה נושאת מספר עידן משלה — צורת השורה נבדלת, ומספר משותף היה זורק על שינוי שלא נעשה כאן.
 // הקריאה אינה ב-single — שם שורה שאינה קיימת מסומנת כשגיאה, ומסד בלי עידן הוא המצב הרגיל.
+// כשל רשת — undefined: אין ראיה, והקריאה חוזרת; ערך שאינו מספר — null, כמו מסד בלי עידן.
 function eraCloudRead() {
   var c = app.ERA_CFG.client(), eraTbl = app.ERA_CFG.table();
-  if (!c || !eraTbl) return Promise.resolve(null);
+  // לקוח שטרם נבנה — אין ראיה, והדחיפה הבאה קוראת שוב.
+  if (!c) return Promise.resolve(undefined);
+  if (!eraTbl) return Promise.resolve(null);
   return netTimeout(c.from(eraTbl).select('value').eq('key', ERA_CLOUD_KEY).maybeSingle())
     .then(function (r) {
+      if (r && r.error && isNetErr(r.error)) return undefined;
       if (!r || r.error || !r.data) return null;
       var pr = kvParse(ERA_CLOUD_KEY, r.data.value);
-      var raw = pr.ok ? pr.value : null;
-      return raw == null ? null : Number(raw);
-    }, function () { return null; });
+      var n = pr.ok && pr.value != null ? Number(pr.value) : NaN;
+      return isFinite(n) ? n : null;
+    }, function () { return undefined; });
 }
 // הממתין כמות שהוא במכשיר: המפתח, רגע הסימון והרשומה שמזהה הסימון מוצא במרחב האפליקציה.
 // המזהה הוא מה שאחרי הקידומת המוצהרת — client_id, או key בטבלת הגדרות; רשומה שלא נמצאה נרשמת בלי גוף.
@@ -958,7 +953,7 @@ function _eraWipe(era) {
 // עותק שאינו תקף אינו נדחף; הממתין נרשם ב-sh_sync_log, ורק רישום שהצליח מתיר את הזריקה.
 function eraDiscard(ep) {
   if (!navigator.onLine) return Promise.resolve(false);
-  var rows = eraPendingRows(), era = Number(app.DATA_ERA);
+  var rows = eraPendingRows(), era = eraTarget();
   var logged = !rows.length ? Promise.resolve(true)
     : Promise.resolve(app.ERA_CFG.log('era_discard', rows.map(function (r) {
         return { key: r.key, details: { since: r.since, ls: r.ls, row: r.row } };
@@ -969,23 +964,8 @@ function eraDiscard(ep) {
     return _eraWipe(era).then(function () { return true; });
   }, function () { return false; });
 }
-// תוצאת הדחיפה נמסרת כארגומנט — גלובלי אחרי המתנה מחזיר את מה שהמחזור הבא כתב.
-function eraBoot(push, ep) {
-  return eraCloudRead().then(function (cloud) {
-    if (ctxStale(ep)) return false;
-    if (!eraBehind(eraLocal(), cloud)) return false;
-    if (!eraMayThrow({ online: navigator.onLine, push: push, pending: pendAll() })) return false;
-    console.log('[era] עידן ' + cloud + ' — העותק המקומי נזרק ונמשך מלא');
-    return _eraWipe(Number(cloud)).then(function () { return true; });
-  }, function () { return false; });
-}
-// לאפליקציה שמחזור הדחיפה שלה אינו מחזיר תוצאה; תוצאה שאינה אובייקט נקראת «אין ראיה» ולא «הצליח».
-function eraNotePush(r) {
-  _eraPush = (r && typeof r === 'object') ? r : null;
-  return r;
-}
-// פעם אחת לעלייה ולא בבדיקה המחזורית, ושוב בחזרת הרשת עד שהוכרע — קידום עידן הוא פעולת מנהל נדירה.
-// ההקשר נלכד לפני הדחיפה ונבדק אחריה — מחזור שמתעורר בהקשר אחר היה זורק את העותק של האחר.
+// פעם אחת לעלייה ולא בבדיקה המחזורית, ושוב בחזרת הרשת ובכל דחיפה עד שהוכרע — קידום עידן הוא פעולת מנהל נדירה.
+// ההקשר נלכד לפני הקריאה ונבדק אחריה — מחזור שמתעורר בהקשר אחר היה זורק את העותק של האחר.
 function eraKick() {
   if (!_eraWired) {
     _eraWired = true;
@@ -995,8 +975,13 @@ function eraKick() {
   if (_eraDone || _eraBusy) return Promise.resolve(false);
   _eraBusy = true;
   var ep = ctxEpoch();
-  var p = !eraValid() ? eraDiscard(ep).then(function (threw) { if (threw) _eraDone = true; return threw; })
-    : Promise.resolve(app.ERA_CFG.push()).then(function (r) { _eraDone = true; return eraBoot(r, ep); });
+  var p = eraCloudRead().then(function (cloud) {
+    if (cloud === undefined || ctxStale(ep)) return false;
+    _eraCloud = cloud;
+    if (eraValid()) { _eraDone = true; return true; }
+    if (eraBehind(eraLocal(), cloud)) console.log('[era] עידן ' + cloud + ' בענן — העותק המקומי אינו נדחף');
+    return eraDiscard(ep).then(function (threw) { if (threw) _eraDone = true; return threw; });
+  });
   return p.then(function (v) { _eraBusy = false; if (v) schedulePush(); return v; },
                 function () { _eraBusy = false; return false; });
 }
@@ -1004,8 +989,8 @@ function eraKick() {
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKill, TOMB_TTL_MS,
          prunePastTombstones, tombPruneMerged, tombBoot, ctxEpoch,
-         ctxSwitch, ctxStale, _eraPush, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
-         eraNotePush, errToast, pendAlertDismiss, pendAll, pendBoot,
+         ctxSwitch, ctxStale, _rowsPaged, eraNotePull, afterSave, eraKeys, eraKick,
+         errToast, pendAlertDismiss, pendAll, pendBoot,
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendRender, pendTag,
          PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,

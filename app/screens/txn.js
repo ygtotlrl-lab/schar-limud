@@ -3,14 +3,15 @@ import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { sessUserId } from '../../core/auth.js';
-import { ask, comboDef, comboHTML, comboValue, esc, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+import { ask, comboDef, comboHTML, comboSet, comboValue, esc, toast } from '../../core/ui.js';
+import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
-         slLocalWrite, slSortTxns, txnAmountHTML, txnMethodPill } from '../domain.js';
+         slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML,
+         txnMethodPill } from '../domain.js';
 
 function screenTxnHTML() {
   return `
@@ -58,17 +59,20 @@ function screenTxnHTML() {
 function studentOpts(a){return a.map(function(s){return{value:s.client_id,label:s.name};});}
 
 // תשלום נרשם לתלמיד פעיל בלבד; הסינון ביומן — לכל תלמיד, ו«כולם» הוא ערך ריק.
-comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return s.active;}));}});
+// בחירת תלמיד קובעת את הסכום בשכר הלימוד שלו בכל בחירה — ערך שנשאר מתלמיד קודם הוא סכום שגוי שנראה נכון.
+comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return studentInMonth(s);}));},pick:function(it){
+  var at=document.getElementById('txn-amount'),st=it?S.STUDENTS.find(function(s){return idEq(s.client_id,it.value);}):null;
+  if(at)at.value=st?(studentTuition(st)||''):'';
+}});
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
 function updateDropdowns(){
-  var ml=S.LISTS['payment_methods']||[],sel=document.getElementById('txn-method'),cur=sel.value;
-  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.value)+'">'+esc(m.value)+'</option>';});
+  var ml=slLookups(LK_METHOD),sel=document.getElementById('txn-method'),cur=sel.value;
+  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.label)+'">'+esc(m.label)+'</option>';});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
   if(cur)sel.value=cur;
   var dt=document.getElementById('txn-date');if(!dt.value)dt.value=dayToday();
-  var at=document.getElementById('txn-amount');if(!at.value)at.value=S.SETTINGS['default_tuition']||'';
   txnMethodHint();
 }
 
@@ -91,8 +95,11 @@ async function saveTxn(){
   // כשל כתיבה מקומית עוצר כאן ברעש — בכסף אסור להציג «נשמר» על משהו שלא נכתב.
   if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
   releaseCid('txn');
-  document.getElementById('txn-amount').value=S.SETTINGS['default_tuition']||'';
+  // הטופס מתרוקן לתשלום הבא — תלמיד, סכום, אמצעי והערה; התאריך נשאר.
+  comboSet('txn-student',null);
+  document.getElementById('txn-method').value='';
   document.getElementById('txn-note').value='';
+  txnMethodHint();
   return true;
 }
 
@@ -100,7 +107,7 @@ function renderTxnLog(){
   var fid=comboValue('txn-filter');
   var txns=slSortTxns(S.TRANSACTIONS, true).slice(0,60);
   if(fid)txns=txns.filter(function(t){return idEq(t.student_client_id, fid);});
-  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
+  document.getElementById('txn-log').innerHTML=txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="txn-who"><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+(t.note?'<span class="txn-note">'+esc(t.note)+'</span>':'')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>';
 }
 
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){

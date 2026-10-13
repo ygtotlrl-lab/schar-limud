@@ -326,7 +326,9 @@ function ksKey(e) {
 // ── רשימה נפתחת עם חיפוש ──
 // הרכיב נושא את השדה, הסינון, הרשימה והבחירה; האפליקציה מגדירה ב-comboDef את הפריטים ואת מה שקורה בבחירה.
 // הסגירה בלחיצה מחוץ לרכיב ולא ב-focusout — במגע הכפתור אינו מקבל מיקוד, ו-focusout היה סוגר את הרשימה לפני שהלחיצה נוחתת.
-var _combo = {}, _comboOpen = null;
+// הרשימה נבנית ב-body ולא בתוך הרכיב — מיכל שחותך גלישה (overflow:hidden) חותך רשימה שבתוכו; והיא נושאת קישור לרכיב שלה.
+var _combo = {}, _comboOpen = null, _comboWired = false;
+var COMBO_EDGE = 8, COMBO_MIN_ROOM = 120;
 function comboDef(kind, cfg) { _combo[kind] = cfg; }
 function comboCfg(root) {
   var kind = root.getAttribute('data-combo');
@@ -344,7 +346,6 @@ function comboHTML(kind, o) {
       ' role="combobox" aria-expanded="false" aria-autocomplete="list" autocomplete="off"' +
       ' value="' + esc(v ? v.label : '') + '">' +
     (cfg.val ? '<input type="hidden" data-combo-val value="' + esc(v ? v.value : '') + '">' : '') +
-    '<div class="combo-list hidden" data-combo-list role="listbox"></div>' +
   '</div>';
 }
 function comboValue(id) {
@@ -362,15 +363,61 @@ function comboMark(label, q) {
   }
   return out + esc(s.slice(i));
 }
+// הרכיב של אלמנט — מתוך הרכיב עצמו, או מתוך הרשימה שלו שיושבת ב-body.
+function comboRootOf(el) {
+  var l = el && el.closest ? el.closest('[data-combo-list]') : null;
+  return l ? l._comboRoot || null : (el && el.closest ? el.closest('[data-combo]') : null);
+}
+function comboList(root) {
+  if (root._comboList) return root._comboList;
+  var list = document.createElement('div');
+  list.className = 'combo-list';
+  list.setAttribute('data-combo-list', '');
+  list.setAttribute('role', 'listbox');
+  if (root.id) list.id = root.id + '-list';
+  list._comboRoot = root;
+  root._comboList = list;
+  return list;
+}
+// המיקום נגזר ממלבן השדה: מתחתיו, ומעליו כשאין מקום — והגובה עד קצה החלון.
+function comboPlace(root) {
+  var list = root._comboList, q = comboQ(root);
+  if (!list || !q) return;
+  var r = q.getBoundingClientRect(), vh = window.innerHeight;
+  if (r.bottom < 0 || r.top > vh) { comboClose(root); return; }
+  var below = vh - r.bottom - COMBO_EDGE, above = r.top - COMBO_EDGE;
+  var up = below < COMBO_MIN_ROOM && above > below;
+  list.style.setProperty('--combo-left', r.left + 'px');
+  list.style.setProperty('--combo-w', r.width + 'px');
+  list.style.setProperty('--combo-room', Math.max(0, up ? above : below) + 'px');
+  list.classList.toggle('is-up', up);
+  list.style.setProperty('--combo-top', (up ? r.top - list.offsetHeight : r.bottom) + 'px');
+}
+// גלילה ושינוי גודל מזיזים את השדה — הרשימה עוברת איתו, וכשהוא יוצא מהחלון היא נסגרת.
+// הגלילה נתפסת ב-document בלכידה — היא אינה מבעבעת; resize מגיע ל-window בלבד.
+function comboWire() {
+  if (_comboWired) return;
+  _comboWired = true;
+  function follow() {
+    if (!_comboOpen) return;
+    if (!_comboOpen.isConnected) { comboClose(_comboOpen); return; }
+    comboPlace(_comboOpen);
+  }
+  document.addEventListener('scroll', function (e) {
+    if (_comboOpen && _comboOpen._comboList && _comboOpen._comboList.contains(e.target)) return;
+    follow();
+  }, true);
+  window.addEventListener('resize', follow);
+}
 function comboClose(root) {
-  var list = root.querySelector('[data-combo-list]'), q = comboQ(root);
-  if (list) { list.classList.add('hidden'); list.innerHTML = ''; }
+  var list = root._comboList, q = comboQ(root);
+  if (list) { list.innerHTML = ''; list.remove(); }
   if (q) q.setAttribute('aria-expanded', 'false');
   if (_comboOpen === root) _comboOpen = null;
 }
 function comboPaint(root) {
-  var cfg = comboCfg(root), q = comboQ(root), list = root.querySelector('[data-combo-list]');
-  if (!cfg || !q || !list) { console.error('[combo] רכיב חסר חלק: #' + root.id); return; }
+  var cfg = comboCfg(root), q = comboQ(root), list = comboList(root);
+  if (!cfg || !q) { console.error('[combo] רכיב חסר חלק: #' + root.id); return; }
   var ql = q.value.trim().toLowerCase();
   if (!ql && cfg.focusOpen === false) { comboClose(root); return; }
   var items = (cfg.items() || []).filter(function (it) {
@@ -387,9 +434,12 @@ function comboPaint(root) {
   else if (!items.length) h = '<div class="combo-empty">' + esc(MSG_NO_MATCH) + '</div>';
   if (_comboOpen && _comboOpen !== root) comboClose(_comboOpen);
   list.innerHTML = h;
-  list.classList.remove('hidden');
+  if (!list.isConnected) document.body.appendChild(list);
   q.setAttribute('aria-expanded', 'true');
+  if (list.id) q.setAttribute('aria-controls', list.id);
   _comboOpen = root;
+  comboWire();
+  comboPlace(root);
 }
 // בחירה ממלאת את השדה ואת הערך הנסתר, ואז עוברת לאפליקציה — ו-null מנקה את שניהם.
 function comboChoose(root, it) {
@@ -405,13 +455,13 @@ function comboSet(id, it) {
   return comboChoose(root, it);
 }
 function comboPick(el) {
-  var root = el.closest('[data-combo]');
+  var root = comboRootOf(el);
   var it = root && root._comboItems ? root._comboItems[+el.getAttribute('data-combo-opt')] : null;
   if (!it) { console.error('[combo] פריט שאינו ברשימה'); return; }
   return comboChoose(root, it);
 }
 function comboMake(el) {
-  var root = el.closest('[data-combo]'), cfg = root ? comboCfg(root) : null;
+  var root = comboRootOf(el), cfg = root ? comboCfg(root) : null;
   if (!cfg || !cfg.make) return;
   var q = comboQ(root).value.trim();
   comboClose(root);
@@ -437,9 +487,8 @@ function comboFocus(e) {
 }
 function comboOutside(e) {
   if (!_comboOpen) return;
-  if (!_comboOpen.isConnected) { _comboOpen = null; return; }
-  var r = e.target && e.target.closest ? e.target.closest('[data-combo]') : null;
-  if (r !== _comboOpen) comboClose(_comboOpen);
+  if (!_comboOpen.isConnected) { comboClose(_comboOpen); return; }
+  if (comboRootOf(e.target) !== _comboOpen) comboClose(_comboOpen);
 }
 // נקרא מהמאזין האחד לפני ksKey — Enter ברשימה פתוחה בוחר, ו-Escape סוגר אותה ולא את הדיאלוג.
 function comboKey(e) {
@@ -450,8 +499,9 @@ function comboKey(e) {
   if (e.key === 'Tab') { if (open) comboClose(root); return false; }
   if (e.key === 'ArrowDown' && !open) { comboPaint(root); e.preventDefault(); return true; }
   if (!open) return false;
-  var opts = Array.prototype.slice.call(root.querySelectorAll('[data-combo-opt]'));
-  var cur = root.querySelector('[data-combo-opt].is-on');
+  var list = root._comboList;
+  var opts = Array.prototype.slice.call(list.querySelectorAll('[data-combo-opt]'));
+  var cur = list.querySelector('[data-combo-opt].is-on');
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     if (!opts.length) return false;
     var i = opts.indexOf(cur) + (e.key === 'ArrowDown' ? 1 : -1);
@@ -523,9 +573,44 @@ function dragCancel() {
   return true;
 }
 
+// ── רשימות לסידור — lookups ──
+// השורות, הכתיבה והרינדור — של האפליקציה (LOOKUP_CFG); הזריעה, הסידור והמחיל בגרירה — כאן, אחד לכולן.
+// rows(kind) — השורות החיות בסדרן · put(row) — כתיבה מקומית ⏳ · after() — דריכת הדחיפה · render() — ציור מחדש.
+function lookupList(kind, dflt) {
+  var l = app.LOOKUP_CFG.rows(kind).map(function (r) { return r.label; });
+  return l.length ? l : (dflt || []);
+}
+// ברירות המחדל מתממשות לשורות בפעולת המשתמש הראשונה ולא ברינדור — עריכה וגרירה דורשות מזהה, וכתיבה ברינדור הייתה כותבת במכשיר שרק קורא.
+// המזהה נגזר ממקום הפריט בזריעה — <kind>:<תווית ברירת המחדל> — ושני מכשירים ריקים שזורעים מגיעים לאותה שורה; התווית עצמה ניתנת לעריכה.
+function lookupSeed(kind, dflt) {
+  if (app.LOOKUP_CFG.rows(kind).length) return;
+  for (var i = 0; i < dflt.length; i++)
+    app.LOOKUP_CFG.put({ client_id: kind + ':' + dflt[i], kind: kind, label: dflt[i],
+                         sort: i + 1, updated_at: Date.now(), deleted: false });
+  app.LOOKUP_CFG.after();
+}
+// הסדר נכתב מחדש לכל השורות — שתי שורות באותו sort הן סדר שאיש לא הכריע, והמיזוג מקבע אותו.
+// הקלט הוא הסדר הסופי שב-DOM ולא צמד «מאיפה לאן», וסדר שאינו מכיל בדיוק את כל השורות נדחה.
+function lookupReorder(kind, ids) {
+  var rows = app.LOOKUP_CFG.rows(kind), by = {}, out = [], i, changed = false;
+  for (i = 0; i < rows.length; i++) by[String(rows[i].client_id)] = rows[i];
+  for (i = 0; i < ids.length; i++) if (by[String(ids[i])]) out.push(by[String(ids[i])]);
+  if (out.length !== rows.length) return false;
+  for (i = 0; i < out.length; i++) if (+out[i].sort !== i + 1) changed = true;
+  if (!changed) return false;
+  for (i = 0; i < out.length; i++)
+    app.LOOKUP_CFG.put(Object.assign({}, out[i], { sort: i + 1, updated_at: Date.now() }));
+  app.LOOKUP_CFG.after();
+  return true;
+}
+function lookupDragApply(list, kind) {
+  if (lookupReorder(kind, dragOrder(list, kind, 'data-id'))) app.LOOKUP_CFG.render();
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
          comboInput, comboMake, comboPick, comboSet, comboValue,
-         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lsToast,
+         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey,
+         lookupDragApply, lookupList, lookupSeed, lsToast,
          openModal, pullRender, shellBare, swApply, swHideUpdate,
          swShowUpdate, toast, uiNoDialog };
