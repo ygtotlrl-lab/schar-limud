@@ -14,7 +14,7 @@ import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, 
          slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
-import { addListItem, deleteListItem, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
+import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
 import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
@@ -193,7 +193,8 @@ var DOM_ACTIONS = {
   'student-add':  function () { return runSave(saveNewStudent, '✅ תלמיד נוסף'); },
   'show-panel':   function (el) { showPanel(el.getAttribute('data-panel'), el); },
   'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
-  'list-add':     function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
+  'list-add':     function (el) { openListAdd(el.getAttribute('data-list')); },
+  'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
   'dash-month':   function (el) { dashPickMonth(Number(el.getAttribute('data-month'))); },
   'sc-year':      function (el) { scSelectYear(Number(el.getAttribute('data-year'))); },

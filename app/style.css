@@ -286,17 +286,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .grip{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex:none;
   color:var(--text-3);font-size:var(--fs-4);touch-action:none;cursor:grab}
 .grip:active{cursor:grabbing;color:var(--text)}
-/* שורת התלמיד — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה; בטלפון השם והחוב בשורה אחת, והתקופות והזכות מתחתיהם. */
-.stu-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name debt" "range credit";
+/* שורת התלמיד — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה. */
+.stu-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name credit debt";
   align-items:center;gap:var(--sp-2) var(--sp-4);width:100%;background:none;border:none;border-bottom:1px solid var(--border);
   padding:var(--sp-4) 0;font-family:Heebo;font-size:var(--fs-4);color:var(--text);text-align:right;cursor:pointer}
 .stu-row:last-child{border-bottom:none}
 .stu-row:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px;border-radius:var(--r-3)}
 .stu-name{grid-area:name;display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
-.stu-range{grid-area:range;font-size:var(--fs-2);color:var(--text-2);min-width:0}
 .stu-credit{grid-area:credit;justify-self:end}
 .stu-debt{grid-area:debt;justify-self:end}
-.pill.cycle{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
+
 .sc-hdr{background:var(--card);color:var(--text);padding:var(--sp-7) var(--sp-6);border-bottom:1px solid var(--border)}
 .sc-name{font-size:var(--fs-5);font-weight:900;color:var(--brand-ink)}
 .sc-meta{font-size:var(--fs-3);color:var(--text-2);margin-top:var(--sp-2)}
@@ -331,9 +330,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 }
 @media (min-width:640px){
   .st-row{grid-template-columns:1fr auto auto auto}
-}
-@media (min-width:640px){
-  .stu-row{grid-template-columns:minmax(0,1fr) minmax(0,15rem) 6.5rem 6.5rem;grid-template-areas:"name range credit debt"}
 }
 @media (min-width:640px){
   .st-total{display:inline}
