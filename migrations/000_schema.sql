@@ -69,6 +69,7 @@ create table if not exists public.sl_users (
   updated_at bigint not null,
   pass_salt text,
   pass_fp text,
+  sort integer,
   constraint sl_users_pkey PRIMARY KEY (client_id),
   constraint sl_users_username_key UNIQUE (username),
   constraint sl_users_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'junior'::text])))

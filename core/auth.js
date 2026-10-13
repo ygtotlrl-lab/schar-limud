@@ -187,7 +187,7 @@ async function authVerify(u, pass) {
 // לכל משתמש ולא רק לאחרון שנכנס, וגם למושבת (authVerify חוסם אותו) — שורה שנשמטה משאירה במכשיר אחר עותק פעיל ישן.
 // רשימת-היתר של עמודות ולא רשימת-איסור: עמודה רגישה שתתווסף לטבלה אינה יורדת לדיסק.
 var AUTH_USER_COLS = ['client_id', 'username', 'full_name', 'role', 'active',
-                      'created_at', 'updated_at', 'pass_salt', 'pass_fp'];
+                      'created_at', 'updated_at', 'pass_salt', 'pass_fp', 'sort'];
 // שדה שנמסר ריק נכתב ריק — איפוס הטביעה הוא ערך ולא היעדר; רק שדה שלא נמסר כלל נשאר כפי שהיה.
 function _authSlim(r) {
   var o = {};
