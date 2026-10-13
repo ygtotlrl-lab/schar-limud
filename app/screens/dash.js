@@ -1,11 +1,13 @@
 // app/screens/dash.js — לוח הבקרה
 import { DAY_MONTHS, dayNoon, dayToday } from '../../core/util.js';
-import { esc } from '../../core/ui.js';
+import { esc, toast } from '../../core/ui.js';
+import { MIRROR } from '../../core/mirror.js';
+import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
-import { YEAR_MONTHS } from '../constants.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
-         slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
+         slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -36,6 +38,10 @@ function screenDashHTML() {
     <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
     <div class="card-body"><div id="dash-chart"></div></div>
   </div>
+  <div class="card">
+    <div class="card-hdr"><h3>טיוטת הערות</h3><span id="dash-notes-st" class="notes-st"></span></div>
+    <div class="card-body"><textarea id="dash-notes" class="notes-ta" data-inp="dash-notes" data-chg="dash-notes" rows="10" placeholder="הערות, משימות ותזכורות" aria-label="טיוטת הערות"></textarea></div>
+  </div>
 </div>
 `;
 }
@@ -43,6 +49,33 @@ function screenDashHTML() {
 function dashPrevYear(){S.DASH_YEAR--;renderDash();}
 
 function dashNextYear(){S.DASH_YEAR++;renderDash();}
+
+// ── טיוטת הערות ──
+// טקסט חופשי אחד, משותף לכל המכשירים — מפתח dash_notes ב-sl_settings, ומיזוג לפי updated_at כמו כל הגדרה.
+// נשמר בהפסקת הקלדה וביציאה מהשדה; הציור אינו דורס שדה שמקלידים בו.
+var notesTimer=null;
+function renderDashNotes(){
+  var ta=document.getElementById('dash-notes');if(!ta||document.activeElement===ta)return;
+  ta.value=S.SETTINGS['dash_notes']||'';
+}
+
+function dashNotesSave(){
+  clearTimeout(notesTimer);notesTimer=null;
+  var ta=document.getElementById('dash-notes');if(!ta)return;
+  var v=ta.value,st=document.getElementById('dash-notes-st');
+  if(v===(S.SETTINGS['dash_notes']||''))return;
+  var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='dash_notes';})[0];
+  var row=Object.assign({},cur||{client_id:newClientId()},{key:'dash_notes',value:JSON.stringify(v)});
+  if(!slLocalWrite(KV_TABLE,row)){toast(MSG_CHANGE_NOT_SAVED,5000,'bad');return;}
+  S.SETTINGS['dash_notes']=v;
+  if(st)st.textContent='נשמר';
+  schedulePush();
+}
+
+function dashNotesInput(){
+  var st=document.getElementById('dash-notes-st');if(st)st.textContent='';
+  clearTimeout(notesTimer);notesTimer=setTimeout(dashNotesSave,1200);
+}
 
 // ── לוח הבקרה ──
 // כל חודש מציג את סך התנועות לפי תאריך התנועה, בלי פריסה — השאלה כאן היא «כמה נגבה בחודש הזה».
@@ -132,6 +165,7 @@ function renderDash(){
     return {lab:MONTH_HE_SHORT[m],val:v,tgt:t,end:pctText(v,t),
             txt:MONTH_HE_SHORT[m]+': נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
   }),'גבייה חודשית מול היעד');
+  renderDashNotes();
 }
 
-export { dashNextYear, dashPrevYear, renderDash, screenDashHTML };
+export { dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash, screenDashHTML };
