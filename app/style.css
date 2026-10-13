@@ -3,9 +3,7 @@
 /* ── אסימוני העיצוב ── */
 :root{
   /* מרחק הטוסט מתחתית המסך — מעל סרגל הלשוניות התחתון הקבוע; טוסט שיושב מתחתיו אינו נראה. */
-  --toast-bottom:calc(var(--tabbar-h) + var(--tabbar-gap) + var(--sp-6));
-  /* שורת הניווט צפה — מורמת מהתחתית במרווח הזה, וכל מרחק ממנה נגזר מ---tabbar-h ומממנו. */
-  --tabbar-gap:var(--sp-6);
+  --toast-bottom:calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom));
   --col:800px;
   /* השוליים מקצות המסך — לרשימה, לכרטיסים ולשורת הניווט הצפה כאחד */
   --gutter:var(--sp-7);
@@ -58,14 +56,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 #topnav{position:sticky;top:0;z-index:var(--z-2);background:var(--bg);display:flex;flex-direction:column;gap:var(--sp-2);max-width:var(--col);margin:0 auto;padding:var(--sp-7) var(--gutter) var(--sp-4)}
 .nav-kicker{font-size:var(--fs-2);font-weight:700;color:var(--kicker);min-height:1em}
 .nav-title{font-size:var(--fs-6);font-weight:800;line-height:var(--lh-2);color:var(--brand-ink)}
-/* השורה צפה — רוחב העמודה פחות הריפוד, מורמת מהתחתית ב---tabbar-gap ובגובה --tabbar-h. */
-#tabbar{position:fixed;bottom:calc(var(--tabbar-gap) + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 2 * var(--gutter));max-width:calc(var(--col) - 2 * var(--gutter));height:var(--tabbar-h);background:var(--nav-bg);border-radius:var(--radius);display:flex;overflow:hidden;z-index:var(--z-2)}
+/* השורה מוצמדת לתחתית לכל רוחב העמודה, כמו בהנהלה — בגובה --tabbar-h ועוד אזור הבטיחות של המכשיר. */
+#tabbar{position:fixed;bottom:0;left:0;right:0;max-width:var(--col);margin:0 auto;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--nav-bg);box-shadow:0 -2px 12px var(--sh-2);display:flex;overflow:hidden;z-index:var(--z-2)}
 .tab-btn{flex:1;background:none;border:none;padding:var(--sp-4) var(--sp-2);font-family:Heebo;font-size:var(--fs-1);color:var(--nav-ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-2);transition:color var(--dur-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--nav-on);font-weight:800}
 .tab-btn:focus-visible{outline:2px solid var(--nav-on);outline-offset:-4px}
 /* סוף התוכן מרוחק מהשורה הצפה כראשו מהכותרת — והכרטיס האחרון אינו מוסיף את המרווח שלו. */
-.panel{display:none;padding:var(--sp-4) var(--gutter) var(--sp-6);padding-bottom:calc(var(--tabbar-h) + var(--tabbar-gap) + var(--sp-6) + env(safe-area-inset-bottom))}
+.panel{display:none;padding:var(--sp-4) var(--gutter) var(--sp-6);padding-bottom:calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom))}
 .panel .card:last-child{margin-bottom:0}
 .panel.active{display:block}
 
