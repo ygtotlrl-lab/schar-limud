@@ -1,7 +1,7 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
 import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, errMsg, isNetErr,
          kvParse, sortCompare } from '../core/util.js';
-import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, eraNotePush, idEq, mergeCore,
+import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
 import { MIRROR, mirrorSave } from '../core/mirror.js';
@@ -341,8 +341,6 @@ async function syncAll(){
       [KV_TABLE]:      pulledSet,
       sl_lists:        pulledLst
     });
-    // שניים משלושת תנאי זריקת העידן נמדדים רק בתוצאת הדחיפה הזו.
-    eraNotePush(_pushRes);
     var stillPending=_pushRes.still;
     // הסריקה מורידה סימון מכל מה שאינו ב-still — ולכן רצה רק כשכל הקטגוריות נמשכו, אחרת ההורדה היא הסקה ולא ראיה.
     if(ctxStale(_ep)) return;

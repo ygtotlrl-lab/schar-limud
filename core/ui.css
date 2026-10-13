@@ -1,6 +1,7 @@
 /* core/ui.css — הגיליון המשותף
    ── סולמות ──
-   תחת הפחתת תנועה כל --dur-N הוא 0s ולא 0 — משך בלי יחידה אינו ערך תקף והמאפיין נזרק בשקט. */
+   תחת הפחתת תנועה כל --dur-N הוא 0s ולא 0 — משך בלי יחידה אינו ערך תקף והמאפיין נזרק בשקט.
+   --tabbar-h — גובה שורת הניווט התחתונה; סוף התוכן וכל אלמנט צף מעליה נגזרים ממנו, וריווח שאינו נגזר נדבק לשורה או משאיר חור. */
 :root{
 --fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
 --sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
@@ -10,6 +11,7 @@
 --op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
 --lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
 --ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
+--tabbar-h:64px;
 --veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
 --alert:#B3261E;--on-alert:#FFFFFF;
 --sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
@@ -33,9 +35,15 @@ body.locked{overflow:hidden}
 .sheet-bd:empty,
 .sheet-ft:empty{display:none}
 /* ── רשימה נפתחת עם חיפוש ──
-   כאן המבנה בלבד — המראה והמצבים בגיליון של האפליקציה, ואותם מצבים בכל אחת. */
+   כאן המבנה בלבד — המראה והמצבים בגיליון של האפליקציה, ואותם מצבים בכל אחת.
+   הרשימה ב-body ובמיקום קבוע, והמשתנים נכתבים מהמלבן של השדה; בדרגת הדיאלוג ואחריו ב-DOM — רשימה בתוך דיאלוג צפה מעליו.
+   --combo-gap המרווח מהשדה ו---combo-max הגובה המרבי — של האפליקציה. */
 .combo{position:relative}
-.combo-list{position:absolute;inset-inline:0;top:100%;z-index:var(--z-3);overflow-y:auto}
+.combo-list{--combo-top:0px;--combo-left:0px;--combo-w:100%;--combo-room:100vh;--combo-gap:0px;--combo-max:240px;
+  position:fixed;z-index:var(--z-4);overflow-y:auto;
+  top:calc(var(--combo-top) + var(--combo-gap));left:var(--combo-left);width:var(--combo-w);
+  max-height:min(var(--combo-max), calc(var(--combo-room) - var(--combo-gap)))}
+.combo-list.is-up{top:calc(var(--combo-top) - var(--combo-gap))}
 .combo-opt{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);width:100%;
   border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
 .combo-empty{cursor:default}

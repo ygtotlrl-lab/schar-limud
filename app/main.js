@@ -1,7 +1,7 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
 import { MSG_OFF_USER_WRITE, MSG_SAVED, appConfigure, getDeviceId,
          netTimeout } from '../core/util.js';
-import { _eraPush, eraKeys, pendAlertDismiss, pendCount, runSave,
+import { eraKeys, pendAlertDismiss, pendCount, runSave,
          sbWatch } from '../core/sync.js';
 import { lsOpen } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorLoadOne, mirrorTables } from '../core/mirror.js';
@@ -150,8 +150,6 @@ var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return S.SB; },
   table:  function () { return KV_TABLE; },
-  // מחזור הסנכרון בונה את מפות הענן, ובלעדיהן שכבת הדחיפה מחזירה «אין ראיה» — ולכן התוצאה נאספת ממנו
-  push:   function () { return syncAll().then(function () { return _eraPush; }); },
   refresh: function () { return syncAll(); },
   log:    function (action, entries) { return logAwait(action, entries); }
 };
