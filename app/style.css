@@ -138,7 +138,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .frm-row-last{margin-bottom:var(--sp-3)}
 .month-inp{text-align:right}
 .month-off{opacity:var(--op-3)}
-.range-hint{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-6)}
 .range-hint-sm{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-2)}
 .table-scroll{overflow-x:auto}
 
@@ -168,6 +167,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* ── דשבורד ── */
 @media (hover:hover){
   .tbl.pivot tfoot tr:hover td{background:var(--card-2)}
+  .tbl.pivot td.mo-pick:hover{background:var(--brand-soft)}
 }
 /* עמודת השם דביקה בימין (RTL) והחודשים נגללים לרוחב.
    גבול העמודה הדביקה הוא box-shadow — עם border-collapse ה-border שייך לטבלה ואינו נגלל עם התא הדביק. */
@@ -175,8 +175,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tbl.pivot td{white-space:nowrap}
 .tbl.pivot th.stu,.tbl.pivot td.stu{position:sticky;right:0;z-index:var(--z-1);text-align:right;font-weight:600;min-width:6rem;background:var(--card);box-shadow:-1px 0 0 var(--border)}
 .tbl.pivot thead th.stu{z-index:var(--z-2);background:var(--bg)}
-.tbl.pivot th.mo{cursor:pointer}
-.tbl.pivot td.mo{cursor:pointer}
+.tbl.pivot tbody tr.grp td{background:var(--bg);color:var(--text-2);font-size:var(--fs-2);font-weight:700}
+/* הסכומים בשורת «סה״כ נגבה» בוחרים את החודש שבפירוט — נראים לחיצים, והנבחר מסומן. */
+.tbl.pivot td.mo-pick{cursor:pointer;color:var(--brand-ink);text-decoration:underline dotted;text-underline-offset:3px}
+.tbl.pivot td.mo-pick.is-on{background:var(--brand-soft);text-decoration:none}
 .tbl.pivot td.off{color:var(--text-3);opacity:var(--op-3)}
 .tbl.pivot td.paid{color:var(--ok)}
 .tbl.pivot td.zero{color:var(--text-3);font-weight:400}
@@ -241,10 +243,31 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .debt-note{font-size:var(--fs-2);color:var(--text-3)}
 .debt-row{background:var(--bg)}
 .student-name{font-weight:600}
+.txn-who{display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
+.txn-who .txn-note{font-size:var(--fs-2);color:var(--text-3);overflow-wrap:anywhere}
 .sum-row{font-weight:700;background:var(--bg)}
 /* ── הגדרות ── */
 .set-list-item{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);gap:var(--sp-4)}
 .set-list-item:last-child{border-bottom:none}
+.set-list-item.dragging{opacity:var(--op-3)}
+.lk-label{flex:1}
+.row-acts{display:flex;gap:var(--sp-3)}
+/* touch-action:none על הידית בלבד — במגע אלמנט שאינו מבטל אותו גולל במקום לגרור,
+   וביטולו על כל השורה היה נועל את גלילת הרשימה. */
+.grip{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex:none;
+  color:var(--text-3);font-size:var(--fs-4);touch-action:none;cursor:grab}
+.grip:active{cursor:grabbing;color:var(--text)}
+/* רשימת התלמידים — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה; בטלפון השם בשורה משלו. */
+.stu-grp-hd{padding:var(--sp-3) var(--sp-6);background:var(--bg);border-bottom:1px solid var(--border);font-size:var(--fs-2);font-weight:700;color:var(--text-2)}
+.stu-row{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem 4.5rem 4.5rem;grid-template-areas:"name name name del" "range credit state del";
+  align-items:center;gap:var(--sp-2) var(--sp-4);padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border)}
+.stu-row:last-child{border-bottom:none}
+.stu-name{grid-area:name;display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
+.stu-range{grid-area:range;font-size:var(--fs-2);color:var(--text-2);min-width:0}
+.stu-credit{grid-area:credit}
+.stu-state{grid-area:state}
+.stu-del{grid-area:del;justify-self:end}
+.pill.shiur{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
 .sc-hdr{background:var(--text);color:var(--card);padding:var(--sp-7) var(--sp-6)}
 .sc-name{font-size:var(--fs-5);font-weight:900}
 .sc-meta{font-size:var(--fs-3);opacity:var(--op-5);margin-top:var(--sp-2)}
@@ -279,6 +302,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 }
 @media (min-width:640px){
   .st-row{grid-template-columns:1fr auto auto}
+}
+@media (min-width:640px){
+  .stu-row{grid-template-columns:minmax(0,1fr) minmax(0,15rem) 6.5rem 5rem 5rem;grid-template-areas:"name range credit state del"}
 }
 @media (min-width:640px){
   .st-total{display:inline}

@@ -7,7 +7,8 @@ import { idEq, newClientId, plTouch, schedulePush, tombKill } from '../../core/s
 import { MIRROR } from '../../core/mirror.js';
 import { authPassFields, authUsersTable, authVerify, sessGet, usersSaveOne,
          writeUser } from '../../core/auth.js';
-import { ask, closeModal, comboSet, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
+import { ask, closeModal, comboSet, dragDef, esc, lookupDragApply, openModal, toast,
+         uiNoDialog } from '../../core/ui.js';
 import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
@@ -17,9 +18,9 @@ import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_ADD_STUDENT, MSG_CONF
          MSG_TUITION_POSITIVE, MSG_VALUE_BAD, MSG_VALUE_EXISTS,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
-import { acadYearLabel, acadYearOf, enrollText, fmt, isCreditValue,
+import { acadYearHeb, acadYearOf, enrollText, fmt, isCreditValue,
          monthKeyOf, pcCascadeDelete, pendLkTag, pendStuTag, pendingCid, readMonthRange,
-         releaseCid, slLocalWrite, slLookups, slSettingsAccess, studentCredit,
+         releaseCid, slLocalWrite, slLookups, slSettingsAccess, slStudentGroups, studentCredit,
          studentInMonth } from '../domain.js';
 
 // נאכפת ביצירה ובשינוי בלבד — אכיפה במסלול הכניסה נועלת בחוץ סיסמה תקפה שנקבעה לפני התקן
@@ -160,17 +161,34 @@ function saveDefaultTuition(){
 // אין אכיפת פורמט שש ספרות כאן ובאף מסלול כניסה — היא נועלת בחוץ סיסמה קיימת ותקפה בלי מסלול שחזור.
 function renderSettingsLists(){
   // יתרת הזכות לשנת הלימודים הנוכחית — שדה נפרד שאינו מעורבב בשום סיכום חוב.
+  // עמודות ברוחב קבוע — שם · תקופות · זכות · מצב · מחיקה — כל תגית באותו מקום בכל שורה.
   var cy=acadYearOf(dayToday());
-  document.getElementById('set-students-list').innerHTML=S.STUDENTS.map(function(s){var er=enrollText(s),cr=studentCredit(s.client_id,cy);return'<div class="set-list-item"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+(er?'<span class="pill">'+esc(er)+'</span>':'')+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearLabel(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; זכות &#8362;'+fmt(cr)+'</span>':'')+'<span class="badge '+(studentInMonth(s)?'green':'gray')+'">'+(studentInMonth(s)?'פעיל':'לא פעיל')+'</span><button class="btn sm danger" data-act="student-del" data-id="'+esc(s.client_id)+'">&#10005; מחק</button></div>';}).join('')||'<div class="empty">אין תלמידים</div>';
+  document.getElementById('set-students-list').innerHTML=slStudentGroups(S.STUDENTS).map(function(g){
+    return '<div class="stu-grp-hd">'+esc(g.label||'ללא שיעור')+'</div>'+g.rows.map(function(s){
+      var cr=studentCredit(s.client_id,cy),sh=(s.card_settings||{}).shiur,on=studentInMonth(s);
+      return '<div class="stu-row">'+
+        '<span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+(sh?'<span class="pill shiur">'+esc(sh)+'</span>':'')+pendStuTag(s)+'</span>'+
+        '<span class="stu-range">'+esc(enrollText(s))+'</span>'+
+        '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות ב'+esc(acadYearHeb(cy))+' — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span>'+
+        '<span class="stu-state"><span class="badge '+(on?'green':'gray')+'">'+(on?'פעיל':'לא פעיל')+'</span></span>'+
+        '<span class="stu-del"><button class="btn sm danger" data-act="student-del" data-id="'+esc(s.client_id)+'">&#10005; מחק</button></span>'+
+      '</div>';
+    }).join('');
+  }).join('')||'<div class="empty">אין תלמידים</div>';
   renderListItems(LK_METHOD,'set-methods-list');renderListItems(LK_SHIUR,'set-shiurim-list');
 }
 
-// סעיף הזיכוי מוצג נעול, בלי כפתור מחיקה — מחיקתו מסתירה אותו מהטופס ומונעת רישום זיכויים חדשים.
+// הסידור בגרירה מהידית, והסדר נכתב לכל השורות מה-DOM הסופי — במנגנון שבליבה.
+dragDef(LK_METHOD, lookupDragApply);
+dragDef(LK_SHIUR, lookupDragApply);
+
+// סעיף הזיכוי נגרר כמו כל אמצעי, אך מוצג נעול ובלי כפתור מחיקה — מחיקתו מסתירה אותו מהטופס ומונעת רישום זיכויים חדשים.
 // הסיווג ההיסטורי אינו נשען על הפריט — הוא נקרא מהמחרוזת ששמורה על התנועה.
-function renderListItems(kind,elId){document.getElementById(elId).innerHTML=slLookups(kind).map(function(i){
-  if(isCreditValue(i.label))return'<div class="set-list-item"><span>'+esc(i.label)+'</span><span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return'<div class="set-list-item"><span>'+esc(i.label)+'</span>'+pendLkTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
-}).join('')||'<div class="empty">ריק</div>';}
+function renderListItems(kind,elId){document.getElementById(elId).innerHTML=(slLookups(kind).map(function(i){
+  var head='<div class="set-list-item" data-drag="'+esc(kind)+'" data-id="'+esc(i.client_id)+'"><span class="grip" data-grip aria-hidden="true">&#10303;</span><span class="lk-label">'+esc(i.label)+'</span>';
+  if(isCreditValue(i.label))return head+'<span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
+  return head+pendLkTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'">&#10005;</button></div>';
+}).join(''))||'<div class="empty">ריק</div>';}
 
 // client_id נוצר במכשיר לפני השליחה — בלעדיו ניסיון חוזר אחרי תשובה שאבדה ברשת יוצר שורה שנייה.
 function addListItem(kind){

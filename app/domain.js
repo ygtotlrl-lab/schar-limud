@@ -6,11 +6,12 @@ import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
 import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
+import { hebYearLabelFull } from '../core/hebrew.js';
 import { authUsersTable, isAdminOf, sessGet, usersRefresh,
          usersSanitize } from '../core/auth.js';
 import { esc, pullRender, toast } from '../core/ui.js';
-import { CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
-         MSG_LOAD_FAIL_POST, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
+import { CREDIT_METHOD, KV_TABLE, LK_METHOD, LK_SHIUR, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
+         MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
 
@@ -227,7 +228,8 @@ function fmt(n){return Number(n||0).toLocaleString('he-IL');}
 
 function acadYearOf(s){var d=dayNoon(String(s));return d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;}
 
-function acadYearLabel(y){var m={2020:'תש"פ',2021:'תשפ"א',2022:'תשפ"ב',2023:'תשפ"ג',2024:'תשפ"ד',2025:'תשפ"ה',2026:'תשפ"ו',2027:'תשפ"ז',2028:'תשפ"ח',2029:'תשפ"ט',2030:'תש"צ'};return (m[y]||y)+'–'+(m[y+1]||(y+1));}
+// שנת הלימודים נקראת בשם השנה העברית שבה חל התשרי שלה — ספטמבר של y, ולכן y+3761.
+function acadYearHeb(y){return hebYearLabelFull(y+3761);}
 
 function monthLabel(y,m){return DAY_MONTHS[m]+' '+(m>=8?y:y+1);}
 
@@ -265,6 +267,16 @@ function periodText(p){return p.end?monthKeyLabel(p.start)+' – '+monthKeyLabel
 
 function enrollText(s){return slPeriods(s).map(periodText).join(' · ');}
 
+// הסדר, החפיפה והתקופה הפתוחה — כמו sl_students_periods_check: רשימה שהמסד דוחה נכשלת סמכותית ואינה עולה לעולם.
+function periodsProblem(ps){
+  var l=ps.slice().sort(function(a,b){return a.start<b.start?-1:1;});
+  for(var i=1;i<l.length;i++){
+    if(!l[i-1].end)return MSG_PERIOD_OPEN_LAST;
+    if(l[i].start<=l[i-1].end)return MSG_PERIOD_OVERLAP;
+  }
+  return '';
+}
+
 function periodHas(p,k){return k>=p.start&&(!p.end||k<=p.end);}
 
 function monthKeyAdd(k,n){var y=+k.slice(0,4),m=+k.slice(5,7)-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;return y+'-'+String(m+1).padStart(2,'0');}
@@ -282,6 +294,22 @@ function periodsToggled(s){
   var end=next?monthKeyAdd(next.start,-1):null;
   if(hit)return ps.map(function(p){return p===hit?{start:p.start,end:end}:p;});
   return ps.concat([{start:k,end:end}]).sort(function(a,b){return a.start<b.start?-1:1;});
+}
+
+// ── שיעורים ──
+// קבוצה לכל שיעור, בסדר הגרירה, ותלמיד בלי שיעור — בקבוצה האחרונה; קבוצה ריקה אינה מוצגת.
+function slStudentGroups(list){
+  var by={},out=[];
+  slLookups(LK_SHIUR).forEach(function(sh){by[sh.label]={label:sh.label,rows:[]};out.push(by[sh.label]);});
+  var rest={label:'',rows:[]};
+  list.forEach(function(st){var sh=(st.card_settings||{}).shiur;(by[sh]||rest).rows.push(st);});
+  return out.concat([rest]).filter(function(g){return g.rows.length;});
+}
+
+// הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
+function studentTuition(s){
+  var cs=(s&&s.card_settings)||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0);
+  return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
@@ -408,7 +436,7 @@ async function ensureCreditMethod(){
 // paid = cash + cred.
 function calcDistribution(sid,year){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
-  var cs=s.card_settings||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0),stuT=cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var stuT=studentTuition(s);
   var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}));
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
@@ -459,11 +487,12 @@ function txnMethodPill(t){
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
 
-export { _slPushOf, acadYearLabel,
+export { _slPushOf, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, readMonthRange, releaseCid, slApplyMirror, slIsAdmin, slKeyOf, slLookups,
-         slLocalWrite, studentContinues, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
+         slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
+         studentTuition, slSanitizeRows, slSendRows, slSettingsAccess, slSortTxns, slSortYears,
          studentCredit, studentInMonth, syncAll, txnAmountHTML, txnMethodPill };

@@ -573,9 +573,44 @@ function dragCancel() {
   return true;
 }
 
+// ── רשימות לסידור — lookups ──
+// השורות, הכתיבה והרינדור — של האפליקציה (LOOKUP_CFG); הזריעה, הסידור והמחיל בגרירה — כאן, אחד לכולן.
+// rows(kind) — השורות החיות בסדרן · put(row) — כתיבה מקומית ⏳ · after() — דריכת הדחיפה · render() — ציור מחדש.
+function lookupList(kind, dflt) {
+  var l = app.LOOKUP_CFG.rows(kind).map(function (r) { return r.label; });
+  return l.length ? l : (dflt || []);
+}
+// ברירות המחדל מתממשות לשורות בפעולת המשתמש הראשונה ולא ברינדור — עריכה וגרירה דורשות מזהה, וכתיבה ברינדור הייתה כותבת במכשיר שרק קורא.
+// המזהה נגזר ממקום הפריט בזריעה — <kind>:<תווית ברירת המחדל> — ושני מכשירים ריקים שזורעים מגיעים לאותה שורה; התווית עצמה ניתנת לעריכה.
+function lookupSeed(kind, dflt) {
+  if (app.LOOKUP_CFG.rows(kind).length) return;
+  for (var i = 0; i < dflt.length; i++)
+    app.LOOKUP_CFG.put({ client_id: kind + ':' + dflt[i], kind: kind, label: dflt[i],
+                         sort: i + 1, updated_at: Date.now(), deleted: false });
+  app.LOOKUP_CFG.after();
+}
+// הסדר נכתב מחדש לכל השורות — שתי שורות באותו sort הן סדר שאיש לא הכריע, והמיזוג מקבע אותו.
+// הקלט הוא הסדר הסופי שב-DOM ולא צמד «מאיפה לאן», וסדר שאינו מכיל בדיוק את כל השורות נדחה.
+function lookupReorder(kind, ids) {
+  var rows = app.LOOKUP_CFG.rows(kind), by = {}, out = [], i, changed = false;
+  for (i = 0; i < rows.length; i++) by[String(rows[i].client_id)] = rows[i];
+  for (i = 0; i < ids.length; i++) if (by[String(ids[i])]) out.push(by[String(ids[i])]);
+  if (out.length !== rows.length) return false;
+  for (i = 0; i < out.length; i++) if (+out[i].sort !== i + 1) changed = true;
+  if (!changed) return false;
+  for (i = 0; i < out.length; i++)
+    app.LOOKUP_CFG.put(Object.assign({}, out[i], { sort: i + 1, updated_at: Date.now() }));
+  app.LOOKUP_CFG.after();
+  return true;
+}
+function lookupDragApply(list, kind) {
+  if (lookupReorder(kind, dragOrder(list, kind, 'data-id'))) app.LOOKUP_CFG.render();
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
          comboInput, comboMake, comboPick, comboSet, comboValue,
-         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lsToast,
+         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey,
+         lookupDragApply, lookupList, lookupSeed, lsToast,
          openModal, pullRender, shellBare, swApply, swHideUpdate,
          swShowUpdate, toast, uiNoDialog };
