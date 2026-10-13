@@ -307,9 +307,10 @@ function slHandledToggle(sid,k){
 // השעון אינו יודע אם המעבר כבר נעשה, ושנה שנגזרת ממנו מתחלפת לפני שהשיעורים עלו.
 function slSchoolYear(){var v=parseInt(S.SETTINGS['school_year'],10);return isFinite(v)&&v>0?v:0;}
 
-// מחזור — שנת הסיום. לפעיל נגזר מהשיעור; ערך שמור גובר — עקיפה ידנית, ומחזור שנרשם ביציאה.
+// מחזור — שנת הסיום, שמורה לכל תלמיד ואינה משתנה במעבר השנתי. slCycleFor — החישוב שממלא אותה
+// בהוספה ובבחירת שיעור בכרטיס; הבורר נשאר לעריכה ידנית.
 function slCycleFor(cls){var y=slSchoolYear();return (y&&CLS_CYCLE_ADD[cls]!=null)?y+CLS_CYCLE_ADD[cls]:0;}
-function slCycleOf(s){var v=parseInt(s&&s.cycle,10);return isFinite(v)&&v>0?v:slCycleFor(s&&s.cls);}
+function slCycleOf(s){var v=parseInt(s&&s.cycle,10);return isFinite(v)&&v>0?v:0;}
 
 // התווית מהמנוע — שנה נושאת תווית אחת.
 function cycleLabel(n){return n?'מחזור '+hebYearLabelFull(n):'';}
@@ -333,7 +334,7 @@ function slArchiveGroups(list){
   });
 }
 
-// המעבר השנתי — ג׳ נסגרים באוגוסט של השנה שמסתיימת ועוברים לארכיון עם מחזורם; ב׳ ⟵ ג׳; א׳ ⟵ ב׳; והשנה מתקדמת.
+// המעבר השנתי — ג׳ נסגרים באוגוסט של השנה שמסתיימת ועוברים לארכיון; ב׳ ⟵ ג׳; א׳ ⟵ ב׳; והשנה מתקדמת. המחזור אינו משתנה.
 // שנה עברית Y מסתיימת באוגוסט של Y−3760. תקופה שמתחילה אחרי החודש הזה — אינה נוגעת.
 function slYearPlan(){
   var y=slSchoolYear();if(!y)return null;
@@ -353,7 +354,7 @@ function slYearApply(plan){
   var n=0,ok=true;
   plan.grad.forEach(function(s){
     var ps=slPeriods(s).map(function(p){return (!p.end||p.end>plan.close)?{start:p.start,end:plan.close}:p;});
-    if(slLocalWrite('sl_students',Object.assign({},s,{periods:ps,cycle:parseInt(s.cycle,10)||plan.year})))n++;else ok=false;
+    if(slLocalWrite('sl_students',Object.assign({},s,{periods:ps})))n++;else ok=false;
   });
   plan.up.forEach(function(s){
     if(slLocalWrite('sl_students',Object.assign({},s,{cls:s.cls==='a'?'b':'g'})))n++;else ok=false;

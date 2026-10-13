@@ -93,7 +93,7 @@ function renderDash(){
   hdr+='<th class="num tot">סה"כ</th></tr>';
   document.getElementById('dash-thead').innerHTML=hdr;
 
-  var rows='',colT={},grand=0;
+  var rows='',colT={},grand=0,defT=parseInt(S.SETTINGS['default_tuition'],10)||0;
   slStudentGroups(act).forEach(function(g){
   rows+='<tr class="grp"><td class="stu" colspan="14">'+esc(g.label||'ללא שיעור')+'</td></tr>';
   g.rows.forEach(function(s){
@@ -105,7 +105,8 @@ function renderDash(){
         cellsHTML+='<td class="num mo off" title="מחוץ לתקופות הפעילות של התלמיד">·</td>';return;
       }
       var extra=v&&!studentInMonth(s,S.DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לתקופות הפעילות של התלמיד"':'';
-      cellsHTML+='<td class="num mo '+(v?'paid':'zero')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
+      // סכום שמתחת לשכר ברירת המחדל — באדום: הנחה, תשלום חלקי, או חודש שלא הושלם.
+      cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<defT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
     });
     grand=Math.round((grand+tot)*100)/100;
     rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHTML+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';

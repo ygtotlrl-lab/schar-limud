@@ -18,7 +18,7 @@ import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSe
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
 import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
-         saveNewStudent, saveStudentSettings, scPastShow, scSelectYear, screenStudentHTML, studentArchiveToggle,
+         saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnMethodHint,
          updateDropdowns } from './screens/txn.js';
@@ -197,10 +197,8 @@ var DOM_ACTIONS = {
   'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
   'dash-month':   function (el) { dashPickMonth(Number(el.getAttribute('data-month'))); },
-  'sc-year':      function (el) { scSelectYear(Number(el.getAttribute('data-year'))); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
-  'sc-past-show':            function () { return scPastShow(); },
   'student-toggle-active':   function () { toggleStudentActive(); },
   'student-handled':         function () { toggleStudentHandled(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
@@ -234,6 +232,7 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'txn-method') txnMethodHint();
+  if (el && el.dataset && el.dataset.chg === 'sc-cls') scClsChanged();
 });
 
 // focus אינו עולה בעץ — ולכן focusin.
