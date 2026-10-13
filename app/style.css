@@ -153,7 +153,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* ── דשבורד ── */
 @media (hover:hover){
   .tbl.pivot tfoot tr:hover td{background:var(--card-2)}
-  .tbl.pivot td.mo-pick:hover{background:var(--brand-soft)}
 }
 /* עמודת השם דביקה בימין (RTL) והחודשים נגללים לרוחב.
    גבול העמודה הדביקה הוא box-shadow — עם border-collapse ה-border שייך לטבלה ואינו נגלל עם התא הדביק. */
@@ -163,8 +162,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tbl.pivot thead th.stu{z-index:var(--z-2);background:var(--bg)}
 .tbl.pivot tbody tr.grp td{background:var(--bg);color:var(--text-2);font-size:var(--fs-2);font-weight:700}
 /* הסכומים בשורת «סה״כ נגבה» בוחרים את החודש שבפירוט — נראים לחיצים, והנבחר מסומן. */
-.tbl.pivot td.mo-pick{cursor:pointer;color:var(--brand-ink);text-decoration:underline dotted;text-underline-offset:3px}
-.tbl.pivot td.mo-pick.is-on{background:var(--brand-soft);text-decoration:none}
 .tbl.pivot td.off{color:var(--text-3);opacity:var(--op-3)}
 .tbl.pivot td.paid{color:var(--ok)}
 .tbl.pivot td.paid.amt-bad{color:var(--bad)}
@@ -184,9 +181,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .paid-cell{color:var(--ok);font-weight:700;text-align:center}
 .req-cell{text-align:center;color:var(--text-2)}
 .bal-cell{text-align:center}
-.dash-total{font-weight:700;border-top:2px solid var(--border);padding:var(--sp-5) var(--sp-6)}
-.dash-total-sub{margin-top:var(--sp-2);font-size:var(--fs-2);color:var(--text-3);font-weight:400}
-.got-amt{color:var(--ok)}
 .month-cell{white-space:nowrap}
 .off-cell{font-size:var(--fs-2);text-align:center}
 .year-label{font-weight:700;color:var(--text);font-size:var(--fs-4);min-width:120px;text-align:center}
@@ -203,25 +197,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .txn-save{width:100%}
 /* ── כרטיס תלמיד ── */
 @media (hover:hover){
-  .st-row:hover{background:var(--card-2)}
-}
-@media (hover:hover){
   .acc-hdr:hover{background:var(--card-2)}
 }
-.st-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:var(--sp-4);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--dur-1)}
-.st-row:last-child{border-bottom:none}
-.st-name{font-size:var(--fs-4);color:var(--text)}
-.st-paid{font-size:var(--fs-3);font-weight:700;min-width:65px;text-align:center}
-.st-total{font-size:var(--fs-2);color:var(--text-3);min-width:80px;text-align:center}
 .acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-5) var(--sp-6);cursor:pointer;user-select:none;border-bottom:1px solid var(--border);background:var(--bg)}
 .acc-hdr span{font-size:var(--fs-3);font-weight:600;color:var(--text)}
 .acc-body{display:none;padding:var(--sp-6)}
 .acc-body.open{display:block}
 .credit-note{background:var(--creditl);border:1px solid var(--credit);color:var(--credit);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-size:var(--fs-3);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-5)}
 .credit-sub{font-size:var(--fs-2);color:var(--text-3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:var(--lh-3)}
-.st-row{grid-template-columns:1fr auto auto}
-.st-total{display:none}
-/* «טופל» לחודש שבפירוט — כבוי במתאר, ודלוק בירוק הבהיר של התגיות. */
+/* «טופל» בשורת התלמיד — כבוי במתאר, ודלוק בירוק הבהיר של התגיות. */
 .st-handled{border:1.5px solid var(--border);background:var(--card);color:var(--text-2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-2);font-weight:700;cursor:pointer;white-space:nowrap}
 .st-handled.is-on{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
 .st-handled:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
@@ -239,12 +223,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sc-grp-hd h3{font-size:var(--fs-4);font-weight:800;color:var(--brand-ink)}
 .sc-grp-cnt{background:var(--brand-soft);color:var(--brand-ink);font-size:var(--fs-1);font-weight:800;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);white-space:nowrap}
 @media (hover:hover){
-  .stu-row:hover .student-name{color:var(--brand-ink)}
+  .stu-open:hover .student-name{color:var(--brand-ink)}
 }
-.sc-row-debt{font-weight:800;white-space:nowrap}
-.sc-row-ok{font-size:var(--fs-2);color:var(--text-3);white-space:nowrap}
 .sc-grp.is-done .sc-grp-hd h3{font-size:var(--fs-3);color:var(--text-2)}
-.sc-grp.is-done .stu-row{font-size:var(--fs-3);color:var(--text-2)}
+.sc-grp.is-done .stu-open{font-size:var(--fs-3);color:var(--text-2)}
 .sc-grp.is-done .student-name{font-weight:500}
 .sc-tools{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-5)}
 .sc-tools h3{font-size:var(--fs-4);font-weight:800;color:var(--brand-ink)}
@@ -284,15 +266,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .grip{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex:none;
   color:var(--text-3);font-size:var(--fs-4);touch-action:none;cursor:grab}
 .grip:active{cursor:grabbing;color:var(--text)}
-/* שורת התלמיד — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה. */
-.stu-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name credit debt";
-  align-items:center;gap:var(--sp-2) var(--sp-4);width:100%;background:none;border:none;border-bottom:1px solid var(--border);
-  padding:var(--sp-4) 0;font-family:Heebo;font-size:var(--fs-4);color:var(--text);text-align:right;cursor:pointer}
+/* שורת התלמיד — עמודות ברוחב קבוע, וכל תגית באותו מקום בכל שורה; «טופל» בקצה. */
+.stu-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--sp-4);border-bottom:1px solid var(--border)}
 .stu-row:last-child{border-bottom:none}
-.stu-row:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px;border-radius:var(--r-3)}
+.stu-open{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name credit";
+  align-items:center;gap:var(--sp-2) var(--sp-4);width:100%;background:none;border:none;
+  padding:var(--sp-4) 0;font-family:Heebo;font-size:var(--fs-4);color:var(--text);text-align:right;cursor:pointer}
+.stu-open:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px;border-radius:var(--r-3)}
 .stu-name{grid-area:name;display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
 .stu-credit{grid-area:credit;justify-self:end}
-.stu-debt{grid-area:debt;justify-self:end}
 
 .sc-hdr{background:var(--card);color:var(--text);padding:var(--sp-7) var(--sp-6);border-bottom:1px solid var(--border)}
 .sc-name{font-size:var(--fs-5);font-weight:900;color:var(--brand-ink)}
@@ -328,11 +310,5 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 }
 @media (min-width:640px){
   .tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}
-}
-@media (min-width:640px){
-  .st-row{grid-template-columns:1fr auto auto auto}
-}
-@media (min-width:640px){
-  .st-total{display:inline}
 }
 

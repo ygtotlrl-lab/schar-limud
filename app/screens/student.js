@@ -16,7 +16,7 @@ import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredApplied,
          slCycleOf, slHandledToggle, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
          slSortTxns, slSortYears, slStudentGroups, studentContinues, studentHandled, studentInMonth,
-         studentTuition, studentYearDebt, txnAmountHTML, txnMethodPill } from '../domain.js';
+         studentTuition, txnAmountHTML, txnMethodPill } from '../domain.js';
 
 function screenStudentHTML() {
   return `
@@ -104,23 +104,22 @@ function screenStudentHTML() {
 // ── רשימת התלמידים ──
 // הרשימה — מי שיש לו תקופה בחודש הנוכחי או אחריו, מקובץ לפי שיעור: שלא טופלו החודש — מעל הקו, ושטופלו — מתחתיו.
 // הארכיון — מי שכל תקופותיו הסתיימו, מקובץ לפי מחזור, החדש ראשון. החיפוש מסנן בשתיהן, ואינו משנה סדר.
-// השורה — שם · יתרת זכות · וחוב השנה עד החודש הנוכחי; המחזור והתקופות — בכרטיס בלבד.
-function studentRowHTML(s){
-  var d=studentYearDebt(s),t=studentTuition(s),cr=studentCredit(s.client_id,acadYearOf(dayToday()));
-  var end=d>0?'<span class="sc-row-debt '+(t>0&&d>=t?'amt-bad':'amt-warn')+'">&#8722;&#8362;'+fmt(d)+'</span>'
-             :'<span class="sc-row-ok">מסודר</span>';
-  return '<button class="stu-row" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
+// השורה — שם · יתרת זכות · ו«טופל» לחודש הנוכחי (בארכיון — בלי «טופל»); המחזור והתקופות — בכרטיס בלבד.
+function studentRowHTML(s,arch){
+  var cr=studentCredit(s.client_id,acadYearOf(dayToday())),k=monthKeyOf(dayToday()),hd=!arch&&studentHandled(s,k);
+  return '<div class="stu-row"><button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
     '<span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
-    '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span>'+
-    '<span class="stu-debt">'+end+'</span></button>';
+    '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span></button>'+
+    (arch?'':'<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל ✓':'טופל')+'</button>')+
+    '</div>';
 }
 
-function groupsHTML(groups,done,count){
+function groupsHTML(groups,done,count,arch){
   return groups.map(function(g){
     return '<section class="sc-grp'+(done?' is-done':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+
       (count?'<span class="sc-grp-cnt">'+g.rows.length+' '+count+'</span>':'')+'</div>'+
-      g.rows.map(studentRowHTML).join('')+'</section>';
+      g.rows.map(function(s){return studentRowHTML(s,arch);}).join('')+'</section>';
   }).join('');
 }
 
@@ -134,7 +133,7 @@ function renderStudentList(){
   ab.innerHTML=arch?'&#8250; חזרה לתלמידים':'&#128451; ארכיון · '+archAll.length;
   var list=(arch?archAll:live).filter(hit);
   if(!list.length){box.innerHTML='<div class="empty">'+(q?'אין תלמיד התואם את החיפוש':arch?'הארכיון ריק':'אין תלמידים')+'</div>';return;}
-  if(arch){box.innerHTML=groupsHTML(slArchiveGroups(list),false,'');return;}
+  if(arch){box.innerHTML=groupsHTML(slArchiveGroups(list),false,'',true);return;}
   var done=list.filter(function(s){return studentHandled(s,k);});
   box.innerHTML=groupsHTML(slStudentGroups(list.filter(function(s){return !studentHandled(s,k);})),false,'לטיפול')+
     '<div class="sc-line"><span>טופלו החודש · '+done.length+'</span></div>'+groupsHTML(slStudentGroups(done),true,'');

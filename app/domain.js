@@ -371,13 +371,6 @@ function studentTuition(s){
   return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
 }
 
-// חוב השנה עד החודש הנוכחי — החיוב פחות מה שנפרס על החודשים שעד היום; חודש מחוץ לתקופות אינו מחויב.
-function studentYearDebt(s){
-  var y=acadYearOf(dayToday()),k=monthKeyOf(dayToday()),d=calcDistribution(s.client_id,y),t=0;
-  YEAR_MONTHS.forEach(function(m){var i=d[m];if(!i||i.off||acadMonthKey(y,m)>k)return;t+=i.req-i.paid;});
-  return Math.max(0,Math.round(t*100)/100);
-}
-
 // ── יתרת זכות וזיכוי מיתרה ──
 
 function isCreditValue(v){return String(v==null?'':v).trim()===CREDIT_METHOD;}
@@ -551,7 +544,7 @@ function txnMethodPill(t){
   return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
 }
 
-export { _slPushOf, acadMonthKey, acadYearHeb,
+export { _slPushOf, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
@@ -561,5 +554,5 @@ export { _slPushOf, acadMonthKey, acadYearHeb,
          cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
          studentArchived,
          studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
-         studentCredit, studentHandled, studentInMonth, studentYearDebt, syncAll, txnAmountHTML,
+         studentCredit, studentHandled, studentInMonth, syncAll, txnAmountHTML,
          txnMethodPill };

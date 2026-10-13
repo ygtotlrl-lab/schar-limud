@@ -12,7 +12,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS }
 import { S, shell } from './state.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
          slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
-import { dashNextYear, dashPickMonth, dashPrevYear, renderDash,
+import { dashNextYear, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
@@ -196,7 +196,6 @@ var DOM_ACTIONS = {
   'list-add':     function (el) { openListAdd(el.getAttribute('data-list')); },
   'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
-  'dash-month':   function (el) { dashPickMonth(Number(el.getAttribute('data-month'))); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
   'student-toggle-active':   function () { toggleStudentActive(); },

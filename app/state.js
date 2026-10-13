@@ -9,7 +9,6 @@ const S = {
   SETTINGS: {},
   LOOKUPS: {},
   DASH_YEAR: null,
-  DASH_MONTH: null,
   SC_STUDENT_ID: null,
   SC_Q: '',
   // _slLastSeenOk היא חותמת תצוגה בלבד
