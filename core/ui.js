@@ -285,8 +285,34 @@ function pullFlush() {
   if (!_pullQ.length) return;
   if (inputOpen()) { _pullT = setTimeout(pullFlush, PULL_WAIT_MS); return; }
   var q = _pullQ; _pullQ = [];
+  var kept = typedKeep();
   q.forEach(function (f) { try { f(); } catch (e) { console.error('[pull] ציור אחרי משיכה נכשל', e); } });
+  typedPut(kept);
 }
+
+// ── מה שהוקלד ולא נשמר ──
+// שדה שהמשתמש הקליד בו ויצא ממנו בלי לשמור — הציור שאחרי משיכה מחזיר אליו את מה שהוקלד, בשדה החדש שבאותו מזהה.
+// הסימון על האלמנט עצמו — ציור שהמשתמש גרם לו בונה אלמנט חדש בלי סימון, ובו הערך השמור הוא האמת.
+function typedMark(ev) {
+  var t = ev.target;
+  if (t && t.id && t.matches && t.matches(PULL_FIELD) && !t.closest('#modal,#ask')) t._typed = true;
+}
+function typedKeep() {
+  var out = [];
+  document.querySelectorAll(PULL_FIELD).forEach(function (el) {
+    if (el._typed && el.id && el.isConnected) out.push({ id: el.id, v: el.value });
+  });
+  return out;
+}
+function typedPut(kept) {
+  kept.forEach(function (k) {
+    var el = document.getElementById(k.id);
+    if (!el || el.value === k.v) return;
+    if (el.tagName === 'SELECT' && !Array.prototype.some.call(el.options, function (o) { return o.value === k.v; })) return;
+    el.value = k.v; el._typed = true;
+  });
+}
+try { document.addEventListener('input', typedMark, true); document.addEventListener('change', typedMark, true); } catch (e) { }
 
 // ── Enter שומר בשדה עריכה ──
 // ההיקף הוא הטופס ולא השדה — שדה שנוסף לטופס מקבל את המקש בלי שאיש ייגע בו.

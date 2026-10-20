@@ -3,7 +3,7 @@
 import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNetErr,
          kvParse, netTimeout } from './util.js';
 import { lsFlush, lsGet, lsKeys, lsLog, lsSet, lsWire } from './storage.js';
-import { closeModal, esc, swShowUpdate, toast } from './ui.js';
+import { closeModal, esc, pullRender, swShowUpdate, toast } from './ui.js';
 import { mirrorWipe } from './mirror.js';
 
 // ── מזהי רשומות ──
@@ -301,6 +301,10 @@ function pendDrawFlush() {
   });
   if (!revealed) return;
   pendRender();
+  pullRender(pendRedrawRun);
+}
+// ציור התגיות עובר בשומר של הציור שאחרי משיכה — הוא רץ מעצמו אחרי כל שמירה, ובונה מחדש מסכים שמישהו מקליד בהם.
+function pendRedrawRun() {
   try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.redraw) app.PEND_CFG.redraw(); } catch (e) { }
 }
 // סימון שירד יורד גם מהשורות שכבר צוירו — מונה שהתאפס ליד תגית שנשארה הוא שני מצבים לאותה רשומה.
@@ -311,7 +315,7 @@ function pendRedrawSoon() {
   try {
     _pendRedrawTimer = setTimeout(function () {
       _pendRedrawTimer = null;
-      try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.redraw) app.PEND_CFG.redraw(); } catch (e) { }
+      pullRender(pendRedrawRun);
     }, 0);
   } catch (e) { _pendRedrawTimer = null; }
 }
