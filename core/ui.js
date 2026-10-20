@@ -274,7 +274,14 @@ function inputOpen() {
   if (a && a.matches && a.matches(PULL_FIELD) && a.getClientRects().length) return true;
   // עריכה בשורה נספרת גם כשהלשונית שלה מוסתרת — ההקלדה מחכה לחזרה, וציור היה מוחק אותה.
   if (document.querySelector('[data-editing]')) return true;
+  // גרירה באמצע — ציור היה מחליף את האלמנט שבאצבע; התקרה מבטיחה שחרור גם אם סוף הגרירה נבלע
+  if (Date.now() < _holdUntil) return true;
   return !!document.querySelector('#modal.open,#ask.open');
+}
+var _holdUntil = 0, UI_HOLD_MAX_MS = 15000;
+function uiHold(on) {
+  _holdUntil = on ? Date.now() + UI_HOLD_MAX_MS : 0;
+  if (!on && _pullQ.length) pullFlush();
 }
 function pullRender(fn) {
   if (_pullQ.indexOf(fn) < 0) _pullQ.push(fn);
@@ -285,9 +292,42 @@ function pullFlush() {
   if (!_pullQ.length) return;
   if (inputOpen()) { _pullT = setTimeout(pullFlush, PULL_WAIT_MS); return; }
   var q = _pullQ; _pullQ = [];
-  var kept = typedKeep();
+  var kept = typedKeep(), scr = scrollKeep();
   q.forEach(function (f) { try { f(); } catch (e) { console.error('[pull] ציור אחרי משיכה נכשל', e); } });
   typedPut(kept);
+  scrollPut(scr);
+}
+
+// ── מיקום הגלילה ──
+// מיכל גלילה שנבנה מחדש חוזר להתחלה — הציור שאחרי משיכה מחזיר אותו למקומו, לפי מזהה, ובלעדיו לפי המחלקה ומקומו בין שותפיה.
+// גלילת הדף עצמו אינה כאן — הציור אינו מחליף את המסמך, והיא נשארת.
+function scrollKey(el) {
+  if (el.id) return '#' + el.id;
+  var c = el.getAttribute('class');
+  if (!c) return '';
+  var sel = '.' + c.trim().split(/\s+/).join('.');
+  var all; try { all = document.querySelectorAll(sel); } catch (e) { return ''; }
+  return sel + '@' + Array.prototype.indexOf.call(all, el);
+}
+function scrollKeep() {
+  var out = [], root = document.scrollingElement;
+  document.querySelectorAll('body *').forEach(function (el) {
+    if (el === root || (!el.scrollLeft && !el.scrollTop)) return;
+    var k = scrollKey(el);
+    if (k) out.push({ k: k, l: el.scrollLeft, t: el.scrollTop });
+  });
+  return out;
+}
+function scrollPut(kept) {
+  kept.forEach(function (s) {
+    var el = null;
+    if (s.k.charAt(0) === '#') el = document.getElementById(s.k.slice(1));
+    else {
+      var at = s.k.lastIndexOf('@');
+      try { el = document.querySelectorAll(s.k.slice(0, at))[Number(s.k.slice(at + 1))] || null; } catch (e) { el = null; }
+    }
+    if (el) { el.scrollLeft = s.l; el.scrollTop = s.t; }
+  });
 }
 
 // ── מה שהוקלד ולא נשמר ──
@@ -561,6 +601,7 @@ function dragDown(e) {
   if (!el) return false;
   _drag = { el: el, list: el.parentNode, home: el.nextSibling, kind: el.getAttribute('data-drag'), moved: false };
   el.classList.add('dragging');
+  uiHold(true);
   // בלי לכידת המצביע אצבע שיוצאת מגבול האלמנט מפסיקה לשדר, והגרירה נתקעת.
   try { g.setPointerCapture(e.pointerId); } catch (e1) {}
   e.preventDefault();
@@ -586,6 +627,7 @@ function dragUp() {
   if (!_drag) return false;
   var d = _drag; _drag = null;
   d.el.classList.remove('dragging');
+  uiHold(false);
   var fn = _dragApply[d.kind];
   if (d.moved && fn) fn(d.list, d.kind);
   return true;
@@ -595,6 +637,7 @@ function dragCancel() {
   if (!_drag) return false;
   var d = _drag; _drag = null;
   d.el.classList.remove('dragging');
+  uiHold(false);
   if (d.moved) d.list.insertBefore(d.el, d.home);
   return true;
 }
@@ -639,4 +682,4 @@ export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus,
          dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey,
          lookupDragApply, lookupList, lookupSeed, lsToast,
          openModal, pullRender, shellBare, swApply, swHideUpdate,
-         swShowUpdate, toast, uiNoDialog };
+         swShowUpdate, toast, uiHold, uiNoDialog };
