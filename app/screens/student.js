@@ -101,12 +101,15 @@ function screenStudentHTML() {
 // ── רשימת התלמידים ──
 // הרשימה — מי שיש לו תקופה בחודש הנוכחי או אחריו, מקובץ לפי שיעור: שלא טופלו החודש — מעל הקו, ושטופלו — מתחתיו.
 // הארכיון — מי שכל תקופותיו הסתיימו, מקובץ לפי מחזור, החדש ראשון. החיפוש מסנן בשתיהן, ואינו משנה סדר.
-// השורה — שם · יתרת זכות · ו«טופל» לחודש הנוכחי (בארכיון — בלי «טופל»); המחזור והתקופות — בכרטיס בלבד.
+// האריח — סמל · שם · יתרת זכות · ו«טופל» לחודש הנוכחי (בארכיון — בלי «טופל»); המחזור והתקופות — בכרטיס בלבד.
+// שני אריחים בשורה מ-560px, אחד בטלפון; הכרטיס הפתוח נפרש לכל רוחב הקבוצה בשורה שמתחת לאריח שלו.
+function stuInitials(name){var p=String(name||'?').trim().split(/\s+/);return (p[0]||'?').charAt(0)+(p[1]?p[1].charAt(0):'');}
 function studentRowHTML(s,arch){
   var cr=studentCredit(s.client_id,acadYearOf(dayToday())),k=monthKeyOf(dayToday()),hd=!arch&&studentHandled(s,k);
   return '<div class="stu-row"><button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
-    '<span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
-    '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span></button>'+
+    '<span class="stu-av" aria-hidden="true">'+esc(stuInitials(s.name))+'</span>'+
+    '<span class="stu-txt"><span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
+    '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span></span></button>'+
     (arch?'':'<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל ✓':'טופל')+'</button>')+
     '</div>';
 }
@@ -116,7 +119,7 @@ function groupsHTML(groups,done,count,arch){
     return '<section class="sc-grp'+(done?' is-done':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+
       (count?'<span class="sc-grp-cnt">'+g.rows.length+' '+count+'</span>':'')+'</div>'+
-      g.rows.map(function(s){return studentRowHTML(s,arch);}).join('')+'</section>';
+      '<div class="stu-tiles">'+g.rows.map(function(s){return studentRowHTML(s,arch);}).join('')+'</div></section>';
   }).join('');
 }
 
