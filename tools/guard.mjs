@@ -37,6 +37,38 @@ for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
 checked++;
 if (!/<script type="module" src="app\/main\.js"><\/script>/.test(html)) fails.push('index.html — אינו טוען את app/main.js');
 
+// ── index.html — שלד ה-<head>, הרשימה הסגורה של שורה 30 ──
+// סטייה כאן אינה שוברת דבר ואינה נראית לעין — ולכן נבדקת: בלי בדיקה היא נכנסת שוב בשקט.
+{
+  checked++;
+  let theme = null;
+  try {
+    const ctx = createContext({});
+    ctx.self = ctx;
+    runInContext(readFileSync(join(ROOT, 'app.config.js'), 'utf8'), ctx);
+    theme = ctx.APP.colors.theme;
+  } catch (e) { theme = null; }
+  const head = (html.match(/<head>([\s\S]*?)<\/head>/) || ['', ''])[1];
+  const metas = [...head.matchAll(/<meta\b[^>]*>/g)].map(m => m[0]);
+  const wantMeta = ['<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
+    '<meta name="color-scheme" content="light dark">',
+    `<meta name="theme-color" content="${theme}">`];
+  // שם הנכס בלי הטביעה — gen-icons מחליף אותה, והצורה היא שנבדקת.
+  const icons = [...head.matchAll(/<link\b[^>]*\bicons\/[^>]*>/g)].map(m => m[0].replace(/\.[0-9a-f]{8}\.png/, '.png'));
+  const wantIcons = ['<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">',
+    '<link rel="icon" href="icons/favicon-32.png" sizes="32x32">',
+    '<link rel="icon" href="icons/favicon-16.png" sizes="16x16">'];
+  if (!html.startsWith('<!DOCTYPE html>\n<html lang="he" dir="rtl">\n<head>\n'))
+    fails.push('index.html — הפתיחה אינה `<!DOCTYPE html>` · `<html lang="he" dir="rtl">` · `<head>`');
+  if (!theme) fails.push('index.html — צבע הנושא לא נקרא מ-app.config.js');
+  if (metas.join('\n') !== wantMeta.join('\n'))
+    fails.push('index.html — תגי ה-meta אינם הרשימה הסגורה (שורה 30): ' + (metas.join(' ') || 'אין'));
+  if (!/^\s*<title><\/title>/m.test(head)) fails.push('index.html — `<title></title>` ריק חסר');
+  if (icons.join('\n') !== wantIcons.join('\n'))
+    fails.push('index.html — תגי האייקונים אינם בצורה שבשורה 30: ' + (icons.join(' ') || 'אין'));
+}
+
 // ── sw.js — סקריפט קלאסי ──
 const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
 syntax('sw.js', sw, 'commonjs');
