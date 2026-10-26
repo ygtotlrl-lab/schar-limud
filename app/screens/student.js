@@ -10,6 +10,7 @@ import { CLS_LIST, CLS_NAME, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVE
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
+import { icon } from '../icons.js';
 import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredApplied, distCredit, enrollText, fmt,
          isCreditTxn, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendTxnTag, pendingCid,
          periodText, periodsProblem, periodsToggled, readMonthRange, releaseCid, slArchiveGroups, slCycleFor,
@@ -24,7 +25,7 @@ function screenStudentHTML() {
   <div id="sc-list-view">
     <div class="sc-tools">
       <h3 id="sc-view-title">תלמידים</h3>
-      <button class="btn sm out" data-act="sc-manage">&#9881; ניהול</button>
+      <button class="btn sm out" data-act="sc-manage">${icon('settings')}ניהול</button>
     </div>
     <div class="sc-search">
       <input id="sc-q" class="sc-q" type="search" data-inp="sc-q" placeholder="חיפוש" aria-label="חיפוש תלמיד" autocomplete="off">
@@ -40,7 +41,7 @@ function screenStudentHTML() {
           <div class="sc-togs">
             <button class="sc-tog tog-act-off" id="sc-handled-tog" data-act="student-handled" aria-pressed="false">טופל</button>
             <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
-            <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">&#10005;</button>
+            <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
           </div>
         </div>
       </div>
@@ -50,12 +51,12 @@ function screenStudentHTML() {
       </div>
       <div id="sc-past-wrap" class="hidden">
         <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-past">
-          <span>&#128220; שנים קודמות</span><span id="acc-icon-sc-past">&#9660;</span>
+          <span>${icon('archive')}שנים קודמות</span><span id="acc-icon-sc-past">${icon('down')}</span>
         </div>
         <div class="acc-body" id="acc-sc-past"></div>
       </div>
       <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
-        <span>&#9998; הגדרות תלמיד</span><span id="acc-icon-sc-settings">&#9660;</span>
+        <span>${icon('edit')}הגדרות תלמיד</span><span id="acc-icon-sc-settings">${icon('down')}</span>
       </div>
       <div class="acc-body" data-ks id="acc-sc-settings">
         <div class="frm-row">
@@ -84,7 +85,7 @@ function screenStudentHTML() {
         </div>
         <div class="row-acts">
           <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
-          <button class="btn sm danger" data-act="student-del">&#10005; מחיקת התלמיד</button>
+          <button class="btn sm danger" data-act="student-del">${icon('del')}מחיקת התלמיד</button>
         </div>
         <div class="sc-part">
           <div class="sc-sub-title">&#128197; תקופות פעילות</div>
@@ -110,7 +111,7 @@ function studentRowHTML(s,arch){
     '<span class="stu-av" aria-hidden="true">'+esc(stuInitials(s.name))+'</span>'+
     '<span class="stu-txt"><span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
     '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span></span></button>'+
-    (arch?'':'<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל ✓':'טופל')+'</button>')+
+    (arch?'':'<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל'+icon('check'):'טופל')+'</button>')+
     '</div>';
 }
 
@@ -130,7 +131,7 @@ function renderStudentList(){
   var archAll=S.STUDENTS.filter(studentArchived),live=S.STUDENTS.filter(function(s){return !studentArchived(s);});
   document.getElementById('sc-view-title').textContent=arch?'ארכיון':'תלמידים';
   var ab=document.getElementById('sc-arch-btn');
-  ab.innerHTML=arch?'&#8250; חזרה לתלמידים':'&#128451; ארכיון · '+archAll.length;
+  ab.innerHTML=arch?icon('prev')+'חזרה לתלמידים':icon('archive')+'ארכיון · '+archAll.length;
   var list=(arch?archAll:live).filter(hit);
   if(!list.length){box.innerHTML='<div class="empty">'+(q?'אין תלמיד התואם את החיפוש':arch?'הארכיון ריק':'אין תלמידים')+'</div>';return;}
   if(arch){box.innerHTML=groupsHTML(slArchiveGroups(list),false,'',true);return;}
@@ -146,8 +147,8 @@ function studentArchiveToggle(){S.SC_ARCH=!S.SC_ARCH;renderStudentPanel();window
 // ── ניהול — הוספה ומעבר שנתי, כמו בהנהלה ──
 function openStudentsManage(){
   openModal(MSG_STUDENTS_MANAGE,'<div class="admin-list">'+
-    '<button class="admin-item menu-plain" data-act="student-open-add"><span class="admin-ico">&#10133;</span>הוסף תלמיד</button>'+
-    '<button class="admin-item menu-warn" data-act="year-open"><span class="admin-ico">&#128260;</span>מעבר שנתי</button>'+
+    '<button class="admin-item menu-plain" data-act="student-open-add"><span class="admin-ico">'+icon('plus')+'</span>הוסף תלמיד</button>'+
+    '<button class="admin-item menu-warn" data-act="year-open"><span class="admin-ico">'+icon('cycle')+'</span>מעבר שנתי</button>'+
   '</div>','');
 }
 
@@ -215,7 +216,7 @@ function openYearTransition(){
     '</div>'+
     '<div class="year-danger">לא ניתן לבטל פעולה זו לאחר האישור.</div>',
     '<button class="btn out" data-act="modal-close">ביטול</button>'+
-    '<button class="btn danger" data-act="year-go">&#128260; בצע מעבר שנתי</button>');
+    '<button class="btn danger" data-act="year-go">'+icon('cycle')+'בצע מעבר שנתי</button>');
 }
 
 function doYearTransition(){
@@ -271,8 +272,8 @@ function renderStudentCard(){
   var cs=s.card_settings||{};
   var meta=[];if(CLS_NAME[s.cls])meta.push(CLS_NAME[s.cls]);var cyl=cycleLabel(slCycleOf(s));if(cyl)meta.push(cyl);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
-  var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.textContent=on?'פעיל ✓':'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
-  var hd=studentHandled(s),ht=document.getElementById('sc-handled-tog');ht.textContent=hd?'טופל ✓':'טופל';ht.className='sc-tog '+(hd?'tog-act-on':'tog-act-off');ht.setAttribute('aria-pressed',hd?'true':'false');
+  var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.innerHTML=on?'פעיל'+icon('check'):'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
+  var hd=studentHandled(s),ht=document.getElementById('sc-handled-tog');ht.innerHTML=hd?'טופל'+icon('check'):'טופל';ht.className='sc-tog '+(hd?'tog-act-on':'tog-act-off');ht.setAttribute('aria-pressed',hd?'true':'false');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
@@ -285,8 +286,8 @@ function renderStudentCard(){
 function renderScPeriods(s){
   document.getElementById('sc-periods-list').innerHTML=slPeriods(s).map(function(p){
     return '<div class="set-list-item"><span>'+esc(periodText(p))+'</span><span class="row-acts">'+
-      '<button class="btn sm out" data-act="period-open" data-id="'+esc(p.start)+'">&#9998; עריכה</button>'+
-      '<button class="btn sm danger" data-act="period-del" data-id="'+esc(p.start)+'">&#10005; מחק</button></span></div>';
+      '<button class="btn sm out" data-act="period-open" data-id="'+esc(p.start)+'">'+icon('edit')+'עריכה</button>'+
+      '<button class="btn sm danger" data-act="period-del" data-id="'+esc(p.start)+'">'+icon('del')+'מחק</button></span></div>';
   }).join('')||'<div class="empty">אין תקופות — התלמיד אינו מחויב באף חודש</div>';
 }
 

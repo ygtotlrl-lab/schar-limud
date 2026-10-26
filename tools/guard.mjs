@@ -62,10 +62,10 @@ if (!/<script type="module" src="app\/main\.js"><\/script>/.test(html)) fails.pu
     fails.push('index.html — הפתיחה אינה `<!DOCTYPE html>` · `<html lang="he" dir="rtl">` · `<head>`');
   if (!theme) fails.push('index.html — צבע הנושא לא נקרא מ-app.config.js');
   if (metas.join('\n') !== wantMeta.join('\n'))
-    fails.push('index.html — תגי ה-meta אינם הרשימה הסגורה שבשורה «שלד הדף»: ' + (metas.join(' ') || 'אין'));
+    fails.push('index.html — תגי ה-meta אינם הרשימה הסגורה שבשורה «ראש הדף»: ' + (metas.join(' ') || 'אין'));
   if (!/^\s*<title><\/title>/m.test(head)) fails.push('index.html — `<title></title>` ריק חסר');
   if (icons.join('\n') !== wantIcons.join('\n'))
-    fails.push('index.html — תגי האייקונים אינם בצורה שבשורה «שלד הדף»: ' + (icons.join(' ') || 'אין'));
+    fails.push('index.html — תגי האייקונים אינם בצורה שבשורה «ראש הדף»: ' + (icons.join(' ') || 'אין'));
 }
 
 // ── sw.js — סקריפט קלאסי ──

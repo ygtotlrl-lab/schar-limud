@@ -10,6 +10,7 @@ import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragC
          dragMove, dragUp, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
+import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
          slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
@@ -222,6 +223,11 @@ var DOM_ACTIONS = {
 };
 
 actWire(DOM_ACTIONS);
+
+// הלשוניות במעטפת הסטטית — האייקון נכנס מכאן, כי index.html אינו נושא את הסט.
+document.querySelectorAll('.tab-btn[data-panel] .ti').forEach(function (el) {
+  el.innerHTML = icon(el.parentElement.getAttribute('data-panel'));
+});
 
 
 document.addEventListener('input', function (e) {

@@ -6,6 +6,7 @@ import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
+import { icon } from '../icons.js';
 import { acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
          slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
@@ -21,9 +22,9 @@ function screenDashHTML() {
       <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
            אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
       <div class="year-nav">
-        <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת">&#9654;</button>
+        <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת" aria-label="שנה קודמת">${icon('prev')}</button>
         <span id="dash-year-label" class="year-label"></span>
-        <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה">&#9664;</button>
+        <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה" aria-label="שנה הבאה">${icon('next')}</button>
       </div>
     </div>
     <div class="dash-scroll">

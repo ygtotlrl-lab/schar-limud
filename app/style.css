@@ -328,4 +328,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 @media (min-width:640px){
   .tbl th{padding:var(--sp-4) var(--sp-5);font-size:var(--fs-2)}
 }
-
+/* ── אייקונים ── */
+/* העובי נקבע כאן ולא ב-icon() — גוף הפונקציה אינו נערך לאפליקציה אחת. */
+.ico{width:1.15em;height:1.15em;flex:none;stroke-width:1.6;vertical-align:-.2em}
+.btn .ico,.txn-more .ico,.sc-tog .ico,.st-handled .ico,.acc-hdr span .ico{margin-inline-end:var(--sp-2)}
+.sc-tog .ico,.st-handled .ico{margin-inline:var(--sp-2) 0}
+.tab-btn .ti{display:flex;align-items:center;justify-content:center}
+.tab-btn .ti .ico{width:22px;height:22px}
+.admin-ico{display:inline-flex;align-items:center;justify-content:center}
+.sc-close .ico{width:20px;height:20px;vertical-align:middle}
