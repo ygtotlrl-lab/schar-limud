@@ -609,7 +609,10 @@ for (const [base, size] of [['icon-192', 192], ['icon-512', 512],
   putWeb(base, encodePng(size, size, tile(size, null)));
 // ה-maskable הוא נכס נפרד ולא אותו קובץ עם purpose אחר — הסמל בו מוקטן לתוך אזור הבטחה.
 putWeb('icon-maskable-512', encodePng(512, 512, tile(512, FG_FRAC)));
-for (const f of ['index.html', 'sw.js']) {
+// כל מי שמפנה לנכס בשמו מתעדכן כאן — הפניה שלא עודכנה מצביעה על קובץ שנמחק, והתמונה נעלמת בלי שגיאה.
+const jsUnder = (d) => !existsSync(join(ROOT, d)) ? [] : readdirSync(join(ROOT, d), { withFileTypes: true })
+  .flatMap((e) => e.isDirectory() ? jsUnder(d + '/' + e.name) : e.name.endsWith('.js') ? [d + '/' + e.name] : []);
+for (const f of ['index.html', 'sw.js', ...jsUnder('app')]) {
   const p = join(ROOT, f);
   if (!existsSync(p)) continue;
   const src = readFileSync(p, 'utf8');
