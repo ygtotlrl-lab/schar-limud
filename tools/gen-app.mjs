@@ -177,19 +177,23 @@ ${body}
 `;
 }
 
-// גשר השיתוף נוצר רק כש-android.share מוצהר — אחרת קטע @@share … @@end יורד כולו.
+// גשר השיתוף נוצר רק כש-android.share מוצהר, ופתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק; אחרת הקטע יורד כולו.
 function javaFile(name) {
   return A => {
     const share = A.android.share;
+    if (!A.android.launch) throw new Error('android.launch — לא מוצהר; ריק הוא {}');
+    const launch = Object.values(A.android.launch);
     const jstr = v => JSON.stringify(String(v)).slice(1, -1);
     const u = new URL(A.android.url);
     const vals = {
       PACKAGE: A.android.package, URL: jstr(A.android.url), OFFLINE: jstr(A.android.offlineLine),
       ACCENT: jstr(A.android.accent), ORIGIN: jstr(u.origin), HOST: jstr(u.host),
-      FILEPREFIX: jstr(A.prefix), CHOOSER: jstr(share ? share.chooser : '')
+      FILEPREFIX: jstr(A.prefix), CHOOSER: jstr(share ? share.chooser : ''),
+      LAUNCH: launch.map(p => '"' + jstr(p) + '"').join(', ')
     };
     const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
-    const body = tmpl.replace(/^\/\/@@share\n([\s\S]*?)^\/\/@@end\n/gm, (m, inner) => share ? inner : '');
+    const on = { share: !!share, launch: launch.length > 0 };
+    const body = tmpl.replace(/^\/\/@@(share|launch)\n([\s\S]*?)^\/\/@@end\n/gm, (m, k, inner) => on[k] ? inner : '');
     return body.replace(/@@([A-Z]+)@@/g, (m, k) => {
       if (!(k in vals)) throw new Error(`${name}.java.in — אין ערך ל-${k}`);
       return vals[k];

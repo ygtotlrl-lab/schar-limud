@@ -105,6 +105,9 @@ public abstract class ShellActivity extends Activity {
             String scheme = uri.getScheme();
             if (scheme == null) return false;
             if (scheme.equals("http") || scheme.equals("https")) return false;
+//@@launch
+            if (scheme.equals("intent")) return launchApp(uri);
+//@@end
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 // אין FLAG_ACTIVITY_NEW_TASK מהקשר Activity חי — הקישור נפתח מעל המעטפת, וחזרה מחזירה אליה.
@@ -115,6 +118,33 @@ public abstract class ShellActivity extends Activity {
             return true;
         }
 
+//@@launch
+        // רק חבילה שמוצהרת ב-android.launch נפתחת — דף שנפרץ אינו מפעיל כל אפליקציה שבמכשיר.
+        // אפליקציה שאינה מותקנת — הדף שלה בחנות.
+        private boolean launchApp(Uri uri) {
+            String pkg;
+            try {
+                pkg = Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME).getPackage();
+            } catch (java.net.URISyntaxException e) {
+                return true;
+            }
+            if (pkg == null || !java.util.Arrays.asList(LAUNCH).contains(pkg)) return true;
+            Intent go = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(pkg);
+            try {
+                startActivity(go);
+            } catch (ActivityNotFoundException e) {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg)));
+                } catch (ActivityNotFoundException e2) {
+                    Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();
+                }
+            }
+            return true;
+        }
+
+        private final String[] LAUNCH = { @@LAUNCH@@ };
+
+//@@end
         @Override
         public void onPageStarted(WebView wv, String url, android.graphics.Bitmap favicon) {
             onShellNavigation(url);
