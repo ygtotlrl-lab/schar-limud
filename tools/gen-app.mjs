@@ -52,6 +52,7 @@ function manifest(A) {
 
 function androidManifest(A) {
   const share = A.android.share;
+  const launch = Object.values(A.android.launch);
   return `<?xml version="1.0" encoding="utf-8"?>
 <!-- ${MARK} -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -65,6 +66,11 @@ ${share ? `
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="image/*" />
         </intent>
+    </queries>
+` : ''}${launch.length ? `
+    <!-- מ-API 30 המעטפת רואה רק אפליקציה שמוצהרת כאן — בלעדיה מותקנת נראית חסרה, והקישור נופל לחנות -->
+    <queries>
+${launch.map(p => `        <package android:name="${p}" />`).join('\n')}
     </queries>
 ` : ''}
     <application

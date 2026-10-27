@@ -129,15 +129,12 @@ public abstract class ShellActivity extends Activity {
                 return true;
             }
             if (pkg == null || !java.util.Arrays.asList(LAUNCH).contains(pkg)) return true;
-            Intent go = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(pkg);
+            // כניסת ההפעלה של החבילה עצמה — והחבילה מוצהרת ב-<queries>, אחרת מותקנת נראית חסרה.
+            Intent go = getPackageManager().getLaunchIntentForPackage(pkg);
             try {
-                startActivity(go);
+                startActivity(go != null ? go : new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg)));
             } catch (ActivityNotFoundException e) {
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg)));
-                } catch (ActivityNotFoundException e2) {
-                    Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();
-                }
+                Toast.makeText(ShellActivity.this, "אין אפליקציה שיודעת לפתוח את הקישור", Toast.LENGTH_SHORT).show();
             }
             return true;
         }
