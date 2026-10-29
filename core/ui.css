@@ -49,8 +49,8 @@ body.locked{overflow:hidden}
 .combo-empty{cursor:default}
 /* ── באנר העדכון ──
    יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו.
-   צורה אחת בכל האפליקציות — רקע מלא וכפתור בצבע הדיו שעליו; --upd-bg ו---upd-ink מחליפים את שני הצבעים
-   באפליקציה שבחרה גוון משלה (שיעורים — עור וזהב). והוא מעל הנעילה, --z-8: גרסה ישנה במסך הכניסה עלולה לחסום כניסה. */
+   צורה אחת בכל האפליקציות — רקע מלא וכפתור לבן; --upd-bg ו---upd-ink מחליפים את הרקע והדיו,
+   ו---upd-btn ו---upd-btn-ink את הכפתור, באפליקציה שבחרה גוון משלה (שיעורים — שמנת וכפתור לבן). והוא מעל הנעילה, --z-8: גרסה ישנה במסך הכניסה עלולה לחסום כניסה. */
 #updater{
   position:fixed;inset-inline:0;z-index:var(--z-8);
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));
@@ -62,7 +62,7 @@ body.locked{overflow:hidden}
   font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
 #updater button{
-  margin-inline-start:auto;background:var(--upd-ink,var(--on-brand));color:var(--upd-bg,var(--brand));border:0;border-radius:var(--r-4);
+  margin-inline-start:auto;background:var(--upd-btn,var(--on-brand));color:var(--upd-btn-ink,var(--brand));border:0;border-radius:var(--r-4);
   padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
 }
 #updater button.x{
