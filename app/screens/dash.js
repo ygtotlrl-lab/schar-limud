@@ -196,10 +196,10 @@ function renderDash(){
   // שלוש הקוביות — אותם נגבה, יעד ואחוז של עמודת הסה״כ, למעלה.
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
   document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
-  // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-100 כחול · יעד הושג ירוק.
+  // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
   var pn=pctNum(grand,grandTgt),rg=document.getElementById('dk-ring');
   document.getElementById('dk-pct').textContent=pctText(grand,grandTgt);
-  rg.className='ring'+(pn===null?'':pn<25?' st-1':pn<50?' st-2':pn<100?' st-3':' st-4');
+  rg.className='ring'+(pn===null?'':pn<25?' st-1':pn<50?' st-2':pn<90?' st-3':' st-4');
   rg.style.setProperty('--p',pn===null?0:Math.min(100,pn));
   rg.title=ofTargetTitle(grand,grandTgt);rg.setAttribute('aria-label','אחוז גבייה '+pctText(grand,grandTgt));rg.setAttribute('role','img');
 
