@@ -19,7 +19,7 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
-    <div class="kpi kpi-pct"><b id="dk-pct" class="kpi-n">—</b><span class="kpi-l">אחוז גבייה</span></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -196,7 +196,12 @@ function renderDash(){
   // שלוש הקוביות — אותם נגבה, יעד ואחוז של עמודת הסה״כ, למעלה.
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
   document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
-  var dp=document.getElementById('dk-pct');dp.textContent=pctText(grand,grandTgt);dp.className='kpi-n '+pctClass(grand,grandTgt);dp.title=ofTargetTitle(grand,grandTgt);
+  // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-100 כחול · יעד הושג ירוק.
+  var pn=pctNum(grand,grandTgt),rg=document.getElementById('dk-ring');
+  document.getElementById('dk-pct').textContent=pctText(grand,grandTgt);
+  rg.className='ring'+(pn===null?'':pn<25?' st-1':pn<50?' st-2':pn<100?' st-3':' st-4');
+  rg.style.setProperty('--p',pn===null?0:Math.min(100,pn));
+  rg.title=ofTargetTitle(grand,grandTgt);rg.setAttribute('aria-label','אחוז גבייה '+pctText(grand,grandTgt));rg.setAttribute('role','img');
 
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
     var v=colT[m]||0,t=tgt[m]||0;

@@ -113,6 +113,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .kpi{background:var(--card);border-radius:var(--radius);padding:var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
 .kpi-n{font-size:var(--fs-5);font-weight:800;color:var(--brand-ink);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-l{font-size:var(--fs-2);font-weight:600;color:var(--text-2)}
+/* טבעת האחוז — מתמלאת מימין לשמאל (נגד כיוון השעון), בצבע השלב */
+.kpi-ring{align-items:center;justify-content:center;padding:var(--sp-3)}
+.ring{--p:0;--c:var(--text-3);position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--card-2) calc((100 - var(--p)) * 1%),var(--c) 0)}
+.ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--card)}
+.ring b{position:relative;font-size:var(--fs-3);font-weight:800;color:var(--c);font-variant-numeric:tabular-nums}
+.ring.st-1{--c:var(--bad)}.ring.st-2{--c:var(--gold)}.ring.st-3{--c:var(--credit)}.ring.st-4{--c:var(--ok)}
 .shl-note{font-size:var(--fs-2);font-weight:600;color:var(--text-2);background:var(--bg);border-radius:999px;padding:2px 10px}
 .btn{display:inline-flex;align-items:center;gap:var(--sp-3);background:var(--brand-soft);color:var(--brand-ink);border:none;border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2);white-space:nowrap}
 .btn:active{transform:translateY(1px)}
