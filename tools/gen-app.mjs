@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // tools/gen-app.mjs — קובצי הפלטפורמה מהתצורה
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
@@ -66,7 +66,7 @@ ${A.android.dnd === true ? `    <!-- «השתקה בזמן לימוד» — המ
     <queries>
         <intent>
             <action android:name="android.intent.action.SEND" />
-            <data android:mimeType="image/*" />
+            <data android:mimeType="*/*" />
         </intent>
     </queries>
 ` : ''}${launch.length ? `
@@ -212,6 +212,15 @@ function javaFile(name) {
 const JAVA = `android/app/src/main/java/${APP.android.package.replace(/\./g, '/')}`;
 
 const RES = 'android/app/src/main/res';
+// תיקיית הקבצים שגשר השיתוף חושף ל-FileProvider — רק המטמון «shared», ונוצרת רק כש-android.share מוצהר.
+function filePaths() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- ${MARK} -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="shared" path="shared/" />
+</paths>
+`;
+}
 export const TARGETS = {
   [`${JAVA}/ShellActivity.java`]: javaFile('ShellActivity'),
   [`${JAVA}/MainActivity.java`]: javaFile('MainActivity'),
@@ -219,7 +228,8 @@ export const TARGETS = {
   'android/app/src/main/AndroidManifest.xml': androidManifest,
   'android/app/build.gradle': appGradle,
   'android/settings.gradle': settingsGradle,
-  [`${RES}/drawable/ic_launcher_background.xml`]: launcherBg
+  [`${RES}/drawable/ic_launcher_background.xml`]: launcherBg,
+  ...(APP.android.share ? { [`${RES}/xml/file_paths.xml`]: filePaths } : {})
 };
 
 function get(path) {
@@ -243,7 +253,7 @@ async function main(argv) {
     if (have === want) continue;
     changed++;
     if (check) console.error(`❌ ${rel} — אינו מה שהתצורה יוצרת`);
-    else writeFileSync(p, want);
+    else { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, want); }
   }
   if (check && changed) process.exit(1);
   console.log(`gen-app — ${changed} קבצים ${check ? 'נבדלים' : 'נכתבו'} (${APP.id})`);

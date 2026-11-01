@@ -62,9 +62,9 @@ public class MainActivity extends ShellActivity {
                         if (!isMainFrame || !APP_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
                         try {
                             JSONObject o = new JSONObject(String.valueOf(message.getData()));
-                            shareImage(o.optString("data"), o.optString("mime"));
+                            shareFile(o.optString("data"), o.optString("mime"));
                         } catch (Exception e) {
-                            toastUi("שגיאה בהכנת התמונה לשיתוף");
+                            toastUi("שגיאה בהכנת הקובץ לשיתוף");
                         }
                     }
                 });
@@ -98,18 +98,24 @@ public class MainActivity extends ShellActivity {
 
     // ── השיתוף עצמו ──
     // אין יעד קבוע — הבורר של המערכת בוחר; יעד קבוע היה שולח את הדוח לאפליקציה אחת בלבד.
-    private void shareImage(final String base64Data, final String mimeType) {
+    // הקובץ — תמונה, PDF או גיליון, והסיומת נגזרת מסוג התוכן: אפליקציה שמקבלת קובץ בסיומת שגויה אינה פותחת אותו.
+    private void shareFile(final String base64Data, final String mimeType) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
             File dir = new File(getCacheDir(), "shared");
             dir.mkdirs();
-            final File f = new File(dir, "@@FILEPREFIX@@" + System.currentTimeMillis() + ".jpg");
+            final String mime = (mimeType == null || mimeType.isEmpty()) ? "image/jpeg" : mimeType;
+            final String ext = "application/pdf".equals(mime) ? ".pdf"
+                : "image/png".equals(mime) ? ".png"
+                : "application/vnd.ms-excel".equals(mime) ? ".xls"
+                : "text/csv".equals(mime) ? ".csv"
+                : ".jpg";
+            final File f = new File(dir, "@@FILEPREFIX@@" + System.currentTimeMillis() + ext);
             FileOutputStream fos = new FileOutputStream(f);
             fos.write(bytes);
             fos.flush();
             fos.close();
 
-            final String mime = (mimeType == null || mimeType.isEmpty()) ? "image/jpeg" : mimeType;
             final Uri uri = FileProvider.getUriForFile(
                 MainActivity.this, getPackageName() + ".fileprovider", f);
 
@@ -131,18 +137,18 @@ public class MainActivity extends ShellActivity {
                 }
             });
         } catch (Exception e) {
-            toastUi("שגיאה בהכנת התמונה לשיתוף");
+            toastUi("שגיאה בהכנת הקובץ לשיתוף");
         }
     }
 
     // מתודות JavascriptInterface רצות ב-binder thread פרטי — לכן ה-URL החי נקרא ב-UI thread לפני כל פעולה: זה המנעול השני.
     private class ShareBridge {
         @JavascriptInterface
-        public void shareImage(final String base64Data, final String mimeType) {
+        public void shareFile(final String base64Data, final String mimeType) {
             runOnUiThread(new Runnable() {
                 @Override public void run() {
                     if (!isAppOrigin(webView.getUrl())) return;
-                    MainActivity.this.shareImage(base64Data, mimeType);
+                    MainActivity.this.shareFile(base64Data, mimeType);
                 }
             });
         }

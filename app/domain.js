@@ -8,6 +8,7 @@ import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
+import { periodsEngine } from '../core/periods.js';
 import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
@@ -233,57 +234,26 @@ function normMonth(v){v=(v==null?'':String(v)).trim();return MONTH_RE.test(v)?v:
 
 function monthKeyLabel(k){var p=normMonth(k);return p?DAY_MONTHS[parseInt(p.slice(5,7),10)-1]+' '+p.slice(0,4):'';}
 
-// תקופה — { start, end }, ו-end ריק לתקופה פתוחה; תקופה בלי התחלה תקינה אינה תקופה. המפתח — start.
-function slPeriods(s){
-  return ((s&&Array.isArray(s.periods))?s.periods:[]).map(function(p){
-    return {start:normMonth(p&&p.start),end:normMonth(p&&p.end)||null};
-  }).filter(function(p){return p.start;}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});
-}
+// תקופות הפעילות — המנוע המשותף (core/periods.js) על הלוח הלועזי; המפתח YYYY-MM.
+var PER=periodsEngine({
+  valid:function(k){return MONTH_RE.test(k);},
+  now:function(){return monthKeyOf(dayToday());},
+  add:function(k,n){return monthKeyAdd(k,n);},
+  label:monthKeyLabel,
+  msg:{openLast:MSG_PERIOD_OPEN_LAST,overlap:MSG_PERIOD_OVERLAP}
+});
+var slPeriods=PER.list,periodsProblem=PER.problem,periodText=PER.text,enrollText=PER.enrollText,
+    studentContinues=PER.continues,periodsToggled=PER.toggled,studentArchived=PER.archived;
 
 // חודש בתוך תקופה — פעיל; מחוץ לכולן — ריק: אין חיוב ואין שורה. בלי חודש — החודש הנוכחי.
-function studentInMonth(s,y,m){
-  if(!s)return false;
-  var k=(y==null)?monthKeyOf(dayToday()):acadMonthKey(y,m);
-  return slPeriods(s).some(function(p){return k>=p.start&&(!p.end||k<=p.end);});
-}
+function studentInMonth(s,y,m){return PER.inMonth(s,(y==null)?null:acadMonthKey(y,m));}
 
 // השלוחים מחוץ לחישוב הגבייה — היעד, האחוז, מספר הפעילים והגרף; בשאר המקומות הם כמו כל שיעור.
 function slInCollection(s){return !CLS_NO_CYCLE[s&&s.cls];}
 
 function countInMonth(y,m){return S.STUDENTS.filter(function(s){return slInCollection(s)&&studentInMonth(s,y,m);}).length;}
 
-function periodText(p){return p.end?monthKeyLabel(p.start)+' – '+monthKeyLabel(p.end):'מ-'+monthKeyLabel(p.start);}
-
-function enrollText(s){return slPeriods(s).map(periodText).join(' · ');}
-
-// הסדר, החפיפה והתקופה הפתוחה — כמו sl_students_periods_check: רשימה שהמסד דוחה נכשלת סמכותית ואינה עולה לעולם.
-function periodsProblem(ps){
-  var l=ps.slice().sort(function(a,b){return a.start<b.start?-1:1;});
-  for(var i=1;i<l.length;i++){
-    if(!l[i-1].end)return MSG_PERIOD_OPEN_LAST;
-    if(l[i].start<=l[i-1].end)return MSG_PERIOD_OVERLAP;
-  }
-  return '';
-}
-
-function periodHas(p,k){return k>=p.start&&(!p.end||k<=p.end);}
-
 function monthKeyAdd(k,n){var y=+k.slice(0,4),m=+k.slice(5,7)-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;return y+'-'+String(m+1).padStart(2,'0');}
-
-// מצב הכפתור — תקופה שנמשכת מעבר לחודש הנוכחי; תלמיד שנסגר החודש עדיין נספר בו, אך הכפתור כבר כבוי.
-function studentContinues(s){var k=monthKeyOf(dayToday());return slPeriods(s).some(function(p){return periodHas(p,k)&&p.end!==k;});}
-
-// כיבוי — התקופה סגורה בחודש הנוכחי: התלמיד נספר החודש ויוצא מהבא.
-// הפעלה — תקופה שנסגרה החודש נפתחת מחדש, בלי תקופה שנייה; אחרת תקופה חדשה מהחודש הנוכחי, עד שלפני הבאה אם יש.
-function periodsToggled(s){
-  var k=monthKeyOf(dayToday()),ps=slPeriods(s);
-  if(studentContinues(s))return ps.map(function(p){return periodHas(p,k)?{start:p.start,end:k}:p;});
-  var hit=ps.filter(function(p){return periodHas(p,k);})[0];
-  var next=ps.filter(function(p){return p.start>k;})[0];
-  var end=next?monthKeyAdd(next.start,-1):null;
-  if(hit)return ps.map(function(p){return p===hit?{start:p.start,end:end}:p;});
-  return ps.concat([{start:k,end:end}]).sort(function(a,b){return a.start<b.start?-1:1;});
-}
 
 // ── טופל ──
 // מערך חודשים YYYY-MM — החודש הוא המפתח הטבעי, וחודש חדש מתחיל ריק מעצמו, בלי איפוס.
@@ -318,8 +288,6 @@ function slCycleOf(s){var v=parseInt(s&&s.cycle,10);return isFinite(v)&&v>0?v:0;
 // התווית מהמנוע — שנה נושאת תווית אחת.
 function cycleLabel(n){return n?'מחזור '+hebYearLabelFull(n):'';}
 
-// בארכיון — מי שכל תקופותיו הסתיימו לפני החודש הנוכחי; תקופה עתידית משאירה ברשימה.
-function studentArchived(s){var k=monthKeyOf(dayToday());return !slPeriods(s).some(function(p){return !p.end||p.end>=k;});}
 
 // קבוצה לכל שיעור, א׳ ⟵ ב׳ ⟵ ג׳, והכותרת — שם השיעור בלבד; המחזור — בכרטיס. קבוצה ריקה אינה מוצגת.
 function slStudentGroups(list){
