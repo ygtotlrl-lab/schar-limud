@@ -247,7 +247,10 @@ function studentInMonth(s,y,m){
   return slPeriods(s).some(function(p){return k>=p.start&&(!p.end||k<=p.end);});
 }
 
-function countInMonth(y,m){return S.STUDENTS.filter(function(s){return studentInMonth(s,y,m);}).length;}
+// השלוחים מחוץ לחישוב הגבייה — היעד, האחוז, מספר הפעילים והגרף; בשאר המקומות הם כמו כל שיעור.
+function slInCollection(s){return !CLS_NO_CYCLE[s&&s.cls];}
+
+function countInMonth(y,m){return S.STUDENTS.filter(function(s){return slInCollection(s)&&studentInMonth(s,y,m);}).length;}
 
 function periodText(p){return p.end?monthKeyLabel(p.start)+' – '+monthKeyLabel(p.end):'מ-'+monthKeyLabel(p.start);}
 
@@ -548,7 +551,7 @@ function txnMethodPill(t){
 }
 
 export { _slPushOf, acadYearHeb,
-         acadYearOf, calcDistribution, countInMonth, distCredApplied, distCredit,
+         acadYearOf, calcDistribution, countInMonth, slInCollection, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
