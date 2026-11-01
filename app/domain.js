@@ -324,7 +324,7 @@ function studentArchived(s){var k=monthKeyOf(dayToday());return !slPeriods(s).so
 // קבוצה לכל שיעור, א׳ ⟵ ב׳ ⟵ ג׳, והכותרת — שם השיעור בלבד; המחזור — בכרטיס. קבוצה ריקה אינה מוצגת.
 function slStudentGroups(list){
   return CLS_LIST.map(function(c){
-    return {label:CLS_NAME[c],rows:list.filter(function(s){return s.cls===c;})};
+    return {cls:c,label:CLS_NAME[c],rows:list.filter(function(s){return s.cls===c;})};
   }).filter(function(g){return g.rows.length;});
 }
 
@@ -336,7 +336,7 @@ function slArchiveGroups(list){
   var gs=Object.keys(by).map(Number).sort(function(a,b){return b-a;}).map(function(c){
     return {label:cycleLabel(c)||'ללא מחזור',rows:by[c]};
   });
-  if(free.length)gs.push({label:CLS_NAME.s,rows:free});
+  if(free.length)gs.push({cls:'s',label:CLS_NAME.s,rows:free});
   return gs;
 }
 
@@ -545,11 +545,6 @@ function txnAmountHTML(t){
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 
-function txnMethodPill(t){
-  if(isCreditTxn(t))return'<span class="pill credit" title="ניצול יתרת זכות משנה קודמת — אינו נספר בגבייה">זיכוי מיתרה</span>';
-  return'<span class="pill">'+esc(t.payment_method||'—')+'</span>';
-}
-
 export { _slPushOf, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, slInCollection, distCredApplied, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
@@ -560,5 +555,4 @@ export { _slPushOf, acadYearHeb,
          cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
          studentArchived,
          studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
-         studentCredit, studentHandled, studentInMonth, syncAll, txnAmountHTML,
-         txnMethodPill };
+         studentCredit, studentHandled, studentInMonth, syncAll, txnAmountHTML };

@@ -10,8 +10,7 @@ import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_B
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { acadYearOf, hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
-         slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML,
-         txnMethodPill } from '../domain.js';
+         slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML } from '../domain.js';
 
 function screenTxnHTML() {
   return `
@@ -23,24 +22,25 @@ function screenTxnHTML() {
         <label>תלמיד</label>
         ${comboHTML('student', { id: 'txn-student', label: 'הקלד לחיפוש', placeholder: 'הקלד לחיפוש...' })}
       </div>
-      <div class="frm-row">
-        <label for="txn-date">תאריך</label>
-        <input id="txn-date" type="date">
+      <div class="frm-2">
+        <div class="frm-row">
+          <label for="txn-amount">סכום (&#8362;)</label>
+          <input id="txn-amount" type="text" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="frm-row">
+          <label for="txn-date">תאריך</label>
+          <input id="txn-date" type="date">
+        </div>
       </div>
       <div class="frm-row">
-        <label for="txn-amount">סכום (&#8362;)</label>
-        <input id="txn-amount" type="text" inputmode="decimal" placeholder="0">
-      </div>
-      <div class="frm-row">
-        <label for="txn-method">אמצעי תשלום</label>
-        <select id="txn-method" data-chg="txn-method">
-          <option value="">-- בחר --</option>
-        </select>
+        <span class="frm-lbl" id="txn-method-lbl">אמצעי תשלום</span>
+        <input id="txn-method" type="hidden" value="">
+        <div id="txn-method-chips" class="chips" role="radiogroup" aria-labelledby="txn-method-lbl"></div>
         <div id="txn-method-hint" class="hidden credit-sub"></div>
       </div>
       <div class="frm-row">
         <label for="txn-note">הערה</label>
-        <textarea aria-label="הערה אופציונלית" id="txn-note" placeholder="הערה אופציונלית..."></textarea>
+        <input id="txn-note" type="text" placeholder="הערה (לא חובה)">
       </div>
       <button class="txn-save btn" data-act="txn-save" data-ksave>שמור תשלום</button>
     </div>
@@ -66,12 +66,23 @@ comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filt
 }});
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
-function updateDropdowns(){
-  var ml=slLookups(LK_METHOD),sel=document.getElementById('txn-method'),cur=sel.value;
-  sel.innerHTML='<option value="">-- בחר --</option>';ml.forEach(function(m){sel.innerHTML+='<option value="'+esc(m.label)+'">'+esc(m.label)+'</option>';});
+// אמצעי התשלום — שבבים, ולחיצה על הנבחר מבטלת אותו (האמצעי אינו חובה); הערך בשדה הנסתר txn-method.
+function txnMethodChips(){
+  var box=document.getElementById('txn-method-chips'),cur=document.getElementById('txn-method').value;
+  var ml=slLookups(LK_METHOD).map(function(m){return m.label;});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
-  if(!hasCreditItem())sel.innerHTML+='<option value="'+esc(CREDIT_METHOD)+'">'+esc(CREDIT_METHOD)+'</option>';
-  if(cur)sel.value=cur;
+  if(!hasCreditItem())ml.push(CREDIT_METHOD);
+  box.innerHTML=ml.map(function(l){var on=l===cur;
+    return '<button type="button" class="chip'+(on?' is-on':'')+(isCreditValue(l)?' chip-credit':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-val="'+esc(l)+'">'+esc(l)+'</button>';}).join('');
+}
+
+function txnMethodPick(v){
+  var h=document.getElementById('txn-method');h.value=h.value===v?'':v;
+  txnMethodChips();txnMethodHint();
+}
+
+function updateDropdowns(){
+  txnMethodChips();
   var dt=document.getElementById('txn-date');if(!dt.value)dt.value=dayToday();
   txnMethodHint();
 }
@@ -99,7 +110,7 @@ async function saveTxn(){
   comboSet('txn-student',null);
   document.getElementById('txn-method').value='';
   document.getElementById('txn-note').value='';
-  txnMethodHint();
+  txnMethodChips();txnMethodHint();
   return true;
 }
 
@@ -107,6 +118,18 @@ async function saveTxn(){
 var TXN_LOG_FIRST=5;
 function txnLogMore(){S.TXN_LOG_LEVEL=Math.min(2,(S.TXN_LOG_LEVEL||0)+1);renderTxnLog();}
 function txnLogLess(){S.TXN_LOG_LEVEL=0;renderTxnLog();}
+
+// שורת תנועה — ביומן ובכרטיס התלמיד: תאריך · שם (ביומן) ומתחתיו האמצעי וההערה · סכום · מחיקה.
+function txnRowHTML(t,name){
+  var cr=isCreditTxn(t),sub=[cr?'<span class="credit-mark">זיכוי מיתרה</span>':esc(t.payment_method||''),esc(t.note||'')].filter(Boolean);
+  return '<div class="txn-row'+(cr?' credit':'')+'"><span class="txn-date">'+esc(txnDateShort(t.txn_date))+'</span>'+
+    '<span class="txn-who">'+(name!=null?'<span class="txn-name"><span class="student-name">'+esc(name)+'</span>'+pendTxnTag(t)+'</span>':pendTxnTag(t))+
+    (sub.length?'<span class="txn-sub">'+sub.join(' · ')+'</span>':'')+'</span>'+txnAmountHTML(t)+
+    '<button class="txn-x" data-act="txn-del" data-id="'+esc(t.client_id)+'" aria-label="מחיקת התשלום" title="מחיקת התשלום">'+icon('close')+'</button></div>';
+}
+
+// התאריך ביומן — יום.חודש, והשנה רק כשאינה השנה הנוכחית.
+function txnDateShort(d){var p=String(d||'').split('-');if(p.length<3)return d||'';var y=String(new Date().getFullYear());return p[2]+'.'+p[1]+(p[0]===y?'':'.'+p[0].slice(2));}
 
 function renderTxnLog(){
   var fid=comboValue('txn-filter'),lvl=S.TXN_LOG_LEVEL||0,cy=acadYearOf(dayToday());
@@ -118,7 +141,7 @@ function renderTxnLog(){
   if(lvl===0&&year.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">'+icon('down')+'עוד '+(year.length-txns.length)+' — עד תחילת השנה</button>';
   else if(lvl<2&&all.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">'+icon('archive')+'ארכיון — שנים קודמות ('+(all.length-txns.length)+')</button>';
   if(lvl>0)more+='<button class="txn-more txn-less" data-act="txn-log-less">'+icon('up')+'צמצם</button>';
-  document.getElementById('txn-log').innerHTML=(txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span><span class="txn-who"><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+(t.note?'<span class="txn-note">'+esc(t.note)+'</span>':'')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים</div>')+more;
+  document.getElementById('txn-log').innerHTML=(txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return txnRowHTML(t,st?st.name:'#'+t.student_client_id);}).join('')||'<div class="empty">אין תשלומים</div>')+more;
 }
 
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
@@ -132,4 +155,4 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   schedulePush();
 });}
 
-export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodHint, updateDropdowns };
+export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick, txnRowHTML, updateDropdowns };

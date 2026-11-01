@@ -1,5 +1,5 @@
 // app/screens/student.js — רשימת התלמידים וכרטיס התלמיד
-import { MSG_SAVED_LOCAL, dayToday } from '../../core/util.js';
+import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
@@ -12,12 +12,13 @@ import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_C
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredApplied, distCredit, enrollText, fmt,
-         isCreditTxn, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendTxnTag, pendingCid,
+         monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          periodText, periodsProblem, periodsToggled, readMonthRange, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slHandledToggle, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
          slSortTxns, slSortYears, slStudentGroups, studentContinues, studentHandled, studentInMonth,
-         studentTuition, txnAmountHTML, txnMethodPill } from '../domain.js';
+         studentTuition } from '../domain.js';
+import { txnRowHTML } from './txn.js';
 
 function screenStudentHTML() {
   return `
@@ -102,25 +103,34 @@ function screenStudentHTML() {
 // ── רשימת התלמידים ──
 // הרשימה — מי שיש לו תקופה בחודש הנוכחי או אחריו, מקובץ לפי שיעור: שלא טופלו החודש — מעל הקו, ושטופלו — מתחתיו.
 // הארכיון — מי שכל תקופותיו הסתיימו, מקובץ לפי מחזור, החדש ראשון. החיפוש מסנן בשתיהן, ואינו משנה סדר.
-// האריח — סמל · שם · יתרת זכות · ו«טופל» לחודש הנוכחי (בארכיון — בלי «טופל»); המחזור והתקופות — בכרטיס בלבד.
-// שני אריחים בשורה מ-560px, אחד בטלפון; הכרטיס הפתוח נפרש לכל רוחב הקבוצה בשורה שמתחת לאריח שלו.
+// השורה — סמל · שם, ומתחתיו מצב החודש · יתרת זכות · ו«טופל» לחודש הנוכחי (בארכיון — בלי «טופל» ובלי מצב);
+// המחזור והתקופות — בכרטיס בלבד. הכרטיס הפתוח נפרש בשורה שמתחת לתלמיד שלו.
 function stuInitials(name){var p=String(name||'?').trim().split(/\s+/);return (p[0]||'?').charAt(0)+(p[1]?p[1].charAt(0):'');}
+// מצב החודש — מהחלוקה שבכרטיס: התשלומים נפרסים מתחילת השנה, ולכן החודש הנוכחי מראה מה חסר עד היום.
+function stuMonthState(d){
+  var m=dayNoon(dayToday()).getMonth(),c=d&&d[m];
+  if(!c||c.off||!(c.req>0))return '';
+  if(c.paid>=c.req-0.005)return '<span class="stu-st ok">שולם החודש</span>';
+  if(!(c.paid>0))return '<span class="stu-st bad">לא שולם החודש</span>';
+  return '<span class="stu-st warn">חסר &#8362;'+fmt(Math.round((c.req-c.paid)*100)/100)+'</span>';
+}
 function studentRowHTML(s,arch){
-  var cr=studentCredit(s.client_id,acadYearOf(dayToday())),k=monthKeyOf(dayToday()),hd=!arch&&studentHandled(s,k);
+  var d=calcDistribution(s.client_id,acadYearOf(dayToday())),cr=distCredit(d),k=monthKeyOf(dayToday()),hd=!arch&&studentHandled(s,k);
   return '<div class="stu-row"><button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
     '<span class="stu-av" aria-hidden="true">'+esc(stuInitials(s.name))+'</span>'+
     '<span class="stu-txt"><span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
-    '<span class="stu-credit">'+(cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</span></span></button>'+
+    (arch?'':stuMonthState(d))+'</span>'+
+    (cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</button>'+
     (arch?'':'<button class="st-handled'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'">'+(hd?'טופל'+icon('check'):'טופל')+'</button>')+
     '</div>';
 }
 
 function groupsHTML(groups,done,count,arch){
   return groups.map(function(g){
-    return '<section class="sc-grp'+(done?' is-done':'')+'">'+
+    return '<section class="sc-grp'+(done?' is-done':'')+(CLS_NO_CYCLE[g.cls]?' sc-grp-free':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+
       (count?'<span class="sc-grp-cnt">'+g.rows.length+' '+count+'</span>':'')+'</div>'+
-      '<div class="stu-tiles">'+g.rows.map(function(s){return studentRowHTML(s,arch);}).join('')+'</div></section>';
+      '<div class="stu-list">'+g.rows.map(function(s){return studentRowHTML(s,arch);}).join('')+'</div></section>';
   }).join('');
 }
 
@@ -358,7 +368,7 @@ function annualHTML(s,year){
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
   if(applied>0)html+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
-  html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(yt.map(function(t){return'<div class="txn-row'+(isCreditTxn(t)?' credit':'')+'"><span class="txn-date">'+esc(t.txn_date)+'</span>'+pendTxnTag(t)+'<span class="txn-note">'+esc(t.note||'—')+'</span>'+txnAmountHTML(t)+txnMethodPill(t)+'<button class="btn sm danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">&#10005;</button></div>';}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
+  html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(yt.map(function(t){return txnRowHTML(t,null);}).join('')||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
   return html;
 }
 

@@ -21,7 +21,7 @@ import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, op
          periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
-import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodHint,
+import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick,
          updateDropdowns } from './screens/txn.js';
 
 // ── החיווט ──
@@ -186,6 +186,7 @@ var DOM_ACTIONS = {
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
+  'txn-method-pick':       function (el) { txnMethodPick(el.getAttribute('data-val')); },
   'txn-log-more':          function () { txnLogMore(); },
   'txn-log-less':          function () { txnLogLess(); },
   'student-del': function () { deleteStudent(); },
@@ -239,7 +240,6 @@ document.addEventListener('input', function (e) {
 
 document.addEventListener('change', function (e) {
   var el = e.target;
-  if (el && el.dataset && el.dataset.chg === 'txn-method') txnMethodHint();
   if (el && el.dataset && el.dataset.chg === 'sc-cls') scClsChanged();
   if (el && el.dataset && el.dataset.chg === 'dash-notes') dashNotesSave();
 });

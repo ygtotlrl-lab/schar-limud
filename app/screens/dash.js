@@ -16,6 +16,11 @@ var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+
 function screenDashHTML() {
   return `
 <div id="panel-dash" class="panel active">
+  <div class="dash-kpis">
+    <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
+    <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
+    <div class="kpi kpi-pct"><b id="dk-pct" class="kpi-n">—</b><span class="kpi-l">אחוז גבייה</span></div>
+  </div>
   <div class="card">
     <div class="card-hdr">
       <h3>לוח שנתי</h3>
@@ -188,6 +193,10 @@ function renderDash(){
   var yearCnt=S.STUDENTS.filter(function(s){return slInCollection(s)&&YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
+  // שלוש הקוביות — אותם נגבה, יעד ואחוז של עמודת הסה״כ, למעלה.
+  document.getElementById('dk-got').textContent='₪'+fmt(grand);
+  document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
+  var dp=document.getElementById('dk-pct');dp.textContent=pctText(grand,grandTgt);dp.className='kpi-n '+pctClass(grand,grandTgt);dp.title=ofTargetTitle(grand,grandTgt);
 
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
     var v=colT[m]||0,t=tgt[m]||0;
