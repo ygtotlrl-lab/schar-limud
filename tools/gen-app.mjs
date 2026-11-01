@@ -59,7 +59,9 @@ function androidManifest(A) {
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-${share ? `
+${A.android.dnd === true ? `    <!-- «השתקה בזמן לימוד» — המעטפת מדליקה «נא לא להפריע» כשהיא בחזית -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+` : ''}${share ? `
     <!-- מ-API 30 resolveActivity() של גשר השיתוף רואה רק מה שמוצהר כאן -->
     <queries>
         <intent>
@@ -183,7 +185,7 @@ ${body}
 `;
 }
 
-// גשר השיתוף נוצר רק כש-android.share מוצהר, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק; אחרת הקטע יורד כולו.
+// גשר השיתוף נוצר רק כש-android.share מוצהר, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק, וההשתקה — רק באפליקציה שמצהירה android.dnd; אחרת הקטע יורד כולו.
 function javaFile(name) {
   return A => {
     const share = A.android.share;
@@ -199,8 +201,8 @@ function javaFile(name) {
     };
     const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
     if (typeof A.android.exit !== 'boolean') throw new Error('android.exit — לא מוצהר; true או false');
-    const on = { share: !!share, launch: launch.length > 0, exit: A.android.exit };
-    const body = tmpl.replace(/^\/\/@@(share|launch|exit)\n([\s\S]*?)^\/\/@@end\n/gm, (m, k, inner) => on[k] ? inner : '');
+    const on = { share: !!share, launch: launch.length > 0, exit: A.android.exit, dnd: A.android.dnd === true };
+    const body = tmpl.replace(/^\/\/@@(share|launch|exit|dnd)\n([\s\S]*?)^\/\/@@end\n/gm, (m, k, inner) => on[k] ? inner : '');
     return body.replace(/@@([A-Z]+)@@/g, (m, k) => {
       if (!(k in vals)) throw new Error(`${name}.java.in — אין ערך ל-${k}`);
       return vals[k];
