@@ -11,14 +11,13 @@ import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragC
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
-import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, slApplyMirror, slHandledToggle,
-         slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
 import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
-         periodDelete, periodOpen, periodSave, renderScAnnual, renderStudentPanel,
+         renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
 import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick,
@@ -214,9 +213,8 @@ var DOM_ACTIONS = {
     if (!slHandledToggle(el.getAttribute('data-id'), el.getAttribute('data-month'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
     refreshUI();
   },
-  'period-open':             function (el) { periodOpen(el.getAttribute('data-id')); },
-  'period-save':             function (el) { return runSave(function () { return periodSave(el.getAttribute('data-id')); }, '✅ התקופה נשמרה'); },
-  'period-del':              function (el) { periodDelete(el.getAttribute('data-id')); },
+  'per-add':                 function (el) { PER.addRow(el); },
+  'per-remove':              function (el) { PER.removeRow(el); },
   'student-open-add':        function () { openAddStudent(); },
   'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
   'txn-save':                function () { return runSave(saveTxn, '✅ תשלום נשמר'); },

@@ -9,10 +9,11 @@ import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { periodsEngine } from '../core/periods.js';
-import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
-         MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
+         MSG_LOAD_FAIL_POST, MSG_PERIOD_NONE, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
+import { icon } from './icons.js';
 
 // התחילית נקראת בזמן ריצה ולא בהצהרה — הקבועים מוגדרים בהמשך הדף
 function _slPushOf(t) {
@@ -240,7 +241,8 @@ var PER=periodsEngine({
   now:function(){return monthKeyOf(dayToday());},
   add:function(k,n){return monthKeyAdd(k,n);},
   label:monthKeyLabel,
-  msg:{openLast:MSG_PERIOD_OPEN_LAST,overlap:MSG_PERIOD_OVERLAP}
+  msg:{openLast:MSG_PERIOD_OPEN_LAST,overlap:MSG_PERIOD_OVERLAP,endBefore:MSG_END_BEFORE_START,none:MSG_PERIOD_NONE},
+  removeIcon:icon('close')
 });
 var slPeriods=PER.list,periodsProblem=PER.problem,periodText=PER.text,enrollText=PER.enrollText,
     studentContinues=PER.continues,periodsToggled=PER.toggled,studentArchived=PER.archived;
@@ -495,18 +497,6 @@ function calcDistribution(sid,year){
   return result;
 }
 
-// ── משותף למסכים ──
-// פיירפוקס אינו תומך ב-input[type=month] ונופל לטקסט חופשי — ולכן הערך מאומת כאן ולא רק במסד.
-// תקופה בלי התחלה אינה תקופה — חודש ההצטרפות חובה, והעזיבה ריקה לתקופה פתוחה.
-function readMonthRange(startId,endId){
-  var rawS=(document.getElementById(startId).value||'').trim(),rawE=(document.getElementById(endId).value||'').trim();
-  var sm=normMonth(rawS),em=normMonth(rawE);
-  if(!sm){toast(MSG_START_MONTH_BAD, null, 'bad');return null;}
-  if(rawE&&!em){toast(MSG_END_MONTH_BAD, null, 'bad');return null;}
-  if(em&&em<sm){toast(MSG_END_BEFORE_START, null, 'bad');return null;}
-  return {start:sm,end:em||null};
-}
-
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
 function txnAmountHTML(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
@@ -518,7 +508,7 @@ export { _slPushOf, acadYearHeb,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
-         pendingCid, readMonthRange, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
+         pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
          cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
          studentArchived,

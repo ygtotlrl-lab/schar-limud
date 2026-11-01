@@ -174,7 +174,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .pill{display:inline-block;padding:var(--sp-1) var(--sp-4);border-radius:var(--r-7);font-size:var(--fs-2);background:var(--bg);color:var(--text-2);border:1px solid var(--border)}
 .tbl td,.tbl th{padding:var(--sp-3) var(--sp-3);font-size:var(--fs-2)}
 .frm-row-last{margin-bottom:var(--sp-3)}
-.month-inp{text-align:right}
 .month-off{opacity:var(--op-3)}
 .range-hint-sm{font-size:var(--fs-2);color:var(--text-3);line-height:var(--lh-3);margin-bottom:var(--sp-2)}
 .table-scroll{overflow-x:auto}

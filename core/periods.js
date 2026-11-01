@@ -8,7 +8,13 @@
 //   now()      — מפתח החודש הנוכחי
 //   add(k, n)  — המפתח n חודשים אחרי k (n שלילי — לפניו)
 //   label(k)   — שם החודש והשנה לתצוגה
-//   msg        — { openLast, overlap }: הודעות הפגם, מהמחרוזות של האפליקציה
+//   msg        — { openLast, overlap, endBefore, none }: הודעות הפגם, מהמחרוזות של האפליקציה
+//   removeIcon — סימון כפתור ההסרה בעורך, מהאייקונים של האפליקציה
+//
+// העורך — אחד בשתי האפליקציות: שורה לכל תקופה — «מ» · «עד» (ו«עדיין בישיבה» לתקופה פתוחה) · הסרה, ו«+ הוסף תקופה».
+// הפעולות בכפתורים — per-add · per-remove, מחווטות במפת הפעולות של האפליקציה ל-addRow · removeRow.
+import { esc } from './ui.js';
+
 function periodsEngine(cal) {
   // ערך שאינו מפתח תקין היה משתתף בהשוואה ומחזיר טווח שגוי בשקט — ולכן ערך פסול נחשב «לא הוגדר»
   function norm(v) { v = (v == null ? '' : String(v)).trim(); return cal.valid(v) ? v : ''; }
@@ -66,8 +72,50 @@ function periodsEngine(cal) {
     return f;
   }
 
+  // ── העורך ──
+  // בורר חודש — שלוש שנים אחורה ושנה קדימה מהחודש הנוכחי, החדש ראשון; ערך שמור מחוץ לטווח נוסף כמות שהוא.
+  function options(cur, open) {
+    var ks = [], k = cal.add(cal.now(), -36);
+    for (var i = 0; i <= 48 && k; i++) { ks.push(k); k = cal.add(k, 1); }
+    if (cur && ks.indexOf(cur) < 0) { ks.push(cur); ks.sort(); }
+    return (open ? '<option value=""' + (cur ? '' : ' selected') + '>עדיין בישיבה</option>' : '') +
+      ks.reverse().map(function (x) { return '<option value="' + x + '"' + (x === cur ? ' selected' : '') + '>' + esc(cal.label(x)) + '</option>'; }).join('');
+  }
+  function rowHTML(p) {
+    return '<div class="per-row" data-per-row>' +
+      '<label class="per-lbl">מ<select aria-label="חודש הצטרפות" data-f="start">' + options(p.start, false) + '</select></label>' +
+      '<label class="per-lbl">עד<select aria-label="חודש עזיבה" data-f="end">' + options(p.end || '', true) + '</select></label>' +
+      '<button type="button" data-act="per-remove" class="per-del" aria-label="הסרת התקופה">' + (cal.removeIcon || '') + '</button>' +
+    '</div>';
+  }
+  // בלי תקופות — שורה אחת מהחודש הנוכחי, פתוחה: תלמיד בלי תקופה אינו נספר באף חודש.
+  function editorHTML(ps) {
+    if (!ps || !ps.length) ps = [{ start: cal.now(), end: null }];
+    return '<div class="per-list" data-per-list>' + ps.map(rowHTML).join('') + '</div>' +
+      '<button type="button" data-act="per-add" class="per-add">+ הוסף תקופה</button>';
+  }
+  function addRow(btn) {
+    var box = btn && btn.previousElementSibling;
+    if (box && box.hasAttribute('data-per-list')) box.insertAdjacentHTML('beforeend', rowHTML({ start: cal.now(), end: null }));
+  }
+  function removeRow(btn) { var r = btn && btn.closest('[data-per-row]'); if (r) r.remove(); }
+  // הרשימה מהעורך שבתוך root — עזיבה לפני הצטרפות, אף תקופה, חפיפה ותקופה פתוחה שאינה האחרונה נדחות כאן.
+  function read(root) {
+    var ps = [], err = '';
+    (root || document).querySelectorAll('[data-per-list] [data-per-row]').forEach(function (r) {
+      var s = norm((r.querySelector('[data-f="start"]') || {}).value), e = norm((r.querySelector('[data-f="end"]') || {}).value);
+      if (!s) return;
+      if (e && e < s) err = err || cal.msg.endBefore;
+      ps.push({ start: s, end: e || null });
+    });
+    if (!err && !ps.length) err = cal.msg.none;
+    if (!err) err = problem(ps);
+    return { ps: list({ periods: ps }), err: err };
+  }
+
   return { norm: norm, list: list, has: has, inMonth: inMonth, continues: continues, toggled: toggled,
-           archived: archived, problem: problem, text: text, enrollText: enrollText, first: first };
+           archived: archived, problem: problem, text: text, enrollText: enrollText, first: first,
+           editorHTML: editorHTML, addRow: addRow, removeRow: removeRow, read: read };
 }
 
 export { periodsEngine };
