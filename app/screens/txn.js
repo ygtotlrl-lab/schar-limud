@@ -119,17 +119,36 @@ var TXN_LOG_FIRST=5;
 function txnLogMore(){S.TXN_LOG_LEVEL=Math.min(2,(S.TXN_LOG_LEVEL||0)+1);renderTxnLog();}
 function txnLogLess(){S.TXN_LOG_LEVEL=0;renderTxnLog();}
 
-// שורת תנועה — ביומן ובכרטיס התלמיד: תאריך · שם (ביומן) ומתחתיו האמצעי וההערה · סכום · מחיקה.
-function txnRowHTML(t,name){
-  var cr=isCreditTxn(t),sub=[cr?'<span class="credit-mark">זיכוי מיתרה</span>':esc(t.payment_method||''),esc(t.note||'')].filter(Boolean);
-  return '<div class="txn-row'+(cr?' credit':'')+'"><span class="txn-date">'+esc(txnDateShort(t.txn_date))+'</span>'+
-    '<span class="txn-who">'+(name!=null?'<span class="txn-name"><span class="student-name">'+esc(name)+'</span>'+pendTxnTag(t)+'</span>':pendTxnTag(t))+
-    (sub.length?'<span class="txn-sub">'+sub.join(' · ')+'</span>':'')+'</span>'+txnAmountHTML(t)+
-    '<button class="txn-x" data-act="txn-del" data-id="'+esc(t.client_id)+'" aria-label="מחיקת התשלום" title="מחיקת התשלום">'+icon('close')+'</button></div>';
+// אייקון לאמצעי התשלום — לפי מילה בשם, כי הרשימה נערכת בהגדרות (כמו בגיוס).
+function methodIcon(m){
+  m=String(m||'');
+  if(/אשראי/.test(m))return 'credit';
+  if(/העברה|בנק/.test(m))return 'bank';
+  if(/מזומן/.test(m))return 'cash';
+  if(/צ׳ק|צ'ק|צק/.test(m))return 'cheque';
+  if(/ביט|פייבוקס/.test(m))return 'phone';
+  if(/הו״ק|הו"ק|קבע/.test(m))return 'repeat';
+  return 'cards';
 }
 
-// התאריך ביומן — יום.חודש, והשנה רק כשאינה השנה הנוכחית.
-function txnDateShort(d){var p=String(d||'').split('-');if(p.length<3)return d||'';var y=String(new Date().getFullYear());return p[2]+'.'+p[1]+(p[0]===y?'':'.'+p[0].slice(2));}
+function txnDay(d){var p=String(d||'').split('-');return p.length<3?(d||'—'):p[2]+'.'+p[1]+'.'+p[0];}
+
+// «קבלה» — ביומן ובכרטיס התלמיד: קבוצה לכל יום, ובשורה הסכום בראש ובירוק · השם (ביומן), ומתחתיו ההערה ·
+// ובקצה אייקון האמצעי ושמו · ✕ קטן. זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
+function txnListHTML(txns,withName){
+  var last=null;
+  return txns.map(function(t){
+    var head='',day=txnDay(t.txn_date),cr=isCreditTxn(t);
+    if(day!==last){head='<div class="rc-day">'+esc(day)+'</div>';last=day;}
+    var st=withName?S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);}):null;
+    var who=withName?'<b><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+'</b>'+(t.note?'<small>'+esc(t.note)+'</small>':'')
+                    :'<small>'+(t.note?esc(t.note):'')+'</small>'+pendTxnTag(t);
+    var meth=cr?CREDIT_METHOD:(t.payment_method||'');
+    return head+'<div class="rc'+(cr?' credit':'')+'">'+txnAmountHTML(t)+'<div class="rc-who">'+who+'</div>'+
+      '<span class="rc-end" title="'+esc(meth)+'">'+icon(cr?'repeat':methodIcon(meth))+'<span>'+esc(meth||'—')+'</span></span>'+
+      '<button class="txn-x" data-act="txn-del" data-id="'+esc(t.client_id)+'" aria-label="מחיקת התשלום" title="מחיקת התשלום">'+icon('close')+'</button></div>';
+  }).join('');
+}
 
 function renderTxnLog(){
   var fid=comboValue('txn-filter'),lvl=S.TXN_LOG_LEVEL||0,cy=acadYearOf(dayToday());
@@ -141,7 +160,7 @@ function renderTxnLog(){
   if(lvl===0&&year.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">'+icon('down')+'עוד '+(year.length-txns.length)+' — עד תחילת השנה</button>';
   else if(lvl<2&&all.length>txns.length)more='<button class="txn-more" data-act="txn-log-more">'+icon('archive')+'ארכיון — שנים קודמות ('+(all.length-txns.length)+')</button>';
   if(lvl>0)more+='<button class="txn-more txn-less" data-act="txn-log-less">'+icon('up')+'צמצם</button>';
-  document.getElementById('txn-log').innerHTML=(txns.map(function(t){var st=S.STUDENTS.find(function(s){return idEq(s.client_id, t.student_client_id);});return txnRowHTML(t,st?st.name:'#'+t.student_client_id);}).join('')||'<div class="empty">אין תשלומים</div>')+more;
+  document.getElementById('txn-log').innerHTML=(txnListHTML(txns,true)||'<div class="empty">אין תשלומים</div>')+more;
 }
 
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
@@ -155,4 +174,4 @@ function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then
   schedulePush();
 });}
 
-export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick, txnRowHTML, updateDropdowns };
+export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnListHTML, txnMethodPick, updateDropdowns };

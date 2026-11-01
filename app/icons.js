@@ -15,7 +15,15 @@ var PATHS = {
   prev:     '<path d="M9 6l6 6-6 6"/>',
   next:     '<path d="M15 6l-6 6 6 6"/>',
   up:       '<path d="M6 15l6-6 6 6"/>',
-  down:     '<path d="M6 9l6 6 6-6"/>'
+  down:     '<path d="M6 9l6 6 6-6"/>',
+  // אמצעי התשלום — כמו בגיוס
+  cards:    '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10.8" r="2.1"/><path d="M5.9 16.2c.7-1.4 1.8-2.1 3.1-2.1s2.4.7 3.1 2.1"/><path d="M14.6 10h3.9M14.6 13.6h2.6"/>',
+  credit:   '<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18M7 14.5h3"/>',
+  bank:     '<path d="M3.5 9.5L12 4.5l8.5 5"/><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7"/><path d="M3.5 19.5h17"/>',
+  cash:     '<rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6.5 10v4M17.5 10v4"/>',
+  cheque:   '<rect x="3" y="6.5" width="18" height="11" rx="2"/><path d="M6.5 14.5c1.2-1.8 2.3-1.8 3 0s1.8 1.8 3 0"/><path d="M14.5 10.5h3.5"/>',
+  phone:    '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 17.5h2"/>',
+  repeat:   '<path d="M17 4l3 3-3 3"/><path d="M20 7H9a5 5 0 0 0-5 5"/><path d="M7 20l-3-3 3-3"/><path d="M4 17h11a5 5 0 0 0 5-5"/>'
 };
 
 function icon(name) {

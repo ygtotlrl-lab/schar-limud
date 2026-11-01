@@ -18,7 +18,9 @@
   /* שורת הניווט — מילוי ירוק כהה, דיו בהיר, והלשונית הפעילה בירוק בהיר. */
   --nav-bg:#3f7744;--nav-ink:#dcefd2;--nav-on:#b9f28a;
   /* השורה הקטנה שמעל שם המסך, וקו «טופלו החודש». */
-  --kicker:#307535}
+  --kicker:#307535;
+  /* פס «בפועל / צפי» — זהב, וירוק כשהושג (כמו בתכנית שבגיוס) */
+  --gold:#b7871b}
 
 /* ── הערכה הכהה ── */
 @media (prefers-color-scheme:dark){
@@ -32,6 +34,7 @@
       --border:#24382a;
       --nav-bg:#24502a; --nav-ink:#cfe8c2; --nav-on:#9fe870;
       --kicker:#9fe870;
+      --gold:#e0b04a;
       --brand-fill:#307535; --brand-ink:#9fe870; --brand-soft:#173a1d;
       --ok:#4ade80; --ok-soft:#12251c;
       --warn:#fbbf24; --warn-soft:#2c2213;
@@ -216,13 +219,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 #dash-chart .btrack i{width:100%;height:var(--bar-w);border-radius:var(--r-3) var(--r-3) 0 0;background:var(--brand-fill)}
 #dash-chart .btrack.tgt i{background:none;border-top:2px dashed var(--text-3);border-radius:0;opacity:1}
 /* ── תנועות ── */
-.txn-row{display:grid;grid-template-columns:3.4rem 1fr auto auto;gap:var(--sp-4);align-items:center;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);font-size:var(--fs-3)}
-.txn-row:last-child{border-bottom:none}
-.txn-row.credit{background:var(--creditl)}
 .txn-amt{font-weight:700;color:var(--ok)}
-.txn-date{font-size:var(--fs-2);color:var(--text-3);font-variant-numeric:tabular-nums}
-.txn-name{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
-.txn-sub{font-size:var(--fs-2);color:var(--text-3);overflow-wrap:anywhere}
+/* «קבלה» — היומן ותשלומי הכרטיס, כמו תשלומי החודש בגיוס: קבוצה לכל יום, הסכום בראש ובירוק, האמצעי באייקון בקצה. */
+#txn-log{padding-inline:var(--sp-6)}
+.rc-day{font-size:var(--fs-1);font-weight:800;color:var(--text-3);padding:var(--sp-5) var(--sp-2) var(--sp-2);border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.rc{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-4) var(--sp-2);border-bottom:1px solid var(--border)}
+.rc .txn-amt,.rc .amt-credit{flex:none;min-width:4.6em;font-size:var(--fs-4);font-weight:800;font-variant-numeric:tabular-nums}
+.rc-who{flex:1;min-width:0}
+.rc-who b{display:flex;align-items:center;gap:var(--sp-3);font-weight:700;min-width:0}
+.rc-who b .student-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-who small{display:block;color:var(--text-3);font-size:var(--fs-2);overflow-wrap:anywhere}
+.rc-end{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text-3);font-size:var(--fs-1);max-width:5.5em;text-align:center}
+.rc-end .ico{width:18px;height:18px;color:var(--brand-ink)}
+.rc.credit{border:1.5px dashed var(--credit);border-radius:var(--r-4);margin:var(--sp-2) 0}
+.rc.credit .rc-end .ico{color:var(--credit)}
 .txn-x{background:none;border:none;color:var(--text-3);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
 .txn-x .ico{width:16px;height:16px}
 .txn-x:focus-visible{outline:2px solid var(--bad);outline-offset:1px}
@@ -239,13 +249,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .acc-body.open{display:block}
 .credit-note{background:var(--creditl);border:1px solid var(--credit);color:var(--credit);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-size:var(--fs-3);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-5)}
 .credit-sub{font-size:var(--fs-2);color:var(--text-3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:var(--lh-3)}
-/* «טופל» בשורת התלמיד — כבוי במתאר, ודלוק בירוק הבהיר של התגיות. */
-.st-handled{border:1.5px solid var(--border);background:var(--card);color:var(--text-2);border-radius:var(--r-7);padding:var(--sp-2) var(--sp-4);font-family:Heebo;font-size:var(--fs-2);font-weight:700;cursor:pointer;white-space:nowrap}
-.st-handled.is-on{background:var(--brand-soft);color:var(--brand-ink);border-color:var(--brand-soft)}
-.st-handled:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
-@media (hover:hover){
-  .st-handled:hover{border-color:var(--brand-fill)}
-}
 /* ── רשימת התלמידים ──
    קבוצה לכל שיעור באזור לבן; מתחת לקו «טופלו החודש» האזורים שקופים למחצה והשורות שקטות. */
 .sc-search{margin-bottom:var(--sp-6)}
@@ -292,7 +295,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .debt-note{font-size:var(--fs-2);color:var(--text-3)}
 .debt-row{background:var(--bg)}
 .student-name{font-weight:600}
-.txn-who{display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
 .sum-row{font-weight:700;background:var(--bg)}
 /* ── הגדרות ── */
 .set-list-item{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-6);border-bottom:1px solid var(--border);gap:var(--sp-4)}
@@ -319,6 +321,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .stu-name{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
 .stu-st{font-size:var(--fs-2);font-weight:600;color:var(--text-3)}
 .stu-st.ok{color:var(--ok)}.stu-st.warn{color:var(--warn)}.stu-st.bad{color:var(--bad)}
+/* עיגול «טופל» — רשימת עבודה, כמו המשימות בגיוס: מתאר, ומלא בירוק עם וי כשטופל; לחיצה אינה פותחת את הכרטיס. */
+.stu-check{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--card);display:grid;place-items:center;cursor:pointer;color:#fff;padding:0}
+.stu-check .ico{width:16px;height:16px;stroke-width:2.4}
+.stu-check.is-on{background:var(--ok);border-color:var(--ok)}
+.stu-check:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
+@media (hover:hover){.stu-check:hover{border-color:var(--ok)}}
+.stu-row.is-handled .student-name{color:var(--text-2);font-weight:500}
+/* פס «בפועל / צפי» — הרכיב המשותף bar; זהב, וירוק כשהושג */
+.stu-prog{width:100%;max-width:220px;height:5px;margin-top:var(--sp-2)}
+.stu-prog i{background:var(--gold)}
+.stu-prog.full i{background:var(--ok)}
+.sc-grp-sum{margin-inline-start:auto;font-size:var(--fs-1);color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
 .stu-open .badge{flex:none}
 .sc-grp.is-done .stu-av{background:var(--card-2);color:var(--text-2)}
 @media (hover:hover){.stu-row:hover{background:var(--card-2)}}
@@ -354,8 +368,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* ── אייקונים ── */
 /* העובי נקבע כאן ולא ב-icon() — גוף הפונקציה אינו נערך לאפליקציה אחת. */
 .ico{width:1.15em;height:1.15em;flex:none;stroke-width:1.6;vertical-align:-.2em}
-.btn .ico,.txn-more .ico,.sc-tog .ico,.st-handled .ico,.acc-hdr span .ico{margin-inline-end:var(--sp-2)}
-.sc-tog .ico,.st-handled .ico{margin-inline:var(--sp-2) 0}
+.btn .ico,.txn-more .ico,.sc-tog .ico,.acc-hdr span .ico{margin-inline-end:var(--sp-2)}
+.sc-tog .ico{margin-inline:var(--sp-2) 0}
 .tab-btn .ti{display:flex;align-items:center;justify-content:center}
 .tab-btn .ti .ico{width:22px;height:22px}
 .admin-ico{display:inline-flex;align-items:center;justify-content:center}
