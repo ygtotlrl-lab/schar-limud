@@ -8,7 +8,7 @@ import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
-import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START, MSG_END_MONTH_BAD,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_START_MONTH_BAD, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -325,13 +325,16 @@ function slStudentGroups(list){
   }).filter(function(g){return g.rows.length;});
 }
 
-// הארכיון — קבוצה לכל מחזור, החדש ראשון.
+// הארכיון — קבוצה לכל מחזור, החדש ראשון; השלוחים — קבוצה משלהם בסוף.
 function slArchiveGroups(list){
   var by={};
-  list.forEach(function(s){var c=slCycleOf(s)||0;(by[c]=by[c]||[]).push(s);});
-  return Object.keys(by).map(Number).sort(function(a,b){return b-a;}).map(function(c){
+  var free=list.filter(function(s){return CLS_NO_CYCLE[s.cls];});
+  list.forEach(function(s){if(CLS_NO_CYCLE[s.cls])return;var c=slCycleOf(s)||0;(by[c]=by[c]||[]).push(s);});
+  var gs=Object.keys(by).map(Number).sort(function(a,b){return b-a;}).map(function(c){
     return {label:cycleLabel(c)||'ללא מחזור',rows:by[c]};
   });
+  if(free.length)gs.push({label:CLS_NAME.s,rows:free});
+  return gs;
 }
 
 // המעבר השנתי — ג׳ נסגרים באוגוסט של השנה שמסתיימת ועוברים לארכיון; ב׳ ⟵ ג׳; א׳ ⟵ ב׳; והשנה מתקדמת. המחזור אינו משתנה.

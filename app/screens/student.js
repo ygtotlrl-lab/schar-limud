@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { CLS_LIST, CLS_NAME, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
          MSG_DEL_PERIOD_BODY, MSG_DEL_PERIOD_TITLE, MSG_HANDLED_OFF, MSG_HANDLED_ON,
@@ -71,7 +71,7 @@ function screenStudentHTML() {
           <label for="sc-edit-cls">שיעור</label>
           <select id="sc-edit-cls" data-chg="sc-cls"></select>
         </div>
-        <div class="frm-row">
+        <div class="frm-row" id="sc-cycle-row">
           <label for="sc-edit-cycle">מחזור</label>
           <select id="sc-edit-cycle"></select>
         </div>
@@ -205,12 +205,14 @@ function deleteStudent(){var s=scStudent();
 function openYearTransition(){
   var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'bad');return;}
   var nb=plan.up.filter(function(s){return s.cls==='b';}).length,na=plan.up.length-nb;
+  var ns=S.STUDENTS.filter(function(s){return CLS_NO_CYCLE[s.cls]&&!s.deleted&&!studentArchived(s);}).length;
   openModal(MSG_YEAR_ROLL_TITLE,
     '<div class="year-note">'+
       '<strong class="danger-strong">⚠️ פעולה בלתי הפיכה!</strong><br>'+
       '• שיעור ג׳ ('+plan.grad.length+') — התקופה נסגרת ב'+esc(monthKeyLabel(plan.close))+', ועוברים לארכיון ('+esc(cycleLabel(plan.year))+')<br>'+
       '• שיעור ב׳ ⟵ שיעור ג׳ ('+nb+')<br>'+
       '• שיעור א׳ ⟵ שיעור ב׳ ('+na+')<br>'+
+      (ns?'• '+esc(CLS_NAME.s)+' ('+ns+') — ללא שינוי<br>':'')+
       '• שנת הלימודים: '+esc(cycleLabel(plan.year).replace('מחזור ',''))+' ⟵ '+esc(cycleLabel(plan.year+1).replace('מחזור ',''))+
       (plan.skip.length?'<br>• לא נסגרים — תקופה שמתחילה אחרי '+esc(monthKeyLabel(plan.close))+': '+plan.skip.map(function(s){return esc(s.name);}).join(', '):'')+
     '</div>'+
@@ -278,6 +280,7 @@ function renderStudentCard(){
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(slCycleOf(s));
+  document.getElementById('sc-cycle-row').classList.toggle('hidden',!!CLS_NO_CYCLE[s.cls]);
   renderScPeriods(s);renderScAnnual();
 }
 
@@ -378,12 +381,14 @@ function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.c
 
 // בחירת שיעור בכרטיס ממלאת את המחזור מהחישוב — והבורר נשאר לעריכה ידנית.
 function scClsChanged(){
-  var c=slCycleFor(document.getElementById('sc-edit-cls').value);if(!c)return;
+  var cls=document.getElementById('sc-edit-cls').value;
+  document.getElementById('sc-cycle-row').classList.toggle('hidden',!!CLS_NO_CYCLE[cls]);
+  var c=slCycleFor(cls);if(!c)return;
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(c);
 }
 
 function saveStudentSettings(){
-  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=parseInt(document.getElementById('sc-edit-cycle').value,10)||null;
+  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
   if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
   if(CLS_LIST.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}

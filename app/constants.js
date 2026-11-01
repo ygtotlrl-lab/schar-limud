@@ -118,8 +118,10 @@ var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lookups'];
 var LK_METHOD = 'method';
 
 // השיעור — קבוע, כמו בהנהלה: הסדר א׳ ⟵ ב׳ ⟵ ג׳, והמחזור — שנת הסיום: ג׳ שנת הלימודים, ב׳ הבאה, א׳ שלאחריה.
-var CLS_LIST = ['a', 'b', 'g'];
-var CLS_NAME = { a: 'שיעור א׳', b: 'שיעור ב׳', g: 'שיעור ג׳' };
+var CLS_LIST = ['a', 'b', 'g', 's'];
+var CLS_NAME = { a: 'שיעור א׳', b: 'שיעור ב׳', g: 'שיעור ג׳', s: 'התלמידים השלוחים' };
+// השלוחים — בלי מחזור ובלי מעבר שנתי: רק הוספה והפסקה ידניות.
+var CLS_NO_CYCLE = { s: true };
 var CLS_CYCLE_ADD = { g: 0, b: 1, a: 2 };
 var MSG_YEAR_UNSET = '⚠️ שנת הלימודים לא נקבעה — המעבר השנתי אינו זמין';
 var MSG_YEAR_ROLL_DONE = '✅ מעבר שנתי הושלם — ';
@@ -135,7 +137,7 @@ var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
 // סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
 var SL_NEVER_MIRROR_SETTINGS = [];
 
-export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
+export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NAME, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
          MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DEBT_POSITIVE, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,
