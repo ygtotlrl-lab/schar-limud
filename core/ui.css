@@ -117,7 +117,10 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 .view-spin{width:28px;height:28px;border-radius:var(--r-7);border:3px solid var(--border);
   border-top-color:var(--brand);animation:view-spin .8s linear infinite}
 @keyframes view-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.view-spin{animation:none}}
+/* מציין הטעינה של הדף — סמל האפליקציה, כמו מסך הפתיחה של המעטפת */
+.view-logo{width:96px;height:96px;border-radius:22%;animation:view-pulse 1.6s ease-in-out infinite}
+@keyframes view-pulse{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.view-spin,.view-logo{animation:none}}
 /* ── הקליפה החשופה ──
    הקוד חושף את המסגרת רק יחד עם מסך שמשתמש בה — מסגרת גלויה לפני המסך הראשון מהבהבת מעליו.
    :not(#view) נושא סגוליות של מזהה — אין להחליפו במחלקה: הוא גובר על ה-display שהאפליקציה נותנת למסגרת. */

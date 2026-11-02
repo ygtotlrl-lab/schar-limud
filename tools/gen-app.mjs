@@ -86,6 +86,7 @@ ${launch.map(p => `        <package android:name="${p}" />`).join('\n')}
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:theme="@style/Theme.Shell.Starting"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -137,13 +138,15 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
-${A.android.share ? `
+
 dependencies {
+    // מסך הפתיחה — אותו מסך בכל גרסאות האנדרואיד, והמעטפת מחזיקה אותו עד שהמסך הראשון צויר
+    implementation 'androidx.core:core-splashscreen:1.0.1'${A.android.share ? `
     implementation 'androidx.core:core:1.13.1'
     // WebViewCompat.addWebMessageListener — רשימת המקורות של גשר השיתוף נאכפת ב-WebView עצמו, לכל frame
-    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.webkit:webkit:1.11.0'` : ''}
 }
-` : ''}`;
+`;
 }
 
 function settingsGradle(A) {
@@ -186,6 +189,14 @@ ${body}
 }
 
 // גשר השיתוף נוצר רק כש-android.share מוצהר, וגשר ההדפסה — רק כש-android.share.print דולק, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק, וההשתקה — רק באפליקציה שמצהירה android.dnd; אחרת הקטע יורד כולו.
+// צבע מסך הפתיחה — רקע האייקון: מלא כמות שהוא, ומדורג — אמצע שני קצותיו.
+function splashColor(A) {
+  const b = A.android.launcherBg;
+  if (b.kind === 'solid') return b.color;
+  const ch = (h, i) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
+  return '#' + [0, 1, 2].map(i => Math.round((ch(b.start, i) + ch(b.end, i)) / 2).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
 function javaFile(name) {
   return A => {
     const share = A.android.share;
@@ -197,7 +208,7 @@ function javaFile(name) {
       PACKAGE: A.android.package, URL: jstr(A.android.url), OFFLINE: jstr(A.android.offlineLine),
       ACCENT: jstr(A.android.accent), ORIGIN: jstr(u.origin), HOST: jstr(u.host),
       FILEPREFIX: jstr(A.prefix), CHOOSER: jstr(share ? share.chooser : ''),
-      LAUNCH: launch.map(p => '"' + jstr(p) + '"').join(', ')
+      LAUNCH: launch.map(p => '"' + jstr(p) + '"').join(', '), SPLASHBG: splashColor(A)
     };
     const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
     if (typeof A.android.exit !== 'boolean') throw new Error('android.exit — לא מוצהר; true או false');
@@ -224,6 +235,20 @@ function filePaths() {
 </paths>
 `;
 }
+// ערכת מסך הפתיחה — הסמל (קדמת האייקון) על צבע הרקע שלו, ואחריה ערכת המעטפת.
+function splashTheme(A) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- ${MARK} -->
+<resources>
+    <style name="Theme.Shell.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">${splashColor(A)}</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+    </style>
+</resources>
+`;
+}
+
 export const TARGETS = {
   [`${JAVA}/ShellActivity.java`]: javaFile('ShellActivity'),
   [`${JAVA}/MainActivity.java`]: javaFile('MainActivity'),
@@ -233,6 +258,7 @@ export const TARGETS = {
   'android/app/build.gradle': appGradle,
   'android/settings.gradle': settingsGradle,
   [`${RES}/drawable/ic_launcher_background.xml`]: launcherBg,
+  [`${RES}/values/themes.xml`]: splashTheme,
   ...(APP.android.share ? { [`${RES}/xml/file_paths.xml`]: filePaths } : {})
 };
 
