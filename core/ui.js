@@ -28,7 +28,8 @@ function actRun(el, fn) {
   el._actBusy = true;
   var isBtn = el.tagName === 'BUTTON';
   // התווית מ-data-busy — פעולה שבודקת אינה «שומרת».
-  if (isBtn) busy(el, true, el.getAttribute('data-busy') ? stIcon('wait') + esc(el.getAttribute('data-busy')) : '');
+  // data-busy הוא HTML שלם (ספינר, או אייקון וטקסט) — נכנס כמות שהוא; בלעדיו — שעון החול ו«שומר…».
+  if (isBtn) busy(el, true, el.getAttribute('data-busy') || '');
   out.then(function () { }, function (e) {
     console.error('[act] ' + el.getAttribute('data-act'), e);
   }).then(function () {
