@@ -74,7 +74,7 @@ var MSG_ADD_METHOD = 'הוספת אמצעי תשלום';
 var MSG_METHOD_LABEL = 'שם האמצעי';
 var MSG_VALUE_REQUIRED = 'יש להזין ערך';
 var MSG_STUDENTS_MANAGE = 'ניהול תלמידים';
-var MSG_YEAR_ROLL_TITLE = '🔄 מעבר שנתי';
+var MSG_YEAR_ROLL_TITLE = 'מעבר שנתי';
 var MSG_STUDENTS_UPDATED = ' תלמידים עודכנו';
 
 var MSG_STUDENT_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — התלמיד לא נשמר';
