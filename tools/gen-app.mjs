@@ -189,14 +189,6 @@ ${body}
 }
 
 // גשר השיתוף נוצר רק כש-android.share מוצהר, וגשר ההדפסה — רק כש-android.share.print דולק, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק, וההשתקה — רק באפליקציה שמצהירה android.dnd; אחרת הקטע יורד כולו.
-// צבע מסך הפתיחה — רקע האייקון: מלא כמות שהוא, ומדורג — אמצע שני קצותיו.
-function splashColor(A) {
-  const b = A.android.launcherBg;
-  if (b.kind === 'solid') return b.color;
-  const ch = (h, i) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
-  return '#' + [0, 1, 2].map(i => Math.round((ch(b.start, i) + ch(b.end, i)) / 2).toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
 function javaFile(name) {
   return A => {
     const share = A.android.share;
@@ -208,7 +200,7 @@ function javaFile(name) {
       PACKAGE: A.android.package, URL: jstr(A.android.url), OFFLINE: jstr(A.android.offlineLine),
       ACCENT: jstr(A.android.accent), ORIGIN: jstr(u.origin), HOST: jstr(u.host),
       FILEPREFIX: jstr(A.prefix), CHOOSER: jstr(share ? share.chooser : ''),
-      LAUNCH: launch.map(p => '"' + jstr(p) + '"').join(', '), SPLASHBG: splashColor(A)
+      LAUNCH: launch.map(p => '"' + jstr(p) + '"').join(', ')
     };
     const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
     if (typeof A.android.exit !== 'boolean') throw new Error('android.exit — לא מוצהר; true או false');
@@ -235,14 +227,14 @@ function filePaths() {
 </paths>
 `;
 }
-// ערכת מסך הפתיחה — הסמל (קדמת האייקון) על צבע הרקע שלו, ואחריה ערכת המעטפת.
+// ערכת מסך הפתיחה — כמקובל באנדרואיד: האייקון המלא במרכז, על רקע לבן, ואחריה ערכת המעטפת.
 function splashTheme(A) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <!-- ${MARK} -->
 <resources>
     <style name="Theme.Shell.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">${splashColor(A)}</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
     </style>
 </resources>

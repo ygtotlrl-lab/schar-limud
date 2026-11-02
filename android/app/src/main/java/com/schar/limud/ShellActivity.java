@@ -42,9 +42,11 @@ public abstract class ShellActivity extends Activity {
     // נדלק כשדף אמיתי כלשהו צויר — כך שגיאה מאוחרת אינה מוחקת אפליקציה חיה.
     private boolean loadedOnce = false;
 
-    // מסך הפתיחה — הסמל על צבע האפליקציה, עד שהמסך הראשון צויר: #view מלא, ובלי מציין הטעינה של הדף.
+    // מסך הפתיחה — האייקון במרכז על רקע לבן, לפחות SPLASH_MIN_MS ועד שהמסך הראשון צויר: #view מלא, ובלי מציין הטעינה של הדף.
     // אות שלא מגיע — המסך יורד ממילא אחרי SPLASH_MAX_MS.
+    private static final long SPLASH_MIN_MS = 1000;
     private static final long SPLASH_MAX_MS = 3000;
+    private long splashAt = 0;
     private static final long SPLASH_POLL_MS = 100;
     private static final String SPLASH_READY_JS =
         "(function(){var v=document.getElementById('view');return !!v&&v.childElementCount>0&&!v.querySelector('.view-loading');})()";
@@ -62,15 +64,18 @@ public abstract class ShellActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        splashAt = android.os.SystemClock.uptimeMillis();
         SplashScreen splash = SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         splash.setKeepOnScreenCondition(new SplashScreen.KeepOnScreenCondition() {
-            @Override public boolean shouldKeepOnScreen() { return !shellReady; }
+            @Override public boolean shouldKeepOnScreen() {
+                return !shellReady || android.os.SystemClock.uptimeMillis() - splashAt < SPLASH_MIN_MS;
+            }
         });
 
         webView = new WebView(this);
-        // הרקע של מסך הפתיחה גם מתחת לדף — בלי הבהוב לבן בין השניים.
-        webView.setBackgroundColor(Color.parseColor("#FFFFFF"));
+        // הרקע של מסך הפתיחה גם מתחת לדף — בלי הבהוב בין השניים.
+        webView.setBackgroundColor(Color.WHITE);
         setContentView(webView);
         webView.postDelayed(new Runnable() { @Override public void run() { shellReady = true; } }, SPLASH_MAX_MS);
 
