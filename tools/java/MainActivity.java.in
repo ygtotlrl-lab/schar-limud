@@ -62,7 +62,7 @@ public class MainActivity extends ShellActivity {
                         if (!isMainFrame || !APP_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
                         try {
                             JSONObject o = new JSONObject(String.valueOf(message.getData()));
-                            shareFile(o.optString("data"), o.optString("mime"));
+                            shareFile(o.optString("data"), o.optString("mime"), o.optString("name"));
                         } catch (Exception e) {
                             toastUi("שגיאה בהכנת הקובץ לשיתוף");
                         }
@@ -99,7 +99,8 @@ public class MainActivity extends ShellActivity {
     // ── השיתוף עצמו ──
     // אין יעד קבוע — הבורר של המערכת בוחר; יעד קבוע היה שולח את הדוח לאפליקציה אחת בלבד.
     // הקובץ — תמונה, PDF או גיליון, והסיומת נגזרת מסוג התוכן: אפליקציה שמקבלת קובץ בסיומת שגויה אינה פותחת אותו.
-    private void shareFile(final String base64Data, final String mimeType) {
+    // name — שם הקובץ מהדף (גיליון התלמיד והחודש); ריק — הקידומת והשעה. תיקייה לכל שיתוף, כדי ששני קבצים באותו שם לא ידרסו.
+    private void shareFile(final String base64Data, final String mimeType, final String name) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
             File dir = new File(getCacheDir(), "shared");
@@ -110,7 +111,17 @@ public class MainActivity extends ShellActivity {
                 : "application/vnd.ms-excel".equals(mime) ? ".xls"
                 : "text/csv".equals(mime) ? ".csv"
                 : ".jpg";
-            final File f = new File(dir, "@@FILEPREFIX@@" + System.currentTimeMillis() + ext);
+            String base = name == null ? "" : name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]+", " ").trim();
+            if (base.toLowerCase().endsWith(ext)) base = base.substring(0, base.length() - ext.length()).trim();
+            if (base.length() > 120) base = base.substring(0, 120).trim();
+            final File f;
+            if (base.isEmpty()) {
+                f = new File(dir, "@@FILEPREFIX@@" + System.currentTimeMillis() + ext);
+            } else {
+                File sub = new File(dir, String.valueOf(System.currentTimeMillis()));
+                sub.mkdirs();
+                f = new File(sub, base + ext);
+            }
             FileOutputStream fos = new FileOutputStream(f);
             fos.write(bytes);
             fos.flush();
@@ -148,7 +159,7 @@ public class MainActivity extends ShellActivity {
             runOnUiThread(new Runnable() {
                 @Override public void run() {
                     if (!isAppOrigin(webView.getUrl())) return;
-                    MainActivity.this.shareFile(base64Data, mimeType);
+                    MainActivity.this.shareFile(base64Data, mimeType, "");
                 }
             });
         }
