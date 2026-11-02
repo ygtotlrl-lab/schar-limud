@@ -15,7 +15,7 @@ var _shell = {};
 function shellIcon(name, svg) {
   if (svg !== undefined) {
     _shell[name] = svg;
-    document.querySelectorAll('[data-shell-ic="' + name + '"]').forEach(function (el) { el.innerHTML = svg; });
+    if (typeof document !== 'undefined') document.querySelectorAll('[data-shell-ic="' + name + '"]').forEach(function (el) { el.innerHTML = svg; });
   }
   return _shell[name] || '';
 }
