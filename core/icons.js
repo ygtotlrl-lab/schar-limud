@@ -9,7 +9,7 @@ function iconSet(paths) {
   };
 }
 
-// אייקוני המעטפת והליבה — ✕ של #modal, של #updater ושל #ls-alert: הקוד המשותף אינו מכיר את הסט של האפליקציה,
+// אייקוני המעטפת והליבה — ✕ של #modal, של #updater ושל #ls-alert, ואייקון הרענון בבאנר העדכון: הקוד המשותף אינו מכיר את הסט של האפליקציה,
 // ולכן האפליקציה מוסרת לו את האייקון בעלייה (shellIcon('close', icon('close'))), והוא נצבע בכל אלמנט שמסומן data-shell-ic.
 var _shell = {};
 function shellIcon(name, svg) {

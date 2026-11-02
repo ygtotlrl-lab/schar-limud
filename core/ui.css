@@ -70,6 +70,8 @@ body.locked{overflow:hidden}
   margin-inline-start:0;background:none;color:var(--upd-ink,var(--on-brand));opacity:var(--op-5);padding:0;width:32px;height:32px;
   display:inline-flex;align-items:center;justify-content:center}
 #updater button.x .ico{width:18px;height:18px}
+#updater .upd-ic{display:inline-flex;flex:none}
+#updater .upd-ic .ico{width:20px;height:20px}
 /* ── שכבת הטוסט ──
    div לכל הודעה — אלמנט קבוע אחד נדרס בהודעה השנייה.
    המשתנה --toasts-lift הוא גובה הבאנר הפתוח ומרווח, נמדד בפתיחתו ונכתב ב-setProperty; אפס כשהוא סגור. */

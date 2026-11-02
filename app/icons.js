@@ -2,6 +2,7 @@
 // כולם באותה רשת (24) ובאותו עובי קו — אמוג׳י מתחלף בין מערכות ההפעלה ואינו נשמע לצבע.
 import { iconSet, shellIcon } from '../core/icons.js';
 var PATHS = {
+  refresh:  '<path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.5"/><path d="M20 3.5v5h-5"/>',
   dash:     '<path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l3.6-4.4"/><circle cx="12" cy="16" r="1.3"/><path d="M4 19.5h16"/>',
   txn:      '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 9.5h18"/><path d="M7 14.5h4"/>',
   student:  '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.8-3 3-4.6 5.5-4.6s4.7 1.6 5.5 4.6"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6"/><path d="M17.5 14.6c1.6.6 2.6 2 3 4.4"/>',
@@ -30,5 +31,6 @@ var PATHS = {
 // הצייר — core/icons.js, גוף אחד בכולן; כאן רק הסט.
 var icon = iconSet(PATHS);
 shellIcon('close', icon('close')); // ✕ של המעטפת והליבה — מהסט של האפליקציה
+shellIcon('refresh', icon('refresh')); // באנר העדכון
 
 export { icon };
