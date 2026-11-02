@@ -9,4 +9,15 @@ function iconSet(paths) {
   };
 }
 
-export { iconSet };
+// אייקוני המעטפת והליבה — ✕ של #modal, של #updater ושל #ls-alert: הקוד המשותף אינו מכיר את הסט של האפליקציה,
+// ולכן האפליקציה מוסרת לו את האייקון בעלייה (shellIcon('close', icon('close'))), והוא נצבע בכל אלמנט שמסומן data-shell-ic.
+var _shell = {};
+function shellIcon(name, svg) {
+  if (svg !== undefined) {
+    _shell[name] = svg;
+    document.querySelectorAll('[data-shell-ic="' + name + '"]').forEach(function (el) { el.innerHTML = svg; });
+  }
+  return _shell[name] || '';
+}
+
+export { iconSet, shellIcon };

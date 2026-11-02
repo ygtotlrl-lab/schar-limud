@@ -147,7 +147,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sheet{background:var(--card);border-radius:var(--r-6);padding:var(--sp-7);width:100%;max-width:420px;box-shadow:0 8px 40px var(--sh-1);max-height:90vh;overflow-y:auto}
 .sheet-hd{margin-bottom:var(--sp-6)}
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
-.sheet-hd .x{color:var(--text-3);padding:0 var(--sp-2)}
+.sheet-hd .x{color:var(--text-3)}
 .sheet-ft{gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
 #ask-body{font-size:var(--fs-4);color:var(--text-2)}
 #ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}

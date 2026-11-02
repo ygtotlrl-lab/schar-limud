@@ -2,6 +2,7 @@
 
 import { app } from './util.js';
 import { lsToast } from './ui.js';
+import { shellIcon } from './icons.js';
 
 // ── האחסון ──
 // מסד IndexedDB אחד לאפליקציה, בשם APP.id, ומאגר מפתח-ערך אחד — הכל נטען לזיכרון ב-lsOpen לפני כל קריאה,
@@ -55,7 +56,8 @@ function lsAlert(msg) {
     sp.id = 'ls-alert-msg';
     var b = document.createElement('button');
     b.type = 'button';
-    b.textContent = '✕';
+    b.dataset.shellIc = 'close';
+    b.innerHTML = shellIcon('close');
     b.setAttribute('aria-label', 'סגור');
     b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
