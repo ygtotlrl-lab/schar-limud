@@ -185,7 +185,7 @@ ${body}
 `;
 }
 
-// גשר השיתוף נוצר רק כש-android.share מוצהר, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק, וההשתקה — רק באפליקציה שמצהירה android.dnd; אחרת הקטע יורד כולו.
+// גשר השיתוף נוצר רק כש-android.share מוצהר, וגשר ההדפסה — רק כש-android.share.print דולק, פתיחת אפליקציה אחרת — רק כש-android.launch אינו ריק, והיציאה — רק כש-android.exit דולק, וההשתקה — רק באפליקציה שמצהירה android.dnd; אחרת הקטע יורד כולו.
 function javaFile(name) {
   return A => {
     const share = A.android.share;
@@ -201,8 +201,11 @@ function javaFile(name) {
     };
     const tmpl = readFileSync(join(ROOT, 'tools', 'java', name + '.java.in'), 'utf8');
     if (typeof A.android.exit !== 'boolean') throw new Error('android.exit — לא מוצהר; true או false');
-    const on = { share: !!share, launch: launch.length > 0, exit: A.android.exit, dnd: A.android.dnd === true };
-    const body = tmpl.replace(/^\/\/@@(share|launch|exit|dnd)\n([\s\S]*?)^\/\/@@end\n/gm, (m, k, inner) => on[k] ? inner : '');
+    const on = { share: !!share, print: !!(share && share.print), launch: launch.length > 0, exit: A.android.exit, dnd: A.android.dnd === true };
+    // גשר ההדפסה יושב בתוך קטע השיתוף — הקטעים הפנימיים נפתרים ראשונים.
+    const block = k => new RegExp(`^\\/\\/@@(${k})\\n([\\s\\S]*?)^\\/\\/@@end\\n`, 'gm');
+    const body = tmpl.replace(block('print'), (m, k, inner) => on[k] ? inner : '')
+      .replace(block('share|launch|exit|dnd'), (m, k, inner) => on[k] ? inner : '');
     return body.replace(/@@([A-Z]+)@@/g, (m, k) => {
       if (!(k in vals)) throw new Error(`${name}.java.in — אין ערך ל-${k}`);
       return vals[k];
@@ -224,6 +227,7 @@ function filePaths() {
 export const TARGETS = {
   [`${JAVA}/ShellActivity.java`]: javaFile('ShellActivity'),
   [`${JAVA}/MainActivity.java`]: javaFile('MainActivity'),
+  ...(APP.android.share && APP.android.share.print ? { 'android/app/src/main/java/android/print/ShellPdfWriter.java': javaFile('ShellPdfWriter') } : {}),
   'manifest.json': manifest,
   'android/app/src/main/AndroidManifest.xml': androidManifest,
   'android/app/build.gradle': appGradle,
