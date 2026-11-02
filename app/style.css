@@ -127,6 +127,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .btn.out{background:var(--card);border:1.5px solid var(--text);color:var(--text)}
 .btn.danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid var(--bad-soft)}
 .btn.sm{padding:var(--sp-3) var(--sp-5);font-size:var(--fs-2)}
+/* כפתור שכולו אייקון — ריבוע, בלי ריפוד, והאייקון במרכזו */
+.btn.ic{padding:0;width:32px;height:32px;justify-content:center}
+.btn.ic .ico{margin:0}
 .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-3)}
 .tbl th{background:var(--bg);color:var(--text-2);padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:600;font-size:var(--fs-2);white-space:nowrap;border-bottom:2px solid var(--border)}
 .tbl td{padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}

@@ -62,7 +62,7 @@ dragDef(LK_METHOD, lookupDragApply);
 function renderListItems(kind,elId){document.getElementById(elId).innerHTML=(slLookups(kind).map(function(i){
   var head='<div class="set-list-item" data-drag="'+esc(kind)+'" data-id="'+esc(i.client_id)+'"><span class="grip" data-grip aria-hidden="true">&#10303;</span><span class="lk-label">'+esc(i.label)+'</span>';
   if(isCreditValue(i.label))return head+'<span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">&#128274; סעיף מערכת</span></div>';
-  return head+pendLkTag(i)+'<button class="btn sm danger" data-act="list-del" data-id="'+esc(i.client_id)+'" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button></div>';
+  return head+pendLkTag(i)+'<button class="btn sm danger ic" data-act="list-del" data-id="'+esc(i.client_id)+'" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button></div>';
 }).join(''))||'<div class="empty">ריק</div>';}
 
 // ההוספה בחלון של האפליקציה — דיאלוג הדפדפן אינו בעיצוב, ונראה כהודעה של אתר.

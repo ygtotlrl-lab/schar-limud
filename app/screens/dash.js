@@ -27,9 +27,9 @@ function screenDashHTML() {
       <!-- ממשק RTL: קדימה בזמן = שמאלה. הכפתור הימני (הראשון ב-DOM) מוביל
            אחורה ולכן מסמן ימינה, והשמאלי קדימה ולכן מסמן שמאלה. -->
       <div class="year-nav">
-        <button class="btn sm out" data-act="dash-prev-year" title="שנה קודמת" aria-label="שנה קודמת">${icon('prev')}</button>
+        <button class="btn sm out ic" data-act="dash-prev-year" title="שנה קודמת" aria-label="שנה קודמת">${icon('prev')}</button>
         <span id="dash-year-label" class="year-label"></span>
-        <button class="btn sm out" data-act="dash-next-year" title="שנה הבאה" aria-label="שנה הבאה">${icon('next')}</button>
+        <button class="btn sm out ic" data-act="dash-next-year" title="שנה הבאה" aria-label="שנה הבאה">${icon('next')}</button>
       </div>
     </div>
     <div class="dash-scroll">
