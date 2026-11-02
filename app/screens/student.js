@@ -11,6 +11,7 @@ import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_C
          MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
+import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
 import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredApplied, distCredit, enrollText, fmt,
          monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
@@ -217,7 +218,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
 function deleteStudent(){var s=scStudent();
  ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
-  if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
+  if(!s){toast(MSG_STUDENT_MISSING2, null, 'warn');return;}
   var row=tombKill(Object.assign({},s));
   if(!slLocalWrite('sl_students',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   pcCascadeDelete('sl_students',row);
@@ -229,12 +230,12 @@ function deleteStudent(){var s=scStudent();
 
 // ── המעבר השנתי ──
 function openYearTransition(){
-  var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'bad');return;}
+  var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'warn');return;}
   var nb=plan.up.filter(function(s){return s.cls==='b';}).length,na=plan.up.length-nb;
   var ns=S.STUDENTS.filter(function(s){return CLS_NO_CYCLE[s.cls]&&!s.deleted&&!studentArchived(s);}).length;
   openModal(MSG_YEAR_ROLL_TITLE,
     '<div class="year-note">'+
-      '<strong class="danger-strong">⚠️ פעולה בלתי הפיכה!</strong><br>'+
+      '<strong class="danger-strong">'+stIcon('warn')+'פעולה בלתי הפיכה!</strong><br>'+
       '• שיעור ג׳ ('+plan.grad.length+') — התקופה נסגרת ב'+esc(monthKeyLabel(plan.close))+', ועוברים לארכיון ('+esc(cycleLabel(plan.year))+')<br>'+
       '• שיעור ב׳ ⟵ שיעור ג׳ ('+nb+')<br>'+
       '• שיעור א׳ ⟵ שיעור ב׳ ('+na+')<br>'+
@@ -248,7 +249,7 @@ function openYearTransition(){
 }
 
 function doYearTransition(){
-  var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'bad');return;}
+  var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'warn');return;}
   var n=slYearApply(plan);
   shell.refreshUI();
   if(n<0){toast(MSG_CHANGE_NOT_SAVED,5000,'bad');return;}
@@ -340,7 +341,7 @@ function annualHTML(s,year){
   var cr=distCredit(dist),applied=distCredApplied(dist);
   if(cr>0)html+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)html+='<div class="credit-applied credit-sub">↩ מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
+  if(applied>0)html+='<div class="credit-applied credit-sub">'+stIcon(icon('credit'))+'מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
   html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
   return html;
@@ -375,7 +376,7 @@ function saveStudentSettings(){
   var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
   if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
   if(CLS_LIST.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}
-  var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'bad');return;}
+  var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'warn');return;}
   var cs=Object.assign({},s.card_settings||{});
   // אימות מפורש — שדה טקסט מעביר קלט פגום כמות שהוא, ו-parseInt בלי אימות כותב NaN לתוך card_settings.
   var tuitionVal=parseInt(tuition,10);

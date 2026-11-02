@@ -19,55 +19,55 @@ var MSG_PICK_DATE = 'נא לבחור תאריך';
 
 var MSG_NEED_AMOUNT = 'נא להזין סכום תקין';
 
-var MSG_PAY_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — התשלום לא נשמר';
+var MSG_PAY_SAVE_FAIL = 'השמירה במכשיר נכשלה — התשלום לא נשמר';
 
-var MSG_PAY_MISSING = '⚠️ התשלום לא נמצא';
+var MSG_PAY_MISSING = 'התשלום לא נמצא';
 
-var MSG_DEL_NOT_SAVED = '❌ המחיקה לא נשמרה במכשיר';
+var MSG_DEL_NOT_SAVED = 'המחיקה לא נשמרה במכשיר';
 
-var MSG_PAY_DELETED = '✅ תשלום נמחק';
+var MSG_PAY_DELETED = 'תשלום נמחק';
 
-var MSG_CHANGE_NOT_SAVED = '❌ השינוי לא נשמר במכשיר';
+var MSG_CHANGE_NOT_SAVED = 'השינוי לא נשמר במכשיר';
 
-var MSG_STUDENT_ON = '✅ תלמיד הופעל';
+var MSG_STUDENT_ON = 'תלמיד הופעל';
 
-var MSG_STUDENT_OFF = '✅ תלמיד הושהה';
+var MSG_STUDENT_OFF = 'תלמיד הושהה';
 
-var MSG_HANDLED_ON = '✅ סומן «טופל» לחודש';
+var MSG_HANDLED_ON = 'סומן «טופל» לחודש';
 
-var MSG_HANDLED_OFF = '✅ הסימון «טופל» הוסר';
+var MSG_HANDLED_OFF = 'הסימון «טופל» הוסר';
 
-var MSG_END_BEFORE_START = '❌ חודש העזיבה מוקדם מחודש ההצטרפות';
+var MSG_END_BEFORE_START = 'חודש העזיבה מוקדם מחודש ההצטרפות';
 
-var MSG_PERIOD_OVERLAP = '❌ התקופה חופפת לתקופה אחרת של התלמיד';
+var MSG_PERIOD_OVERLAP = 'התקופה חופפת לתקופה אחרת של התלמיד';
 
-var MSG_PERIOD_NONE = '❌ לתלמיד נדרשת תקופת פעילות אחת לפחות';
+var MSG_PERIOD_NONE = 'לתלמיד נדרשת תקופת פעילות אחת לפחות';
 
-var MSG_PERIOD_OPEN_LAST = '❌ תקופה פתוחה — רק האחרונה; לתקופה שלפני אחרת נדרש חודש עזיבה';
+var MSG_PERIOD_OPEN_LAST = 'תקופה פתוחה — רק האחרונה; לתקופה שלפני אחרת נדרש חודש עזיבה';
 
 var MSG_NAME_REQUIRED = 'שם חובה';
 
-var MSG_STUDENT_MISSING2 = '⚠️ התלמיד לא נמצא';
+var MSG_STUDENT_MISSING2 = 'התלמיד לא נמצא';
 
-var MSG_TUITION_POSITIVE = '❌ שכר לימוד חייב להיות מספר חיובי';
+var MSG_TUITION_POSITIVE = 'שכר לימוד חייב להיות מספר חיובי';
 
-var MSG_DEBT_POSITIVE = '❌ חוב קודם חייב להיות מספר חיובי';
+var MSG_DEBT_POSITIVE = 'חוב קודם חייב להיות מספר חיובי';
 
-var MSG_SETTINGS_NOT_SAVED = '❌ ההגדרות לא נשמרו במכשיר';
+var MSG_SETTINGS_NOT_SAVED = 'ההגדרות לא נשמרו במכשיר';
 
 var MSG_VALUE_BAD = 'ערך לא תקין';
 
-var MSG_VALUE_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — הערך לא נשמר';
+var MSG_VALUE_SAVE_FAIL = 'השמירה במכשיר נכשלה — הערך לא נשמר';
 
-var MSG_VALUE_EXISTS = '⚠️ הערך כבר קיים ברשימה';
+var MSG_VALUE_EXISTS = 'הערך כבר קיים ברשימה';
 
-var MSG_ITEM_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — הפריט לא נוסף';
+var MSG_ITEM_SAVE_FAIL = 'השמירה במכשיר נכשלה — הפריט לא נוסף';
 
 var MSG_CREDIT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות';
 
-var MSG_ITEM_MISSING = '⚠️ הפריט לא נמצא';
+var MSG_ITEM_MISSING = 'הפריט לא נמצא';
 
-var MSG_DELETED_OK = '✅ נמחק';
+var MSG_DELETED_OK = 'נמחק';
 
 var MSG_ADD_STUDENT = 'הוספת תלמיד';
 var MSG_ADD_METHOD = 'הוספת אמצעי תשלום';
@@ -77,9 +77,9 @@ var MSG_STUDENTS_MANAGE = 'ניהול תלמידים';
 var MSG_YEAR_ROLL_TITLE = 'מעבר שנתי';
 var MSG_STUDENTS_UPDATED = ' תלמידים עודכנו';
 
-var MSG_STUDENT_SAVE_FAIL = '❌ השמירה במכשיר נכשלה — התלמיד לא נשמר';
+var MSG_STUDENT_SAVE_FAIL = 'השמירה במכשיר נכשלה — התלמיד לא נשמר';
 
-var MSG_STUDENT_DELETED = '✅ תלמיד נמחק';
+var MSG_STUDENT_DELETED = 'תלמיד נמחק';
 
 var MSG_CONFIRM = 'אישור';
 
@@ -115,8 +115,8 @@ var CLS_NAME = { a: 'שיעור א׳', b: 'שיעור ב׳', g: 'שיעור ג׳
 // השלוחים — בלי מחזור ובלי מעבר שנתי: רק הוספה והפסקה ידניות.
 var CLS_NO_CYCLE = { s: true };
 var CLS_CYCLE_ADD = { g: 0, b: 1, a: 2 };
-var MSG_YEAR_UNSET = '⚠️ שנת הלימודים לא נקבעה — המעבר השנתי אינו זמין';
-var MSG_YEAR_ROLL_DONE = '✅ מעבר שנתי הושלם — ';
+var MSG_YEAR_UNSET = 'שנת הלימודים לא נקבעה — המעבר השנתי אינו זמין';
+var MSG_YEAR_ROLL_DONE = 'מעבר שנתי הושלם — ';
 var MSG_CLS_REQUIRED = 'יש לבחור שיעור';
 
 var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];

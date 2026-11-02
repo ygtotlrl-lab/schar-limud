@@ -5,6 +5,7 @@ import { MSG_SAVED_LOCAL, MSG_SAVE_FAIL, MSG_STALE_CODE, app, getDeviceId, isNet
 import { lsFlush, lsGet, lsKeys, lsLog, lsSet, lsWire } from './storage.js';
 import { closeModal, esc, pullRender, swShowUpdate, toast } from './ui.js';
 import { mirrorWipe } from './mirror.js';
+import { shellIcon, stIcon } from './icons.js';
 
 // ── מזהי רשומות ──
 function newClientId(){
@@ -479,15 +480,15 @@ function pendTag(key) {
   var title = 'ממתין לסנכרון מאז ' + new Date(t).toLocaleString('he-IL') +
               ' (' + pendFmtAge(age) + ') — שמור במכשיר, טרם אושר בענן';
   return '<span class="pend-tag' + (late ? ' late' : '') + '" title="' + esc(title) + '">' +
-         (late ? '⚠️' : '⏳') + ' ממתין</span>';
+         stIcon(late ? 'warn' : 'wait') + 'ממתין</span>';
 }
 
 function pendCounterText() {
   var n = pendCount(), off = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
   // כשהסרגל מוצג, n הוא הספירה הלוגית המלאה ולא רק מה שמותר לצייר.
-  if (!n || !pendDrawCount()) return off ? '⚠️ אין רשת' : '';
+  if (!n || !pendDrawCount()) return off ? 'אין רשת' : '';
   var late = pendLateCount();
-  var s = (late ? '⚠️ ' : (off ? '⚠️ אין רשת · ' : '⏳ ')) + n + ' פעולות ממתינות לסנכרון';
+  var s = (!late && off ? 'אין רשת · ' : '') + n + ' פעולות ממתינות לסנכרון';
   var old = pendOldest();
   if (old) s += ' · הישנה ביותר לפני ' + pendFmtAge(Date.now() - old);
   return s;
@@ -506,7 +507,9 @@ function pendRender() {
     }
     var extra = '';
     try { if (typeof app.PEND_CFG === 'object' && app.PEND_CFG.extra) extra = app.PEND_CFG.extra() || ''; } catch (e) { }
-    bar.textContent = txt + (extra ? ' · ' + extra : '');
+    // האייקון לפי המצב: באיחור או בלי רשת — אזהרה, ואחרת — המתנה.
+    var offNow = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+    bar.innerHTML = stIcon(pendLateCount() || offNow ? 'warn' : 'wait') + esc(txt + (extra ? ' · ' + extra : ''));
     bar.className = pendLateCount() ? 'late' : '';
   }
   pendRenderAlert();
@@ -519,12 +522,17 @@ function pendRenderAlert() {
     if (el) el.remove();
     return;
   }
-  var msg = '⚠️ ' + late + ' פעולות ממתינות לסנכרון מעל 24 שעות — בדוק חיבור לאינטרנט. הנתונים שמורים במכשיר בלבד.';
-  if (el) { var sp = el.firstChild; if (sp) sp.textContent = msg; return; }
+  var msg = late + ' פעולות ממתינות לסנכרון מעל 24 שעות — בדוק חיבור לאינטרנט. הנתונים שמורים במכשיר בלבד.';
+  if (el) { var sp = el.querySelector('.pend-msg'); if (sp) sp.textContent = msg; return; }
   el = document.createElement('div');
   el.id = 'pend-alert';
   var span = document.createElement('span');
+  span.className = 'pend-msg';
   span.textContent = msg;
+  var ic = document.createElement('span');
+  ic.className = 'st-ic';
+  ic.innerHTML = shellIcon('warn');
+  el.appendChild(ic);
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'הבנתי';

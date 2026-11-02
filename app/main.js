@@ -193,11 +193,11 @@ var DOM_ACTIONS = {
   'modal-close':  function () { closeModal(); },
   'ask-no':       function () { closeAsk(false); },
   'ask-yes':      function () { closeAsk(true); },
-  'student-add':  function () { return runSave(saveNewStudent, '✅ תלמיד נוסף'); },
+  'student-add':  function () { return runSave(saveNewStudent, 'תלמיד נוסף'); },
   'show-panel':   function (el) { showPanel(el.getAttribute('data-panel'), el); },
   'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
   'list-add':     function (el) { openListAdd(el.getAttribute('data-list')); },
-  'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, '✅ נוסף'); },
+  'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, 'נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
@@ -216,8 +216,8 @@ var DOM_ACTIONS = {
   'per-add':                 function (el) { PER.addRow(el); },
   'per-remove':              function (el) { PER.removeRow(el); },
   'student-open-add':        function () { openAddStudent(); },
-  'student-settings-save':   function () { return runSave(saveStudentSettings, '✅ הגדרות נשמרו'); },
-  'txn-save':                function () { return runSave(saveTxn, '✅ תשלום נשמר'); },
+  'student-settings-save':   function () { return runSave(saveStudentSettings, 'הגדרות נשמרו'); },
+  'txn-save':                function () { return runSave(saveTxn, 'תשלום נשמר'); },
   'tuition-save':            function () { return runSave(saveDefaultTuition, MSG_SAVED); },
 };
 

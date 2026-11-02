@@ -9,6 +9,7 @@ import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_B
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
+import { stIcon } from '../../core/icons.js';
 import { acadYearOf, hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
          slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML } from '../domain.js';
 
@@ -92,7 +93,7 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value);
   h.classList.toggle('hidden',!on);
-  if(on)h.innerHTML='<span class="credit-mark">↩ ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('credit'))+'ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 
 // ── תשלומים — רישום, יומן ומחיקה רכה ──
@@ -166,7 +167,7 @@ function renderTxnLog(){
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key);})[0];
-  if(!t){toast(MSG_PAY_MISSING, null, 'bad');return;}
+  if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
   var row=tombKill(Object.assign({},t));
   if(!slLocalWrite('sl_transactions',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
   shell.refreshUI();

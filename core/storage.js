@@ -13,8 +13,8 @@ var LS_OPEN_MS = 8000; // מסד שאינו נפתח עד אז — מצב זיכ
 var LS_LOG_MAX = 12;
 
 // נוסח אחיד: סמל הצלחה, אזהרה או שגיאה בתחילת ההודעה.
-var MSG_LS_FULL  = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו.';
-var MSG_LS_BLOCK = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
+var MSG_LS_FULL  = 'האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו.';
+var MSG_LS_BLOCK = 'האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
 
 var _lsMap = new Map();
 var _lsDb = null;      // null — מצב זיכרון בלבד
@@ -60,7 +60,11 @@ function lsAlert(msg) {
     b.innerHTML = shellIcon('close');
     b.setAttribute('aria-label', 'סגור');
     b.dataset.act = 'ls-alert-close';
-    el.appendChild(sp); el.appendChild(b);
+    var ic = document.createElement('span');
+    ic.className = 'st-ic';
+    ic.dataset.shellIc = 'bad';
+    ic.innerHTML = shellIcon('bad');
+    el.appendChild(ic); el.appendChild(sp); el.appendChild(b);
     (document.body || document.documentElement).appendChild(el);
   }
   var m = document.getElementById('ls-alert-msg');
@@ -74,8 +78,8 @@ var _lsLastFailAt = 0;
 var _lsToastAt = 0;
 var LS_SUCCESS_MUTE_MS = 2500;
 function lsSuccessBlocked() { return (Date.now() - _lsLastFailAt) < LS_SUCCESS_MUTE_MS; }
-function lsGuardToast(msg) {
-  return !(String(msg == null ? '' : msg).indexOf('✅') === 0 && lsSuccessBlocked());
+function lsGuardToast(kind) {
+  return !(kind === 'good' && lsSuccessBlocked());
 }
 // הבאנר אידמפוטנטי ומוצג בכל כישלון; הטוסט מווסת כדי שסדרת כתיבות כושלת לא תסתיר את ההודעה עצמה.
 function lsToastThrottled(msg) {
@@ -87,7 +91,7 @@ function lsToastThrottled(msg) {
 function lsFail(e) {
   _lsLastFailAt = Date.now();
   var full = lsIsQuotaErr(e);
-  lsLog(full ? '❌ כתיבה נכשלה (מכסה)' : '❌ כתיבה נכשלה (אחסון חסום)', e && (e.name || e.message), 0);
+  lsLog(full ? 'כתיבה נכשלה (מכסה)' : 'כתיבה נכשלה (אחסון חסום)', e && (e.name || e.message), 0);
   lsAlert(full ? MSG_LS_FULL : MSG_LS_BLOCK);
   lsToastThrottled(full ? MSG_LS_FULL : MSG_LS_BLOCK);
   return false;
@@ -256,7 +260,7 @@ function lsOpen() {
       _lsDb = db;
     }, function () { try { db.close(); } catch (e) { } });
   }).catch(function () { }).then(function () {
-    if (!_lsDb) { _lsLastFailAt = Date.now(); lsAlert(MSG_LS_BLOCK); lsLog('❌ המסד לא נפתח', 'מצב זיכרון בלבד', 0); }
+    if (!_lsDb) { _lsLastFailAt = Date.now(); lsAlert(MSG_LS_BLOCK); lsLog('המסד לא נפתח', 'מצב זיכרון בלבד', 0); }
     try { lsKeySweep(); } catch (e) { console.warn('[ls] ניקוי המרשם', e); }
     lsPersist();
     // התור נכתב גם כשהדף נסגר או מוסתר — ההבטחה אינה נשמרת, אך הטרנזקציה כבר בדרך.

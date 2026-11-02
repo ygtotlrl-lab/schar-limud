@@ -9,7 +9,7 @@ function iconSet(paths) {
   };
 }
 
-// אייקוני המעטפת והליבה — ✕ של #modal, של #updater ושל #ls-alert, ואייקון הרענון בבאנר העדכון: הקוד המשותף אינו מכיר את הסט של האפליקציה,
+// אייקוני המעטפת והליבה — ✕ של #modal, של #updater ושל #ls-alert, הרענון בבאנר העדכון, ואייקוני המצב של ההודעות: הקוד המשותף אינו מכיר את הסט של האפליקציה,
 // ולכן האפליקציה מוסרת לו את האייקון בעלייה (shellIcon('close', icon('close'))), והוא נצבע בכל אלמנט שמסומן data-shell-ic.
 var _shell = {};
 function shellIcon(name, svg) {
@@ -20,4 +20,11 @@ function shellIcon(name, svg) {
   return _shell[name] || '';
 }
 
-export { iconSet, shellIcon };
+// אייקון מצב בעטיפה — לטוסט, לכותרת דיאלוג, לכפתור עסוק ולסרגל הסנכרון; שם שלא נמסר — כלום, והטקסט לבדו.
+// השמות: good · bad · warn · off · wait, שהאפליקציה מוסרת בעלייה; או svg שלם מ-icon() של האפליקציה (כותרת דיאלוג).
+function stIcon(name) {
+  var s = !name ? '' : (name.charAt(0) === '<' ? name : shellIcon(name));
+  return s ? '<span class="st-ic">' + s + '</span>' : '';
+}
+
+export { iconSet, shellIcon, stIcon };

@@ -81,7 +81,7 @@ function addListItem(kind){
   var val=el.value.trim();
   if(!val){toast(MSG_VALUE_REQUIRED, null, 'bad');return;}
   // ההשוואה על התווית ולא על client_id — הרשימה מזינה בוררים, ושתי אפשרויות באותו טקסט אינן ניתנות להבחנה.
-  if(uniqHas(slLookups(kind), {label:val}, function(it){return it.label;})){toast(MSG_VALUE_EXISTS,4000, 'bad');return;}
+  if(uniqHas(slLookups(kind), {label:val}, function(it){return it.label;})){toast(MSG_VALUE_EXISTS,4000, 'warn');return;}
   var row={client_id:newClientId(),kind:kind,label:val,sort:slLookups(kind).length+1,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_lookups',row)){toast(MSG_ITEM_SAVE_FAIL,5000, 'bad');return;}
   return true;
@@ -91,10 +91,10 @@ function addListItem(kind){
 function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט — הכפתור עשוי להופיע מרינדור ישן.
   var it=(MIRROR.sl_lookups||[]).filter(function(x){return idEq(x.client_id,key);})[0];
-  if(it&&isCreditValue(it.label)){toast('⚠️ «'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'bad');return;}
+  if(it&&isCreditValue(it.label)){toast('«'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'warn');return;}
   ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM).then(function(yes){
     if(!yes)return;
-    if(!it){toast(MSG_ITEM_MISSING, null, 'bad');return;}
+    if(!it){toast(MSG_ITEM_MISSING, null, 'warn');return;}
     var row=tombKill(Object.assign({},it));
     if(!slLocalWrite('sl_lookups',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
     shell.refreshUI();

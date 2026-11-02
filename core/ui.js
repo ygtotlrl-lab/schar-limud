@@ -2,6 +2,7 @@
 
 import { MSG_NO_MATCH, MSG_SW_TIMEOUT, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
+import { stIcon } from './icons.js';
 
 // ── כפתור עסוק ──
 // ההשבתה בנקודת הניתוב ולא באתר הקריאה — מטפל שמחזיר הבטחה מסמן המתנה; מטפל סינכרוני נגמר לפני שלחיצה שנייה נוחתת.
@@ -11,7 +12,7 @@ function busy(btn, on, label) {
   if (on) {
     if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
     btn.disabled = true; btn.classList.add('is-busy');
-    btn.innerHTML = label || '⏳ שומר…';
+    btn.innerHTML = label || (stIcon('wait') + 'שומר…');
   } else {
     btn.disabled = false; btn.classList.remove('is-busy');
     if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
@@ -27,7 +28,7 @@ function actRun(el, fn) {
   el._actBusy = true;
   var isBtn = el.tagName === 'BUTTON';
   // התווית מ-data-busy — פעולה שבודקת אינה «שומרת».
-  if (isBtn) busy(el, true, el.getAttribute('data-busy') || '⏳ שומר…');
+  if (isBtn) busy(el, true, el.getAttribute('data-busy') ? stIcon('wait') + esc(el.getAttribute('data-busy')) : '');
   out.then(function () { }, function (e) {
     console.error('[act] ' + el.getAttribute('data-act'), e);
   }).then(function () {
@@ -180,13 +181,14 @@ function uiNoDialog(where, id) {
   try { document.body.classList.remove('locked'); } catch (e) {}
   try { toast('שגיאה: הדיאלוג אינו זמין (#' + id + ')', null, 'bad'); } catch (e) {}
 }
-function openModal(title, body, foot) {
+// ic — שם אייקון לכותרת (stIcon); בלעדיו — הכותרת לבדה.
+function openModal(title, body, foot, ic) {
   var m = document.getElementById('modal');
   var ttl = document.getElementById('modal-title');
   var bd = document.getElementById('modal-body');
   var ft = document.getElementById('modal-foot');
   if (!m || !ttl || !bd || !ft) { uiNoDialog('openModal', 'modal'); return; }
-  ttl.textContent = title || '';
+  ttl.innerHTML = stIcon(ic) + esc(title || '');
   bd.innerHTML = body || '';
   ft.innerHTML = foot || '';
   m.classList.add('open');
@@ -205,13 +207,13 @@ function closeModal() {
 }
 var askResolve = null;
 // מיכל חסר נענה «לא» — הבטחה שלא נפתרת תולה את הקורא, ו-true היה מבצע פעולה הרסנית בלי אישור.
-function ask(title, text, yesLabel) {
+function ask(title, text, yesLabel, ic) {
   var a = document.getElementById('ask');
   var ttl = document.getElementById('ask-title');
   var bd = document.getElementById('ask-body');
   var yes = document.getElementById('ask-yes');
   if (!a || !ttl || !bd || !yes) { uiNoDialog('ask', 'ask'); return Promise.resolve(false); }
-  ttl.textContent = title || '';
+  ttl.innerHTML = stIcon(ic) + esc(title || '');
   bd.textContent = text || '';
   yes.textContent = yesLabel || 'אישור';
   a.classList.add('open');
@@ -226,17 +228,19 @@ function closeAsk(v) {
   if (!m || !m.classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
-// kind הוא שם מחלקה ולא משך — מי שאין לו ערך מוסר null; המשך ב-TOAST_DEFAULT_MS.
+// kind הוא סוג ההודעה ולא משך — מי שאין לו ערך מוסר null; המשך ב-TOAST_DEFAULT_MS.
+// הסוג קובע את הצבע ואת אייקון המצב: good — הצלחה · bad — כישלון · warn — אזהרה או חסימה · off — אין רשת.
 var TOAST_DEFAULT_MS = 2500;
+var TOAST_CLS = { good: 'good', bad: 'bad', warn: 'bad', off: 'bad' };
 function toast(msg, dur, kind) {
   // אין טוסט הצלחה אחרי כישלון שמירה מקומית — אין להסיר.
-  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
+  if (typeof lsGuardToast === 'function' && !lsGuardToast(kind)) return;
   var box = document.getElementById('toasts');
   // קונסולה בלבד — זה משפך ההודעות היחיד, ודיווח דרך טוסט היה חוזר לכאן.
   if (!box) { try { console.error('[ui] toast: #toasts אינו ב-DOM — ' + msg); } catch (e) {} return; }
   var el = document.createElement('div');
-  el.className = 'toast' + (kind ? ' ' + kind : '');
-  el.textContent = msg;
+  el.className = 'toast' + (TOAST_CLS[kind] ? ' ' + TOAST_CLS[kind] : (kind ? ' ' + kind : ''));
+  el.innerHTML = stIcon(TOAST_CLS[kind] ? kind : '') + '<span>' + esc(msg == null ? '' : msg) + '</span>';
   box.appendChild(el);
   setTimeout(function () {
     el.classList.add('out');

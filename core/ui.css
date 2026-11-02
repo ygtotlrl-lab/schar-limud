@@ -70,6 +70,9 @@ body.locked{overflow:hidden}
   margin-inline-start:0;background:none;color:var(--upd-ink,var(--on-brand));opacity:var(--op-5);padding:0;width:32px;height:32px;
   display:inline-flex;align-items:center;justify-content:center}
 #updater button.x .ico{width:18px;height:18px}
+/* אייקון מצב (stIcon) — בטוסט, בכותרת דיאלוג, בכפתור עסוק ובסרגל הסנכרון: בגודל הטקסט ובצבעו, ממורכז לשורה */
+.st-ic{display:inline-flex;vertical-align:-.22em;margin-inline-end:.4em;flex:none}
+.st-ic .ico{width:1.2em;height:1.2em}
 #updater .upd-ic{display:inline-flex;flex:none}
 #updater .upd-ic .ico{width:20px;height:20px}
 /* ── שכבת הטוסט ──

@@ -81,36 +81,36 @@ function appConfigure(cfg) {
 // ── מחרוזות ההודעה המשותפות ──
 // MSG_OFFLINE נאמר על קריאה שנכשלה ואין בו הבטחת סנכרון; ההבטחה רק ב-MSG_SAVED_LOCAL, על כתיבה שכבר בתור.
 // אין לאחד הודעות חסימה זו עם זו או עם «סיסמה שגויה» — כל אחת מתארת מצב אחר.
-var MSG_SAVED = '✅ נשמר בהצלחה';
-var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
-var MSG_SAVE_FAIL = '❌ השמירה נכשלה';
-var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
-var MSG_OFFLINE = '📴 אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-var MSG_SW_TIMEOUT = '⚠️ העדכון לא הושלם — נסה שוב';
+var MSG_SAVED = 'נשמר בהצלחה';
+var MSG_SAVED_LOCAL = 'נשמר במכשיר — יסונכרן כשתחזור הרשת';
+var MSG_SAVE_FAIL = 'השמירה נכשלה';
+var MSG_SYNC_BACK = 'הסנכרון חזר לפעול';
+var MSG_OFFLINE = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
+var MSG_STALE_CODE = 'הגרסה הזו מיושנת — יש לעדכן';
+var MSG_SW_TIMEOUT = 'העדכון לא הושלם — נסה שוב';
 var MSG_DELETE = 'מחק';
-var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
-var MSG_FILL_LOGIN = '⚠️ נא למלא שם משתמש וסיסמה';
-var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_FILL_ALL = 'נא למלא את כל השדות';
+var MSG_FILL_LOGIN = 'נא למלא שם משתמש וסיסמה';
+var MSG_LOAD_FAIL_PRE = 'טעינת הנתונים נכשלה (';
 var MSG_KV_BAD = 'ערך פגום בענן';
-var MSG_LOGIN_ERR = '❌ הכניסה נכשלה — ';
-var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_LOGIN_ERR = 'הכניסה נכשלה — ';
+var MSG_MY_PASS_TITLE = 'שינוי הסיסמה שלי';
 var MSG_NO_MATCH = 'אין תוצאות';
-var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
-var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
-var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
-var MSG_PASS_SIX = '⚠️ הסיסמה חייבת להיות שש ספרות';
-var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
-var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
+var MSG_OFFLINE_LOGIN = 'כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
+var MSG_PASS_CUR_BAD = 'הסיסמה הנוכחית שגויה';
+var MSG_PASS_MISMATCH = 'הסיסמאות החדשות אינן זהות';
+var MSG_PASS_SIX = 'הסיסמה חייבת להיות שש ספרות';
+var MSG_PASS_UPDATE_FAIL = 'עדכון הסיסמה נכשל: ';
+var MSG_PASS_VERIFY_FAIL = 'לא ניתן לאמת את הסיסמה הנוכחית: ';
 var MSG_SERVER_ERR = 'שגיאת שרת';
 var MSG_SWITCHED_TO = 'הוחלף ל';
-var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
-var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
-var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
-var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
-var MSG_USER_DISABLED_OUT = '⚠️ המשתמש הושבת — מתנתק';
-var MSG_PASS_CHANGED_OUT = '⚠️ הסיסמה שונתה — יש להיכנס מחדש';
+var MSG_OFF_UNKNOWN = 'אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP = 'אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = 'הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_CRYPTO = 'הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+var MSG_OFF_USER_WRITE = 'אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+var MSG_USER_DISABLED_OUT = 'המשתמש הושבת — מתנתק';
+var MSG_PASS_CHANGED_OUT = 'הסיסמה שונתה — יש להיכנס מחדש';
 
 // ── עוזרי הרשת ──
 // בלי קידומת אפליקציה — השם הזהה הוא מה שמאפשר להשוות ביניהן.
@@ -159,7 +159,7 @@ function kvParse(key, raw) {
   catch (e) {
     // ההודעה יוצאת מכאן ולא מאתר הקריאה — נקודת יציאה אחת שומרת על נוסח אחד לכשל.
     console.error('[sync] ' + MSG_KV_BAD + ' [' + key + ']:', e);
-    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
+    toast(kvBadLabel(key), null, 'warn');
     return { ok: false, value: null, bad: true };
   }
 }

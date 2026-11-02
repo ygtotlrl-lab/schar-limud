@@ -14,6 +14,7 @@ import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABL
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
+import { stIcon } from '../core/icons.js';
 
 // התחילית נקראת בזמן ריצה ולא בהצהרה — הקבועים מוגדרים בהמשך הדף
 function _slPushOf(t) {
@@ -437,7 +438,7 @@ async function syncAll(){
     // אזהרה פעם אחת בלבד — הסנכרון רץ כל 3 שניות.
     if(errs.length){
       console.error('[sync] נכשלו:',errs.join(', '));
-      if(!S._syncWarned){S._syncWarned=true;toast(MSG_LOAD_FAIL_PRE+errs.join(', ')+MSG_LOAD_FAIL_POST,4000, 'bad');}
+      if(!S._syncWarned){S._syncWarned=true;toast(MSG_LOAD_FAIL_PRE+errs.join(', ')+MSG_LOAD_FAIL_POST,4000, 'warn');}
     }else if(S._syncWarned){S._syncWarned=false;toast(MSG_SYNC_BACK, null, 'good');}
   }catch(e){
     S._lastSyncOk=false;
@@ -499,7 +500,7 @@ function calcDistribution(sid,year){
 
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
 function txnAmountHTML(t){
-  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">↩ &#8362;'+fmt(t.amount)+'</span>';
+  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">'+stIcon(icon('credit'))+'&#8362;'+fmt(t.amount)+'</span>';
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 
