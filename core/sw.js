@@ -202,7 +202,9 @@ ensureCdnCached(); // קוד עליון — רץ פעם אחת בכל עליית
 
 // ניווט מאותו מטמון כמו הקוד — דף מהרשת וקוד מהמטמון הם שתי גרסאות במסך אחד, ו-import של שם חסר עוצר את הדף.
 // הקליפה אינה מתרעננת כאן; גרסה חדשה נכנסת רק בהתקנת worker חדש. בלי קליפה (כניסה ראשונה) — מהרשת.
+// הקליפה — רק לנתיב הקליפה: דף אחר בתוך ה-scope (contacts.html) נטען מהרשת, ובלי רשת — דף האופליין, ולא האפליקציה.
 function swNavigate(request, u) {
+  if (!swIsShellPath(u)) return fetch(request).catch(function () { return swOfflinePage(); });
   return swShell().then(function (shell) {
     if (shell) return shell;
     return fetch(request).then(function (net) {
