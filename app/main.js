@@ -240,6 +240,8 @@ document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'sc-cls') scClsChanged();
   if (el && el.dataset && el.dataset.chg === 'dash-notes') dashNotesSave();
+  // מסך הגדרות נשמר מיד, בלי כפתור — ביציאה מהשדה, ו-Enter משחרר אותו
+  if (el && el.dataset && el.dataset.chg === 'tuition') DOM_ACTIONS['tuition-save']();
 });
 
 // focus אינו עולה בעץ — ולכן focusin.

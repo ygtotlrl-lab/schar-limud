@@ -17,9 +17,8 @@ function screenSettingsHTML() {
   <div id="settings-main">
     <div class="card">
       <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-      <div class="tuition-row card-body" data-ks>
-        <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר">
-        <button class="btn" data-act="tuition-save" data-ksave>שמור</button>
+      <div class="tuition-row card-body">
+        <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-kent>
       </div>
     </div>
     <div class="card">
