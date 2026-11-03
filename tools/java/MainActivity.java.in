@@ -27,6 +27,7 @@ import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.print.ShellPdfWriter;
+import android.view.ViewGroup;
 import android.webkit.WebViewClient;
 //@@end
 
@@ -195,13 +196,21 @@ public class MainActivity extends ShellActivity {
             });
     }
 
+    // המסמך נכתב תוך PRINT_MAX_MS, או שנפתח חלון ההדפסה של המערכת — לעולם לא «כלום».
+    private static final long PRINT_MAX_MS = 15000;
+
     private void printHtml(final String html, final String name) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (printView != null) { toastUi("מסמך קודם עדיין בהכנה"); return; }
                 final WebView pv = new WebView(MainActivity.this);
                 printView = pv;
                 pv.getSettings().setJavaScriptEnabled(false);
+                // מחובר לחלון, שקוף ובגודל המסך — WebView שאינו מחובר אינו מתחייב לפריסה, והכתיבה עלולה לא להסתיים.
+                pv.setAlpha(0f);
+                ((ViewGroup) getWindow().getDecorView()).addView(pv,
+                    new ViewGroup.LayoutParams(Math.max(1, webView.getWidth()), Math.max(1, webView.getHeight())));
                 pv.setWebViewClient(new WebViewClient() {
                     private boolean started = false;
                     @Override
@@ -219,6 +228,11 @@ public class MainActivity extends ShellActivity {
         });
     }
 
+    private void printDone(WebView pv) {
+        try { ((ViewGroup) getWindow().getDecorView()).removeView(pv); } catch (Exception e) { /* כבר הוסר */ }
+        if (printView == pv) printView = null;
+    }
+
     private void writePdf(final WebView pv, final String name) {
         String base = name == null ? "" : name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]+", " ").trim();
         if (base.toLowerCase().endsWith(".pdf")) base = base.substring(0, base.length() - 4).trim();
@@ -230,23 +244,43 @@ public class MainActivity extends ShellActivity {
             .setResolution(new PrintAttributes.Resolution("pdf", "pdf", 600, 600))
             .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
             .build();
+        // הכרעה אחת בלבד — הכתיבה, הכשל או שעון העצר, הראשון שמגיע.
+        final boolean[] settled = { false };
+        final Runnable fallback = new Runnable() {
+            @Override public void run() {
+                if (settled[0]) return;
+                settled[0] = true;
+                toastUi("הכתיבה הישירה לא הצליחה — נפתח חלון ההדפסה");
+                printDialog(pv, title, attrs);
+            }
+        };
+        pv.postDelayed(fallback, PRINT_MAX_MS);
         try {
             File sub = new File(new File(getCacheDir(), "shared"), String.valueOf(System.currentTimeMillis()));
             sub.mkdirs();
             final File f = new File(sub, title + ".pdf");
             ShellPdfWriter.write(pv.createPrintDocumentAdapter(title), attrs, f,
                 new Runnable() {
-                    @Override public void run() { printView = null; shareSaved(f, "application/pdf"); }
+                    @Override public void run() {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (settled[0]) return;
+                                settled[0] = true;
+                                printDone(pv);
+                                shareSaved(f, "application/pdf");
+                            }
+                        });
+                    }
                 },
                 new Runnable() {
-                    @Override public void run() { printDialog(pv, title, attrs); }
+                    @Override public void run() { runOnUiThread(fallback); }
                 });
         } catch (Throwable e) {
-            printDialog(pv, title, attrs);
+            runOnUiThread(fallback);
         }
     }
 
-    // נפילה-חזרה: כשהכתיבה הישירה אינה זמינה במכשיר — חלון ההדפסה של המערכת, ובו «שמירה כ-PDF».
+    // נפילה-חזרה: חלון ההדפסה של המערכת, ובו «שמירה כ-PDF».
     private void printDialog(final WebView pv, final String title, final PrintAttributes attrs) {
         runOnUiThread(new Runnable() {
             @Override
@@ -254,10 +288,10 @@ public class MainActivity extends ShellActivity {
                 try {
                     PrintManager pm = (PrintManager) getSystemService(PRINT_SERVICE);
                     pm.print(title, pv.createPrintDocumentAdapter(title), attrs);
-                } catch (Exception e) {
-                    toastUi("שגיאה בהכנת המסמך");
+                } catch (Throwable e) {
+                    toastUi("שגיאה בהכנת המסמך: " + e.getClass().getSimpleName());
                 }
-                printView = null;
+                printDone(pv);
             }
         });
     }
