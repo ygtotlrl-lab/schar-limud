@@ -91,6 +91,9 @@ const SS = 8; // דגימת-יתר לכל ציר
 const ALPHA_MIN = 25; // סף התוכן — שוליי הנכס נמדדים בו
 // פיקסל שוליים שקוף למחצה הוא רמפת קצה ואינו מישור דיו.
 const OPAQUE_MIN = 250;
+// צורת האריח — ריבוע מעוגל ברדיוס אחד בכל האפליקציות, כשבר מהצלע; המחולל מצייר אותה, ומהמאסטר נלקחים רק מילוי הרקע והסמל.
+// ה-maskable מלא ובלי עיגול — המערכת חותכת אותו לצורה שלה.
+const TILE_R = 0.225;
 // הצורה המוצהרת ב-APP.art חייבת להתאים לסיומת המאסטר — אחרת המחולל נכשל בשקט על קובץ שאינו מה שהוא מצפה לו.
 if (!APP.master || !APP.master.endsWith(APP.art === 'svg' ? '.svg' : '.png'))
   throw new Error(`הצורה המוצהרת ${APP.art} והמאסטר ${APP.master} — מיישרים את ההצהרה לסיומת המאסטר`);
@@ -498,7 +501,21 @@ const markAspect = () => {
   const m = svgMaster();
   return { w: m.mb[2] - m.mb[0], h: m.mb[3] - m.mb[1] };
 };
+// האריח המעוגל — כיסוי הפינה נדגם כמו כל קצה, והאלפא של הנכס מוכפלת בו.
+function rounded(px, size) {
+  const shape = roundRect(0, 0, size, size, size * TILE_R);
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const k = (y * size + x) * 4 + 3;
+      px[k] = Math.round(px[k] * cover(shape, x, y));
+    }
+  return px;
+}
 function tile(size, frac) {
+  const px = tileSquare(size, frac);
+  return frac === null ? rounded(px, size) : px;
+}
+function tileSquare(size, frac) {
   // אותו דיו ואותה מסכה כמו בחזית — העתקת ה-RGB של המאסטר צובעת את האריח בגוון אחר מהחזית.
   if (APP.art === 'master') {
     const m = masterMask();
@@ -515,7 +532,8 @@ function tile(size, frac) {
   const m = svgMaster();
   const c = canvasOf(size);
   const nat = { sx: size / m.vw, sy: size / m.vh, tx: 0, ty: 0, ox: 0, oy: 0 };
-  svgDraw(c, [m.bg], nat);
+  // מהרקע שבמאסטר — המילוי בלבד; הצורה מלאה, והעיגול של האריח אחד לכולן (TILE_R).
+  svgDraw(c, [Object.assign({}, m.bg, { prim: Object.assign({}, m.bg.prim, { r: 0 }) })], nat);
   if (frac === null) { svgDraw(c, m.mark, nat); return flatten(c); }
   // השבר חל על הצלע הארוכה — סמל גבוה מרוחבו היה גולש מאזור הבטחה אילו חל על הרוחב.
   const ma = markAspect(), long = Math.max(ma.w, ma.h), lw = frac * size, s = lw / long;
