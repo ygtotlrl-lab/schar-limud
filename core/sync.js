@@ -618,7 +618,11 @@ function rtyBoot() {
 // ── מנגנון המשיכה ──
 var PL_FALLBACK_MS = 60000; // אין שורת חותמת בענן - משיכה מלאה אחת לדקה
 var _plTimer = null, _plBusy = false, _plFullAt = 0, _plWired = false;
-function plForget() { _plFullAt = 0; }
+// הרגע האחרון שבו הבדיקה המחזורית אישרה שהמראה זהה לענן — אחרי משיכה מלאה, או חותמת שלא השתנתה מאז.
+var _plOkAt = 0;
+// טרי — הבדיקה המחזורית אישרה בתוך ms; פעולה שצריכה נתון טרי (בדיקת כפילות) אינה מושכת שוב.
+function plFreshWithin(ms) { return _plFullAt > 0 && Date.now() - _plOkAt <= ms; }
+function plForget() { _plFullAt = 0; _plOkAt = 0; }
 
 // חותמת מהענן: מספר, מחרוזת JSON של מספר, או כל דבר אחר - 0.
 function plNum(v) {
@@ -675,7 +679,7 @@ function _plFull() {
   var done = function (v) { _plBusy = false; return v; };
   try {
     return Promise.resolve(app.PL_CFG.pull()).then(
-      function () { _plFullAt = Date.now(); eraNotePull(); return done(true); },
+      function () { _plFullAt = _plOkAt = Date.now(); eraNotePull(); return done(true); },
       function () { return done(false); });
   } catch (e) { return Promise.resolve(done(false)); }
 }
@@ -699,6 +703,7 @@ function plTick() {
     }
     var ts = plNum(r.ts);
     if (ts > _plSeen()) { try { app.PL_CFG.note(ts); } catch (e) { } return _plFull(); }
+    _plOkAt = Date.now();
     eraNotePull();
     return done(false);
   }, function () { return done(false); });
@@ -1006,5 +1011,5 @@ export { newClientId, idEq, mergeCore, mergeWinner, tombAt, tombInherit, tombKil
          pendClearMany, pendConfirmPush, pendCount, pendFailed, pendForget,
          pendHas, pendMark, pendMarkMany, pendRender, pendTag,
          PL_STAMP_KEY, plBoot, plForget, plStampRead, plStampWrite,
-         plTick, plTouch, pushDirty, pushTable,
+         plFreshWithin, plTick, plTouch, pushDirty, pushTable,
          rtyBoot, rtyNote, runSave, sbWatch, schedulePush };
