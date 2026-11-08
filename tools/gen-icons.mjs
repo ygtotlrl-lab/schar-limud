@@ -616,8 +616,9 @@ function foreground(canvas, target) {
 
 // ── הפלט ──
 const DENS = [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]];
-// 48 מתוך 108 היא צלע התוכן של adaptive-icon — המערכת חותכת את השוליים, וסמל גדול מזה נחתך.
-const FG_FRAC = 48 / 108;
+// 48 מתוך 108 היא צלע התוכן המרבית של adaptive-icon — המערכת חותכת את השוליים; 41 משאירה אוויר בתוך העיגול,
+// כדי שסמל רחב (פסים, כיתוב) לא ייצמד לשפת העיגול במסך הפתיחה ובמשגר.
+const FG_FRAC = 41 / 108;
 
 mkdirSync(OUT, { recursive: true });
 let wrote = 0;
