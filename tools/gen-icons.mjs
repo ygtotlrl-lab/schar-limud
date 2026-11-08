@@ -519,14 +519,24 @@ function tileSquare(size, frac) {
   // אותו דיו ואותה מסכה כמו בחזית — העתקת ה-RGB של המאסטר צובעת את האריח בגוון אחר מהחזית.
   if (APP.art === 'master') {
     const m = masterMask();
-    const d = scaleMask(m.full, m.img.w, m.img.h, size, size);
-    const px = Buffer.alloc(size * size * 4);
-    for (let k = 0; k < size * size; k++) {
-      const a = d[k];
-      for (let ch = 0; ch < 3; ch++)
-        px[k * 4 + ch] = Math.round(APP.bg.color[ch] * (1 - a) + APP.ink[ch] * a);
-      px[k * 4 + 3] = 255;
+    // עם שבר (maskable) — התוכן בלבד, מוקטן לאזור הבטחה וממורכז; בלעדיו — המאסטר כולו, כמו שהוא.
+    let src = m.full, sw = m.img.w, sh = m.img.h, dw = size, dh = size, ox = 0, oy = 0;
+    if (frac !== null) {
+      const s = frac * size / Math.max(m.w, m.h);
+      src = m.a; sw = m.w; sh = m.h;
+      dw = Math.max(1, Math.round(m.w * s)); dh = Math.max(1, Math.round(m.h * s));
+      ox = Math.round((size - dw) / 2); oy = Math.round((size - dh) / 2);
     }
+    const d = scaleMask(src, sw, sh, dw, dh);
+    const px = Buffer.alloc(size * size * 4);
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const k = y * size + x, xx = x - ox, yy = y - oy;
+        const a = xx >= 0 && yy >= 0 && xx < dw && yy < dh ? d[yy * dw + xx] : 0;
+        for (let ch = 0; ch < 3; ch++)
+          px[k * 4 + ch] = Math.round(APP.bg.color[ch] * (1 - a) + APP.ink[ch] * a);
+        px[k * 4 + 3] = 255;
+      }
     return px;
   }
   const m = svgMaster();
