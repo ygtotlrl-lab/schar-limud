@@ -641,14 +641,17 @@ for (const f of ['index.html', 'sw.js', ...jsUnder('app')]) {
 for (const [d, scale] of DENS) {
   const dir = join(RES, 'mipmap-' + d);
   mkdirSync(dir, { recursive: true });
-  const legacy = Math.round(48 * scale), fg = Math.round(108 * scale);
+  // החזית בגודל מסך הפתיחה (240dp) ולא בגודל המשגר (108dp) — מסך הפתיחה של אנדרואיד מצייר את האייקון
+  // ב-240dp, וחזית של 108dp נמתחת בו פי 2.2 ויוצאת מטושטשת; המשגר מקטין אותה בלי אובדן.
+  const legacy = Math.round(48 * scale), fg = Math.round(240 * scale);
+  const inner = fg - 2 * Math.round((fg - fg * FG_FRAC) / 2);
   put(join(dir, 'ic_launcher.png'), encodePng(legacy, legacy, tile(legacy, null)));
-  const px = foreground(fg, legacy);
+  const px = foreground(fg, inner);
   const b = contentBox(px, fg);
   if (!b) throw new Error(`${d}: החזית ריקה`);
   const cw = b.x1 - b.x0 + 1, chh = b.y1 - b.y0 + 1;
-  if (Math.max(cw, chh) !== legacy)
-    throw new Error(`${d}: צלע התוכן הארוכה ${Math.max(cw, chh)} ≠ ${legacy}`);
+  if (Math.max(cw, chh) !== inner)
+    throw new Error(`${d}: צלע התוכן הארוכה ${Math.max(cw, chh)} ≠ ${inner}`);
   const L = b.x0, R = fg - 1 - b.x1, T = b.y0, B = fg - 1 - b.y1;
   if (L !== R || T !== B)
     throw new Error(`${d}: שוליים L=${L}/R=${R} · T=${T}/B=${B} בתוכן ${cw}×${chh} — ⛔ נדרש L=R ו-T=B`);
