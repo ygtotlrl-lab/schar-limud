@@ -254,6 +254,8 @@ document.addEventListener('pointerup', dragUp);
 document.addEventListener('pointercancel', dragCancel);
 
 function showPanel(key,btn){
+  // חלון הכרטיס יושב מעל כל המסכים — מעבר למסך אחר סוגר אותו
+  if(key!=='student'&&document.getElementById('sc-win'))studentBack();
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('panel-'+key).classList.add('active');

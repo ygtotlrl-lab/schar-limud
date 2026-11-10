@@ -257,33 +257,48 @@ function doYearTransition(){
 }
 
 // הרשימה והכרטיס מתחלפים בנקודה אחת — תלמיד שנמחק במכשיר אחר מחזיר לרשימה.
-// הכרטיס נפתח בתוך הרשימה, מתחת לשורת התלמיד — הרשימה נשארת מעליו ומתחתיו. רכיב הכרטיס אחד,
-// וחונה ב-sc-main בין ציור לציור: ציור הרשימה מחליף את תוכנה, ורכיב שבתוכה היה נמחק.
+// הכרטיס נפתח בחלון משלו מעל הרשימה, כמו בגיוס (sc-win): על כל המסך בטלפון, וממורכז במסך רחב; הרקע, ✕ ו-Escape סוגרים.
+// רכיב הכרטיס אחד, וחונה ב-sc-main כשהחלון סגור.
 function scRowOf(id){
   var rows=document.querySelectorAll('#sc-list .stu-open');
   for(var i=0;i<rows.length;i++){if(idEq(rows[i].getAttribute('data-id'),id))return rows[i].parentNode;}
   return null;
 }
 
+function _scWinClose(){
+  var card=document.getElementById('sc-card'),park=document.getElementById('sc-main'),w=document.getElementById('sc-win');
+  if(card&&park&&card.parentNode!==park)park.appendChild(card);
+  if(w)w.remove();
+}
 function renderStudentPanel(){
-  var card=document.getElementById('sc-card'),park=document.getElementById('sc-main');
-  if(card&&card.parentNode!==park)park.appendChild(card);
   if(S.SC_STUDENT_ID&&!scStudent())S.SC_STUDENT_ID=null;
   renderStudentList();
   var row=S.SC_STUDENT_ID?scRowOf(S.SC_STUDENT_ID):null;
   // תלמיד שאינו ברשימה המוצגת (חיפוש, ארכיון) — הכרטיס נסגר
-  if(!row){S.SC_STUDENT_ID=null;return;}
+  if(!row){S.SC_STUDENT_ID=null;_scWinClose();return;}
   row.classList.add('is-open');
-  row.parentNode.insertBefore(card,row.nextSibling);
+  var w=document.getElementById('sc-win');
+  if(!w){
+    w=document.createElement('div');w.id='sc-win';w.className='card-win';
+    w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');
+    w.innerHTML='<div class="cw-bg" data-act="sc-back"></div><div class="cw-in"></div>';
+    document.body.appendChild(w);
+  }
+  var card=document.getElementById('sc-card'),inn=w.querySelector('.cw-in');
+  if(card&&card.parentNode!==inn)inn.appendChild(card);
   renderStudentCard();
 }
+// Escape סוגר את חלון הכרטיס — רק כשאין מעליו חלון עריכה או אישור
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'||!document.getElementById('sc-win'))return;
+  if(document.querySelector('.veil.open, #ask.open'))return;
+  e.preventDefault();studentBack();
+});
 
 // המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN. לחיצה על התלמיד הפתוח — סוגרת.
 function studentOpen(id){
   S.SC_STUDENT_ID=idEq(S.SC_STUDENT_ID,id)?null:String(id);
   renderStudentPanel();
-  var row=S.SC_STUDENT_ID?scRowOf(S.SC_STUDENT_ID):null;
-  if(row&&row.scrollIntoView)row.scrollIntoView({block:'nearest'});
 }
 
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
