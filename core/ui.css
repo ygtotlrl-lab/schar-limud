@@ -131,8 +131,8 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 .is-bare > :not(#view){display:none}
 /* ── עורך תקופות הפעילות (core/periods.js) — אחד בהנהלה ובשכר לימוד: שורה לכל תקופה — מ · עד · הסרה ── */
 .per-list{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-3)}
-.per-row{display:grid;grid-template-columns:1fr 1fr auto;gap:var(--sp-2);align-items:center}
-.per-lbl{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-2);color:var(--text-2);min-width:0}
+.per-row{display:grid;grid-template-columns:1fr 1fr auto;gap:var(--sp-3) var(--sp-4);align-items:center}
+.per-lbl{display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-2);color:var(--text-2);min-width:0}
 /* סגוליות של שתי מחלקות — גוברת על כללי השדות של האפליקציה (.frm-row select), שנטענים אחרי */
 .per-row .per-lbl select{flex:1;min-width:0;width:auto;border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-2) var(--sp-3);font:inherit;font-size:var(--fs-2);background:var(--card);color:var(--text)}
 .per-del{border:none;background:none;color:var(--bad);cursor:pointer;width:32px;height:32px;display:grid;place-items:center;padding:0}

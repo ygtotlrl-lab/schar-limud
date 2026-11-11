@@ -83,8 +83,8 @@ function periodsEngine(cal) {
   }
   function rowHTML(p) {
     return '<div class="per-row" data-per-row>' +
-      '<label class="per-lbl">מ<select aria-label="חודש הצטרפות" data-f="start">' + options(p.start, false) + '</select></label>' +
-      '<label class="per-lbl">עד<select aria-label="חודש עזיבה" data-f="end">' + options(p.end || '', true) + '</select></label>' +
+      '<label class="per-lbl">תחילה<select aria-label="חודש הצטרפות" data-f="start">' + options(p.start, false) + '</select></label>' +
+      '<label class="per-lbl">סוף<select aria-label="חודש עזיבה" data-f="end">' + options(p.end || '', true) + '</select></label>' +
       '<button type="button" data-act="per-remove" class="per-del" aria-label="הסרת התקופה">' + (cal.removeIcon || '') + '</button>' +
     '</div>';
   }
