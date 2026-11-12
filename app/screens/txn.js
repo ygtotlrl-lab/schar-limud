@@ -36,7 +36,7 @@ function screenTxnHTML() {
       <div class="frm-row">
         <span class="frm-lbl" id="txn-method-lbl">אמצעי תשלום</span>
         <input id="txn-method" type="hidden" value="">
-        <div id="txn-method-chips" class="chips" role="radiogroup" aria-labelledby="txn-method-lbl"></div>
+        <div id="txn-method-chips" class="mpick" role="radiogroup" aria-labelledby="txn-method-lbl"></div>
         <div id="txn-method-hint" class="hidden credit-sub"></div>
       </div>
       <div class="frm-row">
@@ -67,14 +67,14 @@ comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filt
 }});
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
-// אמצעי התשלום — שבבים, ולחיצה על הנבחר מבטלת אותו (האמצעי אינו חובה); הערך בשדה הנסתר txn-method.
+// אמצעי התשלום — כפתורים עגולים עם אייקון ושם מתחתיו, ולחיצה על הנבחר מבטלת אותו (האמצעי אינו חובה); הערך בשדה הנסתר txn-method.
 function txnMethodChips(){
   var box=document.getElementById('txn-method-chips'),cur=document.getElementById('txn-method').value;
   var ml=slLookups(LK_METHOD).map(function(m){return m.label;});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())ml.push(CREDIT_METHOD);
   box.innerHTML=ml.map(function(l){var on=l===cur;
-    return '<button type="button" class="chip'+(on?' is-on':'')+(isCreditValue(l)?' chip-credit':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-val="'+esc(l)+'">'+esc(l)+'</button>';}).join('');
+    return '<button type="button" class="mp'+(on?' is-on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-val="'+esc(l)+'"><span class="mp-ic">'+icon(methodIco(l))+'</span><span>'+esc(l)+'</span></button>';}).join('');
 }
 
 function txnMethodPick(v){
@@ -132,10 +132,13 @@ function methodIcon(m){
   return 'cards';
 }
 
+// האייקון של אמצעי — הזיכוי מיתרה ב-repeat, ושאר האמצעים לפי השם; אחד לבורר ולקבלה.
+function methodIco(m){return isCreditValue(m)?'repeat':methodIcon(m);}
+
 function txnDay(d){var p=String(d||'').split('-');return p.length<3?(d||'—'):p[2]+'.'+p[1]+'.'+p[0];}
 
 // «קבלה» — ביומן ובכרטיס התלמיד: קבוצה לכל יום, ובשורה הסכום בראש ובירוק · השם (ביומן), ומתחתיו ההערה ·
-// ובקצה אייקון האמצעי ושמו · ✕ קטן. זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
+// ובקצה עמודה ברוחב קבוע — אייקון האמצעי ומתחתיו שמו, ממורכזים · ✕ קטן. זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
 function txnListHTML(txns,withName){
   var last=null;
   return txns.map(function(t){
@@ -146,7 +149,7 @@ function txnListHTML(txns,withName){
                     :'<small>'+(t.note?esc(t.note):'')+'</small>'+pendTxnTag(t);
     var meth=cr?CREDIT_METHOD:(t.payment_method||'');
     return head+'<div class="rc'+(cr?' credit':'')+'">'+txnAmountHTML(t)+'<div class="rc-who">'+who+'</div>'+
-      '<span class="rc-end" title="'+esc(meth)+'">'+icon(cr?'repeat':methodIcon(meth))+'<span>'+esc(meth||'—')+'</span></span>'+
+      '<span class="rc-end" title="'+esc(meth)+'">'+icon(methodIco(meth))+'<span>'+esc(meth||'—')+'</span></span>'+
       '<button class="txn-x" data-act="txn-del" data-id="'+esc(t.client_id)+'" aria-label="מחיקת התשלום" title="מחיקת התשלום">'+icon('close')+'</button></div>';
   }).join('');
 }
