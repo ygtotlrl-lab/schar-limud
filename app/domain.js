@@ -357,7 +357,6 @@ function isCreditTxn(t){return !!t&&isCreditValue(t.payment_method);}
 // העודף יושב בתוצאת calcDistribution תחת 'credit' — שאר המפתחות הם אינדקסי חודש 0–11, ואין התנגשות
 function distCredit(d){return (d&&d.credit)||0;}
 
-function distCredApplied(d){return YEAR_MONTHS.reduce(function(a,m){return a+((d&&d[m]&&d[m].cred)||0);},0);}
 
 function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 
@@ -504,8 +503,8 @@ function txnAmountHTML(t){
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 
-export { _slPushOf, acadYearHeb,
-         acadYearOf, calcDistribution, countInMonth, slInCollection, distCredApplied, distCredit,
+export { _slPushOf, acadMonthKey, acadYearHeb,
+         acadYearOf, calcDistribution, countInMonth, slInCollection, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
          pendLkTag, pendStuKey, pendStuTag, pendTxnTag,

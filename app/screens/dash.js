@@ -7,7 +7,7 @@ import { barChart } from '../../core/chart.js';
 import { CLS_NAME, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
-import { acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
+import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
          slInCollection, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
@@ -19,7 +19,8 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
-    <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div><span class="kpi-l">כל השנה</span></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">ממוצע עד החודש</span></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -119,6 +120,15 @@ function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
 
 function pctText(got,target){var p=pctNum(got,target);return p===null?'—':p+'%';}
 
+// טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק
+function paintRing(ringId,txtId,pn,title,aria){
+  var rg=document.getElementById(ringId),txt=pn===null?'—':pn+'%';
+  document.getElementById(txtId).textContent=txt;
+  rg.className='ring'+(pn===null?'':pn<25?' st-1':pn<50?' st-2':pn<90?' st-3':' st-4');
+  rg.style.setProperty('--p',pn===null?0:Math.min(100,pn));
+  rg.title=title;rg.setAttribute('aria-label',aria+' '+txt);rg.setAttribute('role','img');
+}
+
 function pctClass(got,target){var p=pctNum(got,target);return p===null?'':p>=90?'amt-ok':p>=60?'amt-warn':'amt-bad';}
 
 function ofTargetTitle(got,target){return 'נגבה ‎'+fmt(got)+'‎ מתוך יעד ‎'+fmt(target)+'‎';}
@@ -197,11 +207,12 @@ function renderDash(){
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
   document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
   // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
-  var pn=pctNum(grand,grandTgt),rg=document.getElementById('dk-ring');
-  document.getElementById('dk-pct').textContent=pctText(grand,grandTgt);
-  rg.className='ring'+(pn===null?'':pn<25?' st-1':pn<50?' st-2':pn<90?' st-3':' st-4');
-  rg.style.setProperty('--p',pn===null?0:Math.min(100,pn));
-  rg.title=ofTargetTitle(grand,grandTgt);rg.setAttribute('aria-label','אחוז גבייה '+pctText(grand,grandTgt));rg.setAttribute('role','img');
+  paintRing('dk-ring','dk-pct',pctNum(grand,grandTgt),ofTargetTitle(grand,grandTgt),'אחוז גבייה שנתי');
+  // ממוצע אחוזי הגבייה של החודשים שחלפו, כולל הנוכחי — כל חודש באחוז שלו, וחודש בלי יעד אינו נספר
+  var nowK=dayToday().slice(0,7),pcts=[];
+  YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0)pcts.push((colT[m]||0)/tgt[m]*100);});
+  var avg=pcts.length?Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length):null;
+  paintRing('dk-ring2','dk-pct2',avg,avg===null?'אין עדיין חודשים שחלפו':'ממוצע אחוזי הגבייה ב־'+pcts.length+' החודשים שחלפו, כולל הנוכחי','ממוצע אחוז הגבייה עד החודש');
 
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
     var v=colT[m]||0,t=tgt[m]||0;

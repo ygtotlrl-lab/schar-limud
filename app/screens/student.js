@@ -13,7 +13,7 @@ import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
-import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredApplied, distCredit, enrollText, fmt,
+import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredit, enrollText, fmt,
          monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          PER, periodText, periodsProblem, periodsToggled, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slHandledToggle, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
@@ -353,10 +353,9 @@ function annualHTML(s,year){
   if(cur&&pd>0)tf+='<tr class="debt-row"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="bal-cell amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="debt-note">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
   var html='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+tf+'</tfoot></table></div>';
   // יתרת זכות מוצגת בשורה נפרדת ובצבע נפרד — אינה נכנסת ל«סה״כ שולם» ואינה מקזזת את שורת החוב.
-  var cr=distCredit(dist),applied=distCredApplied(dist);
+  var cr=distCredit(dist);
   if(cr>0)html+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
-  if(applied>0)html+='<div class="credit-applied credit-sub">'+stIcon(icon('credit'))+'מזה זיכוי על חשבון יתרת זכות: &#8362;'+fmt(applied)+' — הקטין את החוב אך אינו כסף שהתקבל (גבייה בפועל בשנה זו: &#8362;'+fmt(Math.round((tP-applied)*100)/100)+').</div>';
   var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
   html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
   return html;
