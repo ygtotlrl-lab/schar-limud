@@ -116,7 +116,7 @@ function swHideUpdate() {
 function swApply(btn) {
   _swAccepted = true;
   busy(btn, true, 'מעדכן…');
-  if (_swTaken) { _swReloaded = true; location.reload(); return; }
+  if (_swTaken) { swReload(); return; }
   if (_swReg && _swReg.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   _swWait = setTimeout(function () { swApplyFail(btn, MSG_SW_TIMEOUT); }, SW_APPLY_MS);
 }
@@ -128,20 +128,61 @@ function swApplyFail(btn, msg) {
   swBannerHide();
   toast(msg, 6000, 'bad');
 }
+// הרענון של העדכון — נקודה אחת: האפליקציה מוסרת לפניו את מה שהרענון היה מאבד (swBeforeReload, רשות).
+function swReload() {
+  if (_swReloaded) return;
+  _swReloaded = true;
+  try { if (typeof app.swBeforeReload === 'function') app.swBeforeReload(); }
+  catch (e) { console.warn('[sw] before reload', e); }
+  location.reload();
+}
+// באמצע עבודה — דיאלוג פתוח, שדה בפוקוס, שדה ששונה מערכו בציור, או הקשה בשניות האחרונות; רענון אז מאבד את מה שהוקלד.
+// שדה שערכו נקבע בקוד אחרי הציור נספר כמשונה — הטעות היא לצד הבאנר, ולא לצד רענון שמוחק.
+var SW_IDLE_MS = 5000, SW_POLL_MS = 3000, _swKeyAt = 0;
+function swFieldDirty(el) {
+  if (el.disabled || el.readOnly) return false;
+  if (el.tagName === 'SELECT') {
+    for (var i = 0; i < el.options.length; i++) if (el.options[i].selected !== el.options[i].defaultSelected) return true;
+    return false;
+  }
+  var t = (el.type || '').toLowerCase();
+  if (t === 'hidden' || t === 'button' || t === 'submit' || t === 'reset' || t === 'file') return false;
+  if (t === 'checkbox' || t === 'radio') return el.checked !== el.defaultChecked;
+  return el.value !== el.defaultValue;
+}
+function swBusy() {
+  if (Date.now() - _swKeyAt < SW_IDLE_MS) return true;
+  if (document.body.classList.contains('locked')) return true;
+  var a = document.activeElement;
+  if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && !(a.type === 'hidden')) return true;
+  var fs = document.querySelectorAll('input, textarea, select, [contenteditable="true"]');
+  for (var i = 0; i < fs.length; i++) {
+    if (fs[i].isContentEditable) { if (document.activeElement === fs[i]) return true; continue; }
+    if (fs[i].offsetParent !== null && swFieldDirty(fs[i])) return true;
+  }
+  return false;
+}
+// עובד חדש השתלט: בלי עבודה פתוחה — רענון מיד; באמצע עבודה — הבאנר, וכשהעבודה נגמרת (שתי בדיקות רצופות) — רענון מעצמו.
+function swTakeover() {
+  if (!swBusy()) { swReload(); return; }
+  _swTaken = true;
+  swShowUpdate();
+  var calm = 0;
+  var t = setInterval(function () {
+    if (_swReloaded) { clearInterval(t); return; }
+    calm = swBusy() ? 0 : calm + 1;
+    if (calm >= 2) { clearInterval(t); swReload(); }
+  }, SW_POLL_MS);
+}
 function swRegister() {
   if (!('serviceWorker' in navigator)) return;
-  // המגע הראשון מבטל את הרענון האוטומטי שבהשתלטות — רענון באמצע עבודה מאבד את מה שהוקלד.
-  var touched = false;
-  ['pointerdown', 'keydown'].forEach(function (ev) {
-    window.addEventListener(ev, function () { touched = true; }, { once: true, capture: true });
-  });
+  document.addEventListener('keydown', function () { _swKeyAt = Date.now(); }, true);
   var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', function () {
     if (_swWait) { clearTimeout(_swWait); _swWait = 0; }
     if (_swReloaded || !hadController) return;
-    if (!_swAccepted && touched) { _swTaken = true; swShowUpdate(); return; }
-    _swReloaded = true;
-    location.reload();
+    if (_swAccepted) { swReload(); return; }
+    swTakeover();
   });
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
     console.log('[sw] registered:', reg.scope);
