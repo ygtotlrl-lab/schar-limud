@@ -102,6 +102,14 @@ else {
   }
 }
 
+// ── נתונים שנגזרו — tools/gen-data.mjs --check, כשהכלי קיים ──
+// מקור שנערך בלי הרצת המחולל, או app/data.js שנערך ביד — האפליקציה מציגה נתון שאינו המקור.
+if (existsSync(join(ROOT, 'tools', 'gen-data.mjs'))) {
+  checked++;
+  const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'gen-data.mjs'), '--check'], { encoding: 'utf8' });
+  if (r.status !== 0) fails.push('tools/gen-data.mjs --check — ' + ((r.stderr || '').trim().split('\n')[0].replace(/^❌ /, '') || 'נכשל'));
+}
+
 if (fails.length) {
   for (const f of fails) console.error(`❌ ${f}`);
   console.error(`\nהשומר נפל: ${fails.length} מתוך ${checked} — מתקנים ומריצים שוב לפני push.`);
