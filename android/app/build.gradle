@@ -11,7 +11,7 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
-        versionCode 27
+        versionCode 28
         versionName "15.0"
     }
 
@@ -30,4 +30,7 @@ android {
 dependencies {
     // מסך הפתיחה — אותו מסך בכל גרסאות האנדרואיד, והמעטפת מחזיקה אותו עד שהמסך הראשון צויר
     implementation 'androidx.core:core-splashscreen:1.0.1'
+    implementation 'androidx.core:core:1.13.1'
+    // WebViewCompat.addWebMessageListener — רשימת המקורות של גשר השיתוף נאכפת ב-WebView עצמו, לכל frame
+    implementation 'androidx.webkit:webkit:1.11.0'
 }
