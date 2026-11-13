@@ -132,12 +132,12 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 /* ── עורך תקופות הפעילות (core/periods.js) — אחד בהנהלה ובשכר לימוד: שורה לכל תקופה — מ · עד · הסרה ── */
 .per-list{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-3)}
 /* כל תקופה — כרטיס קטן: התווית קטנה מעל הבורר, והבוררים בגובה מגע מלא */
-.per-row{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:end;background:var(--card);border:1px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4)}
-.per-row .per-lbl{display:flex;flex-direction:column;align-items:stretch;gap:var(--sp-2);margin:0;font-size:var(--fs-1);font-weight:600;color:var(--text-3);min-width:0}
+.per-row{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:end;background:var(--card);border:1px solid var(--border);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4) var(--sp-4)}
+.per-row .per-lbl{display:flex;flex-direction:column;align-items:stretch;gap:var(--sp-4);margin:0;font-size:var(--fs-1);font-weight:600;color:var(--text-3);min-width:0}
 /* סגוליות של שתי מחלקות — גוברת על כללי השדות של האפליקציה (.frm-row select), שנטענים אחרי */
 .per-row .per-lbl select{display:block;width:100%;min-width:0;height:44px;margin:0;border:1.5px solid var(--border);border-radius:var(--r-4);padding:0 var(--sp-2);font:inherit;font-size:var(--fs-3);font-weight:600;background:var(--card);color:var(--text)}
-/* ההסרה בפינה, בשורת התוויות — שני הבוררים מקבלים את כל הרוחב */
-.per-del{position:absolute;top:var(--sp-2);inset-inline-end:var(--sp-3);border:none;background:color-mix(in srgb,var(--bad) 10%,transparent);color:var(--bad);cursor:pointer;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;padding:0}
+/* ההסרה בפינה, בגובה שורת התוויות בלבד — אינה נוגעת בבורר; שני הבוררים מקבלים את כל הרוחב */
+.per-del{position:absolute;top:var(--sp-3);inset-inline-end:var(--sp-4);border:none;background:color-mix(in srgb,var(--bad) 10%,transparent);color:var(--bad);cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;padding:0}
 .per-del .ico{width:14px;height:14px}
 .per-add{width:100%;min-height:44px;font:inherit;font-size:var(--fs-3);font-weight:600;border:1.5px dashed var(--border);background:var(--card);color:var(--text-2);cursor:pointer;padding:var(--sp-3);border-radius:var(--r-4)}
 .per-del:focus-visible,.per-add:focus-visible{outline:2px solid var(--text);outline-offset:2px}
