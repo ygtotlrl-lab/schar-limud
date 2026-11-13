@@ -6,7 +6,7 @@ self.APP = Object.freeze({
   shortName: 'שכר לימוד',
   description: 'מערכת ניהול תשלומי שכר לימוד',
   prefix: 'sl_',
-  colors: { theme: '#307535', background: '#ffffff' },
+  colors: { theme: '#1f5242', background: '#ffffff' },
   // דף האופליין של ה-service worker — הכהה לפי אסימוני הערכה הכהה של האפליקציה
   offline: { light: { bg: '#1d4a34', ink: '#FFFFFF' }, dark: { bg: '#0f1a12', ink: '#e8f1e6' }, mark: '📴' },
   // מפתח anon ציבורי ולא מפתח שירות — ההרשאות נאכפות במסד.
