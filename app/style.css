@@ -236,20 +236,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .txn-amt{font-weight:700;color:var(--ok)}
 /* «קבלה» — היומן ותשלומי הכרטיס, כמו תשלומי החודש בגיוס: קבוצה לכל יום, הסכום בראש ובירוק, האמצעי באייקון בקצה. */
 .txn-log{padding-inline:var(--sp-6)}
-.rc-day{font-size:var(--fs-1);font-weight:800;color:var(--text-3);padding:var(--sp-5) var(--sp-2) var(--sp-2);border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
-.rc{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-4) var(--sp-2);border-bottom:1px solid var(--border)}
-.rc .txn-amt,.rc .amt-credit{flex:none;min-width:4.6em;font-size:var(--fs-4);font-weight:800;font-variant-numeric:tabular-nums}
-.rc-who{flex:1;min-width:0}
-.rc-who b{display:flex;align-items:center;gap:var(--sp-3);font-weight:700;min-width:0}
 .rc-who b .student-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rc-who small{display:block;color:var(--text-3);font-size:var(--fs-2);overflow-wrap:anywhere}
 /* האמצעי — עמודה ברוחב קבוע: האייקונים בקו אחד בקצה, והשם לימינם, עד שתי שורות */
 /* עמודת האמצעי — רוחב קבוע, האייקון ומתחתיו השם, ממורכזים — כל השורות באותו קו */
-.rc-end{flex:none;width:6em;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:var(--sp-1);color:var(--text-3);font-size:var(--fs-1);text-align:center}
-.rc-end .ico{flex:none}
-.rc-end>span{min-width:0;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rc-end .ico{width:18px;height:18px;color:var(--brand-ink)}
-.rc.credit{border:1.5px dashed var(--credit);border-radius:var(--r-4);margin:var(--sp-2) 0}
+.rc.credit{--rc-dash:var(--credit)}
 .rc.credit .rc-end .ico{color:var(--credit)}
 .txn-x{background:none;border:none;color:var(--brand-ink);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
 .txn-x .ico{width:18px;height:18px}

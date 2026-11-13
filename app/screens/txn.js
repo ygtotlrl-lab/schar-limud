@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, toast } from '../../core/ui.js';
+import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
@@ -129,21 +129,17 @@ function methodIco(m){return isCreditValue(m)?'repeat':methodIcon(m);}
 
 function txnDay(d){var p=String(d||'').split('-');return p.length<3?(d||'—'):p[2]+'.'+p[1]+'.'+p[0];}
 
-// «קבלה» — ביומן ובכרטיס התלמיד: קבוצה לכל יום, ובשורה הסכום בראש ובירוק · השם (ביומן), ומתחתיו ההערה ·
-// ובקצה עמודה ברוחב קבוע — אייקון האמצעי ומתחתיו שמו, ממורכזים · עריכה (תאריך · סכום · אמצעי · הערה, ומחיקה). זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
+// «קבלה» — רכיב הליבה (receiptHTML), ביומן ובכרטיס התלמיד: השם ביומן, וההערה מתחתיו · ובסוף השורה — עריכה (תאריך · סכום · אמצעי · הערה, ומחיקה).
+// זיכוי מיתרה — במסגרת מקווקוות בגוון הזיכוי, והסכום בכחול.
 function txnListHTML(txns,withName){
-  var last=null;
-  return txns.map(function(t){
-    var head='',day=txnDay(t.txn_date),cr=isCreditTxn(t);
-    if(day!==last){head='<div class="rc-day">'+esc(day)+'</div>';last=day;}
+  return receiptHTML(txns.map(function(t){
+    var cr=isCreditTxn(t),meth=cr?CREDIT_METHOD:(t.payment_method||'');
     var st=withName?S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);}):null;
     var who=withName?'<b><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+'</b>'+(t.note?'<small>'+esc(t.note)+'</small>':'')
                     :'<small>'+(t.note?esc(t.note):'')+'</small>'+pendTxnTag(t);
-    var meth=cr?CREDIT_METHOD:(t.payment_method||'');
-    return head+'<div class="rc'+(cr?' credit':'')+'">'+txnAmountHTML(t)+'<div class="rc-who">'+who+'</div>'+
-      '<span class="rc-end" title="'+esc(meth)+'">'+icon(methodIco(meth))+'<span>'+esc(meth||'—')+'</span></span>'+
-      '<button class="txn-x" data-act="txn-edit" data-id="'+esc(t.client_id)+'" aria-label="עריכת התשלום" title="עריכת התשלום">'+icon('edit')+'</button></div>';
-  }).join('');
+    return {day:txnDay(t.txn_date),amt:txnAmountHTML(t),who:who,method:meth,ico:icon(methodIco(meth)),dashed:cr,cls:cr?'credit':'',
+      tail:'<button class="txn-x" data-act="txn-edit" data-id="'+esc(t.client_id)+'" aria-label="עריכת התשלום" title="עריכת התשלום">'+icon('edit')+'</button>'};
+  }));
 }
 
 function renderTxnLog(){

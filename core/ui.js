@@ -662,6 +662,23 @@ function cardWinKey(e) {
   return true;
 }
 
+// ── רשימת תשלומים — «קבלה» ──
+// קבוצה לכל יום, ובשורה: הסכום בראש ובירוק · השם, ומתחתיו פרט משני · ובקצה עמודה ברוחב קבוע — אייקון האמצעי ומתחתיו שמו.
+// הרכיב מקבל פריטים מוכנים, והאפליקציה מחליטה מה נכנס — הסדר, הסינון והחיתוך שלה.
+// it: day · amt (HTML) · who (HTML: <b>…</b><small>…</small>) · method · ico (HTML) · dashed · muted · cls · act · id · title · tail (HTML)
+function receiptHTML(items) {
+  var last = null;
+  return (items || []).map(function (it) {
+    var head = '';
+    if (it.day !== last) { head = '<div class="rc-day">' + esc(it.day) + '</div>'; last = it.day; }
+    return head + '<div class="rc' + (it.dashed ? ' rc-dashed' : '') + (it.muted ? ' rc-muted' : '') + (it.cls ? ' ' + it.cls : '') + '"' +
+      (it.act ? ' data-act="' + esc(it.act) + '" data-id="' + esc(it.id) + '"' : '') + (it.title ? ' title="' + esc(it.title) + '"' : '') + '>' +
+      '<span class="rc-amt">' + it.amt + '</span><div class="rc-who">' + it.who + '</div>' +
+      '<span class="rc-end" title="' + esc(it.method || '') + '">' + (it.ico || '') + '<span>' + esc(it.method || '—') + '</span></span>' +
+      (it.tail || '') + '</div>';
+  }).join('');
+}
+
 // ── רשת בחירת אמצעי ──
 // אמצעי תשלום או אופן — רשת אחת: עיגול ובו אייקון האמצעי, והשם מתחתיו; לחיצה על הנבחר מבטלת.
 // הערך בשדה נסתר שהאפליקציה מחזיקה (target); הליבה בונה ומסמנת, והאפליקציה מחליטה מה תלוי בבחירה.
@@ -793,4 +810,4 @@ export { actRun, actWire, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef
          comboHTML, comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel,
          dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
          lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, openModal, pullRender,
-         shellBare, swApply, swHideUpdate, swShowUpdate, toast, uiHold, uiNoDialog };
+         receiptHTML, shellBare, swApply, swHideUpdate, swShowUpdate, toast, uiHold, uiNoDialog };
