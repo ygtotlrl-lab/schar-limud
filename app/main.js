@@ -186,7 +186,7 @@ var DOM_ACTIONS = {
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
-  'txn-method-pick':       function (el) { txnMethodPick(el); },
+  'method-pick':           function (el) { txnMethodPick(el); },
   'txn-edit':    function (el) { openTxnEdit(el.getAttribute('data-id')); },
   'txn-edit-save': function (el) { saveTxnEdit(el.getAttribute('data-id')); },
   'txn-log-more':          function () { txnLogMore(); },

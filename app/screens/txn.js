@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, openModal, toast } from '../../core/ui.js';
+import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
@@ -36,7 +36,7 @@ function screenTxnHTML() {
       <div class="frm-row">
         <span class="frm-lbl" id="txn-method-lbl">אמצעי תשלום</span>
         <input id="txn-method" type="hidden" value="">
-        <div id="txn-method-chips" class="mpick" role="radiogroup" aria-labelledby="txn-method-lbl"></div>
+        <div id="txn-method-chips"></div>
         <div id="txn-method-hint" class="hidden credit-sub"></div>
       </div>
       <div class="frm-row">
@@ -69,23 +69,19 @@ comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FIL
 
 // אמצעי התשלום — כפתורים עגולים עם אייקון ושם מתחתיו, ולחיצה על הנבחר מבטלת אותו (האמצעי אינו חובה); הערך בשדה הנסתר txn-method.
 // הרשת — אחת לטופס התשלום ולעריכת תנועה; target — השדה הנסתר שמחזיק את הערך.
-function methodGridHTML(target,cur){
+function methodGrid(target,cur){
   var ml=slLookups(LK_METHOD).map(function(m){return m.label;});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())ml.push(CREDIT_METHOD);
-  // ערך שנרשם ואינו ברשימה — נשאר בבורר.
-  if(cur&&ml.indexOf(cur)<0)ml.push(cur);
-  return ml.map(function(l){var on=l===cur;
-    return '<button type="button" class="mp'+(on?' is-on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-target="'+target+'" data-val="'+esc(l)+'"><span class="mp-ic">'+icon(methodIco(l))+'</span><span>'+esc(l)+'</span></button>';}).join('');
+  return methodGridHTML({target:target,list:ml,cur:cur,label:'אמצעי התשלום',ico:function(l){return icon(methodIco(l));}});
 }
 function txnMethodChips(){
-  document.getElementById('txn-method-chips').innerHTML=methodGridHTML('txn-method',document.getElementById('txn-method').value);
+  document.getElementById('txn-method-chips').innerHTML=methodGrid('txn-method',document.getElementById('txn-method').value);
 }
 
+// בחירה — בליבה; וההערה שמתחת מתעדכנת לפי האמצעי (זיכוי מיתרה).
 function txnMethodPick(el){
-  var h=document.getElementById(el.getAttribute('data-target'));if(!h)return;
-  var v=el.getAttribute('data-val');h.value=h.value===v?'':v;
-  el.parentElement.querySelectorAll('.mp').forEach(function(b){var on=b.getAttribute('data-val')===h.value;b.classList.toggle('is-on',on);b.setAttribute('aria-checked',String(on));});
+  var h=methodPick(el);if(!h)return;
   if(h.id==='txn-method')txnMethodHint();
 }
 
@@ -128,17 +124,6 @@ function txnLogMore(){S.TXN_LOG_LEVEL=Math.min(2,(S.TXN_LOG_LEVEL||0)+1);renderT
 function txnLogLess(){S.TXN_LOG_LEVEL=0;renderTxnLog();}
 
 // אייקון לאמצעי התשלום — לפי מילה בשם, כי הרשימה נערכת בהגדרות (כמו בגיוס).
-function methodIcon(m){
-  m=String(m||'');
-  if(/אשראי/.test(m))return 'credit';
-  if(/העברה|בנק/.test(m))return 'bank';
-  if(/מזומן/.test(m))return 'cash';
-  if(/צ׳ק|צ'ק|צק/.test(m))return 'cheque';
-  if(/ביט|פייבוקס/.test(m))return 'phone';
-  if(/הו״ק|הו"ק|קבע/.test(m))return 'repeat';
-  return 'cards';
-}
-
 // האייקון של אמצעי — הזיכוי מיתרה ב-repeat, ושאר האמצעים לפי השם; אחד לבורר ולקבלה.
 function methodIco(m){return isCreditValue(m)?'repeat':methodIcon(m);}
 
@@ -184,7 +169,7 @@ function openTxnEdit(key){
     +'<div class="frm-row"><label for="te-amount">סכום (&#8362;)</label><input id="te-amount" type="text" inputmode="decimal" value="'+esc(t.amount)+'"></div>'
     +'<div class="frm-row"><label for="te-date">תאריך</label><input id="te-date" type="date" value="'+esc(t.txn_date||'')+'"></div></div>'
     +'<div class="frm-row"><span class="frm-lbl" id="te-method-lbl">אמצעי תשלום</span><input id="te-method" type="hidden" value="'+esc(cur)+'">'
-    +'<div class="mpick" role="radiogroup" aria-labelledby="te-method-lbl">'+methodGridHTML('te-method',cur)+'</div></div>'
+    +methodGrid('te-method',cur)+'</div>'
     +'<div class="frm-row frm-row-last"><label for="te-note">הערה</label><input id="te-note" type="text" value="'+esc(t.note||'')+'" placeholder="הערה (לא חובה)"></div></div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
     +'<button class="btn danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">מחיקה</button>'

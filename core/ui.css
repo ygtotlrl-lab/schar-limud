@@ -130,6 +130,15 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
    הקוד חושף את המסגרת רק יחד עם מסך שמשתמש בה — מסגרת גלויה לפני המסך הראשון מהבהבת מעליו.
    שתי מחלקות — גוברות על ה-display שהאפליקציה נותנת למסגרת במחלקה אחת. */
 .is-bare > :not(.view){display:none}
+/* ── רשת בחירת אמצעי (methodGridHTML) — אחת בגיוס, בשכר לימוד ובקופה: עיגול ובו אייקון, והשם מתחתיו ── */
+.mpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:var(--sp-5) var(--sp-3)}
+.mp{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);background:none;border:0;padding:0;font-family:inherit;font-size:var(--fs-2);font-weight:600;line-height:var(--lh-2);color:var(--text-2);text-align:center;cursor:pointer}
+.mp-ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--card-2);border:1.5px solid var(--border);color:var(--brand-ink);transition:background var(--dur-2),border-color var(--dur-2)}
+.mp-ic .ico,.mp-ic svg{width:22px;height:22px;margin:0}
+.mp.is-on{color:var(--brand-ink);font-weight:800}
+.mp.is-on .mp-ic{background:var(--brand-soft);border-color:var(--brand-fill)}
+.mp:focus-visible{outline:none}
+.mp:focus-visible .mp-ic{outline:2px solid var(--brand-fill);outline-offset:2px}
 /* ── עורך תקופות הפעילות (core/periods.js) — אחד בהנהלה ובשכר לימוד: שורה לכל תקופה — מ · עד · הסרה ── */
 .per-list{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-3)}
 /* כל תקופה — כרטיס קטן: התווית קטנה מעל הבורר, והבוררים בגובה מגע מלא */

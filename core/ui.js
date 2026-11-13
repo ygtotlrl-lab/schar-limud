@@ -645,6 +645,41 @@ function comboKey(e) {
   return true;
 }
 
+// ── רשת בחירת אמצעי ──
+// אמצעי תשלום או אופן — רשת אחת: עיגול ובו אייקון האמצעי, והשם מתחתיו; לחיצה על הנבחר מבטלת.
+// הערך בשדה נסתר שהאפליקציה מחזיקה (target); הליבה בונה ומסמנת, והאפליקציה מחליטה מה תלוי בבחירה.
+// האייקון נגזר מהשם במפה אחת — מילה בשם; שם שאינו מוכר — אייקון כללי. השמות — בסט של כל אפליקציה שמשתמשת ברשת.
+var METHOD_ICONS = [[/אשראי/, 'credit'], [/העברה|בנק/, 'bank'], [/מזומן/, 'cash'], [/צ׳ק|צ'ק|צק/, 'cheque'],
+  [/ביט|פייבוקס/, 'phone'], [/הו״ק|הו"ק|קבע/, 'repeat']];
+function methodIcon(m) {
+  m = String(m || '');
+  for (var i = 0; i < METHOD_ICONS.length; i++) if (METHOD_ICONS[i][0].test(m)) return METHOD_ICONS[i][1];
+  return 'cards';
+}
+// o: target (מזהה השדה הנסתר) · list (השמות, בסדר) · cur · ico (שם ⟵ ציור האייקון) · label
+// ערך שנרשם ואינו ברשימה נשאר בבורר.
+function methodGridHTML(o) {
+  var list = (o.list || []).slice(), cur = o.cur || '';
+  if (cur && list.indexOf(cur) < 0) list.push(cur);
+  return '<div class="mpick" role="radiogroup" aria-label="' + esc(o.label || '') + '">' + list.map(function (l) {
+    var on = l === cur;
+    return '<button type="button" class="mp' + (on ? ' is-on' : '') + '" role="radio" aria-checked="' + on +
+      '" data-act="method-pick" data-target="' + esc(o.target) + '" data-val="' + esc(l) + '">' +
+      '<span class="mp-ic">' + o.ico(l) + '</span><span>' + esc(l) + '</span></button>';
+  }).join('') + '</div>';
+}
+// בחירה — מעדכנת את השדה הנסתר ואת הסימון, ומחזירה את השדה; האפליקציה ממשיכה ממנו.
+function methodPick(el) {
+  var h = document.getElementById(el.getAttribute('data-target')), v = el.getAttribute('data-val');
+  if (!h) { console.error('[method] אין שדה #' + el.getAttribute('data-target')); return null; }
+  h.value = h.value === v ? '' : v;
+  el.parentElement.querySelectorAll('.mp').forEach(function (b) {
+    var on = b.getAttribute('data-val') === h.value;
+    b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on));
+  });
+  return h;
+}
+
 // ── גרירה לסידור ──
 // על אירועי מצביע ולא HTML5 — dragstart, dragover ו-drop אינם נורים במגע. הגרירה מתחילה מהידית בלבד — שורה שכולה נגררת חוטפת את הגלילה.
 // המנגנון מזיז בעץ ומחיל בשחרור את מה שהאפליקציה הגדירה ב-dragDef לסוג; סוג בלי מחיל מסתיים בלי כתיבה.
@@ -738,8 +773,7 @@ function lookupDragApply(list, kind) {
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
-         comboInput, comboMake, comboMore, comboPick, comboSet, comboValue,
-         dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey,
-         lookupDragApply, lookupList, lookupSeed, lsToast,
-         openModal, pullRender, shellBare, swApply, swHideUpdate,
-         swShowUpdate, toast, uiHold, uiNoDialog };
+         comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel, dragDef,
+         dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
+         lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, openModal, pullRender,
+         shellBare, swApply, swHideUpdate, swShowUpdate, toast, uiHold, uiNoDialog };
