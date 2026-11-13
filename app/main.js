@@ -19,8 +19,8 @@ import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSe
 import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
-         studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled } from './screens/student.js';
-import { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick,
+         studentBack, studentOpen, studentSearch } from './screens/student.js';
+import { deleteTxn, openTxnEdit, renderTxnLog, saveTxn, saveTxnEdit, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick,
          updateDropdowns } from './screens/txn.js';
 
 // ── החיווט ──
@@ -185,7 +185,9 @@ var DOM_ACTIONS = {
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'txn-del':     function (el) { deleteTxn(el.getAttribute('data-id')); },
-  'txn-method-pick':       function (el) { txnMethodPick(el.getAttribute('data-val')); },
+  'txn-method-pick':       function (el) { txnMethodPick(el); },
+  'txn-edit':    function (el) { openTxnEdit(el.getAttribute('data-id')); },
+  'txn-edit-save': function (el) { saveTxnEdit(el.getAttribute('data-id')); },
   'txn-log-more':          function () { txnLogMore(); },
   'txn-log-less':          function () { txnLogLess(); },
   'student-del': function () { deleteStudent(); },
@@ -201,8 +203,6 @@ var DOM_ACTIONS = {
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
-  'student-toggle-active':   function () { toggleStudentActive(); },
-  'student-handled':         function () { toggleStudentHandled(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
   'sc-back':                 function () { studentBack(); },
   'sc-archive':              function () { studentArchiveToggle(); },

@@ -2,9 +2,9 @@
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, comboDef, comboHTML, comboSet, comboValue, esc, toast } from '../../core/ui.js';
+import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, openModal, toast } from '../../core/ui.js';
 import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
-         MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_MISSING,
+         MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
 import { S, shell } from '../state.js';
@@ -68,18 +68,25 @@ comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filt
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
 // אמצעי התשלום — כפתורים עגולים עם אייקון ושם מתחתיו, ולחיצה על הנבחר מבטלת אותו (האמצעי אינו חובה); הערך בשדה הנסתר txn-method.
-function txnMethodChips(){
-  var box=document.getElementById('txn-method-chips'),cur=document.getElementById('txn-method').value;
+// הרשת — אחת לטופס התשלום ולעריכת תנועה; target — השדה הנסתר שמחזיק את הערך.
+function methodGridHTML(target,cur){
   var ml=slLookups(LK_METHOD).map(function(m){return m.label;});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())ml.push(CREDIT_METHOD);
-  box.innerHTML=ml.map(function(l){var on=l===cur;
-    return '<button type="button" class="mp'+(on?' is-on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-val="'+esc(l)+'"><span class="mp-ic">'+icon(methodIco(l))+'</span><span>'+esc(l)+'</span></button>';}).join('');
+  // ערך שנרשם ואינו ברשימה — נשאר בבורר.
+  if(cur&&ml.indexOf(cur)<0)ml.push(cur);
+  return ml.map(function(l){var on=l===cur;
+    return '<button type="button" class="mp'+(on?' is-on':'')+'" role="radio" aria-checked="'+(on?'true':'false')+'" data-act="txn-method-pick" data-target="'+target+'" data-val="'+esc(l)+'"><span class="mp-ic">'+icon(methodIco(l))+'</span><span>'+esc(l)+'</span></button>';}).join('');
+}
+function txnMethodChips(){
+  document.getElementById('txn-method-chips').innerHTML=methodGridHTML('txn-method',document.getElementById('txn-method').value);
 }
 
-function txnMethodPick(v){
-  var h=document.getElementById('txn-method');h.value=h.value===v?'':v;
-  txnMethodChips();txnMethodHint();
+function txnMethodPick(el){
+  var h=document.getElementById(el.getAttribute('data-target'));if(!h)return;
+  var v=el.getAttribute('data-val');h.value=h.value===v?'':v;
+  el.parentElement.querySelectorAll('.mp').forEach(function(b){var on=b.getAttribute('data-val')===h.value;b.classList.toggle('is-on',on);b.setAttribute('aria-checked',String(on));});
+  if(h.id==='txn-method')txnMethodHint();
 }
 
 function updateDropdowns(){
@@ -138,7 +145,7 @@ function methodIco(m){return isCreditValue(m)?'repeat':methodIcon(m);}
 function txnDay(d){var p=String(d||'').split('-');return p.length<3?(d||'—'):p[2]+'.'+p[1]+'.'+p[0];}
 
 // «קבלה» — ביומן ובכרטיס התלמיד: קבוצה לכל יום, ובשורה הסכום בראש ובירוק · השם (ביומן), ומתחתיו ההערה ·
-// ובקצה עמודה ברוחב קבוע — אייקון האמצעי ומתחתיו שמו, ממורכזים · ✕ קטן. זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
+// ובקצה עמודה ברוחב קבוע — אייקון האמצעי ומתחתיו שמו, ממורכזים · עריכה (תאריך · סכום · אמצעי · הערה, ומחיקה). זיכוי מיתרה — במסגרת מקווקוות והסכום בכחול.
 function txnListHTML(txns,withName){
   var last=null;
   return txns.map(function(t){
@@ -150,7 +157,7 @@ function txnListHTML(txns,withName){
     var meth=cr?CREDIT_METHOD:(t.payment_method||'');
     return head+'<div class="rc'+(cr?' credit':'')+'">'+txnAmountHTML(t)+'<div class="rc-who">'+who+'</div>'+
       '<span class="rc-end" title="'+esc(meth)+'">'+icon(methodIco(meth))+'<span>'+esc(meth||'—')+'</span></span>'+
-      '<button class="txn-x" data-act="txn-del" data-id="'+esc(t.client_id)+'" aria-label="מחיקת התשלום" title="מחיקת התשלום">'+icon('close')+'</button></div>';
+      '<button class="txn-x" data-act="txn-edit" data-id="'+esc(t.client_id)+'" aria-label="עריכת התשלום" title="עריכת התשלום">'+icon('edit')+'</button></div>';
   }).join('');
 }
 
@@ -167,15 +174,45 @@ function renderTxnLog(){
   document.getElementById('txn-log').innerHTML=(txnListHTML(txns,true)||'<div class="empty">אין תשלומים</div>')+more;
 }
 
+// עריכת תנועה למפרע — תאריך · סכום · אמצעי · הערה, באותה שורה (אותו client_id); והמחיקה — מכאן.
+function txnById(key){return (MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key)&&!x.deleted;})[0];}
+function openTxnEdit(key){
+  var t=txnById(key);if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
+  var st=S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);});
+  var cur=isCreditTxn(t)?CREDIT_METHOD:(t.payment_method||'');
+  var body='<div data-ks><div class="frm-2">'
+    +'<div class="frm-row"><label for="te-amount">סכום (&#8362;)</label><input id="te-amount" type="text" inputmode="decimal" value="'+esc(t.amount)+'"></div>'
+    +'<div class="frm-row"><label for="te-date">תאריך</label><input id="te-date" type="date" value="'+esc(t.txn_date||'')+'"></div></div>'
+    +'<div class="frm-row"><span class="frm-lbl" id="te-method-lbl">אמצעי תשלום</span><input id="te-method" type="hidden" value="'+esc(cur)+'">'
+    +'<div class="mpick" role="radiogroup" aria-labelledby="te-method-lbl">'+methodGridHTML('te-method',cur)+'</div></div>'
+    +'<div class="frm-row frm-row-last"><label for="te-note">הערה</label><input id="te-note" type="text" value="'+esc(t.note||'')+'" placeholder="הערה (לא חובה)"></div></div>';
+  var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
+    +'<button class="btn danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">מחיקה</button>'
+    +'<button class="btn" data-act="txn-edit-save" data-id="'+esc(t.client_id)+'" data-ksave>שמירה</button>';
+  openModal('עריכת תשלום — '+(st?st.name:''),body,foot);
+}
+function saveTxnEdit(key){
+  var t=txnById(key);if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
+  var date=document.getElementById('te-date').value,amount=readNum(document.getElementById('te-amount'),0);
+  if(!date){toast(MSG_PICK_DATE, null, 'bad');return;}if(!amount||amount<=0){toast(MSG_NEED_AMOUNT, null, 'bad');return;}
+  var method=document.getElementById('te-method').value,note=document.getElementById('te-note').value.trim();
+  var row=Object.assign({},t,{txn_date:date,amount:amount,payment_method:method||null,note:note||null});
+  // כשל כתיבה מקומית עוצר כאן ברעש — בכסף אסור להציג «נשמר» על משהו שלא נכתב.
+  if(!slLocalWrite('sl_transactions',row)){toast(MSG_PAY_SAVE_FAIL,5000, 'bad');return;}
+  closeModal();shell.refreshUI();
+  toast(navigator.onLine?MSG_PAY_EDITED:MSG_SAVED_LOCAL,4000, 'good');
+  schedulePush();
+}
+
 function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
   var row=tombKill(Object.assign({},t));
   if(!slLocalWrite('sl_transactions',row,row.updated_at)){toast(MSG_DEL_NOT_SAVED,5000, 'bad');return;}
-  shell.refreshUI();
+  closeModal();shell.refreshUI();
   toast(navigator.onLine?MSG_PAY_DELETED:MSG_SAVED_LOCAL,4000, 'good');
   schedulePush();
 });}
 
-export { deleteTxn, renderTxnLog, saveTxn, screenTxnHTML, txnLogLess, txnLogMore, txnListHTML, txnMethodPick, updateDropdowns };
+export { deleteTxn, openTxnEdit, renderTxnLog, saveTxn, saveTxnEdit, screenTxnHTML, txnLogLess, txnLogMore, txnListHTML, txnMethodPick, updateDropdowns };

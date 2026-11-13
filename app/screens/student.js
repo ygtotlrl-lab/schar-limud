@@ -5,20 +5,18 @@ import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
-         MSG_HANDLED_OFF, MSG_HANDLED_ON,
          MSG_NAME_REQUIRED,
-         MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_STUDENT_OFF, MSG_STUDENT_ON,
-         MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
+         MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
 import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredit, enrollText, fmt,
          monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
-         PER, periodText, periodsProblem, periodsToggled, releaseCid, slArchiveGroups, slCycleFor,
-         slCycleOf, slHandledToggle, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
+         PER, periodText, periodsProblem, releaseCid, slArchiveGroups, slCycleFor,
+         slCycleOf, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
-         slSortTxns, slSortYears, slStudentGroups, studentContinues, studentHandled, studentInMonth,
+         slSortTxns, slSortYears, slStudentGroups, studentHandled, studentInMonth,
          studentTuition } from '../domain.js';
 import { txnListHTML } from './txn.js';
 
@@ -41,11 +39,7 @@ function screenStudentHTML() {
       <div class="sc-hdr">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>
-          <div class="sc-togs">
-            <button class="sc-tog tog-act-off" id="sc-handled-tog" data-act="student-handled" aria-pressed="false">טופל</button>
-            <button class="sc-tog tog-act-off" id="sc-active-tog" data-act="student-toggle-active">פעיל</button>
-            <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
-          </div>
+          <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
         </div>
       </div>
       <div class="sc-annual">
@@ -303,21 +297,12 @@ function studentOpen(id){
 
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
 
-function toggleStudentHandled(){
-  var k=monthKeyOf(dayToday());
-  if(!slHandledToggle(S.SC_STUDENT_ID,k)){toast(MSG_CHANGE_NOT_SAVED,5000,'bad');return;}
-  shell.refreshUI();
-  toast(studentHandled(scStudent(),k)?MSG_HANDLED_ON:MSG_HANDLED_OFF,null,'good');
-}
-
 // ── כרטיס התלמיד ──
 function renderStudentCard(){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
   var cs=s.card_settings||{};
   var meta=[];if(CLS_NAME[s.cls])meta.push(CLS_NAME[s.cls]);var cyl=cycleLabel(slCycleOf(s));if(cyl)meta.push(cyl);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
-  var on=studentContinues(s),tog=document.getElementById('sc-active-tog');tog.innerHTML=on?'פעיל'+icon('check'):'לא פעיל';tog.className='sc-tog '+(on?'tog-act-on':'tog-act-off');
-  var hd=studentHandled(s),ht=document.getElementById('sc-handled-tog');ht.innerHTML=hd?'טופל'+icon('check'):'טופל';ht.className='sc-tog '+(hd?'tog-act-on':'tog-act-off');ht.setAttribute('aria-pressed',hd?'true':'false');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
   document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
@@ -372,12 +357,6 @@ function renderScAnnual(){
     return '<div class="sc-past-year"><div class="sc-sub-title">'+esc(acadYearHeb(y))+'</div>'+annualHTML(s,y)+'</div>';}).join('');
 }
 
-function toggleStudentActive(){var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s)return;
-  var row=Object.assign({},s,{periods:periodsToggled(s)});
-  if(!slLocalWrite('sl_students',row)){toast(MSG_CHANGE_NOT_SAVED,5000, 'bad');return;}
-  shell.refreshUI();
-  toast(studentContinues(row)?MSG_STUDENT_ON:MSG_STUDENT_OFF, null, 'good');schedulePush();}
-
 // בחירת שיעור בכרטיס ממלאת את המחזור מהחישוב — והבורר נשאר לעריכה ידנית.
 function scClsChanged(){
   var cls=document.getElementById('sc-edit-cls').value;
@@ -410,4 +389,4 @@ function saveStudentSettings(){
 export { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
-         studentBack, studentOpen, studentSearch, toggleStudentActive, toggleStudentHandled };
+         studentBack, studentOpen, studentSearch };

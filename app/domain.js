@@ -246,7 +246,7 @@ var PER=periodsEngine({
   removeIcon:icon('close')
 });
 var slPeriods=PER.list,periodsProblem=PER.problem,periodText=PER.text,enrollText=PER.enrollText,
-    studentContinues=PER.continues,periodsToggled=PER.toggled,studentArchived=PER.archived;
+    studentArchived=PER.archived;
 
 // חודש בתוך תקופה — פעיל; מחוץ לכולן — ריק: אין חיוב ואין שורה. בלי חודש — החודש הנוכחי.
 function studentInMonth(s,y,m){return PER.inMonth(s,(y==null)?null:acadMonthKey(y,m));}
@@ -506,11 +506,9 @@ function txnAmountHTML(t){
 export { _slPushOf, acadMonthKey, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, slInCollection, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
-         isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, periodsToggled,
-         pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
+         isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
-         slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, studentContinues,
-         cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
+         slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
          studentArchived,
          studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
          studentCredit, studentHandled, studentInMonth, syncAll, txnAmountHTML };
