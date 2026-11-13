@@ -52,12 +52,12 @@ body{-webkit-tap-highlight-color:transparent}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:var(--fs-3)}
 
 /* ── קליפה ── */
-#app{max-width:var(--col);margin:0 auto}
+.app{max-width:var(--col);margin:0 auto}
 @media (hover:hover){
   .tab-btn:hover{color:var(--bar-ink)}
 }
 /* כותרת המסך בשתי שורות — שנת הלימודים והחודש קטן מעל, ושם המסך גדול. */
-#topnav{position:sticky;top:0;z-index:var(--z-2);background:var(--bar);border-radius:0 0 22px 22px;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-5);max-width:var(--col);margin:0 auto var(--sp-5);padding:var(--sp-6) var(--gutter) var(--sp-6)}
+.topnav{position:sticky;top:0;z-index:var(--z-2);background:var(--bar);border-radius:0 0 22px 22px;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-5);max-width:var(--col);margin:0 auto var(--sp-5);padding:var(--sp-6) var(--gutter) var(--sp-6)}
 .nav-titles{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
 /* הסמל בצבע — הרקע הלבן שבקובץ נבלע בפס (multiply); בערכה הכהה — בריבוע לבן קטן */
 .nav-logo{flex:none;width:56px;height:56px;object-fit:contain;mix-blend-mode:multiply}
@@ -65,7 +65,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .nav-kicker{font-size:var(--fs-2);font-weight:700;color:var(--kicker);min-height:1em}
 .nav-title{font-size:var(--fs-6);font-weight:800;line-height:var(--lh-2);color:var(--bar-ink)}
 /* השורה מוצמדת לתחתית לכל רוחב העמודה, כמו בהנהלה — בגובה --tabbar-h ועוד אזור הבטיחות של המכשיר. */
-#tabbar{position:fixed;bottom:0;left:0;right:0;max-width:var(--col);margin:0 auto;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bar);border-radius:22px 22px 0 0;display:flex;overflow:hidden;z-index:var(--z-2)}
+.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:var(--col);margin:0 auto;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bar);border-radius:22px 22px 0 0;display:flex;overflow:hidden;z-index:var(--z-2)}
 .tab-btn{flex:1;min-width:0;background:none;border:none;padding:var(--sp-4) var(--sp-2);font-family:Heebo;font-size:var(--fs-1);color:var(--bar-ink-2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-2);transition:color var(--dur-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
 .tab-btn.active{color:var(--bar-ink);font-weight:800}
@@ -73,7 +73,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tab-btn:focus-visible{outline:2px solid var(--bar-pill);outline-offset:-4px}
 /* סוף התוכן מרוחק מהשורה הצפה כראשו מהכותרת — והכרטיס האחרון אינו מוסיף את המרווח שלו. */
 .panel{display:none;padding:var(--sp-4) var(--gutter) var(--sp-6);padding-bottom:calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom))}
-.panel .card:last-child{margin-bottom:0}
+.panel .card:last-child:not(.sc-card){margin-bottom:0}
 .panel.active{display:block}
 
 /* ── רכיבים ── */
@@ -90,10 +90,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   .tbl tr:hover td{background:var(--card-2)}
 }
 @media (hover:hover){
-  #ask .sheet-ft button:hover{background:var(--card-2)}
+  .veil-ask .sheet-ft button:hover{background:var(--card-2)}
 }
 @media (hover:hover){
-  #ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
+  .veil-ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
 }
 @media (hover:hover){
   .combo-opt:hover{background:var(--brand-soft);color:var(--brand-ink)}
@@ -116,7 +116,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .mp:focus-visible{outline:none}
 .mp:focus-visible .mp-ic{outline:2px solid var(--brand-fill);outline-offset:2px}
 /* השלוחים — מסגרת מקווקוות, בלוח הבקרה וברשימת התלמידים: מחוץ לחישוב הגבייה */
-#dash-shl-card,.sc-grp-free{border:1.5px dashed var(--brand-fill)}
+.dash-shl-card,.sc-grp-free{border:1.5px dashed var(--brand-fill)}
 /* קוביות הסיכום בראש לוח הבקרה */
 .dash-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
 @media (max-width:560px){.dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -164,9 +164,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
 .sheet-hd .x{color:var(--text-3)}
 .sheet-ft{gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
-#ask-body{font-size:var(--fs-4);color:var(--text-2)}
-#ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
-#ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
+.ask-body{font-size:var(--fs-4);color:var(--text-2)}
+.veil-ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
+.veil-ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
 /* ── רשימה נפתחת עם חיפוש ── */
 .combo-list{--combo-max:200px;background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);box-shadow:0 8px 20px var(--sh-1)}
 .combo-list.is-up{border-top:1.5px solid var(--text);border-bottom:none;border-radius:var(--r-5) var(--r-5) 0 0}
@@ -232,18 +232,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .year-label{font-weight:700;color:var(--text);font-size:var(--fs-4);min-width:120px;text-align:center}
 .year-nav{align-items:center;display:flex;gap:var(--sp-4)}
 /* הגרף — אותו רכיב משותף (bar), ערוך כאן כעמודות: עמודה לכל חודש, והיעד — קו מקווקו בגובהו */
-#dash-chart .bchart{display:flex;align-items:stretch;gap:var(--sp-2);height:170px;padding-top:var(--sp-3)}
-#dash-chart .brow{flex:1;display:flex;flex-direction:column-reverse;align-items:center;gap:var(--sp-2);min-width:0;font-size:var(--fs-1)}
-#dash-chart .blab{color:var(--text-2);white-space:nowrap}
-#dash-chart .bval{color:var(--text-3);font-size:10px;white-space:nowrap}
-#dash-chart .bbars{flex:1;width:100%;position:relative;display:block}
-#dash-chart .btrack{position:absolute;inset:0;height:auto;background:none;border-radius:0;display:flex;align-items:flex-end;overflow:visible}
-#dash-chart .btrack i{width:100%;height:var(--bar-w);border-radius:var(--r-3) var(--r-3) 0 0;background:var(--brand-fill)}
-#dash-chart .btrack.tgt i{background:none;border-top:2px dashed var(--text-3);border-radius:0;opacity:1}
+.dash-chart .bchart{display:flex;align-items:stretch;gap:var(--sp-2);height:170px;padding-top:var(--sp-3)}
+.dash-chart .brow{flex:1;display:flex;flex-direction:column-reverse;align-items:center;gap:var(--sp-2);min-width:0;font-size:var(--fs-1)}
+.dash-chart .blab{color:var(--text-2);white-space:nowrap}
+.dash-chart .bval{color:var(--text-3);font-size:10px;white-space:nowrap}
+.dash-chart .bbars{flex:1;width:100%;position:relative;display:block}
+.dash-chart .btrack{position:absolute;inset:0;height:auto;background:none;border-radius:0;display:flex;align-items:flex-end;overflow:visible}
+.dash-chart .btrack i{width:100%;height:var(--bar-w);border-radius:var(--r-3) var(--r-3) 0 0;background:var(--brand-fill)}
+.dash-chart .btrack.tgt i{background:none;border-top:2px dashed var(--text-3);border-radius:0;opacity:1}
 /* ── תנועות ── */
 .txn-amt{font-weight:700;color:var(--ok)}
 /* «קבלה» — היומן ותשלומי הכרטיס, כמו תשלומי החודש בגיוס: קבוצה לכל יום, הסכום בראש ובירוק, האמצעי באייקון בקצה. */
-#txn-log{padding-inline:var(--sp-6)}
+.txn-log{padding-inline:var(--sp-6)}
 .rc-day{font-size:var(--fs-1);font-weight:800;color:var(--text-3);padding:var(--sp-5) var(--sp-2) var(--sp-2);border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
 .rc{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-4) var(--sp-2);border-bottom:1px solid var(--border)}
 .rc .txn-amt,.rc .amt-credit{flex:none;min-width:4.6em;font-size:var(--fs-4);font-weight:800;font-variant-numeric:tabular-nums}
@@ -312,7 +312,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sc-close{background:none;border:none;color:var(--text-2);font-size:var(--fs-4);padding:var(--sp-2) var(--sp-3);cursor:pointer;border-radius:var(--r-3)}
 .sc-close:focus-visible{outline:2px solid var(--brand-fill);outline-offset:2px}
 /* הכרטיס בתוך הרשימה — מסגרת בירוק הבהיר, והשורה שמעליו מסומנת. */
-#sc-card{margin:var(--sp-2) 0 var(--sp-5);border:2px solid var(--brand-line);box-shadow:none}
+.sc-card{margin:var(--sp-2) 0 var(--sp-5);border:2px solid var(--brand-line);box-shadow:none}
 .stu-row.is-open{background:var(--card-2);border-bottom-color:transparent}
 .stu-row.is-open .student-name{color:var(--brand-ink);font-weight:800}
 .acc-hdr-split{border-top:1px solid var(--border)}
@@ -334,13 +334,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .grip:active{cursor:grabbing;color:var(--text)}
 /* רשימת התלמידים — שורה לכל תלמיד: סמל · שם ומצב החודש · יתרת זכות · «טופל»; הכרטיס הפתוח נפרש בשורה שמתחתיו. */
 .stu-list{display:flex;flex-direction:column;margin-top:var(--sp-2)}
-.stu-list > #sc-card{margin:var(--sp-2) 0 var(--sp-4)}
+.stu-list > .sc-card{margin:var(--sp-2) 0 var(--sp-4)}
 /* חלון הכרטיס — על כל המסך בטלפון; ממורכז ומוגבל ברוחב מ-640px; מעל שורת הניווט ומתחת לחלונות העריכה */
 .card-win{position:fixed;inset:0;z-index:var(--z-3);display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;
   padding:calc(var(--sp-6) + env(safe-area-inset-top)) var(--sp-5) calc(var(--sp-6) + env(safe-area-inset-bottom))}
 .cw-bg{position:fixed;inset:0;background:var(--veil)}
 .cw-in{position:relative;width:100%;max-width:820px}
-.cw-in > #sc-card{margin:0;box-shadow:0 10px 30px var(--sh-2)}
+.cw-in > .sc-card{margin:0;box-shadow:0 10px 30px var(--sh-2)}
 body:has(.card-win){overflow:hidden}
 .stu-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-4) var(--sp-2);border-bottom:1px solid var(--border);border-radius:var(--r-4)}
 .stu-row:last-child{border-bottom:0}

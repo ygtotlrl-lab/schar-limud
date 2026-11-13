@@ -159,7 +159,7 @@ document.title = self.APP.name;
 function mountView() {
   var v = document.getElementById('view');
   if (!v) { console.error('[ui] אין מיכל תוכן — #view'); return; }
-  v.innerHTML = '<div id="app">' + screenDashHTML() + screenTxnHTML() +
+  v.innerHTML = '<div id="app" class="app">' + screenDashHTML() + screenTxnHTML() +
     screenStudentHTML() + screenSettingsHTML() + '</div>';
 }
 

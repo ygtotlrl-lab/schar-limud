@@ -51,7 +51,7 @@ function screenTxnHTML() {
       <h3>יומן תשלומים</h3>
       ${comboHTML('txn-filter', { id: 'txn-filter', cls: 'txn-filter', label: 'סנן לפי תלמיד', placeholder: 'סנן לפי תלמיד...' })}
     </div>
-    <div id="txn-log"></div>
+    <div id="txn-log" class="txn-log"></div>
   </div>
 </div>
 `;

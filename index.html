@@ -22,7 +22,7 @@
 <body>
 <!-- הקליפה מתחילה חשופה, והמסגרת נחשפת רק יחד עם הלוחות — לא בטעינה -->
 <div id="main-app" class="is-bare">
-  <div id="topnav">
+  <div id="topnav" class="topnav">
     <div class="nav-titles">
       <span class="nav-kicker" id="nav-kicker"></span>
       <h1 class="nav-title" id="nav-title"></h1>
@@ -30,7 +30,7 @@
     <img class="nav-logo" src="icons/icon-512.0f5e4367.png" alt="">
   </div>
 
-  <div id="tabbar">
+  <div id="tabbar" class="tabbar">
     <button class="tab-btn active" data-act="show-panel" data-panel="dash">
       <span class="ti"></span><span class="tl">לוח בקרה</span>
     </button>
@@ -45,23 +45,23 @@
     </button>
   </div>
 
-  <main id="view"><div class="view-loading view-boot" role="status" aria-label="טוען"><img class="view-logo" src="icons/icon-maskable-512.17e26215.png" alt=""></div></main>
+  <main id="view" class="view"><div class="view-loading view-boot" role="status" aria-label="טוען"><img class="view-logo" src="icons/icon-maskable-512.17e26215.png" alt=""></div></main>
 </div>
 
-<div id="modal" class="veil" data-veil="modal">
+<div id="modal" class="veil veil-modal" data-veil="modal">
   <div class="sheet" data-ks role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" data-shell-ic="close" aria-label="סגירה"></button>
     </div>
-    <div class="sheet-bd" id="modal-body"></div>
-    <div class="sheet-ft" id="modal-foot"></div>
+    <div class="sheet-bd modal-body" id="modal-body"></div>
+    <div class="sheet-ft modal-foot" id="modal-foot"></div>
   </div>
 </div>
-<div id="ask" class="veil" data-veil="ask">
+<div id="ask" class="veil veil-ask" data-veil="ask">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
     <div class="sheet-hd"><h3 id="ask-title"></h3></div>
-    <div class="sheet-bd" id="ask-body"></div>
+    <div class="sheet-bd ask-body" id="ask-body"></div>
     <div class="sheet-ft">
       <button data-act="ask-no">ביטול</button>
       <button class="danger" data-act="ask-yes" id="ask-yes">אישור</button>
@@ -69,8 +69,8 @@
   </div>
 </div>
 
-<div id="toasts" aria-live="polite"></div>
-<div id="updater">
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="updater" class="updater">
   <div class="in">
     <span class="upd-ic" data-shell-ic="refresh"></span><span>גרסה חדשה זמינה</span>
     <button data-act="sw-apply">עדכן עכשיו</button>

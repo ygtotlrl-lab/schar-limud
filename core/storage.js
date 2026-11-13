@@ -51,6 +51,7 @@ function lsAlert(msg) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'ls-alert';
+    el.className = 'ls-alert';
     el.setAttribute('role', 'alert');
     var sp = document.createElement('span');
     sp.id = 'ls-alert-msg';

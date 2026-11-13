@@ -8,6 +8,7 @@
   function paint() {
     var o = document.createElement('div');
     o.id = 'boot-fail';
+    o.className = 'boot-fail';
     o.setAttribute('role', 'alertdialog');
     o.setAttribute('aria-labelledby', 'boot-fail-msg');
     // הצבעים מהתצורה נכתבים למשתני CSS — הגיליון בוחר ביניהם לפי הערכה, ואין כאן סגנון מוטבע.

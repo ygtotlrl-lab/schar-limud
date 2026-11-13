@@ -52,33 +52,33 @@ body.locked{overflow:hidden}
    יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו.
    צורה אחת בכל האפליקציות — רקע מלא וכפתור לבן; --upd-bg ו---upd-ink מחליפים את הרקע והדיו,
    ו---upd-btn ו---upd-btn-ink את הכפתור, באפליקציה שבחרה גוון משלה (שיעורים — שמנת וכפתור לבן). והוא מעל הנעילה, --z-8: גרסה ישנה במסך הכניסה עלולה לחסום כניסה. */
-#updater{
+.updater{
   position:fixed;inset-inline:0;z-index:var(--z-8);
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));
   display:none;justify-content:center;padding:0 var(--sp-6)}
-#updater.show{display:flex}
-#updater .in{
+.updater.show{display:flex}
+.updater .in{
   background:var(--upd-bg,var(--brand));color:var(--upd-ink,var(--on-brand));border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
   display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--sh-3);
   font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
-#updater button{
+.updater button{
   margin-inline-start:auto;background:var(--upd-btn,var(--on-brand));color:var(--upd-btn-ink,var(--brand));border:0;border-radius:var(--r-4);
   padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
 }
-#updater button.x{
+.updater button.x{
   margin-inline-start:0;background:none;color:var(--upd-ink,var(--on-brand));opacity:var(--op-5);padding:0;width:32px;height:32px;
   display:inline-flex;align-items:center;justify-content:center}
-#updater button.x .ico{width:18px;height:18px}
+.updater button.x .ico{width:18px;height:18px}
 /* אייקון מצב (stIcon) — בטוסט, בכותרת דיאלוג, בכפתור עסוק ובסרגל הסנכרון: בגודל הטקסט ובצבעו, ממורכז לשורה */
 .st-ic{display:inline-flex;vertical-align:-.22em;margin-inline-end:.4em;flex:none}
 .st-ic .ico{width:1.2em;height:1.2em}
-#updater .upd-ic{display:inline-flex;flex:none}
-#updater .upd-ic .ico{width:20px;height:20px}
+.updater .upd-ic{display:inline-flex;flex:none}
+.updater .upd-ic .ico{width:20px;height:20px}
 /* ── שכבת הטוסט ──
    div לכל הודעה — אלמנט קבוע אחד נדרס בהודעה השנייה.
    המשתנה --toasts-lift הוא גובה הבאנר הפתוח ומרווח, נמדד בפתיחתו ונכתב ב-setProperty; אפס כשהוא סגור. */
-#toasts{--toasts-lift:0px;position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + var(--toasts-lift));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toasts{--toasts-lift:0px;position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + var(--toasts-lift));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
 .toast{background:var(--brand-soft);color:var(--brand-ink);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
 .toast.good{background:var(--brand-fill);color:var(--on-brand)}
@@ -91,21 +91,21 @@ body.locked{overflow:hidden}
 html .is-busy{opacity:var(--op-4);cursor:wait}
 /* ── באנר כשל האחסון ──
    דרגת «נעילה» — כשל כתיבה נשאר גלוי מעל כל מסך. */
-#ls-alert{position:fixed;z-index:var(--z-7);left:0;right:0;top:0;background:var(--alert);color:var(--on-alert);
+.ls-alert{position:fixed;z-index:var(--z-7);left:0;right:0;top:0;background:var(--alert);color:var(--on-alert);
   direction:rtl;text-align:center;font-weight:700;font-size:var(--fs-3);line-height:var(--lh-4);
   padding:var(--sp-5) calc(var(--sp-7) * 2);box-shadow:0 2px 14px var(--sh-3)}
-#ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
+.ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
   cursor:pointer;padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center}
-#ls-alert button .ico{width:20px;height:20px}
+.ls-alert button .ico{width:20px;height:20px}
 /* ── שומר העלייה ──
    בצבעי offline שבתצורה, והכפתור בצבעים ההפוכים — צבע שלישי אינו בתצורה. */
-#boot-fail{--boot-bg:#FFFFFF;--boot-ink:#1A1A1A;--boot-bg-dark:#121212;--boot-ink-dark:#F2F2F2;
+.boot-fail{--boot-bg:#FFFFFF;--boot-ink:#1A1A1A;--boot-bg-dark:#121212;--boot-ink-dark:#F2F2F2;
   --boot-fg-use:var(--boot-ink);--boot-bg-use:var(--boot-bg);
   position:fixed;inset:0;z-index:var(--z-7);display:flex;align-items:center;justify-content:center;
   padding:var(--sp-7);background:var(--boot-bg-use);color:var(--boot-fg-use);
   font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 @media (prefers-color-scheme:dark){
-  #boot-fail{--boot-fg-use:var(--boot-ink-dark);--boot-bg-use:var(--boot-bg-dark)}
+  .boot-fail{--boot-fg-use:var(--boot-ink-dark);--boot-bg-use:var(--boot-bg-dark)}
 }
 .boot-fail-box{max-width:340px;text-align:center}
 .boot-fail-msg{margin:0 0 var(--sp-7);font-size:var(--fs-5);font-weight:700}
@@ -127,8 +127,8 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
 .view-boot .view-logo{width:240px;height:240px;border-radius:0;clip-path:circle(80px);animation:none}
 /* ── הקליפה החשופה ──
    הקוד חושף את המסגרת רק יחד עם מסך שמשתמש בה — מסגרת גלויה לפני המסך הראשון מהבהבת מעליו.
-   :not(#view) נושא סגוליות של מזהה — אין להחליפו במחלקה: הוא גובר על ה-display שהאפליקציה נותנת למסגרת. */
-.is-bare > :not(#view){display:none}
+   שתי מחלקות — גוברות על ה-display שהאפליקציה נותנת למסגרת במחלקה אחת. */
+.is-bare > :not(.view){display:none}
 /* ── עורך תקופות הפעילות (core/periods.js) — אחד בהנהלה ובשכר לימוד: שורה לכל תקופה — מ · עד · הסרה ── */
 .per-list{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-3)}
 /* כל תקופה — כרטיס קטן: התווית קטנה מעל הבורר, והבוררים בגובה מגע מלא */

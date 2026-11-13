@@ -35,7 +35,7 @@ function screenStudentHTML() {
     <button class="sc-arch-btn" id="sc-arch-btn" data-act="sc-archive"></button>
   </div>
   <div id="sc-main" class="hidden">
-    <div class="card" id="sc-card">
+    <div class="card sc-card" id="sc-card">
       <div class="sc-hdr">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>

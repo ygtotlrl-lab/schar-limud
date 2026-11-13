@@ -41,7 +41,7 @@ function screenDashHTML() {
       </table>
     </div>
   </div>
-  <div class="card hidden" id="dash-shl-card">
+  <div class="card hidden dash-shl-card" id="dash-shl-card">
     <div class="card-hdr"><h3>${CLS_NAME.s}</h3><span class="shl-note">מחוץ לחישוב הגבייה</span></div>
     <div class="dash-scroll">
       <table class="tbl pivot shl">
@@ -53,7 +53,7 @@ function screenDashHTML() {
   </div>
   <div class="card">
     <div class="card-hdr"><h3>גרף גביה חודשי</h3></div>
-    <div class="card-body"><div id="dash-chart"></div></div>
+    <div class="card-body"><div id="dash-chart" class="dash-chart"></div></div>
   </div>
   <div class="card">
     <div class="card-hdr"><h3>טיוטת הערות</h3><span id="dash-notes-st" class="notes-st"></span></div>
