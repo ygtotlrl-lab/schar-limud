@@ -65,7 +65,7 @@ function actWire(actions) {
     actRun(el, fn);
   });
   document.addEventListener('keydown', function (e) {
-    if (comboKey(e) || ksKey(e)) return;
+    if (comboKey(e) || ksKey(e) || cardWinKey(e)) return;
     modalEsc(e);
   });
 }
@@ -645,6 +645,23 @@ function comboKey(e) {
   return true;
 }
 
+// ── חלון כרטיס מעל רשימה ──
+// פריט שנפתח מתוך רשימה — בחלון משלו מעליה: על כל המסך בטלפון, וממורכז במסך רחב; מעל הסרגל ומתחת לחלונות העריכה.
+// הרקע סוגר כ-✕ — פעולת הסגירה של האפליקציה (close); ו-Escape לוחץ עליו, כשאין מעליו חלון עריכה או אישור.
+// o: label · close (שם הפעולה) · body · id
+function cardWinHTML(o) {
+  return '<div class="card-win"' + (o.id ? ' id="' + esc(o.id) + '"' : '') + ' role="dialog" aria-modal="true" aria-label="' + esc(o.label || '') + '">' +
+    '<div class="cw-bg" data-act="' + esc(o.close) + '"></div><div class="cw-in">' + (o.body || '') + '</div></div>';
+}
+function cardWinKey(e) {
+  if (e.key !== 'Escape') return false;
+  var bg = document.querySelector('.card-win .cw-bg');
+  if (!bg || document.querySelector('.veil.open')) return false;
+  e.preventDefault();
+  bg.click();
+  return true;
+}
+
 // ── רשת בחירת אמצעי ──
 // אמצעי תשלום או אופן — רשת אחת: עיגול ובו אייקון האמצעי, והשם מתחתיו; לחיצה על הנבחר מבטלת.
 // הערך בשדה נסתר שהאפליקציה מחזיקה (target); הליבה בונה ומסמנת, והאפליקציה מחליטה מה תלוי בבחירה.
@@ -772,8 +789,8 @@ function lookupDragApply(list, kind) {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
-export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
-         comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel, dragDef,
-         dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
+export { actRun, actWire, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef, comboFocus,
+         comboHTML, comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel,
+         dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
          lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, openModal, pullRender,
          shellBare, swApply, swHideUpdate, swShowUpdate, toast, uiHold, uiNoDialog };

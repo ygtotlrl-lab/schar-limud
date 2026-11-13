@@ -130,6 +130,12 @@ html .is-busy{opacity:var(--op-4);cursor:wait}
    הקוד חושף את המסגרת רק יחד עם מסך שמשתמש בה — מסגרת גלויה לפני המסך הראשון מהבהבת מעליו.
    שתי מחלקות — גוברות על ה-display שהאפליקציה נותנת למסגרת במחלקה אחת. */
 .is-bare > :not(.view){display:none}
+/* ── חלון כרטיס מעל רשימה (cardWinHTML) — אחד בגיוס ובשכר לימוד: על כל המסך בטלפון; ממורכז ומוגבל ברוחב במסך רחב ── */
+.card-win{position:fixed;inset:0;z-index:var(--z-3);display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;
+  padding:calc(var(--sp-6) + env(safe-area-inset-top)) var(--sp-5) calc(var(--sp-6) + env(safe-area-inset-bottom))}
+.cw-bg{position:fixed;inset:0;background:var(--veil)}
+.cw-in{position:relative;width:100%;max-width:820px}
+body:has(.card-win){overflow:hidden}
 /* ── רשת בחירת אמצעי (methodGridHTML) — אחת בגיוס, בשכר לימוד ובקופה: עיגול ובו אייקון, והשם מתחתיו ── */
 .mpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:var(--sp-5) var(--sp-3)}
 .mp{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);background:none;border:0;padding:0;font-family:inherit;font-size:var(--fs-2);font-weight:600;line-height:var(--lh-2);color:var(--text-2);text-align:center;cursor:pointer}

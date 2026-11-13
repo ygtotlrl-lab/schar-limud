@@ -1,7 +1,7 @@
 // app/screens/student.js — רשימת התלמידים וכרטיס התלמיד
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
-import { ask, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
+import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
@@ -251,7 +251,7 @@ function doYearTransition(){
 }
 
 // הרשימה והכרטיס מתחלפים בנקודה אחת — תלמיד שנמחק במכשיר אחר מחזיר לרשימה.
-// הכרטיס נפתח בחלון משלו מעל הרשימה, כמו בגיוס (sc-win): על כל המסך בטלפון, וממורכז במסך רחב; הרקע, ✕ ו-Escape סוגרים.
+// הכרטיס נפתח בחלון הכרטיס של הליבה (cardWinHTML, sc-win): הרקע, ✕ ו-Escape סוגרים ב-sc-back.
 // רכיב הכרטיס אחד, וחונה ב-sc-main כשהחלון סגור.
 function scRowOf(id){
   var rows=document.querySelectorAll('#sc-list .stu-open');
@@ -273,22 +273,13 @@ function renderStudentPanel(){
   row.classList.add('is-open');
   var w=document.getElementById('sc-win');
   if(!w){
-    w=document.createElement('div');w.id='sc-win';w.className='card-win';
-    w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');
-    w.innerHTML='<div class="cw-bg" data-act="sc-back"></div><div class="cw-in"></div>';
-    document.body.appendChild(w);
+    document.body.insertAdjacentHTML('beforeend',cardWinHTML({id:'sc-win',close:'sc-back',label:(scStudent()||{}).name||''}));
+    w=document.getElementById('sc-win');
   }
   var card=document.getElementById('sc-card'),inn=w.querySelector('.cw-in');
   if(card&&card.parentNode!==inn)inn.appendChild(card);
   renderStudentCard();
 }
-// Escape סוגר את חלון הכרטיס — רק כשאין מעליו חלון עריכה או אישור
-document.addEventListener('keydown',function(e){
-  if(e.key!=='Escape'||!document.getElementById('sc-win'))return;
-  if(document.querySelector('.veil.open, #ask.open'))return;
-  e.preventDefault();studentBack();
-});
-
 // המזהה נשמר כמחרוזת — client_id הוא טקסט, ו-parseInt עליו מחזיר NaN. לחיצה על התלמיד הפתוח — סוגרת.
 function studentOpen(id){
   S.SC_STUDENT_ID=idEq(S.SC_STUDENT_ID,id)?null:String(id);
