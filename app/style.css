@@ -361,7 +361,7 @@ body:has(.card-win){overflow:hidden}
 @media (hover:hover){.stu-check:hover{border-color:var(--ok)}}
 .stu-row.is-handled .student-name{color:var(--text-2);font-weight:500}
 /* פס «בפועל / צפי» — הרכיב המשותף bar; זהב, וירוק כשהושג */
-.stu-prog{width:100%;max-width:220px;height:5px;margin-top:var(--sp-2)}
+.stu-prog{width:100%;height:5px;margin-top:var(--sp-2)}
 .stu-prog i{background:var(--gold)}
 .stu-prog.full i{background:var(--ok)}
 .sc-grp-sum{margin-inline-start:auto;font-size:var(--fs-1);color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
