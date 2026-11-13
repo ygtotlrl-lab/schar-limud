@@ -6,7 +6,7 @@ import { lsOpen } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
-import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboPick, dragCancel, dragDown,
+import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown,
          dragMove, dragUp, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
@@ -179,6 +179,7 @@ function refreshUI(){navHead();updateDropdowns();renderDash();renderTxnLog();ren
 // data-id הוא תמיד מחרוזת — ההשוואות עוברות ב-String(key), ואין להחליפן ב-=== על מספר.
 var DOM_ACTIONS = {
   'combo-pick':          function (el) { return comboPick(el); },
+  'combo-more':          function (el) { return comboMore(el); },
   'sw-apply':            function (el) { swApply(el); },
   'sw-dismiss':          function () { swHideUpdate(); },
   // התראות התשתית נבנות ב-JS — לכן הן מנותבות במפה ולא במאזין ישיר על הכפתור.

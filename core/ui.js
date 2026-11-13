@@ -1,6 +1,6 @@
 // core/ui.js — שכבת התצוגה המשותפת
 
-import { MSG_NO_MATCH, MSG_SW_TIMEOUT, app } from './util.js';
+import { MSG_COMBO_MORE, MSG_NO_MATCH, MSG_SW_TIMEOUT, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 import { stIcon } from './icons.js';
 
@@ -450,6 +450,7 @@ function comboCfg(root) {
 function comboQ(root) { return root.querySelector('[data-combo-q]'); }
 // פריט: { value, label } — הערך הוא מה שהשדה הנסתר מחזיק, כמו <option value>, ואינו רשומה.
 // o: id · label · placeholder · picked ({ value, label }) · qid · cls
+// cfg: items · pick · val · hl · make · makeLabel · query · focusOpen · max · more (עם max — «עוד אפשרויות» עד more)
 function comboHTML(kind, o) {
   var cfg = _combo[kind] || {}, v = o.picked || null;
   return '<div class="combo' + (o.cls ? ' ' + o.cls : '') + '" id="' + esc(o.id) + '" data-combo="' + esc(kind) + '">' +
@@ -526,6 +527,7 @@ function comboClose(root) {
   if (list) { list.innerHTML = ''; list.remove(); }
   if (q) q.setAttribute('aria-expanded', 'false');
   if (_comboOpen === root) _comboOpen = null;
+  root._comboMore = false;
 }
 function comboPaint(root) {
   var cfg = comboCfg(root), q = comboQ(root), list = comboList(root);
@@ -535,7 +537,9 @@ function comboPaint(root) {
   var items = (cfg.items() || []).filter(function (it) {
     return !ql || String(it.find != null ? it.find : it.label).toLowerCase().indexOf(ql) >= 0;
   });
-  if (cfg.max) items = items.slice(0, cfg.max);
+  // רשימה קצרה ו«עוד»: max פריטים, והכפתור פותח עד more — הרחבה נשארת עד שהרשימה נסגרת.
+  var all = items.length, cap = cfg.more && root._comboMore ? cfg.more : cfg.max;
+  if (cap) items = items.slice(0, cap);
   root._comboItems = items;
   var h = items.map(function (it, i) {
     return '<button type="button" class="combo-opt' + (i ? '' : ' is-on') + '" role="option" data-act="combo-pick" data-combo-opt="' + i + '">' +
@@ -544,6 +548,8 @@ function comboPaint(root) {
   }).join('');
   if (cfg.make) h += '<button type="button" class="combo-opt combo-make' + (items.length ? '' : ' is-on') + '" data-act="combo-make" data-combo-opt="make">' + esc(cfg.makeLabel(q.value.trim())) + '</button>';
   else if (!items.length) h = '<div class="combo-empty">' + esc(MSG_NO_MATCH) + '</div>';
+  if (cfg.more && !root._comboMore && all > items.length)
+    h += '<button type="button" class="combo-more" data-act="combo-more">' + esc(MSG_COMBO_MORE) + '</button>';
   if (_comboOpen && _comboOpen !== root) comboClose(_comboOpen);
   list.innerHTML = h;
   if (!list.isConnected) document.body.appendChild(list);
@@ -571,6 +577,14 @@ function comboPick(el) {
   var it = root && root._comboItems ? root._comboItems[+el.getAttribute('data-combo-opt')] : null;
   if (!it) { console.error('[combo] פריט שאינו ברשימה'); return; }
   return comboChoose(root, it);
+}
+// «עוד אפשרויות» — הרשימה נבנית מחדש עד more, והמיקוד חוזר לשדה: ההקלדה ממשיכה לסנן.
+function comboMore(el) {
+  var root = comboRootOf(el), q = root ? comboQ(root) : null;
+  if (!root) return;
+  root._comboMore = true;
+  comboPaint(root);
+  if (q) q.focus();
 }
 function comboMake(el) {
   var root = comboRootOf(el), cfg = root ? comboCfg(root) : null;
@@ -724,7 +738,7 @@ function lookupDragApply(list, kind) {
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { actRun, actWire, ask, busy, closeAsk, closeModal, comboDef, comboFocus, comboHTML,
-         comboInput, comboMake, comboPick, comboSet, comboValue,
+         comboInput, comboMake, comboMore, comboPick, comboSet, comboValue,
          dragCancel, dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey,
          lookupDragApply, lookupList, lookupSeed, lsToast,
          openModal, pullRender, shellBare, swApply, swHideUpdate,

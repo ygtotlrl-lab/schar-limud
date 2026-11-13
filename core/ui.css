@@ -48,6 +48,7 @@ body.locked{overflow:hidden}
 .combo-opt{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);width:100%;
   border:0;background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
 .combo-empty{cursor:default}
+.combo-more{display:block;width:100%;border:0;background:none;font:inherit;cursor:pointer;text-align:center}
 /* ── באנר העדכון ──
    יושב במקום הטוסט בלי מרווח משלו — טוסט שמופיע בזמן שהבאנר פתוח עולה מעליו.
    צורה אחת בכל האפליקציות — רקע מלא וכפתור לבן; --upd-bg ו---upd-ink מחליפים את הרקע והדיו,

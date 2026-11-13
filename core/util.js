@@ -96,6 +96,7 @@ var MSG_KV_BAD = 'ערך פגום בענן';
 var MSG_LOGIN_ERR = 'הכניסה נכשלה — ';
 var MSG_MY_PASS_TITLE = 'שינוי הסיסמה שלי';
 var MSG_NO_MATCH = 'אין תוצאות';
+var MSG_COMBO_MORE = 'עוד אפשרויות';
 var MSG_OFFLINE_LOGIN = 'כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
 var MSG_PASS_CUR_BAD = 'הסיסמה הנוכחית שגויה';
 var MSG_PASS_MISMATCH = 'הסיסמאות החדשות אינן זהות';
@@ -176,7 +177,7 @@ function sortCompare(a, b) { return SORT_COLLATOR.compare(a, b); }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { app, appConfigure, readNum, sortCompare, uniqList, uniqHas,
-         MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
+         MSG_COMBO_MORE, MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,
