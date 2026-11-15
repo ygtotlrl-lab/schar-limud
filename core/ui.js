@@ -1,6 +1,6 @@
 // core/ui.js — שכבת התצוגה המשותפת
 
-import { MSG_COMBO_MORE, MSG_NO_MATCH, MSG_SW_TIMEOUT, app } from './util.js';
+import { MSG_COMBO_MORE, MSG_NO_MATCH, MSG_SW_TIMEOUT, MSG_UNSAVED_DROP, MSG_UNSAVED_SAVE, MSG_UNSAVED_TEXT, MSG_UNSAVED_TITLE, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 import { stIcon } from './icons.js';
 
@@ -62,7 +62,11 @@ function actWire(actions) {
     var fn = actions[el.getAttribute('data-act')];
     if (!fn) return;
     ev.preventDefault();
+    var g = _gDirty(el);
+    if (g) { _gLeave(g, function () { actRun(el, fn); }); return; }
+    var after = _gSaved(el);
     actRun(el, fn);
+    after();
   });
   document.addEventListener('keydown', function (e) {
     if (comboKey(e) || ksKey(e) || cardWinKey(e)) return;
@@ -314,33 +318,77 @@ function modalEsc(e) {
 }
 
 // ── שינויים שלא נשמרו ──
-// חלון שיש בו כפתור שמירה (data-ksave) ושהמשתמש שינה בו שדה — הסגירה (✕, ביטול, הרקע, Escape) שואלת «לשמור?»:
-// «שמור» לוחץ על כפתור השמירה של החלון · «סגור בלי לשמור» סוגר · הרקע או Escape של השאלה — חזרה לחלון.
-// מצב השדות נלכד בנגיעה הראשונה בחלון ולא בפתיחה — ערך שהאפליקציה ממלאת אחרי הפתיחה אינו נחשב שינוי.
+// טופס שנשמר בכפתור (data-ksave) ושינו בו שדה — היציאה ממנו שואלת «לשמור?» (TABLE.md, שורה 103):
+// «שמירה» לוחץ על כפתור השמירה · «סגירה בלי שמירה» ממשיך ביציאה · הרקע או Escape של השאלה — חזרה לטופס.
+// חלון (#modal) — ✕, «ביטול», הרקע ו-Escape עוברים ב-modalDismiss. שורת הוספה או טופס בתוך מסך, אריח או כרטיס —
+// היקף הטופס, data-ks (שורה 102): לחיצה על data-act מחוץ לו (מעבר מסך, סגירת אריח או חלון כרטיס) שואלת, ואחרי «שמירה» שהצליחה — ממשיכה.
+// מצב השדות נלכד בנגיעה הראשונה בטופס ולא בציור — ערך שהאפליקציה ממלאת אחרי הציור אינו נחשב שינוי.
+// data-noguard — כפתור Enter שאינו שמירה (כניסה, «המשך» בתהליך): הטופס אינו שואל עליו.
 var _mSnap = null;
-function _mState() {
-  var bd = document.getElementById('modal-body');
-  if (!bd) return '';
-  return Array.prototype.map.call(bd.querySelectorAll('input,select,textarea'), function (el) {
+var _gSnap = new WeakMap();
+var KSAVE = '[data-ksave]:not([data-noguard])';
+function _fState(box) {
+  if (!box) return '';
+  return Array.prototype.map.call(box.querySelectorAll('input,select,textarea'), function (el) {
     return el.type === 'checkbox' || el.type === 'radio' ? (el.checked ? '1' : '0') : el.value;
   }).join('\u0001');
 }
-// data-noguard — כפתור Enter שאינו שמירה (כניסה, «הבא» בתהליך רב-שלבי): החלון אינו שואל עליו.
-function _mSaveBtn() { var m = document.getElementById('modal'); return m ? m.querySelector('[data-ksave]:not([data-noguard])') : null; }
-function _mTouch(e) {
+function _mState() { return _fState(document.getElementById('modal-body')); }
+// כפתור השמירה של החלון — בתחתית קודם: כפתור Enter בגוף (יצירה מתוך בורר) אינו שמירת החלון
+function _mSaveBtn() {
   var m = document.getElementById('modal');
-  if (_mSnap !== null || !m || !m.classList.contains('open') || !e.target || !e.target.closest || !e.target.closest('#modal-body')) return;
-  _mSnap = _mState();
+  return m ? (m.querySelector('#modal-foot ' + KSAVE) || m.querySelector('#modal-body ' + KSAVE)) : null;
+}
+function _mTouch(e) {
+  var t = e.target;
+  if (!t || !t.closest) return;
+  var m = document.getElementById('modal');
+  if (_mSnap === null && m && m.classList.contains('open') && t.closest('#modal-body')) _mSnap = _mState();
+  var g = t.closest('[data-ks]');
+  if (g && !g.closest('#modal') && !_gSnap.has(g)) _gSnap.set(g, _fState(g));
 }
 if (typeof document !== 'undefined') {
   ['focusin', 'pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, _mTouch, true); });
 }
 function modalDirty() { return _mSnap !== null && !!_mSaveBtn() && _mState() !== _mSnap; }
+function _unsavedAsk() { return ask(MSG_UNSAVED_TITLE, MSG_UNSAVED_TEXT, MSG_UNSAVED_SAVE, 'warn', MSG_UNSAVED_DROP); }
 function modalDismiss() {
   if (!modalDirty()) { closeModal(); return Promise.resolve(); }
-  return ask('יש שינויים שלא נשמרו', 'לשמור אותם לפני הסגירה?', 'שמור', 'warn', 'סגור בלי לשמור').then(function (v) {
+  return _unsavedAsk().then(function (v) {
     if (v === true) { var b = _mSaveBtn(); if (b) b.click(); }
     else if (v === false) closeModal();
+  });
+}
+// שורת הוספה שהשתנתה ושהלחיצה מחוץ לה — הראשונה; חלון השאלה עצמו אינו יציאה
+function _gDirty(el) {
+  if (el.closest('#ask')) return null;
+  var hit = null;
+  document.querySelectorAll('[data-ks]').forEach(function (g) {
+    if (hit || g.contains(el) || g.closest('#modal') || !_gSnap.has(g) || !g.querySelector(KSAVE)) return;
+    if (_fState(g) !== _gSnap.get(g)) hit = g;
+  });
+  return hit;
+}
+// שמירה בתוך טופס שנשאר במסך (שורת הוספה): השדות שהתרוקנו — המצב החדש הוא נקודת המוצא; שמירה שנחסמה (שדה חסר) אינה משנה דבר
+function _gSaved(b) {
+  var g = b.matches && b.matches(KSAVE) ? b.closest('[data-ks]') : null;
+  if (!g || g.closest('#modal')) return function () {};
+  var before = _fState(g);
+  return function () {
+    setTimeout(function () { if (g.isConnected && _fState(g) !== before) _gSnap.set(g, _fState(g)); }, 0);
+  };
+}
+// «שמירה» — לחיצה על כפתור השמירה; טופס שעדיין מחובר ושונה אחריה — השמירה נחסמה (שדה חסר), ונשארים בו
+function _gLeave(g, go) {
+  return _unsavedAsk().then(function (v) {
+    if (v === null) return;
+    if (v === false) { _gSnap.set(g, _fState(g)); go(); return; }
+    var b = g.querySelector(KSAVE), snap = _gSnap.get(g);
+    if (b) b.click();
+    setTimeout(function () {
+      if (g.isConnected && _fState(g) !== snap && document.body.contains(g.querySelector(KSAVE))) return;
+      go();
+    }, 0);
   });
 }
 
@@ -448,7 +496,9 @@ function ksFire(scope, attr) {
   var act = b.getAttribute('data-act');
   var fn = app.DOM_ACTIONS[act];
   if (!fn) { console.error('[ks] כפתור ' + attr + ' בלי פעולה במפה: ' + act); return false; }
+  var after = _gSaved(b);
   fn(b);
+  after();
   return true;
 }
 // Escape מחזיר את הערך השמור לפני השחרור — השמירה ביציאה רואה ערך שלא השתנה ואינה כותבת.

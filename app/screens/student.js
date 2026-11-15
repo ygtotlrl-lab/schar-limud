@@ -85,7 +85,7 @@ function screenStudentHTML() {
           <div id="sc-periods"></div>
         </div>
         <div class="row-acts">
-          <button class="btn" data-act="student-settings-save" data-ksave>שמור</button>
+          <button class="btn" data-act="student-settings-save" data-ksave>${icon('save')}שמירה</button>
           <button class="btn sm danger" data-act="student-del">${icon('del')}מחיקת התלמיד</button>
         </div>
       </div>
@@ -169,7 +169,7 @@ function studentArchiveToggle(){S.SC_ARCH=!S.SC_ARCH;renderStudentPanel();window
 // ── ניהול — הוספה ומעבר שנתי, כמו בהנהלה ──
 function openStudentsManage(){
   openModal(MSG_STUDENTS_MANAGE,'<div class="admin-list">'+
-    '<button class="admin-item menu-plain" data-act="student-open-add"><span class="admin-ico">'+icon('plus')+'</span>הוסף תלמיד</button>'+
+    '<button class="admin-item menu-plain" data-act="student-open-add"><span class="admin-ico">'+icon('plus')+'</span>הוספת תלמיד</button>'+
     '<button class="admin-item menu-warn" data-act="year-open"><span class="admin-ico">'+icon('cycle')+'</span>מעבר שנתי</button>'+
   '</div>','');
 }
@@ -197,7 +197,7 @@ function openAddStudent(){
     +'<div class="frm-row frm-row-last"><span class="frm-lbl">תקופות פעילות</span>'+PER.editorHTML([])+'</div>'
     +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבתקופה (כולל).</div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
-          +'<button class="btn" data-act="student-add" data-ksave>הוסף</button>';
+          +'<button class="btn" data-act="student-add" data-ksave>' + icon('save') + 'שמירה</button>';
   openModal(MSG_ADD_STUDENT, body, foot);
 }
 

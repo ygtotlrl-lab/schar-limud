@@ -92,7 +92,7 @@ function periodsEngine(cal) {
   function editorHTML(ps) {
     if (!ps || !ps.length) ps = [{ start: cal.now(), end: null }];
     return '<div class="per-list" data-per-list>' + ps.map(rowHTML).join('') + '</div>' +
-      '<button type="button" data-act="per-add" class="per-add">+ הוסף תקופה</button>';
+      '<button type="button" data-act="per-add" class="per-add">+ הוספת תקופה</button>';
   }
   function addRow(btn) {
     var box = btn && btn.previousElementSibling;

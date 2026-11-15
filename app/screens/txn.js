@@ -43,7 +43,7 @@ function screenTxnHTML() {
         <label for="txn-note">הערה</label>
         <input id="txn-note" type="text" placeholder="הערה (לא חובה)">
       </div>
-      <button class="txn-save btn" data-act="txn-save" data-ksave>שמור תשלום</button>
+      <button class="txn-save btn" data-act="txn-save" data-ksave>${icon('save')}שמירה</button>
     </div>
   </div>
   <div class="card">
@@ -169,7 +169,7 @@ function openTxnEdit(key){
     +'<div class="frm-row frm-row-last"><label for="te-note">הערה</label><input id="te-note" type="text" value="'+esc(t.note||'')+'" placeholder="הערה (לא חובה)"></div></div>';
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
     +'<button class="btn danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">מחיקה</button>'
-    +'<button class="btn" data-act="txn-edit-save" data-id="'+esc(t.client_id)+'" data-ksave>שמירה</button>';
+    +'<button class="btn" data-act="txn-edit-save" data-id="'+esc(t.client_id)+'" data-ksave>' + icon('save') + 'שמירה</button>';
   openModal('עריכת תשלום — '+(st?st.name:''),body,foot);
 }
 function saveTxnEdit(key){

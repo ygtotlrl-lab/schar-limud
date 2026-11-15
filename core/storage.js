@@ -59,7 +59,7 @@ function lsAlert(msg) {
     b.type = 'button';
     b.dataset.shellIc = 'close';
     b.innerHTML = shellIcon('close');
-    b.setAttribute('aria-label', 'סגור');
+    b.setAttribute('aria-label', 'סגירה');
     b.dataset.act = 'ls-alert-close';
     var ic = document.createElement('span');
     ic.className = 'st-ic';

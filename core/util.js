@@ -88,7 +88,12 @@ var MSG_SYNC_BACK = 'הסנכרון חזר לפעול';
 var MSG_OFFLINE = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
 var MSG_STALE_CODE = 'הגרסה הזו מיושנת — יש לעדכן';
 var MSG_SW_TIMEOUT = 'העדכון לא הושלם — נסה שוב';
-var MSG_DELETE = 'מחק';
+var MSG_DELETE = 'מחיקה';
+// שאלת השינויים שלא נשמרו — חלון או שורת הוספה עם כפתור שמירה, שיוצאים מהם אחרי שינוי (modalDismiss · data-guard ב-core/ui.js)
+var MSG_UNSAVED_TITLE = 'יש שינויים שלא נשמרו';
+var MSG_UNSAVED_TEXT = 'לשמור אותם לפני הסגירה?';
+var MSG_UNSAVED_SAVE = 'שמירה';
+var MSG_UNSAVED_DROP = 'סגירה בלי שמירה';
 var MSG_FILL_ALL = 'נא למלא את כל השדות';
 var MSG_FILL_LOGIN = 'נא למלא שם משתמש וסיסמה';
 var MSG_LOAD_FAIL_PRE = 'טעינת הנתונים נכשלה (';
@@ -177,7 +182,7 @@ function sortCompare(a, b) { return SORT_COLLATOR.compare(a, b); }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { app, appConfigure, readNum, sortCompare, uniqList, uniqHas,
-         MSG_COMBO_MORE, MSG_DELETE, MSG_FILL_ALL, MSG_FILL_LOGIN,
+         MSG_COMBO_MORE, MSG_DELETE, MSG_FILL_ALL, MSG_UNSAVED_DROP, MSG_UNSAVED_SAVE, MSG_UNSAVED_TEXT, MSG_UNSAVED_TITLE, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
          MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,

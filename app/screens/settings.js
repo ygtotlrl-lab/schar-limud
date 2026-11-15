@@ -24,7 +24,7 @@ function screenSettingsHTML() {
     <div class="card">
       <div class="card-hdr">
         <h3>אמצעי תשלום</h3>
-        <button class="btn sm" data-act="list-add" data-list="method">+ הוסף</button>
+        <button class="btn sm" data-act="list-add" data-list="method">+ הוספה</button>
       </div>
       <div id="set-methods-list"></div>
     </div>
@@ -70,7 +70,7 @@ function openListAdd(kind){
     '<div data-ks><div class="frm-row frm-row-last"><label for="lk-new">'+esc(MSG_METHOD_LABEL)+'</label>'+
     '<input id="lk-new" type="text" autocomplete="off"></div></div>',
     '<button class="btn out" data-act="modal-close">ביטול</button>'+
-    '<button class="btn" data-act="list-save" data-list="'+esc(kind)+'" data-ksave>הוסף</button>');
+    '<button class="btn" data-act="list-save" data-list="'+esc(kind)+'" data-ksave>' + icon('save') + 'שמירה</button>');
   var el=document.getElementById('lk-new');if(el)el.focus();
 }
 
