@@ -233,12 +233,14 @@ function openModal(title, body, foot, ic) {
   ttl.innerHTML = stIcon(ic) + esc(title || '');
   bd.innerHTML = body || '';
   ft.innerHTML = foot || '';
+  _mSnap = null;
   m.classList.add('open');
   document.body.classList.add('locked');
 }
 function closeModal() {
   var m = document.getElementById('modal');
   if (!m) { uiNoDialog('closeModal', 'modal'); return; }
+  _mSnap = null;
   m.classList.remove('open');
   var bd = document.getElementById('modal-body');
   var ft = document.getElementById('modal-foot');
@@ -249,7 +251,8 @@ function closeModal() {
 }
 var askResolve = null;
 // מיכל חסר נענה «לא» — הבטחה שלא נפתרת תולה את הקורא, ו-true היה מבצע פעולה הרסנית בלי אישור.
-function ask(title, text, yesLabel, ic) {
+// noLabel — הכפתור השני (ברירת המחדל «ביטול»). התשובה: true — הכפתור הראשי · false — השני · null — הרקע או Escape, כלומר «לא החלטתי».
+function ask(title, text, yesLabel, ic, noLabel) {
   var a = document.getElementById('ask');
   var ttl = document.getElementById('ask-title');
   var bd = document.getElementById('ask-body');
@@ -258,6 +261,8 @@ function ask(title, text, yesLabel, ic) {
   ttl.innerHTML = stIcon(ic) + esc(title || '');
   bd.textContent = text || '';
   yes.textContent = yesLabel || 'אישור';
+  var no = a.querySelector('[data-act="ask-no"]');
+  if (no) no.textContent = noLabel || 'ביטול';
   a.classList.add('open');
   document.body.classList.add('locked');
   return new Promise(function (res) { askResolve = res; });
@@ -296,16 +301,46 @@ function lsToast(msg, dur, kind) { try { toast(msg, dur || LS_TOAST_MS, kind); }
 function modalBackdrop(e) {
   if (!e.target) return false;
   var v = e.target.getAttribute ? e.target.getAttribute('data-veil') : null;
-  if (v === 'modal') { closeModal(); return true; }
-  if (v === 'ask') { closeAsk(false); return true; }
+  if (v === 'modal') { modalDismiss(); return true; }
+  if (v === 'ask') { closeAsk(null); return true; }
   return false;
 }
 function modalEsc(e) {
   if (e.key !== 'Escape') return false;
   var a = document.getElementById('ask'), m = document.getElementById('modal');
-  if (a && a.classList.contains('open')) { closeAsk(false); return true; }
-  if (m && m.classList.contains('open')) { closeModal(); return true; }
+  if (a && a.classList.contains('open')) { closeAsk(null); return true; }
+  if (m && m.classList.contains('open')) { modalDismiss(); return true; }
   return false;
+}
+
+// ── שינויים שלא נשמרו ──
+// חלון שיש בו כפתור שמירה (data-ksave) ושהמשתמש שינה בו שדה — הסגירה (✕, ביטול, הרקע, Escape) שואלת «לשמור?»:
+// «שמור» לוחץ על כפתור השמירה של החלון · «סגור בלי לשמור» סוגר · הרקע או Escape של השאלה — חזרה לחלון.
+// מצב השדות נלכד בנגיעה הראשונה בחלון ולא בפתיחה — ערך שהאפליקציה ממלאת אחרי הפתיחה אינו נחשב שינוי.
+var _mSnap = null;
+function _mState() {
+  var bd = document.getElementById('modal-body');
+  if (!bd) return '';
+  return Array.prototype.map.call(bd.querySelectorAll('input,select,textarea'), function (el) {
+    return el.type === 'checkbox' || el.type === 'radio' ? (el.checked ? '1' : '0') : el.value;
+  }).join('\u0001');
+}
+function _mSaveBtn() { var m = document.getElementById('modal'); return m ? m.querySelector('[data-ksave]') : null; }
+function _mTouch(e) {
+  var m = document.getElementById('modal');
+  if (_mSnap !== null || !m || !m.classList.contains('open') || !e.target || !e.target.closest || !e.target.closest('#modal-body')) return;
+  _mSnap = _mState();
+}
+if (typeof document !== 'undefined') {
+  ['focusin', 'pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, _mTouch, true); });
+}
+function modalDirty() { return _mSnap !== null && !!_mSaveBtn() && _mState() !== _mSnap; }
+function modalDismiss() {
+  if (!modalDirty()) { closeModal(); return Promise.resolve(); }
+  return ask('יש שינויים שלא נשמרו', 'לשמור אותם לפני הסגירה?', 'שמור', 'warn', 'סגור בלי לשמור').then(function (v) {
+    if (v === true) { var b = _mSaveBtn(); if (b) b.click(); }
+    else if (v === false) closeModal();
+  });
 }
 
 // ── ציור שאחרי משיכה ──
@@ -809,5 +844,5 @@ function lookupDragApply(list, kind) {
 export { actRun, actWire, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef, comboFocus,
          comboHTML, comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel,
          dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
-         lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, openModal, pullRender,
+         lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, modalDismiss, openModal, pullRender,
          receiptHTML, shellBare, swApply, swHideUpdate, swShowUpdate, toast, uiHold, uiNoDialog };

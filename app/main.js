@@ -7,7 +7,7 @@ import { MIRROR, mirrorKey, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown,
-         dragMove, dragUp, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+         dragMove, dragUp, modalDismiss, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
@@ -193,7 +193,7 @@ var DOM_ACTIONS = {
   'txn-log-less':          function () { txnLogLess(); },
   'student-del': function () { deleteStudent(); },
   'list-del':    function (el) { deleteListItem(el.getAttribute('data-id')); },
-  'modal-close':  function () { closeModal(); },
+  'modal-close':  function () { modalDismiss(); },
   'ask-no':       function () { closeAsk(false); },
   'ask-yes':      function () { closeAsk(true); },
   'student-add':  function () { return runSave(saveNewStudent, 'תלמיד נוסף'); },
