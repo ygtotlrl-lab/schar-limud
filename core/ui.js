@@ -325,7 +325,8 @@ function _mState() {
     return el.type === 'checkbox' || el.type === 'radio' ? (el.checked ? '1' : '0') : el.value;
   }).join('\u0001');
 }
-function _mSaveBtn() { var m = document.getElementById('modal'); return m ? m.querySelector('[data-ksave]') : null; }
+// data-noguard — כפתור Enter שאינו שמירה (כניסה, «הבא» בתהליך רב-שלבי): החלון אינו שואל עליו.
+function _mSaveBtn() { var m = document.getElementById('modal'); return m ? m.querySelector('[data-ksave]:not([data-noguard])') : null; }
 function _mTouch(e) {
   var m = document.getElementById('modal');
   if (_mSnap !== null || !m || !m.classList.contains('open') || !e.target || !e.target.closest || !e.target.closest('#modal-body')) return;
