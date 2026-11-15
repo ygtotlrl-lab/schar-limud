@@ -73,7 +73,7 @@ public class MainActivity extends ShellActivity {
                         if (!isMainFrame || !APP_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
                         try {
                             JSONObject o = new JSONObject(String.valueOf(message.getData()));
-                            shareFile(o.optString("data"), o.optString("mime"), o.optString("name"));
+                            shareFile(o.optString("data"), o.optString("mime"), o.optString("name"), o.optString("text"));
                         } catch (Exception e) {
                             toastUi("שגיאה בהכנת הקובץ לשיתוף");
                         }
@@ -130,11 +130,12 @@ public class MainActivity extends ShellActivity {
     // אין יעד קבוע — הבורר של המערכת בוחר; יעד קבוע היה שולח את הדוח לאפליקציה אחת בלבד.
     // הקובץ — תמונה, PDF או גיליון, והסיומת נגזרת מסוג התוכן: אפליקציה שמקבלת קובץ בסיומת שגויה אינה פותחת אותו.
     // name — שם הקובץ מהדף (גיליון התלמיד והחודש); ריק — הקידומת והשעה. תיקייה לכל שיתוף, כדי ששני קבצים באותו שם לא ידרסו.
-    private void shareFile(final String base64Data, final String mimeType, final String name) {
+    // text — כיתוב שהיעד מצרף לקובץ (בוואטסאפ — מתחת לתמונה); ריק — בלי כיתוב.
+    private void shareFile(final String base64Data, final String mimeType, final String name, final String text) {
         try {
             final String mime = mimeOf(mimeType);
             File dir = new File(getCacheDir(), "shared");
-            shareSaved(writeShared(base64Data, mime, name, dir), mime);
+            shareSaved(writeShared(base64Data, mime, name, dir), mime, text);
         } catch (Exception e) {
             toastUi("שגיאה בהכנת הקובץ לשיתוף");
         }
@@ -211,7 +212,7 @@ public class MainActivity extends ShellActivity {
     }
 
     // קובץ שכבר נכתב במטמון «shared» — לבורר השיתוף של המערכת.
-    private void shareSaved(final File f, final String mime) {
+    private void shareSaved(final File f, final String mime, final String text) {
         final Uri uri;
         try {
             uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", f);
@@ -225,6 +226,7 @@ public class MainActivity extends ShellActivity {
                 Intent send = new Intent(Intent.ACTION_SEND);
                 send.setType(mime);
                 send.putExtra(Intent.EXTRA_STREAM, uri);
+                if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
                 send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
                 // createChooser בלי FLAG_ACTIVITY_NEW_TASK — המשתמש בוחר יעד בכל פעם, והחזרה מביאה אותו למעטפת.
@@ -334,7 +336,7 @@ public class MainActivity extends ShellActivity {
                                 if (settled[0]) return;
                                 settled[0] = true;
                                 printDone(pv);
-                                shareSaved(f, "application/pdf");
+                                shareSaved(f, "application/pdf", "");
                             }
                         });
                     }
@@ -371,7 +373,7 @@ public class MainActivity extends ShellActivity {
             runOnUiThread(new Runnable() {
                 @Override public void run() {
                     if (!isAppOrigin(webView.getUrl())) return;
-                    MainActivity.this.shareFile(base64Data, mimeType, "");
+                    MainActivity.this.shareFile(base64Data, mimeType, "", "");
                 }
             });
         }

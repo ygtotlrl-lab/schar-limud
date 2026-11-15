@@ -11,7 +11,7 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
-        versionCode 28
+        versionCode 29
         versionName "15.0"
     }
 
