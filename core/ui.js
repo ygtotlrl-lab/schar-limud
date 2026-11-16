@@ -322,6 +322,8 @@ function modalEsc(e) {
 // «שמירה» לוחץ על כפתור השמירה · «סגירה בלי שמירה» ממשיך ביציאה · הרקע או Escape של השאלה — חזרה לטופס.
 // חלון (#modal) — ✕, «ביטול», הרקע ו-Escape עוברים ב-modalDismiss. שורת הוספה או טופס בתוך מסך, אריח או כרטיס —
 // היקף הטופס, data-ks («שמירה ב-`Enter` בכל שדה עריכה»): לחיצה על data-act מחוץ לו (מעבר מסך, סגירת אריח או חלון כרטיס) שואלת, ואחרי «שמירה» שהצליחה — ממשיכה.
+// טופס שהבוררים שלו מחוץ להיקף (שבבי קטגוריה, רשת אמצעים, כרטיס שלם) — המיכל שלו נושא data-ks-area, ולחיצה בתוכו אינה יציאה;
+// וכפתור סגירה שבתוך המיכל (✕ של הכרטיס) — data-ks-leave: הוא יציאה.
 // מצב השדות נלכד בנגיעה הראשונה בטופס ולא בציור — ערך שהאפליקציה ממלאת אחרי הציור אינו נחשב שינוי.
 // data-noguard — כפתור Enter שאינו שמירה (כניסה, «המשך» בתהליך): הטופס אינו שואל עליו.
 var _mSnap = null;
@@ -364,7 +366,7 @@ function _gDirty(el) {
   if (el.closest('#ask')) return null;
   var hit = null;
   document.querySelectorAll('[data-ks]').forEach(function (g) {
-    if (hit || g.contains(el) || g.closest('#modal') || !_gSnap.has(g) || !g.querySelector(KSAVE)) return;
+    if (hit || (!el.hasAttribute('data-ks-leave') && (g.closest('[data-ks-area]') || g).contains(el)) || g.closest('#modal') || !_gSnap.has(g) || !g.querySelector(KSAVE)) return;
     if (_fState(g) !== _gSnap.get(g)) hit = g;
   });
   return hit;

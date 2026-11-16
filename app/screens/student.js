@@ -35,11 +35,11 @@ function screenStudentHTML() {
     <button class="sc-arch-btn" id="sc-arch-btn" data-act="sc-archive"></button>
   </div>
   <div id="sc-main" class="hidden">
-    <div class="card sc-card" id="sc-card">
+    <div class="card sc-card" id="sc-card" data-ks-area>
       <div class="sc-hdr">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>
-          <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
+          <button class="sc-close" data-act="sc-back" data-ks-leave aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
         </div>
       </div>
       <div class="sc-annual">

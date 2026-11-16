@@ -15,7 +15,7 @@ import { acadYearOf, hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pend
 
 function screenTxnHTML() {
   return `
-<div id="panel-txn" class="panel">
+<div id="panel-txn" class="panel" data-ks-area>
   <div class="card">
     <div class="card-hdr"><h3>הוספת תשלום</h3></div>
     <div class="card-body" data-ks>
