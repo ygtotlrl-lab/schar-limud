@@ -63,7 +63,7 @@ function actWire(actions) {
     if (!fn) return;
     ev.preventDefault();
     var g = _gDirty(el);
-    if (g) { _gLeave(g, function () { actRun(el, fn); }); return; }
+    if (g) { _gLeave(g, function () { actRun(el, fn); }, function (b) { var f = actions[b.getAttribute('data-act')]; return f ? f(b) : null; }); return; }
     var after = _gSaved(el);
     actRun(el, fn);
     after();
@@ -329,7 +329,6 @@ function modalEsc(e) {
 var _mSnap = null;
 var _gSnap = new WeakMap();
 var KSAVE = '[data-ksave]:not([data-noguard])';
-var KS_SAVE_WAIT_MS = 2000;
 function _fState(box) {
   if (!box) return '';
   return Array.prototype.map.call(box.querySelectorAll('input,select,textarea'), function (el) {
@@ -382,20 +381,17 @@ function _gSaved(b) {
     setTimeout(function () { if (g.isConnected && _fState(g) !== before) _gSnap.set(g, _fState(g)); }, 0);
   };
 }
-// «שמירה» — לחיצה על כפתור השמירה; טופס שעדיין מחובר ושונה אחריה — השמירה נחסמה (שדה חסר), ונשארים בו
-function _gLeave(g, go) {
+// «שמירה» — פעולת כפתור השמירה, וממתינים להבטחה שהיא מחזירה ולא לשעון: טופס שירד מהמסך או שהשדות שלו השתנו — נשמר, וממשיכים למה שנלחץ;
+// טופס שנשאר כמות שהיה — השמירה נחסמה (שדה חסר), ונשארים בו.
+function _gLeave(g, go, save) {
   return _unsavedAsk().then(function (v) {
     if (v === null) return;
     if (v === false) { _gSnap.set(g, _fState(g)); go(); return; }
     var b = g.querySelector(KSAVE), dirty = _fState(g);
-    if (b) b.click();
-    // השמירה אינה מסתיימת באותו רגע (הכתיבה לדיסק) — ממתינים לה: טופס שירד מהמסך או שהשדות שלו השתנו — נשמר, וממשיכים;
-    // טופס שנשאר כמו שהיה עד תום ההמתנה — השמירה נחסמה, ונשארים בו.
-    var t0 = Date.now();
-    (function wait() {
-      if (!g.isConnected || _fState(g) !== dirty) { go(); return; }
-      if (Date.now() - t0 < KS_SAVE_WAIT_MS) setTimeout(wait, 40);
-    })();
+    return Promise.resolve(b ? save(b) : null).then(function () {
+      if (g.isConnected && _fState(g) === dirty) return;
+      go();
+    }, function (e) { console.error('[ks] השמירה שלפני היציאה נכשלה', e); });
   });
 }
 
