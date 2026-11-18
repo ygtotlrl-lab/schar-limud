@@ -329,6 +329,7 @@ function modalEsc(e) {
 var _mSnap = null;
 var _gSnap = new WeakMap();
 var KSAVE = '[data-ksave]:not([data-noguard])';
+var KS_SAVE_WAIT_MS = 2000;
 function _fState(box) {
   if (!box) return '';
   return Array.prototype.map.call(box.querySelectorAll('input,select,textarea'), function (el) {
@@ -386,12 +387,15 @@ function _gLeave(g, go) {
   return _unsavedAsk().then(function (v) {
     if (v === null) return;
     if (v === false) { _gSnap.set(g, _fState(g)); go(); return; }
-    var b = g.querySelector(KSAVE), snap = _gSnap.get(g);
+    var b = g.querySelector(KSAVE), dirty = _fState(g);
     if (b) b.click();
-    setTimeout(function () {
-      if (g.isConnected && _fState(g) !== snap && document.body.contains(g.querySelector(KSAVE))) return;
-      go();
-    }, 0);
+    // השמירה אינה מסתיימת באותו רגע (הכתיבה לדיסק) — ממתינים לה: טופס שירד מהמסך או שהשדות שלו השתנו — נשמר, וממשיכים;
+    // טופס שנשאר כמו שהיה עד תום ההמתנה — השמירה נחסמה, ונשארים בו.
+    var t0 = Date.now();
+    (function wait() {
+      if (!g.isConnected || _fState(g) !== dirty) { go(); return; }
+      if (Date.now() - t0 < KS_SAVE_WAIT_MS) setTimeout(wait, 40);
+    })();
   });
 }
 
