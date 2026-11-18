@@ -361,9 +361,10 @@ function modalDismiss() {
     else if (v === false) closeModal();
   });
 }
-// שורת הוספה שהשתנתה ושהלחיצה מחוץ לה — הראשונה; חלון השאלה עצמו אינו יציאה
+// שורת הוספה שהשתנתה ושהלחיצה מחוץ לה — הראשונה; חלון השאלה עצמו אינו יציאה,
+// וגם לא בחירה ברשימה נפתחת — הרשימה מצוירת ב-body, מחוץ לטופס שהשדה שלה בתוכו או לצדו
 function _gDirty(el) {
-  if (el.closest('#ask')) return null;
+  if (el.closest('#ask') || el.closest('[data-combo-list]')) return null;
   var hit = null;
   document.querySelectorAll('[data-ks]').forEach(function (g) {
     if (hit || (!el.hasAttribute('data-ks-leave') && (g.closest('[data-ks-area]') || g).contains(el)) || g.closest('#modal') || !_gSnap.has(g) || !g.querySelector(KSAVE)) return;
