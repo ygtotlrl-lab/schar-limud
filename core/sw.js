@@ -31,13 +31,14 @@ var SW_OFFLINE_HTML =
   '@media (prefers-color-scheme:dark){body{background:' + swEsc(self.APP.offline.dark.bg) +
   ';color:' + swEsc(self.APP.offline.dark.ink) + '}}' +
   '.box{max-width:340px;text-align:center}' +
-  '.mark{font-size:2.4rem;margin-bottom:10px}' +
+  '.mark{display:inline-block;width:44px;height:44px;margin-bottom:10px}' +
   'h1{font-size:1.15rem;margin:0 0 10px}' +
   'p{font-size:.92rem;line-height:1.6;margin:0 0 20px}' +
   'a{display:inline-block;color:inherit;border:1.5px solid currentColor;border-radius:22px;' +
   'padding:10px 26px;font-weight:700;text-decoration:none}' +
   '</style></head><body><div class="box">' +
-  '<div class="mark">' + swEsc(self.APP.offline.mark) + '</div>' +
+  // הסמל — אייקון קווי של «אין רשת», אחד לכולן: העובד אינו טוען את סט האייקונים של האפליקציה.
+  '<svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.6M2 8.8a15 15 0 0 1 4.2-2.7M22 8.8A15 15 0 0 0 10.7 5"/><circle cx="12" cy="19.5" r=".8" fill="currentColor"/></svg>' +
   '<h1>' + swEsc(self.APP.name) + ' — אין חיבור לאינטרנט</h1>' +
   '<p>האפליקציה עדיין לא נשמרה במלואה במכשיר.<br>' +
   'התחבר לרשת פעם אחת, ומאז היא תיפתח גם ללא חיבור.</p>' +
