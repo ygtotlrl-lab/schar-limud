@@ -210,7 +210,7 @@ function saveNewStudent(){var name=document.getElementById('new-st-name').value.
 
 // מחיקה פיזית של תלמיד היא מחיקת כל היסטוריית הכספים שלו — המפתח הזר restrict רק עוצר אותה במסד.
 function deleteStudent(){var s=scStudent();
- ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM).then(function(yes){
+ ask(MSG_DEL_STUDENT_TITLE,MSG_DEL_STUDENT_PRE+(s?s.name:MSG_DEL_STUDENT_ANON)+MSG_DEL_STUDENT_POST,MSG_CONFIRM, null, null, true).then(function(yes){
   if(!yes)return;
   if(!s){toast(MSG_STUDENT_MISSING2, null, 'warn');return;}
   var row=tombKill(Object.assign({},s));

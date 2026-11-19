@@ -8,7 +8,7 @@ import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown,
          dragMove, dragUp, modalDismiss, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
-import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS } from './constants.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, MSG_SETTINGS_SAVED, MSG_STUDENT_ADDED, MSG_TXN_SAVED } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
@@ -196,7 +196,7 @@ var DOM_ACTIONS = {
   'modal-close':  function () { modalDismiss(); },
   'ask-no':       function () { closeAsk(false); },
   'ask-yes':      function () { closeAsk(true); },
-  'student-add':  function () { return runSave(saveNewStudent, 'תלמיד נוסף'); },
+  'student-add':  function () { return runSave(saveNewStudent, MSG_STUDENT_ADDED); },
   'show-panel':   function (el) { showPanel(el.getAttribute('data-panel'), el); },
   'acc-toggle':   function (el) { toggleAcc(el.getAttribute('data-acc')); },
   'list-add':     function (el) { openListAdd(el.getAttribute('data-list')); },
@@ -217,8 +217,8 @@ var DOM_ACTIONS = {
   'per-add':                 function (el) { PER.addRow(el); },
   'per-remove':              function (el) { PER.removeRow(el); },
   'student-open-add':        function () { openAddStudent(); },
-  'student-settings-save':   function () { return runSave(saveStudentSettings, 'הגדרות נשמרו'); },
-  'txn-save':                function () { return runSave(saveTxn, 'תשלום נשמר'); },
+  'student-settings-save':   function () { return runSave(saveStudentSettings, MSG_SETTINGS_SAVED); },
+  'txn-save':                function () { return runSave(saveTxn, MSG_TXN_SAVED); },
   'tuition-save':            function () { return runSave(saveDefaultTuition, MSG_SAVED); },
 };
 

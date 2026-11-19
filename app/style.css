@@ -90,12 +90,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
   .tbl tr:hover td{background:var(--card-2)}
 }
 @media (hover:hover){
-  .veil-ask .sheet-ft button:hover{background:var(--card-2)}
-}
-@media (hover:hover){
-  .veil-ask .sheet-ft button.danger:hover{background:var(--bad-soft-2)}
-}
-@media (hover:hover){
   .combo-opt:hover{background:var(--brand-soft);color:var(--brand-ink)}
 }
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:var(--sp-6);overflow:hidden}
@@ -156,9 +150,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .sheet-hd h3{font-size:var(--fs-4);font-weight:700;color:var(--text);flex:1;margin:0}
 .sheet-hd .x{color:var(--text-3)}
 .sheet-ft{gap:var(--sp-4);justify-content:flex-end;margin-top:var(--sp-6)}
-.ask-body{font-size:var(--fs-4);color:var(--text-2)}
-.veil-ask .sheet-ft button{flex:1;display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--text);border:1.5px solid var(--text);border-radius:var(--r-7);padding:var(--sp-4) var(--sp-6);font-family:Heebo;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:background var(--dur-2)}
-.veil-ask .sheet-ft button.danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-soft)}
 /* ── רשימה נפתחת עם חיפוש ── */
 .combo-list{--combo-max:200px;background:var(--card);border:1.5px solid var(--text);border-top:none;border-radius:0 0 var(--r-5) var(--r-5);box-shadow:0 8px 20px var(--sh-1)}
 .combo-list.is-up{border-top:1.5px solid var(--text);border-bottom:none;border-radius:var(--r-5) var(--r-5) 0 0}

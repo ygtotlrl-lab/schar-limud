@@ -6,7 +6,7 @@ import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, method
 import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
-         MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL } from '../constants.js';
+         MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL, TTL_TXN_EDIT } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
@@ -170,7 +170,7 @@ function openTxnEdit(key){
   var foot='<button class="btn out" data-act="modal-close">ביטול</button>'
     +'<button class="btn danger" data-act="txn-del" data-id="'+esc(t.client_id)+'">מחיקה</button>'
     +'<button class="btn" data-act="txn-edit-save" data-id="'+esc(t.client_id)+'" data-ksave>' + icon('save') + 'שמירה</button>';
-  openModal('עריכת תשלום — '+(st?st.name:''),body,foot);
+  openModal(TTL_TXN_EDIT+(st?st.name:''),body,foot);
 }
 function saveTxnEdit(key){
   var t=txnById(key);if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
@@ -185,7 +185,7 @@ function saveTxnEdit(key){
   schedulePush();
 }
 
-function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM).then(function(yes){
+function deleteTxn(key){ask(MSG_DEL_TXN_TITLE,MSG_DEL_TXN_BODY,MSG_CONFIRM, null, null, true).then(function(yes){
   if(!yes)return;
   var t=(MIRROR.sl_transactions||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}

@@ -91,7 +91,7 @@ function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט — הכפתור עשוי להופיע מרינדור ישן.
   var it=(MIRROR.sl_lookups||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(it&&isCreditValue(it.label)){toast('«'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'warn');return;}
-  ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM).then(function(yes){
+  ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM, null, null, true).then(function(yes){
     if(!yes)return;
     if(!it){toast(MSG_ITEM_MISSING, null, 'warn');return;}
     var row=tombKill(Object.assign({},it));

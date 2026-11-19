@@ -255,8 +255,9 @@ function closeModal() {
 }
 var askResolve = null;
 // מיכל חסר נענה «לא» — הבטחה שלא נפתרת תולה את הקורא, ו-true היה מבצע פעולה הרסנית בלי אישור.
-// noLabel — הכפתור השני (ברירת המחדל «ביטול»). התשובה: true — הכפתור הראשי · false — השני · null — הרקע או Escape, כלומר «לא החלטתי».
-function ask(title, text, yesLabel, ic, noLabel) {
+// noLabel — הכפתור השני (ברירת המחדל «ביטול»). danger — שאלת מחיקה: האישור באדום הרך; בלעדיו — בצבע האפליקציה.
+// התשובה: true — הכפתור הראשי · false — השני · null — הרקע או Escape, כלומר «לא החלטתי».
+function ask(title, text, yesLabel, ic, noLabel, danger) {
   var a = document.getElementById('ask');
   var ttl = document.getElementById('ask-title');
   var bd = document.getElementById('ask-body');
@@ -265,6 +266,7 @@ function ask(title, text, yesLabel, ic, noLabel) {
   ttl.innerHTML = stIcon(ic) + esc(title || '');
   bd.textContent = text || '';
   yes.textContent = yesLabel || 'אישור';
+  yes.classList.toggle('danger', !!danger);
   var no = a.querySelector('[data-act="ask-no"]');
   if (no) no.textContent = noLabel || 'ביטול';
   a.classList.add('open');
