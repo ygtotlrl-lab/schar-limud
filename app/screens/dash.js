@@ -8,7 +8,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
-         slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
+         slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -103,7 +103,7 @@ function actualByMonth(year){
 }
 
 function monthTarget(year,m){
-  return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?studentTuition(s):0);},0);
+  return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?slDefaultTuition(s):0);},0);
 }
 
 function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
@@ -142,7 +142,7 @@ function renderDash(){
     slStudentGroups(list).forEach(function(g){
     rows+='<tr class="grp"><td class="stu" colspan="14">'+esc(g.label||'ללא שיעור')+'</td></tr>';
     g.rows.forEach(function(s){
-      var mm=actual[s.client_id]||{},tot=0,cellsHTML='',stuT=studentTuition(s);
+      var mm=actual[s.client_id]||{},tot=0,cellsHTML='',defT=slDefaultTuition(s);
       YEAR_MONTHS.forEach(function(m){
         var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
         // חודש מחוץ לטווח מוצג כ-'·' רק כשאין בו תנועה — כך סכום העמודה שווה בדיוק לסך תנועות החודש.
@@ -150,8 +150,8 @@ function renderDash(){
           cellsHTML+='<td class="num mo off" title="מחוץ לתקופות הפעילות של התלמיד">·</td>';return;
         }
         var extra=v&&!studentInMonth(s,S.DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לתקופות הפעילות של התלמיד"':'';
-        // סכום שמתחת לשכר של התלמיד (האישי, או ברירת המחדל של השיעור) — באדום: תשלום חלקי, או חודש שלא הושלם.
-        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<stuT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
+        // סכום שמתחת לשכר ברירת המחדל של השיעור — באדום: הנחה, תשלום חלקי, או חודש שלא הושלם.
+        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<defT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
       });
       grand=Math.round((grand+tot)*100)/100;
       rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHTML+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
@@ -168,7 +168,7 @@ function renderDash(){
   var tf='<tr class="top"><td class="stu">סה"כ נגבה</td>';
   YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(colT[m]?fmt(colT[m]):'—')+'</td>';});
   tf+='<td class="num tot">'+fmt(grand)+'</td></tr>';
-  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש × שכר הלימוד החודשי שלהם">יעד</td>';
+  tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש × שכר ברירת המחדל של השיעור שלהם">יעד</td>';
   YEAR_MONTHS.forEach(function(m){tf+='<td class="num">'+(tgt[m]?fmt(tgt[m]):'—')+'</td>';});
   tf+='<td class="num tot">'+fmt(grandTgt)+'</td></tr>';
   tf+='<tr class="sub"><td class="stu">אחוז גבייה</td>';

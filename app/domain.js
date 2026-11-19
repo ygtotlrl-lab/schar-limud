@@ -334,11 +334,16 @@ function slYearApply(plan){
 }
 
 // הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
-// השכר האישי, ובלעדיו — ברירת המחדל של השיעור; בלי שכר חודשי — 0.
+// ברירת המחדל של השיעור — היעד והאדום בלוח הבקרה נמדדים בה, ולא בשכר האישי; בלי שכר חודשי — 0.
+function slDefaultTuition(s){
+  var cls=s&&s.cls;
+  return CLS_NO_TUITION[cls]?0:(parseInt(S.SETTINGS[CLS_TUITION_KEY[cls]||'default_tuition'],10)||0);
+}
+// השכר של התלמיד — האישי, ובלעדיו ברירת המחדל של השיעור: החיוב בכרטיס והסכום בטופס התשלום.
 function studentTuition(s){
-  var cs=(s&&s.card_settings)||{},cls=s&&s.cls;
-  if(CLS_NO_TUITION[cls])return 0;
-  return cs.monthly_tuition?parseInt(cs.monthly_tuition):(parseInt(S.SETTINGS[CLS_TUITION_KEY[cls]||'default_tuition'],10)||0);
+  var cs=(s&&s.card_settings)||{};
+  if(CLS_NO_TUITION[s&&s.cls])return 0;
+  return cs.monthly_tuition?parseInt(cs.monthly_tuition):slDefaultTuition(s);
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
@@ -505,7 +510,7 @@ function txnAmountHTML(t){
 }
 
 export { _slPushOf, acadMonthKey, acadYearHeb,
-         acadYearOf, calcDistribution, countInMonth, slHasTuition, distCredit,
+         acadYearOf, calcDistribution, countInMonth, slDefaultTuition, slHasTuition, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
