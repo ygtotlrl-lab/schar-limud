@@ -42,16 +42,6 @@ function screenStudentHTML() {
           <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
         </div>
       </div>
-      <div class="sc-annual">
-        <div class="sc-sub-title" id="sc-annual-title"></div>
-        <div id="sc-annual"></div>
-      </div>
-      <div id="sc-past-wrap" class="hidden">
-        <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-past">
-          <span>${icon('archive')}שנים קודמות</span><span id="acc-icon-sc-past">${icon('down')}</span>
-        </div>
-        <div class="acc-body" id="acc-sc-past"></div>
-      </div>
       <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
         <span>${icon('edit')}הגדרות תלמיד</span><span id="acc-icon-sc-settings">${icon('down')}</span>
       </div>
@@ -88,6 +78,16 @@ function screenStudentHTML() {
         <div class="row-acts">
           <button class="btn sm danger" data-act="student-del">${icon('del')}מחיקת התלמיד</button>
         </div>
+      </div>
+      <div class="sc-annual">
+        <div class="sc-sub-title" id="sc-annual-title"></div>
+        <div id="sc-annual"></div>
+      </div>
+      <div id="sc-past-wrap" class="hidden">
+        <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-past">
+          <span>${icon('archive')}שנים קודמות</span><span id="acc-icon-sc-past">${icon('down')}</span>
+        </div>
+        <div class="acc-body" id="acc-sc-past"></div>
       </div>
     </div>
   </div>

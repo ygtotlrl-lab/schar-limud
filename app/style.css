@@ -286,6 +286,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .stu-row.is-open{background:var(--card-2);border-bottom-color:transparent}
 .stu-row.is-open .student-name{color:var(--brand-ink);font-weight:800}
 .acc-hdr-split{border-top:1px solid var(--border)}
+/* «הגדרות תלמיד» בראש הכרטיס — צמוד לפס, והקו מתחתיו */
+.sc-hdr + .acc-hdr-split{border-top:0;border-bottom:1px solid var(--border)}
 .credit-mark{font-weight:700;color:var(--credit)}
 .debt-note{font-size:var(--fs-2);color:var(--text-3)}
 .debt-row{background:var(--bg)}
