@@ -20,7 +20,7 @@ function screenDashHTML() {
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
     <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div><span class="kpi-l">כל השנה</span></div>
-    <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">ממוצע עד החודש</span></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">עד החודש</span></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -185,11 +185,12 @@ function renderDash(){
   document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
   // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
   paintRing('dk-ring','dk-pct',pctNum(grand,grandTgt),ofTargetTitle(grand,grandTgt),'אחוז גבייה שנתי');
-  // ממוצע אחוזי הגבייה של החודשים שחלפו, כולל הנוכחי — כל חודש באחוז שלו, וחודש בלי יעד אינו נספר
-  var nowK=dayToday().slice(0,7),pcts=[];
-  YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0)pcts.push((colT[m]||0)/tgt[m]*100);});
-  var avg=pcts.length?Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length):null;
-  paintRing('dk-ring2','dk-pct2',avg,avg===null?'אין עדיין חודשים שחלפו':'ממוצע אחוזי הגבייה ב־'+pcts.length+' החודשים שחלפו, כולל הנוכחי','ממוצע אחוז הגבייה עד החודש');
+  // עד החודש — אחוז משוקלל: סך הנגבה בחודשים שחלפו, כולל הנוכחי, מתוך סך היעד שלהם; חודש בלי יעד אינו נספר.
+  // כך בשנה שהסתיימה הוא שווה בדיוק ל«כל השנה», וחודש קטן אינו שוקל כמו חודש מלא.
+  var nowK=dayToday().slice(0,7),gotTD=0,tgtTD=0;
+  YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0){gotTD+=colT[m]||0;tgtTD+=tgt[m];}});
+  gotTD=Math.round(gotTD*100)/100;
+  paintRing('dk-ring2','dk-pct2',pctNum(gotTD,tgtTD),tgtTD?ofTargetTitle(gotTD,tgtTD)+' עד החודש':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
 
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
     var v=colT[m]||0,t=tgt[m]||0;
