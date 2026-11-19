@@ -143,10 +143,11 @@ function grpToDate(rows){
   S.TRANSACTIONS.forEach(function(t){if(ids[t.student_client_id]&&t.txn_date&&!isCreditTxn(t)&&acadYearOf(t.txn_date)===y&&String(t.txn_date).slice(0,7)<=end)paid+=parseFloat(t.amount)||0;});
   return {req:Math.round(req*100)/100,paid:Math.round(paid*100)/100};
 }
+// הסיכום — של השיעור כולו, בכל הרשימה: אותו מספר מעל הקו ומתחתיו, בלי תלות ב«טופל» ובחיפוש.
 function groupsHTML(groups,done,count,arch){
   return groups.map(function(g){
-    var acc=grpToDate(g.rows),rows=g.rows.map(function(s){return studentRowHTML(s,arch);}).join('');
-    var sum=(!arch&&acc.req>0)?'<span class="sc-grp-sum" title="שולם מתחילת השנה מתוך הנדרש עד החודש הזה">&#8362;'+fmt(acc.paid)+' / &#8362;'+fmt(acc.req)+' · '+Math.round(acc.paid/acc.req*100)+'%</span>':'';
+    var acc=arch?null:grpToDate(S.STUDENTS.filter(function(s){return s.cls===g.cls&&!studentArchived(s);})),rows=g.rows.map(function(s){return studentRowHTML(s,arch);}).join('');
+    var sum=(acc&&acc.req>0)?'<span class="sc-grp-sum" title="שולם מתחילת השנה מתוך הנדרש עד החודש הזה">&#8362;'+fmt(acc.paid)+' / &#8362;'+fmt(acc.req)+' · '+Math.round(acc.paid/acc.req*100)+'%</span>':'';
     return '<section class="sc-grp'+(done?' is-done':'')+(CLS_NO_TUITION[g.cls]?' sc-grp-free':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+sum+
       (count?'<span class="sc-grp-cnt">'+g.rows.length+' '+count+'</span>':'')+'</div>'+
