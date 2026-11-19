@@ -4,11 +4,11 @@ import { esc, toast } from '../../core/ui.js';
 import { MIRROR } from '../../core/mirror.js';
 import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
-import { CLS_NAME, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
-         slInCollection, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
+         slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -38,16 +38,6 @@ function screenDashHTML() {
         <thead id="dash-thead"></thead>
         <tbody id="dash-tbody"></tbody>
         <tfoot id="dash-tfoot"></tfoot>
-      </table>
-    </div>
-  </div>
-  <div class="card hidden dash-shl-card" id="dash-shl-card">
-    <div class="card-hdr"><h3>${CLS_NAME.s}</h3><span class="shl-note">מחוץ לחישוב הגבייה</span></div>
-    <div class="dash-scroll">
-      <table class="tbl pivot shl">
-        <thead id="dash-shl-thead"></thead>
-        <tbody id="dash-shl-tbody"></tbody>
-        <tfoot id="dash-shl-tfoot"></tfoot>
       </table>
     </div>
   </div>
@@ -113,7 +103,7 @@ function actualByMonth(year){
 }
 
 function monthTarget(year,m){
-  return S.STUDENTS.reduce(function(a,s){return a+(slInCollection(s)&&studentInMonth(s,year,m)?studentTuition(s):0);},0);
+  return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?studentTuition(s):0);},0);
 }
 
 function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
@@ -146,14 +136,13 @@ function renderDash(){
   hdr+='<th class="num tot">סה"כ</th></tr>';
   document.getElementById('dash-thead').innerHTML=hdr;
 
-  var defT=parseInt(S.SETTINGS['default_tuition'],10)||0;
-  // שורה לכל תלמיד בקבוצות שנמסרו, והסכומים לכל עמודה — לטבלה הראשית ולטבלת השלוחים באותה צורה.
+  // שורה לכל תלמיד, קבוצה לכל שיעור, והסכומים לכל עמודה.
   function body(list){
     var rows='',colT={},grand=0;
     slStudentGroups(list).forEach(function(g){
     rows+='<tr class="grp"><td class="stu" colspan="14">'+esc(g.label||'ללא שיעור')+'</td></tr>';
     g.rows.forEach(function(s){
-      var mm=actual[s.client_id]||{},tot=0,cellsHTML='';
+      var mm=actual[s.client_id]||{},tot=0,cellsHTML='',stuT=studentTuition(s);
       YEAR_MONTHS.forEach(function(m){
         var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
         // חודש מחוץ לטווח מוצג כ-'·' רק כשאין בו תנועה — כך סכום העמודה שווה בדיוק לסך תנועות החודש.
@@ -161,8 +150,8 @@ function renderDash(){
           cellsHTML+='<td class="num mo off" title="מחוץ לתקופות הפעילות של התלמיד">·</td>';return;
         }
         var extra=v&&!studentInMonth(s,S.DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לתקופות הפעילות של התלמיד"':'';
-        // סכום שמתחת לשכר ברירת המחדל — באדום: הנחה, תשלום חלקי, או חודש שלא הושלם.
-        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<defT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
+        // סכום שמתחת לשכר של התלמיד (האישי, או ברירת המחדל של השיעור) — באדום: תשלום חלקי, או חודש שלא הושלם.
+        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<stuT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
       });
       grand=Math.round((grand+tot)*100)/100;
       rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHTML+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
@@ -170,20 +159,8 @@ function renderDash(){
     });
     return {rows:rows,colT:colT,grand:grand};
   }
-  var main=body(act.filter(slInCollection)),colT=main.colT,grand=main.grand;
+  var main=body(act),colT=main.colT,grand=main.grand;
   document.getElementById('dash-tbody').innerHTML=main.rows||'<tr><td class="stu">—</td><td class="num" colspan="13">אין תלמידים פעילים</td></tr>';
-
-  // השלוחים — טבלה משלהם, בלי יעד ובלי אחוז.
-  var shl=act.filter(function(s){return !slInCollection(s);}),shlCard=document.getElementById('dash-shl-card');
-  shlCard.classList.toggle('hidden',!shl.length);
-  if(shl.length){
-    var sb=body(shl),sf='<tr class="top"><td class="stu">סה"כ שולם</td>';
-    YEAR_MONTHS.forEach(function(m){sf+='<td class="num">'+(sb.colT[m]?fmt(sb.colT[m]):'—')+'</td>';});
-    sf+='<td class="num tot">'+(sb.grand?fmt(sb.grand):'—')+'</td></tr>';
-    document.getElementById('dash-shl-thead').innerHTML=hdr;
-    document.getElementById('dash-shl-tbody').innerHTML=sb.rows.replace(/<tr class="grp">[\s\S]*?<\/tr>/,'');
-    document.getElementById('dash-shl-tfoot').innerHTML=sf;
-  }
 
   // נגבה ויעד מוצגים מעל האחוז — שני המספרים שמהם הוא נגזר.
   var tgt={},grandTgt=0;
@@ -200,7 +177,7 @@ function renderDash(){
   tf+='<tr class="sub"><td class="stu" title="מספר התלמידים הפעילים בחודש זה, לפי תקופות הפעילות">פעילים</td>';
   YEAR_MONTHS.forEach(function(m){var c=countInMonth(S.DASH_YEAR,m);tf+='<td class="num">'+(c||'—')+'</td>';});
   // כמה תלמידים היו פעילים בשלב כלשהו בשנה — ולא סכום החודשים.
-  var yearCnt=S.STUDENTS.filter(function(s){return slInCollection(s)&&YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
+  var yearCnt=S.STUDENTS.filter(function(s){return slHasTuition(s)&&YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
   // שלוש הקוביות — אותם נגבה, יעד ואחוז של עמודת הסה״כ, למעלה.

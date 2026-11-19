@@ -1,6 +1,6 @@
 // app/domain.js — הסנכרון, הכתיבה המקומית, החישוב והתאריכים
 import { DAY_MONTHS, MSG_LOAD_FAIL_PRE, MSG_SYNC_BACK, dayNoon, dayToday, errMsg, isNetErr,
-         kvParse, sortCompare, uniqHas } from '../core/util.js';
+         kvParse, sortCompare } from '../core/util.js';
 import { PL_STAMP_KEY, _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore,
          newClientId, pendAll, pendClearMany, pendFailed, pendHas, pendMark, pendMarkMany,
          pendTag, pushDirty, rtyNote, schedulePush, tombInherit } from '../core/sync.js';
@@ -9,7 +9,7 @@ import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { periodsEngine } from '../core/periods.js';
-import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_NONE, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -252,30 +252,23 @@ var slPeriods=PER.list,periodsProblem=PER.problem,periodText=PER.text,enrollText
 function studentInMonth(s,y,m){return PER.inMonth(s,(y==null)?null:acadMonthKey(y,m));}
 
 // השלוחים מחוץ לחישוב הגבייה — היעד, האחוז, מספר הפעילים והגרף; בשאר המקומות הם כמו כל שיעור.
-function slInCollection(s){return !CLS_NO_CYCLE[s&&s.cls];}
+// תלמיד שיש לו שכר חודשי — נספר ביעד וב«פעילים»; «השלמת חוב בוגרים» — בלי שכר, ותשלומיו בנגבה בלבד.
+function slHasTuition(s){return !CLS_NO_TUITION[s&&s.cls];}
 
-function countInMonth(y,m){return S.STUDENTS.filter(function(s){return slInCollection(s)&&studentInMonth(s,y,m);}).length;}
+function countInMonth(y,m){return S.STUDENTS.filter(function(s){return slHasTuition(s)&&studentInMonth(s,y,m);}).length;}
 
 function monthKeyAdd(k,n){var y=+k.slice(0,4),m=+k.slice(5,7)-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;return y+'-'+String(m+1).padStart(2,'0');}
 
 // ── טופל ──
-// מערך חודשים YYYY-MM — החודש הוא המפתח הטבעי, וחודש חדש מתחיל ריק מעצמו, בלי איפוס.
-function slHandled(s){return ((s&&Array.isArray(s.handled))?s.handled:[]).map(normMonth).filter(Boolean);}
-
-// בלי חודש — החודש הנוכחי.
-function studentHandled(s,k){return slHandled(s).indexOf(k||monthKeyOf(dayToday()))>=0;}
-
-function handledToggled(s,k){
-  var l=slHandled(s);
-  if(uniqHas(l,k))return l.filter(function(x){return x!==k;});
-  return l.concat([k]).sort();
-}
+// סימון אחד — מה שעל השולחן עכשיו: נשמר החודש שבו סומן (YYYY-MM), ומוצג כ«טופל» רק בחודש הזה;
+// בחודש חדש כולם חוזרים ללא טופל מעצמם, בלי איפוס.
+function studentHandled(s){return !!s&&s.handled===monthKeyOf(dayToday());}
 
 // מחזירה false כשהכתיבה לאחסון נכשלה — הקורא אומר זאת, ואינו מציג «טופל» על מה שלא נשמר.
-function slHandledToggle(sid,k){
+function slHandledToggle(sid){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id,sid);});
-  if(!s||!normMonth(k))return false;
-  return slLocalWrite('sl_students',Object.assign({},s,{handled:handledToggled(s,k)}));
+  if(!s)return false;
+  return slLocalWrite('sl_students',Object.assign({},s,{handled:studentHandled(s)?null:monthKeyOf(dayToday())}));
 }
 
 // ── שיעור ומחזור ──
@@ -299,16 +292,14 @@ function slStudentGroups(list){
   }).filter(function(g){return g.rows.length;});
 }
 
-// הארכיון — קבוצה לכל מחזור, החדש ראשון; השלוחים — קבוצה משלהם בסוף.
+// הארכיון — קבוצה לכל מחזור, החדש ראשון; שיעור בלי מחזור — קבוצה משלו בסוף.
 function slArchiveGroups(list){
   var by={};
-  var free=list.filter(function(s){return CLS_NO_CYCLE[s.cls];});
   list.forEach(function(s){if(CLS_NO_CYCLE[s.cls])return;var c=slCycleOf(s)||0;(by[c]=by[c]||[]).push(s);});
   var gs=Object.keys(by).map(Number).sort(function(a,b){return b-a;}).map(function(c){
     return {label:cycleLabel(c)||'ללא מחזור',rows:by[c]};
   });
-  if(free.length)gs.push({cls:'s',label:CLS_NAME.s,rows:free});
-  return gs;
+  return gs.concat(slStudentGroups(list.filter(function(s){return CLS_NO_CYCLE[s.cls];})));
 }
 
 // המעבר השנתי — ג׳ נסגרים באוגוסט של השנה שמסתיימת ועוברים לארכיון; ב׳ ⟵ ג׳; א׳ ⟵ ב׳; והשנה מתקדמת. המחזור אינו משתנה.
@@ -343,9 +334,11 @@ function slYearApply(plan){
 }
 
 // הגדרה שלא נקבעה היא 0 ולא ניחוש — סכום מומצא מוצג כחוב אמיתי ונכתב לענן בשמירה הראשונה של ההגדרות.
+// השכר האישי, ובלעדיו — ברירת המחדל של השיעור; בלי שכר חודשי — 0.
 function studentTuition(s){
-  var cs=(s&&s.card_settings)||{},defT=(parseInt(S.SETTINGS['default_tuition'],10)||0);
-  return cs.monthly_tuition?parseInt(cs.monthly_tuition):defT;
+  var cs=(s&&s.card_settings)||{},cls=s&&s.cls;
+  if(CLS_NO_TUITION[cls])return 0;
+  return cs.monthly_tuition?parseInt(cs.monthly_tuition):(parseInt(S.SETTINGS[CLS_TUITION_KEY[cls]||'default_tuition'],10)||0);
 }
 
 // ── יתרת זכות וזיכוי מיתרה ──
@@ -484,6 +477,14 @@ function calcDistribution(sid,year){
     }
     return {cash:cash,cred:cred};
   }
+  // בלי שכר חודשי — כל תשלום בחודש שלו, בלי חיוב ובלי יתרת זכות.
+  if(!slHasTuition(s)){
+    YEAR_MONTHS.forEach(function(m){result[m]={req:0,paid:0,cash:0,cred:0,off:false};});
+    txns.forEach(function(t){var m=dayNoon(String(t.txn_date)).getMonth(),a=parseFloat(t.amount)||0,r=result[m];if(!r||!a)return;
+      if(isCreditTxn(t))r.cred=Math.round((r.cred+a)*100)/100;else r.cash=Math.round((r.cash+a)*100)/100;r.paid=Math.round((r.cash+r.cred)*100)/100;});
+    result.credit=0;
+    return result;
+  }
   var used=0;
   // הדגל off מבחין בין חודש שאינו מחויב לחודש מחויב שלא שולם.
   YEAR_MONTHS.forEach(function(m){
@@ -504,7 +505,7 @@ function txnAmountHTML(t){
 }
 
 export { _slPushOf, acadMonthKey, acadYearHeb,
-         acadYearOf, calcDistribution, countInMonth, slInCollection, distCredit,
+         acadYearOf, calcDistribution, countInMonth, slHasTuition, distCredit,
          enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,

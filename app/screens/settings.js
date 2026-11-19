@@ -3,7 +3,7 @@ import { MSG_SAVED_LOCAL, uniqHas } from '../../core/util.js';
 import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
+import { CLS_NAME, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_ADD_METHOD, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_METHOD_LABEL, MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_REQUIRED,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
@@ -17,8 +17,15 @@ function screenSettingsHTML() {
   <div id="settings-main">
     <div class="card">
       <div class="card-hdr"><h3>שכר לימוד ברירת מחדל</h3></div>
-      <div class="tuition-row card-body">
-        <input aria-label="שכר לימוד חודשי ברירת מחדל" id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-kent>
+      <div class="card-body">
+        <div class="tuition-row">
+          <label for="set-def-tuition">שיעורים א׳–ג׳</label>
+          <input id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-key="default_tuition" data-kent>
+        </div>
+        <div class="tuition-row">
+          <label for="set-def-tuition-s">${esc(CLS_NAME.s)}</label>
+          <input id="set-def-tuition-s" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-key="${CLS_TUITION_KEY.s}" data-kent>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -37,16 +44,18 @@ function screenSettingsHTML() {
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=icon(o?'up':'down');}
 
 function renderSettingsPanel(){
-  document.getElementById('set-def-tuition').value=S.SETTINGS['default_tuition']||'';
+  document.querySelectorAll('.tuition-inp[data-key]').forEach(function(el){el.value=el.defaultValue=S.SETTINGS[el.getAttribute('data-key')]||'';});
   renderSettingsLists();
 }
 
 // אין לחסום שמירה כשאין רשת — המיזוג מכריע על ההגדרה לפי updated_at כמו על כל שורה.
-function saveDefaultTuition(){
-  var v=document.getElementById('set-def-tuition').value;
+// שדה לכל שיעור שיש לו ברירת מחדל משלו — המפתח ב-data-key.
+function saveDefaultTuition(el){
+  var key=el.getAttribute('data-key'),v=el.value.trim();
   if(!v||isNaN(v)){toast(MSG_VALUE_BAD, null, 'bad');return;}
-  var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key==='default_tuition';})[0];
-  var row=Object.assign({},cur||{client_id:newClientId()},{key:'default_tuition',value:JSON.stringify(Number(v))});
+  if(Number(v)===Number(S.SETTINGS[key]))return;
+  var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key===key;})[0];
+  var row=Object.assign({},cur||{client_id:newClientId()},{key:key,value:JSON.stringify(Number(v))});
   if(!slLocalWrite(KV_TABLE,row)){toast(MSG_VALUE_SAVE_FAIL,5000, 'bad');return;}
   return true;
 }

@@ -1,5 +1,5 @@
 // app/main.js — העלייה, מפת הפעולות והניווט
-import { DAY_MONTHS, MSG_SAVED, appConfigure, dayNoon, dayToday, getDeviceId } from '../core/util.js';
+import { DAY_MONTHS, appConfigure, dayNoon, dayToday, getDeviceId } from '../core/util.js';
 import { eraKeys, pendAlertDismiss, pendCount, runSave, sbWatch,
          schedulePush } from '../core/sync.js';
 import { lsOpen } from '../core/storage.js';
@@ -8,7 +8,7 @@ import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown,
          dragMove, dragUp, modalDismiss, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
-import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, MSG_SETTINGS_SAVED, MSG_STUDENT_ADDED, MSG_TXN_SAVED } from './constants.js';
+import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, MSG_STUDENT_ADDED, MSG_TXN_SAVED } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
@@ -211,15 +211,15 @@ var DOM_ACTIONS = {
   'year-open':               function () { openYearTransition(); },
   'year-go':                 function () { closeModal(); doYearTransition(); },
   'handled-toggle':          function (el) {
-    if (!slHandledToggle(el.getAttribute('data-id'), el.getAttribute('data-month'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
+    if (!slHandledToggle(el.getAttribute('data-id'))) { toast(MSG_CHANGE_NOT_SAVED, 5000, 'bad'); return; }
     refreshUI();
   },
   'per-add':                 function (el) { PER.addRow(el); },
-  'per-remove':              function (el) { PER.removeRow(el); },
+  'per-remove':              function (el) { var box = el.closest('[data-autosave]'); PER.removeRow(el); if (box) autosave(box); },
   'student-open-add':        function () { openAddStudent(); },
-  'student-settings-save':   function () { return runSave(saveStudentSettings, MSG_SETTINGS_SAVED); },
+  'student-settings-save':   function () { return runSave(saveStudentSettings); },
   'txn-save':                function () { return runSave(saveTxn, MSG_TXN_SAVED); },
-  'tuition-save':            function () { return runSave(saveDefaultTuition, MSG_SAVED); },
+  'tuition-save':            function (el) { return runSave(function () { return saveDefaultTuition(el); }); },
 };
 
 actWire(DOM_ACTIONS);
@@ -237,12 +237,15 @@ document.addEventListener('input', function (e) {
   if (el && el.dataset && el.dataset.inp === 'dash-notes') dashNotesInput();
 });
 
+// נתון קיים נשמר מיד, בלי כפתור («שמירה אוטומטית — נתון קיים» בטבלה) — ביציאה מהשדה ובבחירה, ו-Enter משחרר אותו:
+// הגדרות התלמיד שבכרטיס (המיכל נושא data-autosave) ושכר ברירת המחדל שבהגדרות.
+function autosave(box) { return DOM_ACTIONS['student-settings-save'](box); }
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'sc-cls') scClsChanged();
   if (el && el.dataset && el.dataset.chg === 'dash-notes') dashNotesSave();
-  // מסך הגדרות נשמר מיד, בלי כפתור — ביציאה מהשדה, ו-Enter משחרר אותו
-  if (el && el.dataset && el.dataset.chg === 'tuition') DOM_ACTIONS['tuition-save']();
+  if (el && el.dataset && el.dataset.chg === 'tuition') DOM_ACTIONS['tuition-save'](el);
+  if (el && el.closest && el.closest('[data-autosave]')) autosave(el.closest('[data-autosave]'));
 });
 
 // focus אינו עולה בעץ — ולכן focusin.

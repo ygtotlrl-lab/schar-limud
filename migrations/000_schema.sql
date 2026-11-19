@@ -59,11 +59,12 @@ create table if not exists public.sl_students (
   client_id text not null,
   updated_at bigint not null,
   periods jsonb not null,
-  handled jsonb not null default '[]'::jsonb,
+  handled text,
   cls text not null,
   cycle integer,
   constraint sl_students_pkey PRIMARY KEY (client_id),
-  constraint sl_students_cls_check CHECK ((cls = ANY (ARRAY['a'::text, 'b'::text, 'g'::text]))),
+  constraint sl_students_cls_check CHECK ((cls = ANY (ARRAY['a'::text, 'b'::text, 'g'::text, 's'::text, 'd'::text]))),
+  constraint sl_students_handled_check CHECK ((handled ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)),
   constraint sl_students_periods_check CHECK (public.sl_students_periods_ok(periods))
 );
 

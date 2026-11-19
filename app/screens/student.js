@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
          MSG_NAME_REQUIRED,
@@ -12,7 +12,7 @@ import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
 import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredit, enrollText, fmt,
-         monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
+         monthKeyLabel, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          PER, periodText, periodsProblem, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
@@ -35,11 +35,11 @@ function screenStudentHTML() {
     <button class="sc-arch-btn" id="sc-arch-btn" data-act="sc-archive"></button>
   </div>
   <div id="sc-main" class="hidden">
-    <div class="card sc-card" id="sc-card" data-ks-area>
+    <div class="card sc-card" id="sc-card">
       <div class="sc-hdr">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>
-          <button class="sc-close" data-act="sc-back" data-ks-leave aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
+          <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
         </div>
       </div>
       <div class="sc-annual">
@@ -55,16 +55,17 @@ function screenStudentHTML() {
       <div class="acc-hdr-split acc-hdr" data-act="acc-toggle" data-acc="sc-settings">
         <span>${icon('edit')}הגדרות תלמיד</span><span id="acc-icon-sc-settings">${icon('down')}</span>
       </div>
-      <div class="acc-body" data-ks id="acc-sc-settings">
+      <!-- נתון קיים — נשמר מיד, ביציאה מהשדה ובבחירה, בלי כפתור («שמירה אוטומטית — נתון קיים» בטבלה) -->
+      <div class="acc-body" data-autosave id="acc-sc-settings">
         <div class="frm-row">
           <label for="sc-edit-name">שם</label>
-          <input id="sc-edit-name" type="text">
+          <input id="sc-edit-name" type="text" data-kent>
         </div>
-        <div class="frm-row">
+        <div class="frm-row sc-tu">
           <label for="sc-edit-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label>
-          <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל">
+          <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל" data-kent>
         </div>
-        <div class="frm-row">
+        <div class="frm-row sc-tu">
           <label for="sc-edit-cls">שיעור</label>
           <select id="sc-edit-cls" data-chg="sc-cls"></select>
         </div>
@@ -72,20 +73,19 @@ function screenStudentHTML() {
           <label for="sc-edit-cycle">מחזור</label>
           <select id="sc-edit-cycle"></select>
         </div>
-        <div class="frm-row">
+        <div class="frm-row sc-tu">
           <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
-          <input id="sc-edit-debt" type="text" inputmode="decimal" placeholder="0">
+          <input id="sc-edit-debt" type="text" inputmode="decimal" placeholder="0" data-kent>
         </div>
-        <div class="frm-row">
+        <div class="frm-row sc-tu">
           <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
-          <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה">
+          <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה" data-kent>
         </div>
-        <div class="frm-row">
+        <div class="frm-row sc-tu">
           <span class="frm-lbl">תקופות פעילות</span>
           <div id="sc-periods"></div>
         </div>
         <div class="row-acts">
-          <button class="btn" data-act="student-settings-save" data-ksave>${icon('save')}שמירה</button>
           <button class="btn sm danger" data-act="student-del">${icon('del')}מחיקת התלמיד</button>
         </div>
       </div>
@@ -100,7 +100,7 @@ function screenStudentHTML() {
 // הארכיון — מי שכל תקופותיו הסתיימו, מקובץ לפי מחזור, החדש ראשון. החיפוש מסנן בשתיהן, ואינו משנה סדר.
 // השורה — «רשימת עבודה», כמו המשימות בגיוס: עיגול «טופל» בראשה (לחיצה מסמנת בלי לפתוח) · שם, ומתחתיו מצב החודש ·
 // פס «בפועל / צפי» של השנה עד החודש הזה · יתרת זכות. בארכיון — סמל ראשי התיבות במקום העיגול, בלי מצב ובלי פס.
-// המחזור והתקופות — בכרטיס בלבד. הכרטיס הפתוח נפרש בשורה שמתחת לתלמיד שלו.
+// המחזור והתקופות — בכרטיס בלבד. הכרטיס נפתח בחלון משלו מעל הרשימה.
 function stuInitials(name){var p=String(name||'?').trim().split(/\s+/);return (p[0]||'?').charAt(0)+(p[1]?p[1].charAt(0):'');}
 function curMonth(){return dayNoon(dayToday()).getMonth();}
 // מצב החודש — מהחלוקה שבכרטיס: התשלומים נפרסים מתחילת השנה, ולכן החודש הנוכחי מראה מה חסר עד היום.
@@ -123,10 +123,10 @@ function progHTML(p){
   return bar(pct,'stu-prog'+(p.paid>=p.req-0.005?' full':''));
 }
 function studentRowHTML(s,arch,acc){
-  var d=calcDistribution(s.client_id,acadYearOf(dayToday())),cr=distCredit(d),k=monthKeyOf(dayToday()),hd=!arch&&studentHandled(s,k);
+  var d=calcDistribution(s.client_id,acadYearOf(dayToday())),cr=distCredit(d),hd=!arch&&studentHandled(s);
   var td=arch?null:stuToDate(d);if(td&&acc){acc.req+=td.req;acc.paid+=td.paid;}
   var lead=arch?'<span class="stu-av" aria-hidden="true">'+esc(stuInitials(s.name))+'</span>'
-    :'<button class="stu-check'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" data-month="'+esc(k)+'" aria-pressed="'+(hd?'true':'false')+'" aria-label="טופל החודש — '+esc(s.name)+'" title="'+(hd?'טופל החודש':'סמן שטופל החודש')+'">'+(hd?icon('check'):'')+'</button>';
+    :'<button class="stu-check'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" aria-pressed="'+(hd?'true':'false')+'" aria-label="טופל החודש — '+esc(s.name)+'" title="'+(hd?'טופל החודש':'סמן שטופל החודש')+'">'+(hd?icon('check'):'')+'</button>';
   return '<div class="stu-row'+(hd?' is-handled':'')+'">'+lead+'<button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
     '<span class="stu-txt"><span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
     (arch?'':stuMonthState(d)+progHTML(td))+'</span>'+
@@ -139,7 +139,7 @@ function groupsHTML(groups,done,count,arch){
   return groups.map(function(g){
     var acc={req:0,paid:0},rows=g.rows.map(function(s){return studentRowHTML(s,arch,acc);}).join('');
     var sum=(!arch&&acc.req>0)?'<span class="sc-grp-sum" title="שולם מתחילת השנה מתוך הנדרש עד החודש הזה">&#8362;'+fmt(acc.paid)+' / &#8362;'+fmt(acc.req)+' · '+Math.round(acc.paid/acc.req*100)+'%</span>':'';
-    return '<section class="sc-grp'+(done?' is-done':'')+(CLS_NO_CYCLE[g.cls]?' sc-grp-free':'')+'">'+
+    return '<section class="sc-grp'+(done?' is-done':'')+(CLS_NO_TUITION[g.cls]?' sc-grp-free':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+sum+
       (count?'<span class="sc-grp-cnt">'+g.rows.length+' '+count+'</span>':'')+'</div>'+
       '<div class="stu-list">'+rows+'</div></section>';
@@ -148,7 +148,7 @@ function groupsHTML(groups,done,count,arch){
 
 function renderStudentList(){
   var box=document.getElementById('sc-list');if(!box)return;
-  var q=String(S.SC_Q||'').trim(),k=monthKeyOf(dayToday()),arch=!!S.SC_ARCH;
+  var q=String(S.SC_Q||'').trim(),arch=!!S.SC_ARCH;
   var hit=function(s){return !q||String(s.name||'').indexOf(q)>=0;};
   var archAll=S.STUDENTS.filter(studentArchived),live=S.STUDENTS.filter(function(s){return !studentArchived(s);});
   document.getElementById('sc-view-title').textContent=arch?'ארכיון':'תלמידים';
@@ -157,8 +157,8 @@ function renderStudentList(){
   var list=(arch?archAll:live).filter(hit);
   if(!list.length){box.innerHTML='<div class="empty">'+(q?'אין תלמיד התואם את החיפוש':arch?'הארכיון ריק':'אין תלמידים')+'</div>';return;}
   if(arch){box.innerHTML=groupsHTML(slArchiveGroups(list),false,'',true);return;}
-  var done=list.filter(function(s){return studentHandled(s,k);});
-  box.innerHTML=groupsHTML(slStudentGroups(list.filter(function(s){return !studentHandled(s,k);})),false,'לטיפול')+
+  var done=list.filter(studentHandled);
+  box.innerHTML=groupsHTML(slStudentGroups(list.filter(function(s){return !studentHandled(s);})),false,'לטיפול')+
     '<div class="sc-line"><span>טופלו החודש · '+done.length+'</span></div>'+groupsHTML(slStudentGroups(done),true,'');
 }
 
@@ -175,7 +175,7 @@ function openStudentsManage(){
 }
 
 function clsOptions(cur){
-  return '<option value="">-- בחר --</option>'+CLS_LIST.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+esc(CLS_NAME[c])+'</option>';}).join('');
+  return '<option value="">-- בחר --</option>'+CLS_PICK.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+esc(CLS_NAME[c])+'</option>';}).join('');
 }
 
 // בורר המחזור — שבע שנים סביב שנת הלימודים; ערך שמור מחוץ לטווח נוסף כמות שהוא.
@@ -201,9 +201,9 @@ function openAddStudent(){
   openModal(MSG_ADD_STUDENT, body, foot);
 }
 
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,cls=document.getElementById('new-st-cls').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}if(CLS_LIST.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}var per=PER.read(document.getElementById('modal'));if(per.err){toast(per.err, null, 'bad');return;}var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,cls=document.getElementById('new-st-cls').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}if(CLS_PICK.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}var per=PER.read(document.getElementById('modal'));if(per.err){toast(per.err, null, 'bad');return;}var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;
   var cid=pendingCid('student',[name,tuition,cls,JSON.stringify(per.ps)].join(' '));
-  var row={client_id:cid,name:name,card_settings:cs,periods:per.ps,handled:[],cls:cls,cycle:slCycleFor(cls)||null,deleted:false,deleted_at:null,deleted_by:null};
+  var row={client_id:cid,name:name,card_settings:cs,periods:per.ps,handled:null,cls:cls,cycle:slCycleFor(cls)||null,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
   releaseCid('student');
   return true;}
@@ -226,7 +226,7 @@ function deleteStudent(){var s=scStudent();
 function openYearTransition(){
   var plan=slYearPlan();if(!plan){toast(MSG_YEAR_UNSET, null, 'warn');return;}
   var nb=plan.up.filter(function(s){return s.cls==='b';}).length,na=plan.up.length-nb;
-  var ns=S.STUDENTS.filter(function(s){return CLS_NO_CYCLE[s.cls]&&!s.deleted&&!studentArchived(s);}).length;
+  var ns=S.STUDENTS.filter(function(s){return s.cls==='s'&&!s.deleted&&!studentArchived(s);}).length;
   openModal(MSG_YEAR_ROLL_TITLE,
     '<div class="year-note">'+
       '<strong class="danger-strong">'+stIcon('warn')+'פעולה בלתי הפיכה!</strong><br>'+
@@ -299,6 +299,10 @@ function renderStudentCard(){
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(slCycleOf(s));
   document.getElementById('sc-cycle-row').classList.toggle('hidden',!!CLS_NO_CYCLE[s.cls]);
+  // «השלמת חוב בוגרים» — בלי שכר, שיעור, חוב ותקופות: השם בלבד.
+  // Escape בשדה מחזיר לערך השמור — defaultValue, ולא לערך שבסימון.
+  ['sc-edit-name','sc-edit-tuition','sc-edit-debt','sc-edit-debt-note'].forEach(function(id){var e=document.getElementById(id);e.defaultValue=e.value;});
+  document.querySelectorAll('#acc-sc-settings .sc-tu').forEach(function(r){r.classList.toggle('hidden',!!CLS_NO_TUITION[s.cls]);});
   document.getElementById('sc-periods').innerHTML=PER.editorHTML(slPeriods(s));renderScAnnual();
 }
 
@@ -316,6 +320,7 @@ function scYearsWithTxns(){
 function annualHTML(s,year){
   var cs=s.card_settings||{},stuT=studentTuition(s),cur=year===acadYearOf(dayToday());
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
+  if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist);
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:stuT,paid:0};
     if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(year,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
@@ -337,6 +342,17 @@ function annualHTML(s,year){
   return html;
 }
 
+// בלי שכר חודשי — חודש ושולם בלבד, והתשלומים.
+function freeAnnualHTML(s,year,dist){
+  var rows='',tP=0;
+  YEAR_MONTHS.forEach(function(m){var p=(dist[m]&&dist[m].paid)||0;tP+=p;
+    rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="paid-cell">'+(p?fmt(p):'—')+'</td></tr>';});
+  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
+  return '<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>שולם</th></tr></thead><tbody>'+rows+'</tbody>'+
+    '<tfoot><tr class="sum-row"><td>סה"כ</td><td class="paid-cell">'+fmt(Math.round(tP*100)/100)+'</td></tr></tfoot></table></div>'+
+    '<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
+}
+
 function renderScAnnual(){
   var s=scStudent();if(!s)return;
   var cy=acadYearOf(dayToday());
@@ -356,11 +372,18 @@ function scClsChanged(){
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(c);
 }
 
+// הגדרות התלמיד — נתון קיים, נשמר מיד: ביציאה מהשדה, בבחירה ובהסרת תקופה. קלט שאינו תקין — הודעה, ושום דבר אינו נשמר עד שמתקנים.
 function saveStudentSettings(){
-  var name=document.getElementById('sc-edit-name').value.trim(),tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
-  if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
-  if(CLS_LIST.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, S.SC_STUDENT_ID);});if(!s){toast(MSG_STUDENT_MISSING2, null, 'warn');return;}
+  var name=document.getElementById('sc-edit-name').value.trim();
+  if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}
+  if(CLS_NO_TUITION[s.cls]){
+    if(name===s.name)return;
+    if(!slLocalWrite('sl_students',Object.assign({},s,{name:name}))){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
+    return true;
+  }
+  var tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
+  if(CLS_PICK.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // אימות מפורש — שדה טקסט מעביר קלט פגום כמות שהוא, ו-parseInt בלי אימות כותב NaN לתוך card_settings.
   var tuitionVal=parseInt(tuition,10);
@@ -373,6 +396,7 @@ function saveStudentSettings(){
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
   var per=PER.read(document.getElementById('acc-sc-settings'));if(per.err){toast(per.err, null, 'bad');return;}
   var row=Object.assign({},s,{name:name,card_settings:cs,cls:cls,cycle:cycle,periods:per.ps});
+  if(JSON.stringify([row.name,row.card_settings,row.cls,row.cycle,row.periods])===JSON.stringify([s.name,s.card_settings||{},s.cls,s.cycle==null?null:s.cycle,slPeriods(s)]))return;
   if(!slLocalWrite('sl_students',row)){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
   return true;
 }

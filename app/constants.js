@@ -106,11 +106,17 @@ var PUSH_TABLES = ['sl_students', 'sl_transactions', KV_TABLE, 'sl_lookups'];
 // סוג הרשימה ב-sl_lookups — אמצעי תשלום.
 var LK_METHOD = 'method';
 
-// השיעור — קבוע, כמו בהנהלה: הסדר א׳ ⟵ ב׳ ⟵ ג׳, והמחזור — שנת הסיום: ג׳ שנת הלימודים, ב׳ הבאה, א׳ שלאחריה.
-var CLS_LIST = ['a', 'b', 'g', 's'];
-var CLS_NAME = { a: 'שיעור א׳', b: 'שיעור ב׳', g: 'שיעור ג׳', s: 'התלמידים השלוחים' };
-// השלוחים — בלי מחזור ובלי מעבר שנתי: רק הוספה והפסקה ידניות.
-var CLS_NO_CYCLE = { s: true };
+// השיעור — קבוע, כמו בהנהלה: הסדר א׳ ⟵ ב׳ ⟵ ג׳ ⟵ השלוחים ⟵ השלמת חוב בוגרים, והמחזור — שנת הסיום: ג׳ שנת הלימודים, ב׳ הבאה, א׳ שלאחריה.
+var CLS_LIST = ['a', 'b', 'g', 's', 'd'];
+var CLS_NAME = { a: 'שיעור א׳', b: 'שיעור ב׳', g: 'שיעור ג׳', s: 'התלמידים השלוחים', d: 'השלמת חוב בוגרים' };
+// השיעורים שנבחרים בהוספה ובכרטיס — «השלמת חוב בוגרים» הוא כרטיס אחד, ואינו שיעור של תלמיד.
+var CLS_PICK = ['a', 'b', 'g', 's'];
+// השלוחים והבוגרים — בלי מחזור ובלי מעבר שנתי.
+var CLS_NO_CYCLE = { s: true, d: true };
+// שכר ברירת המחדל לפי שיעור — מפתח ב-sl_settings; שיעור שאינו כאן — default_tuition.
+var CLS_TUITION_KEY = { s: 'default_tuition_s' };
+// בלי שכר חודשי — התשלומים נכנסים לנגבה ולא ליעד, ואינם תלמיד ב«פעילים».
+var CLS_NO_TUITION = { d: true };
 var CLS_CYCLE_ADD = { g: 0, b: 1, a: 2 };
 var MSG_YEAR_UNSET = 'שנת הלימודים לא נקבעה — המעבר השנתי אינו זמין';
 var MSG_YEAR_ROLL_DONE = 'מעבר שנתי הושלם — ';
@@ -130,10 +136,9 @@ var SL_NEVER_MIRROR_SETTINGS = [];
 // כותרות החלונות והודעות השמירה — מחרוזת למשתמש היא קבוע.
 var TTL_TXN_EDIT = 'עריכת תשלום — ';
 var MSG_STUDENT_ADDED = 'תלמיד נוסף';
-var MSG_SETTINGS_SAVED = 'הגדרות נשמרו';
 var MSG_TXN_SAVED = 'תשלום נשמר';
 
-export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NAME, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
+export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_NAME, CLS_PICK, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
          MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DEBT_POSITIVE, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,
@@ -145,4 +150,4 @@ export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPD
          MSG_STUDENT_SAVE_FAIL, MSG_TUITION_POSITIVE,
          MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_SAVE_FAIL, PUSH_TABLES,
          SL_NEVER_MIRROR_SETTINGS, TXN_FILTER_ALL, YEAR_MONTHS,
-         TTL_TXN_EDIT, MSG_STUDENT_ADDED, MSG_SETTINGS_SAVED, MSG_TXN_SAVED };
+         TTL_TXN_EDIT, MSG_STUDENT_ADDED, MSG_TXN_SAVED };
