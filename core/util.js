@@ -85,6 +85,7 @@ var MSG_SAVED = 'נשמר בהצלחה';
 var MSG_SAVED_LOCAL = 'נשמר במכשיר — יסונכרן כשתחזור הרשת';
 var MSG_SAVE_FAIL = 'השמירה נכשלה';
 var MSG_SYNC_BACK = 'הסנכרון חזר לפעול';
+var MSG_NO_DIALOG = 'שגיאה: הדיאלוג אינו זמין (#';
 var MSG_OFFLINE = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
 var MSG_STALE_CODE = 'הגרסה הזו מיושנת — יש לעדכן';
 var MSG_SW_TIMEOUT = 'העדכון לא הושלם — נסה שוב';
@@ -184,7 +185,7 @@ function sortCompare(a, b) { return SORT_COLLATOR.compare(a, b); }
 export { app, appConfigure, readNum, sortCompare, uniqList, uniqHas,
          MSG_COMBO_MORE, MSG_DELETE, MSG_FILL_ALL, MSG_UNSAVED_DROP, MSG_UNSAVED_SAVE, MSG_UNSAVED_TEXT, MSG_UNSAVED_TITLE, MSG_FILL_LOGIN,
          MSG_KV_BAD, MSG_LOAD_FAIL_PRE, MSG_LOGIN_ERR, MSG_MY_PASS_TITLE,
-         MSG_NO_CRYPTO, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
+         MSG_NO_CRYPTO, MSG_NO_DIALOG, MSG_NO_MATCH, MSG_OFFLINE, MSG_OFFLINE_LOGIN, MSG_OFF_NO_CRYPTO,
          MSG_OFF_NO_FP, MSG_OFF_UNKNOWN, MSG_OFF_USER_WRITE,
          MSG_PASS_CHANGED_OUT, MSG_PASS_CUR_BAD, MSG_PASS_MISMATCH, MSG_PASS_SIX,
          MSG_PASS_UPDATE_FAIL, MSG_PASS_VERIFY_FAIL, MSG_SAVED,

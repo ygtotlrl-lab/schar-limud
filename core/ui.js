@@ -1,6 +1,6 @@
 // core/ui.js — שכבת התצוגה המשותפת
 
-import { MSG_COMBO_MORE, MSG_NO_MATCH, MSG_SW_TIMEOUT, MSG_UNSAVED_DROP, MSG_UNSAVED_SAVE, MSG_UNSAVED_TEXT, MSG_UNSAVED_TITLE, app } from './util.js';
+import { MSG_COMBO_MORE, MSG_NO_DIALOG, MSG_NO_MATCH, MSG_SW_TIMEOUT, MSG_UNSAVED_DROP, MSG_UNSAVED_SAVE, MSG_UNSAVED_TEXT, MSG_UNSAVED_TITLE, app } from './util.js';
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 import { stIcon } from './icons.js';
 
@@ -225,7 +225,7 @@ function esc(s) {
 function uiNoDialog(where, id) {
   try { console.error('[ui] ' + where + ': #' + id + ' אינו ב-DOM'); } catch (e) {}
   try { document.body.classList.remove('locked'); } catch (e) {}
-  try { toast('שגיאה: הדיאלוג אינו זמין (#' + id + ')', null, 'bad'); } catch (e) {}
+  try { toast(MSG_NO_DIALOG + id + ')', null, 'bad'); } catch (e) {}
 }
 // ic — שם אייקון לכותרת (stIcon); בלעדיו — הכותרת לבדה.
 function openModal(title, body, foot, ic) {
