@@ -106,6 +106,11 @@ function monthTarget(year,m){
   return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?slDefaultTuition(s):0);},0);
 }
 
+// יעד הגבייה — 90%: הקו בגרף, וממנו הטבעת ירוקה.
+var COLLECT_GOAL=90;
+// סכום מקוצר לעמודה צרה — 93,806 ⟵ 93.8K.
+function fmtK(v){return v>=1000?String(Math.round(v/100)/10).replace(/\.0$/,'')+'K':String(Math.round(v));}
+
 function pctNum(got,target){return target>0?Math.round(got/target*100):null;}
 
 function pctText(got,target){var p=pctNum(got,target);return p===null?'—':p+'%';}
@@ -192,11 +197,12 @@ function renderDash(){
   gotTD=Math.round(gotTD*100)/100;
   paintRing('dk-ring2','dk-pct2',pctNum(gotTD,tgtTD),tgtTD?ofTargetTitle(gotTD,tgtTD)+' עד החודש':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
 
+  // הגרף — אחוז הגבייה של כל חודש, והקו המקווקו — יעד הגבייה (90%); מעל העמודה — האחוז, ומתחתיו הסכום שנגבה, מקוצר.
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
-    var v=colT[m]||0,t=tgt[m]||0;
-    return {lab:MONTH_HE_SHORT[m],val:v,tgt:t,end:pctText(v,t),
-            txt:MONTH_HE_SHORT[m]+': נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
-  }),'גבייה חודשית מול היעד');
+    var v=colT[m]||0,t=tgt[m]||0,p=t>0?v/t*100:0;
+    return {lab:MONTH_HE_SHORT[m],val:p,tgt:t>0?COLLECT_GOAL:0,end:pctText(v,t)+(v?'\n'+fmtK(v):''),
+            txt:MONTH_HE_SHORT[m]+': '+pctText(v,t)+' — נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
+  }),'אחוז הגבייה החודשי מול יעד הגבייה');
   renderDashNotes();
 }
 
