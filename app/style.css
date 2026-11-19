@@ -306,10 +306,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .stu-list{display:flex;flex-direction:column;margin-top:var(--sp-2)}
 .stu-list > .sc-card{margin:var(--sp-2) 0 var(--sp-4)}
 .cw-in > .sc-card{margin:0;box-shadow:0 10px 30px var(--sh-2)}
-/* חלון הכרטיס — הגלילה בתוך הכרטיס עצמו ולא של כל החלון, כמו בגיוס: הכרטיס בגובה המסך לכל היותר, הפס שבראשו נשאר במקומו, והתוכן נגלל מתחתיו. */
-.card-win{overflow:hidden}
-.cw-in > .sc-card{max-height:calc(100dvh - 2 * var(--sp-6) - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain}
-.cw-in > .sc-card > .sc-hdr{position:sticky;top:0;z-index:var(--z-1)}
+
 .stu-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-4) var(--sp-2);border-bottom:1px solid var(--border);border-radius:var(--r-4)}
 .stu-row:last-child{border-bottom:0}
 .stu-open{flex:1;min-width:0;display:flex;align-items:center;gap:var(--sp-4);background:none;border:none;padding:0;

@@ -11,8 +11,8 @@ import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
-import { acadYearHeb, acadYearOf, calcDistribution, cycleLabel, distCredit, enrollText, fmt,
-         monthKeyLabel, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
+import { acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
+         monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          PER, periodText, periodsProblem, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
@@ -35,8 +35,8 @@ function screenStudentHTML() {
     <button class="sc-arch-btn" id="sc-arch-btn" data-act="sc-archive"></button>
   </div>
   <div id="sc-main" class="hidden">
-    <div class="card sc-card" id="sc-card">
-      <div class="sc-hdr">
+    <div class="card sc-card cw-card" id="sc-card">
+      <div class="sc-hdr cw-band">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>
           <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
@@ -122,9 +122,9 @@ function progHTML(p){
   var pct=Math.min(100,Math.round(p.paid/p.req*1000)/10);
   return bar(pct,'stu-prog'+(p.paid>=p.req-0.005?' full':''));
 }
-function studentRowHTML(s,arch,acc){
+function studentRowHTML(s,arch){
   var d=calcDistribution(s.client_id,acadYearOf(dayToday())),cr=distCredit(d),hd=!arch&&studentHandled(s);
-  var td=arch?null:stuToDate(d);if(td&&acc){acc.req+=td.req;acc.paid+=td.paid;}
+  var td=arch?null:stuToDate(d);
   var lead=arch?'<span class="stu-av" aria-hidden="true">'+esc(stuInitials(s.name))+'</span>'
     :'<button class="stu-check'+(hd?' is-on':'')+'" data-act="handled-toggle" data-id="'+esc(s.client_id)+'" aria-pressed="'+(hd?'true':'false')+'" aria-label="טופל החודש — '+esc(s.name)+'" title="'+(hd?'טופל החודש':'סמן שטופל החודש')+'">'+(hd?icon('check'):'')+'</button>';
   return '<div class="stu-row'+(hd?' is-handled':'')+'">'+lead+'<button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
@@ -134,10 +134,18 @@ function studentRowHTML(s,arch,acc){
     '</div>';
 }
 
-// בכותרת הקבוצה — בפועל / צפי ואחוז, מסכום השורות שבה.
+// בכותרת הקבוצה — בפועל / צפי ואחוז, כמו בלוח הבקרה: הצפי — החודשים בתקופות מתחילת השנה ועד החודש הזה × שכר ברירת המחדל
+// של השיעור (slDefaultTuition), ולא השכר האישי; בפועל — התשלומים באותם חודשים לפי תאריך התנועה, בלי זיכוי מיתרה.
+function grpToDate(rows){
+  var y=acadYearOf(dayToday()),m=curMonth(),req=0,paid=0,ids={},end=monthKeyOf(dayToday());
+  rows.forEach(function(s){ids[s.client_id]=1;
+    for(var i=0;i<YEAR_MONTHS.length;i++){if(studentInMonth(s,y,YEAR_MONTHS[i]))req+=slDefaultTuition(s);if(YEAR_MONTHS[i]===m)break;}});
+  S.TRANSACTIONS.forEach(function(t){if(ids[t.student_client_id]&&t.txn_date&&!isCreditTxn(t)&&acadYearOf(t.txn_date)===y&&String(t.txn_date).slice(0,7)<=end)paid+=parseFloat(t.amount)||0;});
+  return {req:Math.round(req*100)/100,paid:Math.round(paid*100)/100};
+}
 function groupsHTML(groups,done,count,arch){
   return groups.map(function(g){
-    var acc={req:0,paid:0},rows=g.rows.map(function(s){return studentRowHTML(s,arch,acc);}).join('');
+    var acc=grpToDate(g.rows),rows=g.rows.map(function(s){return studentRowHTML(s,arch);}).join('');
     var sum=(!arch&&acc.req>0)?'<span class="sc-grp-sum" title="שולם מתחילת השנה מתוך הנדרש עד החודש הזה">&#8362;'+fmt(acc.paid)+' / &#8362;'+fmt(acc.req)+' · '+Math.round(acc.paid/acc.req*100)+'%</span>':'';
     return '<section class="sc-grp'+(done?' is-done':'')+(CLS_NO_TUITION[g.cls]?' sc-grp-free':'')+'">'+
       '<div class="sc-grp-hd"><h3>'+esc(g.label)+'</h3>'+sum+
