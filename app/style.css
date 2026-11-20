@@ -102,9 +102,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* «השלמת חוב בוגרים» ברשימת התלמידים — מסגרת מקווקוות: כרטיס אחד ולא תלמידים */
 .sc-grp-free{border:1.5px dashed var(--brand-fill)}
 /* קוביות הסיכום בראש לוח הבקרה */
-.dash-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
-/* עד 900px — שלוש בשורה הראשונה (הסכומים ו«כל השנה»), ומתחתן שתי שורות של זוג: עד החודש · עד סוף השנה */
-@media (max-width:900px){.dash-kpis{grid-template-columns:repeat(6,minmax(0,1fr))} .dash-kpis .kpi{grid-column:span 2} .dash-kpis .kpi-pair{grid-column:span 3}}
+.dash-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
+/* זוגות בכל רוחב: הסכומים, ומתחתם שלוש שורות — עד החודש · עד החודש כולל מראש · עד סוף השנה; לפי התלמידים מימין ולפי החובה משמאל */
 .kpi-l small{display:block;font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
 .kpi{background:var(--card);border-radius:var(--radius);padding:var(--sp-5);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--sp-1);min-width:0;container-type:inline-size}
 /* הסכום מתכווץ לרוחב הקובייה — בטלפון קטן ונכנס, ובמסך רחב בגודלו המלא */
