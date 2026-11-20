@@ -102,8 +102,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* «השלמת חוב בוגרים» ברשימת התלמידים — מסגרת מקווקוות: כרטיס אחד ולא תלמידים */
 .sc-grp-free{border:1.5px dashed var(--brand-fill)}
 /* קוביות הסיכום בראש לוח הבקרה */
-.dash-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
-@media (max-width:560px){.dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dash-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
+/* בטלפון — שני הסכומים בחצאים, ושלוש הטבעות בשלישים */
+@media (max-width:560px){.dash-kpis{grid-template-columns:repeat(6,minmax(0,1fr))} .dash-kpis .kpi{grid-column:span 3} .dash-kpis .kpi-ring{grid-column:span 2}}
 .kpi{background:var(--card);border-radius:var(--radius);padding:var(--sp-5);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--sp-1);min-width:0;container-type:inline-size}
 /* הסכום מתכווץ לרוחב הקובייה — בטלפון קטן ונכנס, ובמסך רחב בגודלו המלא */
 .kpi-n{font-size:clamp(var(--fs-3),14cqi,var(--fs-5));font-weight:800;color:var(--brand-ink);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

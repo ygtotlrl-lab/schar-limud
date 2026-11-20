@@ -8,7 +8,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthLabel,
-         slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth } from '../domain.js';
+         slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
@@ -21,6 +21,7 @@ function screenDashHTML() {
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
     <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div><span class="kpi-l">כל השנה</span></div>
     <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">עד החודש</span></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">לפי החובה</span></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -100,6 +101,11 @@ function actualByMonth(year){
     map[t.student_client_id][m]=Math.round(((map[t.student_client_id][m]||0)+a)*100)/100;
   });
   return map;
+}
+
+// החובה בחודש — השכר האישי שבכרטיס (studentTuition) של התלמידים הפעילים בו; ל«לפי החובה» בלבד.
+function monthDue(year,m){
+  return S.STUDENTS.reduce(function(a,s){return a+(studentInMonth(s,year,m)?studentTuition(s):0);},0);
 }
 
 function monthTarget(year,m){
@@ -196,6 +202,10 @@ function renderDash(){
   YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0){gotTD+=colT[m]||0;tgtTD+=tgt[m];}});
   gotTD=Math.round(gotTD*100)/100;
   paintRing('dk-ring2','dk-pct2',pctNum(gotTD,tgtTD),tgtTD?ofTargetTitle(gotTD,tgtTD)+' עד החודש':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
+  // לפי החובה — אותו נגבה עד החודש, מתוך השכר האישי שבכרטיס של כל תלמיד פעיל (studentTuition) ולא שכר ברירת המחדל של השיעור.
+  var dueTD=0;
+  YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0)dueTD+=monthDue(S.DASH_YEAR,m);});
+  paintRing('dk-ring3','dk-pct3',pctNum(gotTD,dueTD),dueTD?'נגבה ‎'+fmt(gotTD)+'‎ מתוך החובה ‎'+fmt(dueTD)+'‎ עד החודש, לפי השכר שבכרטיס':'אין עדיין חודשים שחלפו','אחוז הגבייה מול השכר שבכרטיס');
 
   // הגרף — אחוז הגבייה של כל חודש, והקו המקווקו — יעד הגבייה (90%); מעל העמודה — האחוז, ומתחתיו הסכום שנגבה, מקוצר.
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
