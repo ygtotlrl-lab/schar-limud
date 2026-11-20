@@ -3,7 +3,7 @@ import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
-import { BAL_CREDIT, BAL_DEBT, CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+import { BAL_CREDIT, BAL_DEBT, HINT_CREDIT, HINT_DEBT, HINT_NOT_INCOME, CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL, TTL_TXN_EDIT } from '../constants.js';
@@ -101,8 +101,8 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value),db=isDebtValue(sel.value);
   h.classList.toggle('hidden',!on&&!db);
-  if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('repeat'))+esc(CREDIT_METHOD)+'</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
-  else if(db)h.innerHTML='<span class="debt-mark">'+stIcon(icon('repeatBack'))+esc(DEBT_METHOD)+'</span> — התנועה תוסיף לחוב התלמיד בשנה זו ו<b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('repeat'))+esc(CREDIT_METHOD)+'</span> — '+HINT_CREDIT+' '+HINT_NOT_INCOME;
+  else if(db)h.innerHTML='<span class="debt-mark">'+stIcon(icon('repeatBack'))+esc(DEBT_METHOD)+'</span> — '+HINT_DEBT+' '+HINT_NOT_INCOME;
 }
 
 // ── תשלומים — רישום, יומן ומחיקה רכה ──
