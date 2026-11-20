@@ -12,7 +12,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, 
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureSystemMethods, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
-import { openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
+import { openDiscList, openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
@@ -203,6 +203,7 @@ var DOM_ACTIONS = {
   'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, 'נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
   'kpi-info':                function (el) { openKpiInfo(el.dataset.k); },
+  'disc-list':               function () { openDiscList(); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },

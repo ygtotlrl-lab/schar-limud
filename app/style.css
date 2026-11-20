@@ -125,6 +125,45 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .kpi-info-b dt:first-child{margin-top:0}
 .kpi-info-b dd{margin:0}
 .kpi-info-b .kpi-diff{color:var(--brand-ink);font-weight:800}
+/* קוביית ההנחות — כפתור: לחיצה פותחת את רשימת ההנחות */
+.kpi-btn{border:0;font:inherit;cursor:pointer;color:inherit}
+.kpi-btn:hover,.kpi-btn:focus-visible{box-shadow:inset 0 0 0 1.5px var(--brand-line)}
+/* ההסבר החזותי — הכלל למעלה, ומתחת שלוש עמודות; בכל עמודה שני פסים על ציר השנה (ספטמבר מימין) וקו «היום» */
+.ki{display:flex;flex-direction:column;gap:var(--sp-5);color:var(--text-2);line-height:1.5}
+.ki-gen{display:flex;flex-direction:column;gap:var(--sp-3);background:var(--card-2);border-radius:var(--r-5);padding:var(--sp-4)}
+.ki-eq{display:grid;grid-template-columns:5.5rem 1fr;gap:var(--sp-3);align-items:baseline;font-size:var(--fs-2)}
+.ki-k{color:var(--brand-ink);font-weight:800}
+.ki .kpi-diff{color:var(--brand-ink);font-weight:800}
+.ki-op{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-weight:800;font-size:var(--fs-2);line-height:1;vertical-align:middle}
+.ki-plus{background:var(--bad-soft,var(--card));color:var(--bad)}.ki-minus{background:var(--brand-soft);color:var(--brand-ink)}
+.ki-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3)}
+.ki-col{display:flex;flex-direction:column;gap:var(--sp-3);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-3);min-width:0}
+.ki-t{text-align:center;color:var(--brand-ink);font-size:var(--fs-2);font-weight:800}
+.ki-bar{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ki-bl{font-size:var(--fs-1);font-weight:700;color:var(--text-2)}
+.ki-bv{font-size:var(--fs-1);color:var(--text-3)}
+.ki-track{position:relative;height:10px;border-radius:5px;background:var(--card-2);overflow:hidden}
+.ki-fill{position:absolute;inset-block:0;inset-inline-start:0;border-radius:5px}
+.ki-due{background:var(--bad)}.ki-pay{background:var(--ok)}
+.ki-ahead{position:absolute;inset-block:0;inset-inline-end:0;background:var(--card);opacity:.55}
+.ki-now{position:absolute;inset-block:-2px;width:2px;background:var(--text);transform:translateX(50%)}
+.ki-n{font-size:var(--fs-1);color:var(--text-3);text-align:center;margin-top:auto}
+.ki-leg{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-2) var(--sp-4);font-size:var(--fs-1);color:var(--text-3)}
+.ki-leg span{display:inline-flex;align-items:center;gap:var(--sp-1)}
+.ki-sw{display:inline-block;width:14px;height:8px;border-radius:4px}
+.ki-ahead-sw{background:var(--ok);opacity:.45}.ki-now-sw{width:2px;height:12px;border-radius:0;background:var(--text)}
+.ki-note{margin:0;font-size:var(--fs-1);color:var(--text-3);text-align:center}
+@media (max-width:420px){.ki-cols{gap:var(--sp-2)}.ki-col{padding:var(--sp-2)}.ki-eq{grid-template-columns:1fr;gap:var(--sp-1)}}
+/* רשימת ההנחות — שורה לכל תלמיד: השם והשיעור · ההנחה השנתית ואחוזה; ומתחת פירוט לכל תקופה בשכר אחר */
+.disc-list{display:flex;flex-direction:column}
+.disc-row{padding:var(--sp-3) 0;border-bottom:1px solid var(--border)}
+.disc-h{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3)}
+.disc-name{font-weight:700;color:var(--text);min-width:0}
+.disc-name small,.disc-amt small{display:block;font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
+.disc-amt{font-weight:800;color:var(--brand-ink);text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.disc-part{display:flex;justify-content:space-between;gap:var(--sp-3);font-size:var(--fs-1);color:var(--text-2);margin-top:var(--sp-1);font-variant-numeric:tabular-nums}
+.disc-tot{display:flex;justify-content:space-between;align-items:center;padding-top:var(--sp-4);font-weight:800;color:var(--text)}
+.disc-tot .amt-bad{color:var(--bad)}.disc-tot .amt-ok{color:var(--ok)}
 .kpi-l small{display:block;font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
 /* שכר לתקופה — שלושה שדות בשורה, באותה צורה של עורך התקופות */
 .per-row.tp-row{grid-template-columns:1fr 1fr 5.5rem}
