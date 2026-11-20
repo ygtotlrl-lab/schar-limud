@@ -13,7 +13,7 @@
   /* הדיו על --brand-soft הוא דיו הזהות ולא דיו הטקסט. */
   /* «ירוק במבוק» — ירוק בקבוק עמוק לזהות, מרווה רכה לפסים ולמילוי, ומרווה כהה יותר לקווים ולמסגרות. */
   --brand-fill:#1f5242; --brand-ink:#1f5242; --brand-soft:#c9ded4; --brand-line:#8fb3a5;
---ok:#2e7a5c;--ok-soft:#e3f0ea;--warn:#b45309;--warn-soft:#fdf1e3;--bad:#b42318;--bad-soft:#fdecea;--bad-soft-2:#fbe0dc;--border:#dce7e2;--bg:#eef4f1;--card-2:#f4f8f6;--text:#0b2e24;--text-2:#3e5a50;--text-3:#5b6f67;--card:#ffffff;--shadow:none;--radius:var(--r-6);--credit:#1565c0;--creditl:#eef5fd;
+--ok:#2e7a5c;--ok-soft:#e3f0ea;--warn:#b45309;--warn-soft:#fdf1e3;--bad:#b42318;--bad-soft:#fdecea;--bad-soft-2:#fbe0dc;--border:#dce7e2;--bg:#eef4f1;--card-2:#f4f8f6;--text:#0b2e24;--text-2:#3e5a50;--text-3:#5b6f67;--card:#ffffff;--shadow:none;--radius:var(--r-6);--credit:#1565c0;--creditl:#eef5fd;--pink:#c2185b;
   /* כיוון «רך»: אזורים לבנים על רקע ירקרק, בלי מסגרת ובלי צל; אזור שטופל — לבן שקוף למחצה. */
   --card-soft:rgba(255,255,255,.55);
   /* הפסים — הכותרת ושורת הניווט בירוק רך, מעוגלים כלפי התוכן; הדיו עליהם — כהה לפעיל ומשני לשאר, והלשונית הפעילה בגלולה מלאה. */
@@ -40,7 +40,7 @@
       --ok:#6fcfa6; --ok-soft:#12251f;
       --warn:#fbbf24; --warn-soft:#2c2213;
       --bad:#f87171; --bad-soft:#2d1717; --bad-soft-2:#3d1f1f;
-      --credit:#7bb7f5; --creditl:#122334;
+      --credit:#7bb7f5; --creditl:#122334; --pink:#f48fb1;
       --shadow:none;
     }
 }
@@ -131,11 +131,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* ההסבר החזותי — הכלל למעלה, ומתחת שלוש עמודות; בכל עמודה שני פסים על ציר השנה (ספטמבר מימין) וקו «היום» */
 .ki{display:flex;flex-direction:column;gap:var(--sp-5);color:var(--text-2);line-height:1.5}
 .ki-gen{display:flex;flex-direction:column;gap:var(--sp-3);background:var(--card-2);border-radius:var(--r-5);padding:var(--sp-4)}
-.ki-eq{display:grid;grid-template-columns:5.5rem 1fr;gap:var(--sp-3);align-items:baseline;font-size:var(--fs-2)}
+.ki-eq{display:flex;flex-direction:column;gap:var(--sp-2);font-size:var(--fs-2)}
 .ki-k{color:var(--brand-ink);font-weight:800}
 .ki .kpi-diff{color:var(--brand-ink);font-weight:800}
-.ki-op{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-weight:800;font-size:var(--fs-2);line-height:1;vertical-align:middle}
-.ki-plus{background:var(--bad-soft,var(--card));color:var(--bad)}.ki-minus{background:var(--brand-soft);color:var(--brand-ink)}
+/* שורה לכל רכיב: הבסיס, ואחריו «ועוד» — פלוס בכחול — ו«פחות» — מינוס בוורוד; עיגול מלא וסימן לבן */
+.ki-term{display:flex;align-items:center;gap:var(--sp-2)}
+.ki-op{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;color:var(--card);font-weight:800;font-size:var(--fs-3);line-height:1}
+.ki-op .ico{width:14px;height:14px;stroke-width:3}
+.ki-plus{background:var(--credit)}.ki-minus{background:var(--pink)}
+.ki-base{width:22px;flex:none}
 .ki-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3)}
 .ki-col{display:flex;flex-direction:column;gap:var(--sp-3);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-3);min-width:0}
 .ki-t{text-align:center;color:var(--brand-ink);font-size:var(--fs-2);font-weight:800}
@@ -153,7 +157,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .ki-sw{display:inline-block;width:14px;height:8px;border-radius:4px}
 .ki-ahead-sw{background:var(--ok);opacity:.45}.ki-now-sw{width:2px;height:12px;border-radius:0;background:var(--text)}
 .ki-note{margin:0;font-size:var(--fs-1);color:var(--text-3);text-align:center}
-@media (max-width:420px){.ki-cols{gap:var(--sp-2)}.ki-col{padding:var(--sp-2)}.ki-eq{grid-template-columns:1fr;gap:var(--sp-1)}}
+@media (max-width:420px){.ki-cols{gap:var(--sp-2)}.ki-col{padding:var(--sp-2)}}
 /* רשימת ההנחות — שורה לכל תלמיד: השם והשיעור · ההנחה השנתית ואחוזה; ומתחת פירוט לכל תקופה בשכר אחר */
 .disc-list{display:flex;flex-direction:column}
 .disc-row{padding:var(--sp-3) 0;border-bottom:1px solid var(--border)}
