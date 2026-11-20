@@ -24,12 +24,13 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('students')}<div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">לפי התלמידים<small>עד החודש</small></span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('due')}<div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">לפי החובה<small>עד החודש</small></span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsAhead')}<div class="ring" id="dk-ring6"><b id="dk-pct6">—</b></div><span class="kpi-l">לפי התלמידים<small>עד החודש · כולל מראש</small></span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueAhead')}<div class="ring" id="dk-ring7"><b id="dk-pct7">—</b></div><span class="kpi-l">לפי החובה<small>עד החודש · כולל מראש</small></span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsYear')}<div class="ring" id="dk-ring4"><b id="dk-pct4">—</b></div><span class="kpi-l">לפי התלמידים<small>עד סוף השנה</small></span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueYear')}<div class="ring" id="dk-ring5"><b id="dk-pct5">—</b></div><span class="kpi-l">לפי החובה<small>עד סוף השנה</small></span></div>
+    <div class="kpi-col-h">לפי התלמידים</div><div class="kpi-col-h">לפי החובה</div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('students')}<div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">חודש נוכחי</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('due')}<div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">חודש נוכחי</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsAhead')}<div class="ring" id="dk-ring6"><b id="dk-pct6">—</b></div><span class="kpi-l">סליקה בפועל</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueAhead')}<div class="ring" id="dk-ring7"><b id="dk-pct7">—</b></div><span class="kpi-l">סליקה בפועל</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsYear')}<div class="ring" id="dk-ring4"><b id="dk-pct4">—</b></div><span class="kpi-l">תחזית שנתית</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueYear')}<div class="ring" id="dk-ring5"><b id="dk-pct5">—</b></div><span class="kpi-l">תחזית שנתית</span></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -207,9 +208,11 @@ function renderDash(){
   function paidTo(s,lim){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=lim)p+=parseFloat(t.amount)||0;});return p;}
   // dl — עד איזה חודש החובה, pl — עד איזה חודש התשלומים.
   // כל תשלום נספר במלואו — גם עודף מעבר לשנה כולה, כמו תרומה (ההעברה ליתרת זכות בשנה הבאה — ידנית), ועודף של תלמיד אחד מכסה על חוב של אחר.
-  // ב«עד החודש» — חוץ מהחלק שמכסה מראש את החודשים הבאים של השנה: לכל תלמיד יורד החלק שבין החובה עד החודש לחובה לכל השנה.
+  // ב«חודש נוכחי» — לכל תלמיד עד גובה החובה שעד החודש, ועודף מעבר לשנה כולה — בחלקי החודשים שחלפו (עודף/12 לכל חודש).
   // כך באוגוסט — כשאין עוד חודשים הבאים — שלושת הזוגות מגיעים לאותה תוצאה.
   function owed(s,rate,lim){var d=prevDebt(s);YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=lim&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});return d;}
+  // החודשים שחלפו בשנת הלימודים, כולל הנוכחי (באוגוסט — 12; בשנה שהסתיימה — 12).
+  var elapsed=YEAR_MONTHS.filter(function(m){return acadMonthKey(S.DASH_YEAR,m)<=nowK;}).length;
   function cover(rate,dl,pl,ahead){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
@@ -217,14 +220,15 @@ function renderDash(){
       if(!slHasTuition(s)){cov+=p;return;}
       var d=owed(s,rate,dl);due+=d;
       if(ahead){cov+=p;return;}
-      var fut=owed(s,rate,endK)-d;
-      cov+=p-Math.min(Math.max(0,p-d),fut);
+      // חודש נוכחי — מה ששולם עד היום, עד גובה החובה שעד היום; ועודף מעבר לשנה כולה — מתחלק ל-12, ונספרים החלקים של החודשים שחלפו.
+      var yr=owed(s,rate,endK);
+      cov+=Math.min(p,d)+Math.max(0,p-yr)*elapsed/12;
     });
     return {due:due,cov:Math.round(cov*100)/100};
   }
   var byDef=function(s){return slDefaultTuition(s);},byCard=function(s,k){return studentTuition(s,k);};
-  [['2',byDef,nowK,nowK,'עד החודש'],['3',byCard,nowK,nowK,'עד החודש'],['6',byDef,nowK,endK,'עד החודש, כולל תשלומים מראש'],['7',byCard,nowK,endK,'עד החודש, כולל תשלומים מראש'],
-   ['4',byDef,endK,endK,'עד סוף השנה'],['5',byCard,endK,endK,'עד סוף השנה']].forEach(function(r){
+  [['2',byDef,nowK,nowK,'חודש נוכחי'],['3',byCard,nowK,nowK,'חודש נוכחי'],['6',byDef,nowK,endK,'סליקה בפועל'],['7',byCard,nowK,endK,'סליקה בפועל'],
+   ['4',byDef,endK,endK,'תחזית שנתית'],['5',byCard,endK,endK,'תחזית שנתית']].forEach(function(r){
     var c=cover(r[1],r[2],r[3],r[2]!==r[3]||r[2]===endK),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
     paintRing('dk-ring'+r[0],'dk-pct'+r[0],pctNum(c.cov,c.due),c.due?(stu?'נגבה':'שולם')+' ‎'+fmt(c.cov)+'‎ מתוך ‎'+fmt(c.due)+'‎ '+r[3]+(stu?', לפי שכר ברירת המחדל':', לפי השכר שבכרטיס'):'אין עדיין חודשים שחלפו','אחוז הגבייה '+r[3]);
   });
