@@ -13,10 +13,14 @@ import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
 var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+'׳';});
 
-// כפתור המידע שבפינת הקובייה — פותח את ההסבר שלה (KPI_INFO).
-function kpiInfo(k){return '<button type="button" class="kpi-info" data-act="kpi-info" data-k="'+k+'" aria-label="מה מחושב כאן — '+esc(KPI_INFO[k].t)+'">'+icon('info')+'</button>';}
+// כרטיס לכל בסיס — לפי התלמידים · לפי החובה: הכותרת וכפתור המידע שלה, ושלוש טבעות זו לצד זו (חודש נוכחי · סליקה בפועל · תחזית שנתית).
+var KPI_RINGS=[['חודש נוכחי',0],['סליקה בפועל',1],['תחזית שנתית',2]];
+function kpiCardHTML(k,ids){var x=KPI_INFO[k];
+  return '<div class="kpi-card"><div class="kpi-card-h"><span>'+esc(x.t)+'</span><button type="button" class="kpi-info" data-act="kpi-info" data-k="'+k+'" aria-label="מה מחושב כאן — '+esc(x.t)+'">'+icon('info')+'</button></div>'+
+    '<div class="kpi-trio">'+KPI_RINGS.map(function(r){var id=ids[r[1]];return '<div class="kpi-mini"><div class="ring" id="dk-ring'+id+'"><b id="dk-pct'+id+'">—</b></div><span class="kpi-l">'+r[0]+'</span></div>';}).join('')+'</div></div>';}
+// ההסבר — זהה בשני הכרטיסים מילה במילה, חוץ מהבסיס (x.basis).
 function openKpiInfo(k){var x=KPI_INFO[k];if(!x)return;
-  openModal(x.t,'<dl class="kpi-info-b">'+[['החובה',x.due],['התשלומים',x.pay],['איך נספר',x.how]].map(function(r){return '<dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd>';}).join('')+'</dl>','',icon('info'));}
+  openModal(x.t,'<dl class="kpi-info-b">'+x.rows.map(function(r){return '<dt>'+esc(r[0])+'</dt><dd>'+esc(r[1])+'</dd>';}).join('')+'</dl>','',icon('info'));}
 
 function screenDashHTML() {
   return `
@@ -24,14 +28,8 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
-    <div class="kpi-col-h">לפי התלמידים</div><div class="kpi-col-h">לפי החובה</div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('students')}<div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">חודש נוכחי</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('due')}<div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">חודש נוכחי</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsAhead')}<div class="ring" id="dk-ring6"><b id="dk-pct6">—</b></div><span class="kpi-l">סליקה בפועל</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueAhead')}<div class="ring" id="dk-ring7"><b id="dk-pct7">—</b></div><span class="kpi-l">סליקה בפועל</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsYear')}<div class="ring" id="dk-ring4"><b id="dk-pct4">—</b></div><span class="kpi-l">תחזית שנתית</span></div>
-    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueYear')}<div class="ring" id="dk-ring5"><b id="dk-pct5">—</b></div><span class="kpi-l">תחזית שנתית</span></div>
   </div>
+  <div class="kpi-cards">${kpiCardHTML('students',[2,6,4])}${kpiCardHTML('due',[3,7,5])}</div>
   <div class="card">
     <div class="card-hdr">
       <h3>לוח שנתי</h3>

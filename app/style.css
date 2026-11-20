@@ -102,21 +102,22 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* «השלמת חוב בוגרים» ברשימת התלמידים — מסגרת מקווקוות: כרטיס אחד ולא תלמידים */
 .sc-grp-free{border:1.5px dashed var(--brand-fill)}
 /* קוביות הסיכום בראש לוח הבקרה */
-.dash-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
+.dash-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-4)}
 /* זוגות בכל רוחב: הסכומים, ומתחתם שלוש שורות — עד החודש · עד החודש כולל מראש · עד סוף השנה; לפי התלמידים מימין ולפי החובה משמאל */
-.kpi-l small{display:block;font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
 /* כותרת לכל טור של טבעות — לפי התלמידים · לפי החובה */
-.kpi-col-h{text-align:center;font-size:var(--fs-3);font-weight:800;color:var(--brand-ink);margin-top:var(--sp-3)}
+.kpi-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6)}
+@media (max-width:760px){.kpi-cards{grid-template-columns:1fr}}
+.kpi-card{background:var(--card);border-radius:var(--radius);padding:var(--sp-5) var(--sp-4)}
+.kpi-card-h{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);font-size:var(--fs-3);font-weight:800;color:var(--brand-ink);margin-bottom:var(--sp-4)}
+.kpi-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-2)}
+.kpi-mini{display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);text-align:center;min-width:0}
 .kpi{background:var(--card);border-radius:var(--radius);padding:var(--sp-5);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--sp-1);min-width:0;container-type:inline-size}
 /* הסכום מתכווץ לרוחב הקובייה — בטלפון קטן ונכנס, ובמסך רחב בגודלו המלא */
 .kpi-n{font-size:clamp(var(--fs-3),14cqi,var(--fs-5));font-weight:800;color:var(--brand-ink);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi-l{font-size:var(--fs-2);font-weight:600;color:var(--text-2)}
 /* טבעת האחוז — מתמלאת מימין לשמאל (נגד כיוון השעון), בצבע השלב */
-.kpi-ring{align-items:center;justify-content:center;padding:var(--sp-3);gap:var(--sp-2)}
-.kpi-ring .kpi-l{text-align:center}
-/* כפתור המידע — בפינה העליונה של הקובייה, קטן ועמום; ההסבר בחלון */
-.kpi-ring{position:relative}
-.kpi-info{position:absolute;top:var(--sp-2);inset-inline-end:var(--sp-2);width:28px;height:28px;display:grid;place-items:center;border:0;background:none;color:var(--text-3);border-radius:50%;cursor:pointer;padding:0}
+/* כפתור המידע — ליד כותרת הכרטיס, קטן ועמום; ההסבר בחלון */
+.kpi-info{width:28px;height:28px;display:grid;place-items:center;border:0;background:none;color:var(--text-3);border-radius:50%;cursor:pointer;padding:0}
 .kpi-info .ico{width:17px;height:17px}
 .kpi-info:hover,.kpi-info:focus-visible{background:var(--brand-soft);color:var(--brand-ink)}
 .kpi-info-b{margin:0;line-height:1.6;color:var(--text-2)}
