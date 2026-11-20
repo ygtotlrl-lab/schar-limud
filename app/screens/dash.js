@@ -20,7 +20,7 @@ function screenDashHTML() {
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
     <div class="kpi kpi-ring"><div class="ring" id="dk-ring"><b id="dk-pct">—</b></div><span class="kpi-l">כל השנה</span></div>
-    <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">עד החודש</span></div>
+    <div class="kpi kpi-ring"><div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">לפי התלמידים</span></div>
     <div class="kpi kpi-ring"><div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">לפי החובה</span></div>
   </div>
   <div class="card">
@@ -196,7 +196,7 @@ function renderDash(){
   document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
   // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
   paintRing('dk-ring','dk-pct',pctNum(grand,grandTgt),ofTargetTitle(grand,grandTgt),'אחוז גבייה שנתי');
-  // עד החודש — אחוז משוקלל: סך הנגבה בחודשים שחלפו, כולל הנוכחי, מתוך סך היעד שלהם; חודש בלי יעד אינו נספר.
+  // לפי התלמידים — אחוז משוקלל עד החודש: סך הנגבה בחודשים שחלפו, כולל הנוכחי, מתוך סך היעד שלהם; חודש בלי יעד אינו נספר.
   // כך בשנה שהסתיימה הוא שווה בדיוק ל«כל השנה», וחודש קטן אינו שוקל כמו חודש מלא.
   var nowK=dayToday().slice(0,7),gotTD=0,tgtTD=0;
   YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0){gotTD+=colT[m]||0;tgtTD+=tgt[m];}});
