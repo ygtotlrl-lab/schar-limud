@@ -106,8 +106,8 @@ var MSG_VALUE_EXISTS = 'הערך כבר קיים ברשימה';
 
 var MSG_ITEM_SAVE_FAIL = 'השמירה במכשיר נכשלה — הפריט לא נוסף';
 
-var MSG_CREDIT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות';
-var MSG_DEBT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום חוב שעבר משנה קודמת';
+var MSG_CREDIT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום יתרת זכות שעברה משנה קודמת';
+var MSG_DEBT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום יתרת חובה שעברה משנה קודמת';
 
 var MSG_ITEM_MISSING = 'הפריט לא נמצא';
 
@@ -173,9 +173,21 @@ var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 
 // יתרת זכות אינה חוב שלילי ואינה מקוזזת; זיכוי מיתרה מקטין חוב אך אינו כסף שהתקבל
 // הסיווג לפי המחרוזת שעל התנועה ולא לפי קיום הפריט ברשימה — מחיקת הפריט אינה משנה סיווג היסטורי
-var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
+var CREDIT_METHOD='יתרת זכות שעברה משנה קודמת';
 // המראה של הזיכוי — חוב שעבר משנה קודמת: תנועה שמוסיפה לחובה ואינה כסף שהתקבל; סעיף מערכת באדום, ונרשם כמו הזיכוי (בדרך כלל ב-1.9).
-var DEBT_METHOD='חוב שעבר משנה קודמת';
+var DEBT_METHOD='יתרת חובה שעברה משנה קודמת';
+// השמות הקודמים של שני הסעיפים — נקראים כמותם, לתנועה שנרשמה במכשיר שטרם התעדכן.
+var CREDIT_METHOD_OLD='זוכה על חשבון יתרת זכות';
+var DEBT_METHOD_OLD='חוב שעבר משנה קודמת';
+// ארבע השורות של היתרות שעברו — בכרטיס, באותו נוסח כמו בהסבר שבלוח הבקרה; ובסוף שנה שנגמרה — היתרה שנשארה.
+var BAL_CREDIT_IN=CREDIT_METHOD;
+var BAL_DEBT_IN=DEBT_METHOD;
+var BAL_DEBT_OUT='יתרת חובה שעברה לשנה הבאה';
+var BAL_CREDIT_OUT='יתרת זכות שעברה לשנה הבאה';
+var BAL_CREDIT='יתרת זכות';
+var BAL_DEBT='יתרת חובה';
+var BAL_SPREAD='נפרס על החודשים';
+var BAL_MOVED='עבר לשנה הבאה';
 
 // מפתחות שאסור להם להגיע לאחסון המקומי; נאכפת במשיכה, בכתיבה המקומית ובשער הדיסק
 // סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
@@ -187,7 +199,7 @@ var TTL_TXN_EDIT = 'עריכת תשלום — ';
 var MSG_STUDENT_ADDED = 'תלמיד נוסף';
 var MSG_TXN_SAVED = 'תשלום נשמר';
 
-export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_NAME, CLS_PICK, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, MSG_DEBT_ITEM_LOCKED, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
+export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_NAME, CLS_PICK, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, CREDIT_METHOD_OLD, DEBT_METHOD_OLD, BAL_CREDIT_IN, BAL_DEBT_IN, BAL_DEBT_OUT, BAL_CREDIT_OUT, BAL_CREDIT, BAL_DEBT, BAL_SPREAD, BAL_MOVED, MSG_DEBT_ITEM_LOCKED, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
          MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,

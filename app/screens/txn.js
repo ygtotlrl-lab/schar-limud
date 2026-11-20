@@ -97,8 +97,8 @@ function txnMethodHint(){
   if(!sel||!h)return;
   var on=isCreditValue(sel.value),db=isDebtValue(sel.value);
   h.classList.toggle('hidden',!on&&!db);
-  if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('credit'))+'ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
-  else if(db)h.innerHTML='<span class="debt-mark">'+stIcon(icon('debt'))+'חוב שעבר משנה קודמת</span> — התנועה תוסיף לחוב התלמיד בשנה זו ו<b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('repeat'))+esc(CREDIT_METHOD)+'</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  else if(db)h.innerHTML='<span class="debt-mark">'+stIcon(icon('repeatBack'))+esc(DEBT_METHOD)+'</span> — התנועה תוסיף לחוב התלמיד בשנה זו ו<b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 
 // ── תשלומים — רישום, יומן ומחיקה רכה ──

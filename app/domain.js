@@ -9,7 +9,7 @@ import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { periodsEngine } from '../core/periods.js';
-import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_TUITION_KEY, CREDIT_METHOD, CREDIT_METHOD_OLD, DEBT_METHOD, DEBT_METHOD_OLD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_NONE, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -361,12 +361,12 @@ function studentTuition(s,k){
 
 // ── יתרת זכות וזיכוי מיתרה ──
 
-function isCreditValue(v){return String(v==null?'':v).trim()===CREDIT_METHOD;}
+function isCreditValue(v){v=String(v==null?'':v).trim();return v===CREDIT_METHOD||v===CREDIT_METHOD_OLD;}
 
 function isCreditTxn(t){return !!t&&isCreditValue(t.payment_method);}
 
 // המראה של הזיכוי — חוב שעבר משנה קודמת: לפי המחרוזת שעל התנועה, כמו הזיכוי.
-function isDebtValue(v){return String(v==null?'':v).trim()===DEBT_METHOD;}
+function isDebtValue(v){v=String(v==null?'':v).trim();return v===DEBT_METHOD||v===DEBT_METHOD_OLD;}
 function isDebtTxn(t){return !!t&&isDebtValue(t.payment_method);}
 // החוב שעבר לשנה — סך תנועות החוב של התלמיד בשנת הלימודים.
 // הזיכוי שעבר לשנה — סך תנועות הזיכוי של התלמיד בשנת הלימודים; ובמראה — מה שעבר ממנה לשנה הבאה (תנועות השנה הבאה) יוצא מהשנה החולפת.
@@ -540,8 +540,8 @@ function calcDistribution(sid,year){
 
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
 function txnAmountHTML(t){
-  if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">'+stIcon(icon('credit'))+'&#8362;'+fmt(t.amount)+'</span>';
-  if(isDebtTxn(t))return'<span class="amt-debt" title="חוב שעבר משנה קודמת — מוסיף לחובה ואינו כסף שהתקבל">'+stIcon(icon('debt'))+'&#8362;'+fmt(t.amount)+'</span>';
+  if(isCreditTxn(t))return'<span class="amt-credit" title="'+CREDIT_METHOD+' — אינו כסף שהתקבל">'+stIcon(icon('repeat'))+'&#8362;'+fmt(t.amount)+'</span>';
+  if(isDebtTxn(t))return'<span class="amt-debt" title="'+DEBT_METHOD+' — מוסיפה לחובה ואינה כסף שהתקבל">'+stIcon(icon('repeatBack'))+'&#8362;'+fmt(t.amount)+'</span>';
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 

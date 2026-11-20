@@ -309,6 +309,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .acc-body{display:none;padding:var(--sp-6)}
 .acc-body.open{display:block}
 .credit-note{background:var(--creditl);border:1px solid var(--credit);color:var(--credit);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5);font-size:var(--fs-3);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-5)}
+.credit-note.debt-note{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
 .credit-sub{font-size:var(--fs-2);color:var(--text-3);margin-top:var(--sp-3);padding:0 var(--sp-2);line-height:var(--lh-3)}
 /* ── רשימת התלמידים ──
    קבוצה לכל שיעור באזור לבן; מתחת לקו «טופלו החודש» האזורים שקופים למחצה והשורות שקטות. */

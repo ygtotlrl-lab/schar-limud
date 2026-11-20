@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { SNAP_APP, SNAP_CARD, SNAP_TXNS, SNAP_TXN_MAX, SNAP_YEAR, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { BAL_CREDIT, BAL_CREDIT_IN, BAL_CREDIT_OUT, BAL_DEBT, BAL_DEBT_IN, BAL_DEBT_OUT, BAL_MOVED, BAL_SPREAD, SNAP_APP, SNAP_CARD, SNAP_TXNS, SNAP_TXN_MAX, SNAP_YEAR, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM,
          MSG_NAME_REQUIRED,
@@ -128,7 +128,7 @@ function studentRowHTML(s,arch){
   return '<div class="stu-row'+(hd?' is-handled':'')+'">'+lead+'<button class="stu-open" data-act="student-open" data-id="'+esc(s.client_id)+'">'+
     '<span class="stu-txt"><span class="stu-name"><span class="student-name">'+esc(s.name)+'</span>'+pendStuTag(s)+'</span>'+
     (arch?'':stuMonthState(d)+progHTML(td))+'</span>'+
-    (cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">&#128142; &#8362;'+fmt(cr)+'</span>':'')+'</button>'+
+    (cr>0?'<span class="badge blue" title="יתרת זכות — שולם מראש, אינו מקוזז מהחוב">'+stIcon(icon('repeat'))+'&#8362;'+fmt(cr)+'</span>':'')+'</button>'+
     '</div>';
 }
 
@@ -379,10 +379,10 @@ function annualHTML(s,year,noTx){
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
   if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist,noTx);
   // זיכוי שעבר משנה קודמת — המראה של החוב: שורה ראשונה בכחול, והסכום בעמודת «שולם»; הוא נפרס ראשון על החודשים ונכלל בתשלומים שלהם, ולכן אינו נוסף לסה״כ.
-  if(dist.creditIn)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('credit'))+'זיכוי שעבר משנה קודמת</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditIn)+'</td><td class="bal-cell credit-in">נפרס על החודשים</td></tr>';
+  if(dist.creditIn)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('repeat'))+BAL_CREDIT_IN+'</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditIn)+'</td><td class="bal-cell credit-in">'+BAL_SPREAD+'</td></tr>';
   // חוב שעבר משנה קודמת — שורה ראשונה באדום: חובה שהתשלומים מכסים לפני החודשים (dist.debt).
   if(dist.debt){var db=dist.debt,dbb=db.paid-db.req;tR+=db.req;tP+=db.paid;
-    rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('debt'))+'חוב שעבר משנה קודמת</td><td class="req-cell">'+fmt(db.req)+'</td><td class="paid-cell">'+fmt(db.paid)+'</td><td class="bal-cell '+(dbb>=0?'amt-ok':'amt-bad')+'">'+(dbb>=0?'+':'')+fmt(dbb)+'</td></tr>';}
+    rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('repeatBack'))+BAL_DEBT_IN+'</td><td class="req-cell">'+fmt(db.req)+'</td><td class="paid-cell">'+fmt(db.paid)+'</td><td class="bal-cell '+(dbb>=0?'amt-ok':'amt-bad')+'">'+(dbb>=0?'+':'')+fmt(dbb)+'</td></tr>';}
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:studentTuition(s,acadMonthKey(year,m)),paid:0};
     if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(year,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
@@ -390,15 +390,18 @@ function annualHTML(s,year,noTx){
     rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   // המראה של השורות הראשונות — בסוף השנה, מה שעבר לשנה הבאה: חוב — יוצא מהדרישה; יתרת זכות — שורה בכחול, ויוצאת מהעודף.
-  if(dist.debtOut){tR-=dist.debtOut;rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('debt'))+'חוב שעבר לשנה הבאה</td><td class="req-cell">&#8722;'+fmt(dist.debtOut)+'</td><td class="paid-cell">—</td><td class="bal-cell">+'+fmt(dist.debtOut)+'</td></tr>';}
+  if(dist.debtOut){tR-=dist.debtOut;rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('repeatBack'))+BAL_DEBT_OUT+'</td><td class="req-cell">&#8722;'+fmt(dist.debtOut)+'</td><td class="paid-cell">—</td><td class="bal-cell">+'+fmt(dist.debtOut)+'</td></tr>';}
   // יתרת הזכות — כמו השורה של הזיכוי שעבר: הסכום בעמודת «שולם», בלי להיכנס לסה״כ — כי העודף אינו נכנס לסה״כ ממילא; היתרה שנשארה (dist.credit) — בלעדיו.
-  if(dist.creditOut)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('credit'))+'יתרת זכות שעברה לשנה הבאה</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditOut)+'</td><td class="bal-cell credit-in">עבר לשנה הבאה</td></tr>';
+  if(dist.creditOut)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('repeat'))+BAL_CREDIT_OUT+'</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditOut)+'</td><td class="bal-cell credit-in">'+BAL_MOVED+'</td></tr>';
   var tb=tP-tR,tf='<tr class="sum-row"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="bal-cell '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   var html='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+tf+'</tfoot></table></div>';
   // יתרת זכות מוצגת בשורה נפרדת ובצבע נפרד — אינה נכנסת ל«סה״כ שולם» ואינה מקזזת את שורת החוב.
   var cr=distCredit(dist);
-  if(cr>0)html+='<div class="credit-note"><span>'+stIcon(icon('credit'))+'יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
-    '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'»; וחוב שנשאר — באמצעי «'+esc(DEBT_METHOD)+'».</div>';
+  if(cr>0)html+='<div class="credit-note"><span>'+stIcon(icon('repeat'))+BAL_CREDIT+'</span><span>&#8362;'+fmt(cr)+'</span></div>'+
+    '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. להעברתה לשנה הבאה — רשום בשנה הבאה תנועה באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
+  // המראה — יתרת חובה: רק בשנה שנגמרה, כשנשאר חוב שלא עבר לשנה הבאה; בשנה הנוכחית היתרה השלילית היא חודשים שטרם הגיעו.
+  if(!cur&&tb<0)html+='<div class="credit-note debt-note"><span>'+stIcon(icon('repeatBack'))+BAL_DEBT+'</span><span>&#8362;'+fmt(-tb)+'</span></div>'+
+    '<div class="credit-sub">נשאר לתשלום מהשנה הזו. להעברתה לשנה הבאה — רשום בשנה הבאה תנועה באמצעי «'+esc(DEBT_METHOD)+'».</div>';
   if(noTx)return html;
   var yt=yearTxns(s,year);
   html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
