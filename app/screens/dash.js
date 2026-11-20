@@ -190,31 +190,37 @@ function renderDash(){
   var yearCnt=S.STUDENTS.filter(function(s){return slHasTuition(s)&&YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
-  // שלוש הקוביות — אותם נגבה, יעד ואחוז של עמודת הסה״כ, למעלה.
+  // חוב משנים קודמות (card_settings.prev_debt) — נכנס לשנה הנוכחית בלבד: מוסיף ליעד השנתי ולחובה שעד החודש בשתי הטבעות.
+  var curYear=S.DASH_YEAR===acadYearOf(dayToday());
+  function prevDebt(s){return curYear?(parseInt((s.card_settings||{}).prev_debt,10)||0):0;}
+  var debtSum=S.STUDENTS.reduce(function(a,s){return a+(slHasTuition(s)?prevDebt(s):0);},0),yearTgt=grandTgt+debtSum;
+  // שלוש הקוביות — הנגבה של עמודת הסה״כ, והיעד — של הטבלה ועוד החוב משנים קודמות.
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
-  document.getElementById('dk-tgt').textContent=grandTgt?'₪'+fmt(grandTgt):'—';
+  document.getElementById('dk-tgt').textContent=yearTgt?'₪'+fmt(yearTgt):'—';
   // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
-  paintRing('dk-ring','dk-pct',pctNum(grand,grandTgt),ofTargetTitle(grand,grandTgt),'אחוז גבייה שנתי');
-  // לפי התלמידים — אחוז משוקלל עד החודש: סך הנגבה בחודשים שחלפו, כולל הנוכחי, מתוך סך היעד שלהם; חודש בלי יעד אינו נספר.
-  // כך בשנה שהסתיימה הוא שווה בדיוק ל«כל השנה», וחודש קטן אינו שוקל כמו חודש מלא.
-  var nowK=dayToday().slice(0,7),gotTD=0,tgtTD=0;
-  YEAR_MONTHS.forEach(function(m){if(acadMonthKey(S.DASH_YEAR,m)<=nowK&&tgt[m]>0){gotTD+=colT[m]||0;tgtTD+=tgt[m];}});
-  gotTD=Math.round(gotTD*100)/100;
-  paintRing('dk-ring2','dk-pct2',pctNum(gotTD,tgtTD),tgtTD?ofTargetTitle(gotTD,tgtTD)+' עד החודש':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
-  // לפי החובה — לכל תלמיד: מה ששילם השנה עד סוף החודש הנוכחי, כולל זיכוי מיתרה, עד גובה החובה שלו באותם חודשים לפי השכר שבכרטיס (studentTuition).
-  // חוב מחודשים קודמים נשאר חוב, ותשלום מראש אינו נספר ואינו מכסה על תלמיד אחר.
-  var dueTD=0,covTD=0;
-  S.STUDENTS.forEach(function(s){
-    if(!slHasTuition(s))return;
-    var due=0;
-    YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=nowK&&studentInMonth(s,S.DASH_YEAR,m))due+=studentTuition(s,k);});
-    if(!due)return;
-    var paid=0;
-    S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=nowK)paid+=parseFloat(t.amount)||0;});
-    dueTD+=due;covTD+=Math.min(paid,due);
-  });
-  covTD=Math.round(covTD*100)/100;
-  paintRing('dk-ring3','dk-pct3',pctNum(covTD,dueTD),dueTD?'שולם ‎'+fmt(covTD)+'‎ מתוך החובה ‎'+fmt(dueTD)+'‎ עד החודש, לפי השכר שבכרטיס':'אין עדיין חודשים שחלפו','אחוז החובה ששולם');
+  paintRing('dk-ring','dk-pct',pctNum(grand,yearTgt),ofTargetTitle(grand,yearTgt)+(debtSum?' (כולל חוב משנים קודמות ‎'+fmt(debtSum)+'‎)':''),'אחוז גבייה שנתי');
+  // שתי הטבעות שעד החודש — לכל תלמיד: החובה מתחילת השנה ועד סוף החודש הנוכחי, ועוד החוב משנים קודמות; והתשלומים באותו טווח, כולל זיכוי מיתרה,
+  // נספרים עד גובה החובה שלו בלבד — תשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר. ההבדל ביניהן — השכר:
+  // «לפי התלמידים» — שכר ברירת המחדל של השיעור; «לפי החובה» — השכר שבכרטיס (studentTuition).
+  var nowK=dayToday().slice(0,7);
+  function paidTD(s){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=nowK)p+=parseFloat(t.amount)||0;});return p;}
+  function toDate(rate){
+    var due=0,cov=0;
+    S.STUDENTS.forEach(function(s){
+      if(!slHasTuition(s))return;
+      var d=prevDebt(s);
+      YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=nowK&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
+      if(!d)return;
+      due+=d;cov+=Math.min(paidTD(s),d);
+    });
+    return {due:due,cov:Math.round(cov*100)/100};
+  }
+  // «השלמת חוב בוגרים» — גביית חובות ישנים: נכנסת לנגבה של «לפי התלמידים» ולא ליעד, כמו בטבלה.
+  var grad=S.STUDENTS.filter(function(s){return !slHasTuition(s);}).reduce(function(a,s){return a+paidTD(s);},0);
+  var byStu=toDate(function(s){return slDefaultTuition(s);});byStu.cov=Math.round((byStu.cov+grad)*100)/100;
+  paintRing('dk-ring2','dk-pct2',pctNum(byStu.cov,byStu.due),byStu.due?'נגבה ‎'+fmt(byStu.cov)+'‎ מתוך ‎'+fmt(byStu.due)+'‎ עד החודש, לפי שכר ברירת המחדל':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
+  var byDue=toDate(function(s,k){return studentTuition(s,k);});
+  paintRing('dk-ring3','dk-pct3',pctNum(byDue.cov,byDue.due),byDue.due?'שולם ‎'+fmt(byDue.cov)+'‎ מתוך החובה ‎'+fmt(byDue.due)+'‎ עד החודש, לפי השכר שבכרטיס':'אין עדיין חודשים שחלפו','אחוז החובה ששולם');
 
   // הגרף — אחוז הגבייה של כל חודש, והקו המקווקו — יעד הגבייה (90%); מעל העמודה — האחוז, ומתחתיו הסכום שנגבה, מקוצר.
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
