@@ -458,5 +458,3 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .rp-part{display:flex;align-items:center;justify-content:center;gap:var(--sp-4);border:0;border-radius:var(--r-7);background:var(--brand-fill);color:var(--on-brand);padding:var(--sp-5);font:inherit;font-size:var(--fs-4);font-weight:800;cursor:pointer}
 .rp-part .ico{width:20px;height:20px;margin:0}
 .rp-part.is-done{background:var(--brand-soft);color:var(--brand-ink)}
-/* שמות שני סעיפי המערכת ארוכים — ב«קבלה» שלוש שורות ולא שתיים, כך שהשם נקרא במלואו */
-.rc.credit .rc-end>span,.rc.debt .rc-end>span{-webkit-line-clamp:3}

@@ -3,7 +3,7 @@ import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+import { BAL_CREDIT, BAL_DEBT, CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL, TTL_TXN_EDIT } from '../constants.js';
@@ -74,8 +74,12 @@ function methodGrid(target,cur){
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())ml.push(CREDIT_METHOD);
   if(!hasDebtItem())ml.push(DEBT_METHOD);
-  return methodGridHTML({target:target,list:ml,cur:cur,label:'אמצעי התשלום',ico:function(l){return icon(methodIco(l));}});
+  // שני סעיפי המערכת — בשם הקצר ברשת (BAL_CREDIT · BAL_DEBT), כמו שאר האמצעים; הערך שנשמר — השם המלא.
+  return methodGridHTML({target:target,list:ml,cur:cur,label:'אמצעי התשלום',ico:function(l){return icon(methodIco(l));}})
+    .replace('<span>'+esc(CREDIT_METHOD)+'</span>','<span>'+BAL_CREDIT+'</span>').replace('<span>'+esc(DEBT_METHOD)+'</span>','<span>'+BAL_DEBT+'</span>');
 }
+// השם שמוצג לאמצעי — הקצר לשני סעיפי המערכת, ושאר האמצעים כשמם; לרשת ול«קבלה».
+function methodShort(m){return isCreditValue(m)?BAL_CREDIT:isDebtValue(m)?BAL_DEBT:m;}
 function txnMethodChips(){
   document.getElementById('txn-method-chips').innerHTML=methodGrid('txn-method',document.getElementById('txn-method').value);
 }
@@ -139,7 +143,7 @@ function txnListHTML(txns,withName){
     var st=withName?S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);}):null;
     var who=withName?'<b><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+'</b>'+(t.note?'<small>'+esc(t.note)+'</small>':'')
                     :'<small>'+(t.note?esc(t.note):'')+'</small>'+pendTxnTag(t);
-    return {day:txnDay(t.txn_date),amt:txnAmountHTML(t),who:who,method:meth,ico:icon(methodIco(meth)),dashed:cr||db,cls:cr?'credit':db?'debt':'',
+    return {day:txnDay(t.txn_date),amt:txnAmountHTML(t),who:who,method:methodShort(meth),ico:icon(methodIco(meth)),dashed:cr||db,cls:cr?'credit':db?'debt':'',
       tail:'<button class="txn-x" data-act="txn-edit" data-id="'+esc(t.client_id)+'" aria-label="עריכת התשלום" title="עריכת התשלום">'+icon('edit')+'</button>'};
   }));
 }
