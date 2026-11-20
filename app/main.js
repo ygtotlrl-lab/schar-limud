@@ -12,6 +12,7 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, 
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureSystemMethods, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { snapSharePart } from './snap.js';
 import { discShare, openDiscList, openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
@@ -206,6 +207,7 @@ var DOM_ACTIONS = {
   'disc-list':               function () { openDiscList(); },
   'disc-share':              function () { discShare(); },
   'sc-share':                function () { scShare(); },
+  'snap-part':               function (el) { snapSharePart(el); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },

@@ -450,3 +450,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .snap-card{margin:0;box-shadow:none;padding:var(--sp-5)}
 .snap .txn-x,.snap .credit-sub{display:none}
 .snap .table-scroll{overflow:visible}
+.snap-sub-t{font-size:var(--fs-4);font-weight:800;color:var(--text);margin:0 0 var(--sp-3)}
+.snap-foot{margin-top:var(--sp-4);text-align:center;font-size:var(--fs-2);font-weight:700;color:var(--text-3)}
+/* חלון השיתוף בחלקים — כפתור לכל חלק, כמו בדוח של יומן עבודה; שחלק שותף — בהיר ובסימון וי, ועדיין לחיץ */
+.rp-parts{display:flex;gap:var(--sp-4);flex-direction:column}
+.rp-part{display:flex;align-items:center;justify-content:center;gap:var(--sp-4);border:0;border-radius:var(--r-7);background:var(--brand-fill);color:var(--on-brand);padding:var(--sp-5);font:inherit;font-size:var(--fs-4);font-weight:800;cursor:pointer}
+.rp-part .ico{width:20px;height:20px;margin:0}
+.rp-part.is-done{background:var(--brand-soft);color:var(--brand-ink)}

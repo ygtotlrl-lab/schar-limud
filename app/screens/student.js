@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { SNAP_APP, SNAP_CARD, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { SNAP_APP, SNAP_CARD, SNAP_TXNS, SNAP_TXN_MAX, SNAP_YEAR, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM,
          MSG_NAME_REQUIRED,
@@ -293,10 +293,15 @@ function studentOpen(id){
   renderStudentPanel();
 }
 
-// שיתוף הכרטיס כתמונה — כמו בגיוס (snapShare): השם, השיעור והמחזור, והכרטיס השנתי של השנה הנוכחית עם תשלומיו; בלי כפתורי עריכה ובלי ההסבר הפנימי.
+// שיתוף הכרטיס כתמונות — כמו בגיוס (snapShare): הראשונה — מצב השנה (פירוט החודשים), ואחריה התשלומים, עד SNAP_TXN_MAX בתמונה;
+// בכל תמונה הכותרת — השם, השיעור והמחזור; בלי הגדרות התלמיד, בלי כפתורי עריכה ובלי ההסבר הפנימי.
 function scShare(){var s=scStudent();if(!s)return;var cy=acadYearOf(dayToday());
   var meta=[CLS_NAME[s.cls],cycleLabel(slCycleOf(s))].filter(Boolean).join(' • ');
-  snapShare('<div class="snap-hd"><small>'+esc(SNAP_APP)+' · '+esc(acadYearHeb(cy))+'</small><h2>'+esc(s.name)+'</h2>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</div><div class="card snap-card">'+annualHTML(s,cy)+'</div>',SNAP_CARD+' '+s.name);}
+  var hd=function(sub){return '<div class="snap-hd"><small>'+esc(SNAP_APP)+' · '+esc(acadYearHeb(cy))+'</small><h2>'+esc(s.name)+'</h2>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</div>'+(sub?'<div class="snap-sub-t">'+esc(sub)+'</div>':'');};
+  var pages=[hd(SNAP_YEAR)+'<div class="card snap-card">'+annualHTML(s,cy,true)+'</div>'];
+  var yt=yearTxns(s,cy);
+  for(var i=0;i<yt.length;i+=SNAP_TXN_MAX)pages.push(hd(SNAP_TXNS)+'<div class="card snap-card">'+txnListHTML(yt.slice(i,i+SNAP_TXN_MAX),false)+'</div>');
+  snapShare(pages,SNAP_CARD+' '+s.name,SNAP_CARD+' · '+s.name);}
 
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
 
@@ -368,10 +373,11 @@ function scYearsWithTxns(){
   return Object.keys(y).map(Number);
 }
 
-function annualHTML(s,year){
+// noTx — בלי חלק התשלומים (לשיתוף, שבו התשלומים בתמונות משלהם).
+function annualHTML(s,year,noTx){
   var cs=s.card_settings||{},cur=year===acadYearOf(dayToday());
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
-  if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist);
+  if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist,noTx);
   // זיכוי שעבר משנה קודמת — המראה של החוב: שורה ראשונה בכחול, והסכום בעמודת «שולם»; הוא נפרס ראשון על החודשים ונכלל בתשלומים שלהם, ולכן אינו נוסף לסה״כ.
   if(dist.creditIn)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('credit'))+'זיכוי שעבר משנה קודמת</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditIn)+'</td><td class="bal-cell credit-in">נפרס על החודשים</td></tr>';
   // חוב שעבר משנה קודמת — שורה ראשונה באדום: חובה שהתשלומים מכסים לפני החודשים (dist.debt).
@@ -393,20 +399,23 @@ function annualHTML(s,year){
   var cr=distCredit(dist);
   if(cr>0)html+='<div class="credit-note"><span>'+stIcon(icon('credit'))+'יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
     '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'»; וחוב שנשאר — באמצעי «'+esc(DEBT_METHOD)+'».</div>';
-  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
+  if(noTx)return html;
+  var yt=yearTxns(s,year);
   html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
   return html;
 }
 
 // בלי שכר חודשי — חודש ושולם בלבד, והתשלומים.
-function freeAnnualHTML(s,year,dist){
+function yearTxns(s,year){return slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);}
+function freeAnnualHTML(s,year,dist,noTx){
   var rows='',tP=0;
   YEAR_MONTHS.forEach(function(m){var p=(dist[m]&&dist[m].paid)||0;tP+=p;
     rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="paid-cell">'+(p?fmt(p):'—')+'</td></tr>';});
-  var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
-  return '<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>שולם</th></tr></thead><tbody>'+rows+'</tbody>'+
-    '<tfoot><tr class="sum-row"><td>סה"כ</td><td class="paid-cell">'+fmt(Math.round(tP*100)/100)+'</td></tr></tfoot></table></div>'+
-    '<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
+  var yt=yearTxns(s,year);
+  var tbl='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>שולם</th></tr></thead><tbody>'+rows+'</tbody>'+
+    '<tfoot><tr class="sum-row"><td>סה"כ</td><td class="paid-cell">'+fmt(Math.round(tP*100)/100)+'</td></tr></tfoot></table></div>';
+  if(noTx)return tbl;
+  return tbl+'<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
 }
 
 function renderScAnnual(){

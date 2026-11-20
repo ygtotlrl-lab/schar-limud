@@ -4,7 +4,7 @@ import { esc, openModal, toast } from '../../core/ui.js';
 import { MIRROR } from '../../core/mirror.js';
 import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
-import { CLS_NAME, DISCOUNT_GOAL, DISC_INSTEAD, DISC_NONE, DISC_TITLE, DISC_TOTAL, KPI_COLS, KPI_GEN, KPI_INFO, KPI_TODAY, KV_TABLE, SNAP_APP, SNAP_SHARE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
+import { CLS_NAME, DISCOUNT_GOAL, DISC_INSTEAD, DISC_NONE, DISC_TITLE, DISC_TOTAL, KPI_COLS, KPI_GEN, KPI_INFO, KPI_TODAY, KV_TABLE, SNAP_APP, SNAP_DISC_MAX, SNAP_SHARE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { snapShare } from '../snap.js';
@@ -47,18 +47,21 @@ function discData(){var rows=[],defT=0,perT=0;
   rows.sort(function(a,b){return b.disc-a.disc||String(a.s.name).localeCompare(String(b.s.name),'he');});
   return {rows:rows,defT:defT,perT:perT};}
 function discPct(a,b){return b>0?Math.round(a/b*1000)/10:0;}
-function openDiscList(){var D=discData(),tot=D.defT-D.perT;
-  var body=D.rows.length?'<div class="disc-list">'+D.rows.map(function(r){
-    return '<div class="disc-row"><div class="disc-h"><span class="disc-name">'+esc(r.s.name)+'<small>'+esc(CLS_NAME[r.s.cls]||'')+(r.parts.length===1?' · ₪'+fmt(r.parts[0].p)+' '+DISC_INSTEAD+' ₪'+fmt(r.parts[0].d):'')+'</small></span>'+
-      '<span class="disc-amt">₪'+fmt(r.disc)+'<small>'+discPct(r.disc,r.def)+'%</small></span></div>'+
-      (r.parts.length<2?'':r.parts.map(function(p){var rng=MONTH_HE_SHORT[p.from]+(p.to!==p.from?'–'+MONTH_HE_SHORT[p.to]:'');
-        return '<div class="disc-part"><span>'+rng+' · ₪'+fmt(p.p)+' '+DISC_INSTEAD+' ₪'+fmt(p.d)+'</span><span>'+fmt(p.d-p.p)+(p.n>1?' × '+p.n:'')+' = ₪'+fmt((p.d-p.p)*p.n)+'</span></div>';}).join(''))+'</div>';}).join('')+'</div>'+
-    '<div class="disc-tot"><span>'+DISC_TOTAL+'</span><span class="disc-amt '+(discPct(tot,D.defT)<DISCOUNT_GOAL?'amt-bad':'amt-ok')+'">₪'+fmt(tot)+'<small>'+discPct(tot,D.defT)+'% מתוך ₪'+fmt(D.defT)+'</small></span></div>'
-    :'<p class="empty">'+DISC_NONE+'</p>';
+function discRowHTML(r){
+  return '<div class="disc-row"><div class="disc-h"><span class="disc-name">'+esc(r.s.name)+'<small>'+esc(CLS_NAME[r.s.cls]||'')+(r.parts.length===1?' · ₪'+fmt(r.parts[0].p)+' '+DISC_INSTEAD+' ₪'+fmt(r.parts[0].d):'')+'</small></span>'+
+    '<span class="disc-amt">₪'+fmt(r.disc)+'<small>'+discPct(r.disc,r.def)+'%</small></span></div>'+
+    (r.parts.length<2?'':r.parts.map(function(p){var rng=MONTH_HE_SHORT[p.from]+(p.to!==p.from?'–'+MONTH_HE_SHORT[p.to]:'');
+      return '<div class="disc-part"><span>'+rng+' · ₪'+fmt(p.p)+' '+DISC_INSTEAD+' ₪'+fmt(p.d)+'</span><span>'+fmt(p.d-p.p)+(p.n>1?' × '+p.n:'')+' = ₪'+fmt((p.d-p.p)*p.n)+'</span></div>';}).join(''))+'</div>';}
+function discTotHTML(D){var tot=D.defT-D.perT;
+  return '<div class="disc-tot"><span>'+DISC_TOTAL+'</span><span class="disc-amt '+(discPct(tot,D.defT)<DISCOUNT_GOAL?'amt-bad':'amt-ok')+'">₪'+fmt(tot)+'<small>'+discPct(tot,D.defT)+'% מתוך ₪'+fmt(D.defT)+'</small></span></div>';}
+function openDiscList(){var D=discData();
+  var body=D.rows.length?'<div class="disc-list">'+D.rows.map(discRowHTML).join('')+'</div>'+discTotHTML(D):'<p class="empty">'+DISC_NONE+'</p>';
   openModal(DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR),body,D.rows.length?'<button type="button" class="btn" data-act="disc-share">'+icon('share')+SNAP_SHARE+'</button>':'',icon('info'));}
-// שיתוף רשימת ההנחות כתמונה — אותה רשימה, פרושה, בכותרת השנה.
-function discShare(){var b=document.getElementById('modal-body');if(!b)return;
-  snapShare('<div class="snap-hd"><small>'+esc(SNAP_APP)+'</small><h2>'+esc(DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR))+'</h2></div><div class="card snap-card snap-pad">'+b.innerHTML+'</div>',DISC_TITLE+' '+acadYearHeb(S.DASH_YEAR));}
+// שיתוף רשימת ההנחות כתמונות — עד SNAP_DISC_MAX תלמידים בתמונה; הכותרת בכל אחת, והסה״כ באחרונה.
+function discShare(){var D=discData(),t=DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR),pages=[];
+  for(var i=0;i<D.rows.length;i+=SNAP_DISC_MAX){var last=i+SNAP_DISC_MAX>=D.rows.length;
+    pages.push('<div class="snap-hd"><small>'+esc(SNAP_APP)+'</small><h2>'+esc(t)+'</h2></div><div class="card snap-card"><div class="disc-list">'+D.rows.slice(i,i+SNAP_DISC_MAX).map(discRowHTML).join('')+'</div>'+(last?discTotHTML(D):'')+'</div>');}
+  if(pages.length)snapShare(pages,DISC_TITLE+' '+acadYearHeb(S.DASH_YEAR),t);}
 
 function screenDashHTML() {
   return `
