@@ -4,10 +4,10 @@ import { esc, openModal, toast } from '../../core/ui.js';
 import { MIRROR } from '../../core/mirror.js';
 import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
-import { KPI_INFO, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
+import { DISCOUNT_GOAL, KPI_INFO, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
-import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, isDebtTxn, monthKeyOf, studentDebtIn, monthLabel,
+import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, isDebtTxn, monthKeyOf, studentDebtIn, studentCreditIn, monthLabel,
          slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
@@ -18,9 +18,9 @@ var KPI_RINGS=[['חודש נוכחי',0],['סליקה בפועל',1],['תחזי�
 function kpiCardHTML(k,ids){var x=KPI_INFO[k];
   return '<div class="kpi-card"><div class="kpi-card-h"><span>'+esc(x.t)+'</span><button type="button" class="kpi-info" data-act="kpi-info" data-k="'+k+'" aria-label="מה מחושב כאן — '+esc(x.t)+'">'+icon('info')+'</button></div>'+
     '<div class="kpi-trio">'+KPI_RINGS.map(function(r){var id=ids[r[1]];return '<div class="kpi-mini"><div class="ring" id="dk-ring'+id+'"><b id="dk-pct'+id+'">—</b></div><span class="kpi-l">'+r[0]+'</span></div>';}).join('')+'</div></div>';}
-// ההסבר — זהה בשני הכרטיסים מילה במילה, חוץ מהבסיס (x.basis).
+// ההסבר — זהה בשני הכרטיסים מילה במילה, חוץ מהבסיס — שורה בת שלושה חלקים, והאמצעי (הבסיס) מודגש.
 function openKpiInfo(k){var x=KPI_INFO[k];if(!x)return;
-  openModal(x.t,'<dl class="kpi-info-b">'+x.rows.map(function(r){return '<dt>'+esc(r[0])+'</dt><dd>'+esc(r[1])+'</dd>';}).join('')+'</dl>','',icon('info'));}
+  openModal(x.t,'<dl class="kpi-info-b">'+x.rows.map(function(r){return '<dt>'+esc(r[0])+'</dt><dd>'+(r.length>2?'<b class="kpi-diff">'+esc(r[1])+'</b>'+esc(r[2]):esc(r[1]))+'</dd>';}).join('')+'</dl>','',icon('info'));}
 
 function screenDashHTML() {
   return `
@@ -28,6 +28,7 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
+    <div class="kpi"><b id="dk-disc" class="kpi-n">—</b><span class="kpi-l">הנחות<small>יעד ${DISCOUNT_GOAL}%</small></span></div>
   </div>
   <div class="kpi-cards">${kpiCardHTML('students',[2,6,4])}${kpiCardHTML('due',[3,7,5])}</div>
   <div class="card">
@@ -194,10 +195,19 @@ function renderDash(){
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
   // חוב שעבר משנה קודמת — תנועות בסעיף DEBT_METHOD בשנה המוצגת: מוסיף ליעד השנתי ולחובה שבטבעות.
-  function prevDebt(s){return studentDebtIn(s.client_id,S.DASH_YEAR);}
+  // ובמראה — מה שעבר מהשנה המוצגת לשנה הבאה: חוב יוצא מהחובה, ויתרת זכות יוצאת מהתשלומים (תנועות השנה הבאה).
+  function prevDebt(s){return studentDebtIn(s.client_id,S.DASH_YEAR)-studentDebtIn(s.client_id,S.DASH_YEAR+1);}
+  function creditOut(s){return studentCreditIn(s.client_id,S.DASH_YEAR+1);}
   var debtSum=S.STUDENTS.reduce(function(a,s){return a+(slHasTuition(s)?prevDebt(s):0);},0),yearTgt=grandTgt+debtSum;
+  var outSum=S.STUDENTS.reduce(function(a,s){return a+creditOut(s);},0);
   // שלוש הקוביות — הנגבה של עמודת הסה״כ, והיעד — של הטבלה ועוד החוב משנים קודמות.
-  document.getElementById('dk-got').textContent='₪'+fmt(grand);
+  document.getElementById('dk-got').textContent='₪'+fmt(Math.round((grand-outSum)*100)/100);
+  // ההנחה בכרטיסים — בכל חודשי הפעילות של השנה: כמה השכר שבכרטיס נמוך משכר ברירת המחדל של השיעור; בלי קשר לגבייה. היעד — עד 10%.
+  var defT=0,perT=0;
+  S.STUDENTS.forEach(function(s){if(!slHasTuition(s))return;YEAR_MONTHS.forEach(function(m){if(!studentInMonth(s,S.DASH_YEAR,m))return;defT+=slDefaultTuition(s);perT+=studentTuition(s,acadMonthKey(S.DASH_YEAR,m));});});
+  var disc=defT>0?Math.round((defT-perT)/defT*1000)/10:null,de=document.getElementById('dk-disc');
+  de.textContent=disc===null?'—':disc+'%';de.className='kpi-n '+(disc===null?'':disc<=DISCOUNT_GOAL?'amt-ok':'amt-bad');
+  de.title=disc===null?'':'הנחה בכרטיסים ‎'+fmt(Math.round(defT-perT))+'‎ מתוך ‎'+fmt(defT)+'‎ לפי שכר ברירת המחדל';
   document.getElementById('dk-tgt').textContent=yearTgt?'₪'+fmt(yearTgt):'—';
   // שלושה זוגות, באותו חישוב: החובה — מתחילת השנה ועד סוף הטווח, ועוד החוב שעבר משנה קודמת; והתשלומים שתאריכם עד סוף הטווח, כולל זיכוי מיתרה.
   // «עד החודש» — שני הטווחים עד סוף החודש הנוכחי; «כולל מראש» — החובה עד החודש, והתשלומים — כל מה שנרשם לשנה; «עד סוף השנה» — השנה כולה.
@@ -214,7 +224,7 @@ function renderDash(){
   function cover(rate,dl,pl,ahead){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
-      var p=paidTo(s,pl);
+      var p=paidTo(s,pl)-creditOut(s);
       if(!slHasTuition(s)){cov+=p;return;}
       var d=owed(s,rate,dl);due+=d;
       if(ahead){cov+=p;return;}

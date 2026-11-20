@@ -376,6 +376,10 @@ function annualHTML(s,year){
     var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-ok':i.paid>0?'amt-warn':'amt-bad';
     rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
+  // המראה של השורות הראשונות — בסוף השנה, מה שעבר לשנה הבאה: חוב — יוצא מהדרישה; יתרת זכות — שורה בכחול, ויוצאת מהעודף.
+  if(dist.debtOut){tR-=dist.debtOut;rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('debt'))+'חוב שעבר לשנה הבאה</td><td class="req-cell">&#8722;'+fmt(dist.debtOut)+'</td><td class="paid-cell">—</td><td class="bal-cell">+'+fmt(dist.debtOut)+'</td></tr>';}
+  // יתרת הזכות — כמו השורה של הזיכוי שעבר: הסכום בעמודת «שולם», בלי להיכנס לסה״כ — כי העודף אינו נכנס לסה״כ ממילא; היתרה שנשארה (dist.credit) — בלעדיו.
+  if(dist.creditOut)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('credit'))+'יתרת זכות שעברה לשנה הבאה</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditOut)+'</td><td class="bal-cell credit-in">עבר לשנה הבאה</td></tr>';
   var tb=tP-tR,tf='<tr class="sum-row"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="bal-cell '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
   var html='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+tf+'</tfoot></table></div>';
   // יתרת זכות מוצגת בשורה נפרדת ובצבע נפרד — אינה נכנסת ל«סה״כ שולם» ואינה מקזזת את שורת החוב.

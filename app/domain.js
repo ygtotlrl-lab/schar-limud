@@ -369,6 +369,8 @@ function isCreditTxn(t){return !!t&&isCreditValue(t.payment_method);}
 function isDebtValue(v){return String(v==null?'':v).trim()===DEBT_METHOD;}
 function isDebtTxn(t){return !!t&&isDebtValue(t.payment_method);}
 // החוב שעבר לשנה — סך תנועות החוב של התלמיד בשנת הלימודים.
+// הזיכוי שעבר לשנה — סך תנועות הזיכוי של התלמיד בשנת הלימודים; ובמראה — מה שעבר ממנה לשנה הבאה (תנועות השנה הבאה) יוצא מהשנה החולפת.
+function studentCreditIn(sid,year){return S.TRANSACTIONS.reduce(function(a,t){return a+(t.student_client_id===sid&&isCreditTxn(t)&&t.txn_date&&acadYearOf(t.txn_date)===year?(parseFloat(t.amount)||0):0);},0);}
 function studentDebtIn(sid,year){return S.TRANSACTIONS.reduce(function(a,t){return a+(t.student_client_id===sid&&isDebtTxn(t)&&t.txn_date&&acadYearOf(t.txn_date)===year?(parseFloat(t.amount)||0):0);},0);}
 
 // העודף יושב בתוצאת calcDistribution תחת 'credit' — שאר המפתחות הם אינדקסי חודש 0–11, ואין התנגשות
@@ -528,7 +530,11 @@ function calcDistribution(sid,year){
     result[m]={req:stuT,paid:paid,cash:Math.round(d.cash*100)/100,cred:Math.round(d.cred*100)/100,off:false};
   });
   // העודף הוא יתרת זכות בשדה נפרד — ולא חוב שלילי בשום סיכום.
-  result.credit=Math.max(0,Math.round((total-used)*100)/100);
+  // המראה בסוף השנה — מה שעבר לשנה הבאה: יתרת זכות יוצאת מהתשלומים, וחוב יוצא מהחובה.
+  var cOut=studentCreditIn(sid,year+1),dOut=studentDebtIn(sid,year+1);
+  if(cOut>0)result.creditOut=Math.round(cOut*100)/100;
+  if(dOut>0)result.debtOut=Math.round(dOut*100)/100;
+  result.credit=Math.max(0,Math.round((total-used-cOut)*100)/100);
   return result;
 }
 
@@ -541,7 +547,7 @@ function txnAmountHTML(t){
 
 export { _slPushOf, acadMonthKey, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, slDefaultTuition, slHasTuition, distCredit,
-         enrollText, ensureSystemMethods, fmt, hasCreditItem, hasDebtItem, isCreditTxn, isDebtTxn, isDebtValue, studentDebtIn,
+         enrollText, ensureSystemMethods, fmt, hasCreditItem, hasDebtItem, isCreditTxn, isDebtTxn, isDebtValue, studentDebtIn, studentCreditIn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
