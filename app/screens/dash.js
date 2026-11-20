@@ -206,15 +206,16 @@ function renderDash(){
   var nowK=dayToday().slice(0,7),endK=acadMonthKey(S.DASH_YEAR,YEAR_MONTHS[YEAR_MONTHS.length-1]);
   function paidTo(s,lim){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=lim)p+=parseFloat(t.amount)||0;});return p;}
   // dl — עד איזה חודש החובה, pl — עד איזה חודש התשלומים.
-  // כל תשלום נספר במלואו, ועודף של תלמיד אחד מכסה על חוב של אחר — כך בסוף השנה שלושת הזוגות מגיעים לאותה תוצאה.
-  function cover(rate,dl,pl){
+  // לכל תלמיד — התשלומים נספרים עד התקרה שלו: החובה עד cl (סוף הטווח, ובזוג «כולל מראש» — סוף השנה); עודף של תלמיד אחד אינו מכסה על אחר.
+  // כך באוגוסט — כשסוף הטווח הוא סוף השנה — שלושת הזוגות מגיעים לאותה תוצאה.
+  function owed(s,rate,lim){var d=prevDebt(s);YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=lim&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});return d;}
+  function cover(rate,dl,pl,cl){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
       if(!slHasTuition(s))return;
-      var d=prevDebt(s);
-      YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=dl&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
+      var d=owed(s,rate,dl);
       if(!d)return;
-      due+=d;cov+=paidTo(s,pl);
+      due+=d;cov+=Math.min(paidTo(s,pl),owed(s,rate,cl));
     });
     return {due:due,cov:Math.round(cov*100)/100};
   }
@@ -223,7 +224,7 @@ function renderDash(){
   var byDef=function(s){return slDefaultTuition(s);},byCard=function(s,k){return studentTuition(s,k);};
   [['2',byDef,nowK,nowK,'עד החודש'],['3',byCard,nowK,nowK,'עד החודש'],['6',byDef,nowK,endK,'עד החודש, כולל תשלומים מראש'],['7',byCard,nowK,endK,'עד החודש, כולל תשלומים מראש'],
    ['4',byDef,endK,endK,'עד סוף השנה'],['5',byCard,endK,endK,'עד סוף השנה']].forEach(function(r){
-    var c=cover(r[1],r[2],r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
+    var c=cover(r[1],r[2],r[3],r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
     if(stu)c.cov=Math.round((c.cov+grad(r[2]))*100)/100;
     paintRing('dk-ring'+r[0],'dk-pct'+r[0],pctNum(c.cov,c.due),c.due?(stu?'נגבה':'שולם')+' ‎'+fmt(c.cov)+'‎ מתוך ‎'+fmt(c.due)+'‎ '+r[3]+(stu?', לפי שכר ברירת המחדל':', לפי השכר שבכרטיס'):'אין עדיין חודשים שחלפו','אחוז הגבייה '+r[3]);
   });
