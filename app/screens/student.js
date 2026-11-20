@@ -2,13 +2,14 @@
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { SNAP_APP, SNAP_CARD, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM,
          MSG_NAME_REQUIRED,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TP_AMOUNT, MSG_TP_END_BEFORE, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
+import { snapShare } from '../snap.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, isDebtTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
@@ -39,6 +40,7 @@ function screenStudentHTML() {
       <div class="sc-hdr cw-band">
         <div class="sc-head">
           <div class="sc-meta" id="sc-meta"></div>
+          <button class="sc-close" data-act="sc-share" aria-label="שיתוף הכרטיס כתמונה" title="שיתוף">${icon('share')}</button>
           <button class="sc-close" data-act="sc-back" aria-label="סגירת הכרטיס" title="סגירה">${icon('close')}</button>
         </div>
       </div>
@@ -291,6 +293,11 @@ function studentOpen(id){
   renderStudentPanel();
 }
 
+// שיתוף הכרטיס כתמונה — כמו בגיוס (snapShare): השם, השיעור והמחזור, והכרטיס השנתי של השנה הנוכחית עם תשלומיו; בלי כפתורי עריכה ובלי ההסבר הפנימי.
+function scShare(){var s=scStudent();if(!s)return;var cy=acadYearOf(dayToday());
+  var meta=[CLS_NAME[s.cls],cycleLabel(slCycleOf(s))].filter(Boolean).join(' • ');
+  snapShare('<div class="snap-hd"><small>'+esc(SNAP_APP)+' · '+esc(acadYearHeb(cy))+'</small><h2>'+esc(s.name)+'</h2>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</div><div class="card snap-card">'+annualHTML(s,cy)+'</div>',SNAP_CARD+' '+s.name);}
+
 function studentBack(){S.SC_STUDENT_ID=null;renderStudentPanel();}
 
 // ── כרטיס התלמיד ──
@@ -449,7 +456,7 @@ function saveStudentSettings(){
   return true;
 }
 
-export { deleteStudent, tpAddRow, tpRemoveRow, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
+export { scShare, deleteStudent, tpAddRow, tpRemoveRow, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch };

@@ -441,3 +441,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .admin-ico{display:inline-flex;align-items:center;justify-content:center}
 .sc-close .ico{width:20px;height:20px;vertical-align:middle}
 .per-row.tp-row .per-lbl select,.per-row.tp-row .per-lbl input{font-size:var(--fs-2);padding:0 var(--sp-1)}
+
+/* שיתוף כתמונה — כמו בגיוס (app/snap.js): שורש מחוץ לתצוגה, ברוחב קבוע; בלי כפתורי עריכה ובלי ההסבר הפנימי שמתחת ליתרת הזכות */
+.snap{position:fixed;top:0;left:-10000px;width:720px;padding:var(--sp-7);background:var(--bg);direction:rtl;color:var(--text)}
+.snap-hd{margin-bottom:var(--sp-5)}
+.snap-hd small{display:block;color:var(--text-3);font-size:var(--fs-2)}
+.snap-hd h2{font-size:var(--fs-6);color:var(--brand-ink);margin:var(--sp-1) 0}
+.snap-card{margin:0;box-shadow:none;padding:var(--sp-5)}
+.snap .txn-x,.snap .credit-sub{display:none}
+.snap .table-scroll{overflow:visible}

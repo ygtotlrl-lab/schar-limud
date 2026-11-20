@@ -4,9 +4,10 @@ import { esc, openModal, toast } from '../../core/ui.js';
 import { MIRROR } from '../../core/mirror.js';
 import { newClientId, schedulePush } from '../../core/sync.js';
 import { barChart } from '../../core/chart.js';
-import { CLS_NAME, DISCOUNT_GOAL, DISC_INSTEAD, DISC_NONE, DISC_TITLE, DISC_TOTAL, KPI_COLS, KPI_GEN, KPI_INFO, KPI_TODAY, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
+import { CLS_NAME, DISCOUNT_GOAL, DISC_INSTEAD, DISC_NONE, DISC_TITLE, DISC_TOTAL, KPI_COLS, KPI_GEN, KPI_INFO, KPI_TODAY, KV_TABLE, SNAP_APP, SNAP_SHARE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
+import { snapShare } from '../snap.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, isDebtTxn, monthKeyOf, studentDebtIn, studentCreditIn, monthLabel,
          slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
@@ -54,7 +55,10 @@ function openDiscList(){var D=discData(),tot=D.defT-D.perT;
         return '<div class="disc-part"><span>'+rng+' · ₪'+fmt(p.p)+' '+DISC_INSTEAD+' ₪'+fmt(p.d)+'</span><span>'+fmt(p.d-p.p)+(p.n>1?' × '+p.n:'')+' = ₪'+fmt((p.d-p.p)*p.n)+'</span></div>';}).join(''))+'</div>';}).join('')+'</div>'+
     '<div class="disc-tot"><span>'+DISC_TOTAL+'</span><span class="disc-amt '+(discPct(tot,D.defT)<DISCOUNT_GOAL?'amt-bad':'amt-ok')+'">₪'+fmt(tot)+'<small>'+discPct(tot,D.defT)+'% מתוך ₪'+fmt(D.defT)+'</small></span></div>'
     :'<p class="empty">'+DISC_NONE+'</p>';
-  openModal(DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR),body,'',icon('info'));}
+  openModal(DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR),body,D.rows.length?'<button type="button" class="btn" data-act="disc-share">'+icon('share')+SNAP_SHARE+'</button>':'',icon('info'));}
+// שיתוף רשימת ההנחות כתמונה — אותה רשימה, פרושה, בכותרת השנה.
+function discShare(){var b=document.getElementById('modal-body');if(!b)return;
+  snapShare('<div class="snap-hd"><small>'+esc(SNAP_APP)+'</small><h2>'+esc(DISC_TITLE+' · '+acadYearHeb(S.DASH_YEAR))+'</h2></div><div class="card snap-card snap-pad">'+b.innerHTML+'</div>',DISC_TITLE+' '+acadYearHeb(S.DASH_YEAR));}
 
 function screenDashHTML() {
   return `
@@ -283,4 +287,4 @@ function renderDash(){
   renderDashNotes();
 }
 
-export { openDiscList, openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash, screenDashHTML };
+export { discShare, openDiscList, openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash, screenDashHTML };
