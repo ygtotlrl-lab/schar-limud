@@ -26,10 +26,10 @@ function kpiBar(kind,span,lbl,f){var w=span==='all'?100:Math.round(f*100);
   return '<div class="ki-bar"><span class="ki-bl">'+(kind==='due'?KPI_GEN.due[0]:KPI_GEN.pay[0])+'</span><div class="ki-track"><i class="ki-fill ki-'+kind+'" style="width:'+w+'%"></i>'+
     (kind==='pay'&&span==='all'&&f<1?'<i class="ki-ahead" style="inset-inline-start:'+Math.round(f*100)+'%"></i>':'')+'<i class="ki-now" style="inset-inline-start:'+Math.round(f*100)+'%"></i></div><span class="ki-bv">'+esc(lbl)+'</span></div>';}
 function openKpiInfo(k){var x=KPI_INFO[k];if(!x)return;var g=KPI_GEN,f=kpiNowFrac(),fy=Math.round(f*100);
-  // הכלל — שורה לכל רכיב: הבסיס, ופלוס (כחול) או מינוס (ורוד) לפני כל תוספת וניכוי.
-  function term(op,t){return '<div class="ki-term">'+(op?'<span class="ki-op ki-'+op+'">'+icon(op)+'</span>':'<span class="ki-base"></span>')+'<span>'+t+'</span></div>';}
-  var gen='<div class="ki-gen"><div class="ki-eq"><b class="ki-k">'+esc(g.due[0])+'</b>'+term('','<b class="kpi-diff">'+esc(x.basis)+'</b>'+esc(g.due[1]))+term('plus',esc(g.due[2]))+term('minus',esc(g.due[3]))+'</div>'+
-    '<div class="ki-eq"><b class="ki-k">'+esc(g.pay[0])+'</b>'+term('',esc(g.pay[1]))+term('minus',esc(g.pay[2]))+'</div></div>';
+  // הכלל — זהה בשתי הקבוצות: שורת בסיס (אייקון בצבע האפליקציה), ועוד מה שעבר משנה קודמת (פלוס כחול), ופחות מה שעבר לשנה הבאה (מינוס ורוד).
+  function term(op,ico,t){return '<div class="ki-term"><span class="ki-op ki-'+op+'">'+icon(ico)+'</span><span>'+t+'</span></div>';}
+  function eq(r,base,ico){return '<div class="ki-eq"><b class="ki-k">'+esc(r[0])+'</b>'+term('base',ico,base)+term('plus','plus',esc(r[2]))+term('minus','minus',esc(r[3]))+'</div>';}
+  var gen='<div class="ki-gen">'+eq(g.due,'<b class="kpi-diff">'+esc(x.basis)+'</b>'+esc(g.due[1]),x.ico)+eq(g.pay,esc(g.pay[1]),'txn')+'</div>';
   var cols='<div class="ki-cols">'+KPI_COLS.map(function(c){return '<div class="ki-col"><b class="ki-t">'+esc(c.t)+'</b>'+kpiBar('due',c.due,c.dueL,f)+kpiBar('pay',c.pay,c.payL,f)+'<small class="ki-n">'+esc(c.note)+'</small></div>';}).join('')+'</div>';
   var leg='<div class="ki-leg"><span><i class="ki-sw ki-due"></i>'+esc(g.due[0])+'</span><span><i class="ki-sw ki-pay"></i>'+esc(g.pay[0])+'</span><span><i class="ki-sw ki-ahead-sw"></i>'+esc(g.ahead)+'</span><span><i class="ki-sw ki-now-sw"></i>'+KPI_TODAY+'</span></div>';
   openModal(x.t,'<div class="ki">'+gen+cols+leg+'<p class="ki-note">'+esc(g.note)+'</p></div>','',icon('info'));}

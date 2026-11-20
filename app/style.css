@@ -134,12 +134,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .ki-eq{display:flex;flex-direction:column;gap:var(--sp-2);font-size:var(--fs-2)}
 .ki-k{color:var(--brand-ink);font-weight:800}
 .ki .kpi-diff{color:var(--brand-ink);font-weight:800}
-/* שורה לכל רכיב: הבסיס, ואחריו «ועוד» — פלוס בכחול — ו«פחות» — מינוס בוורוד; עיגול מלא וסימן לבן */
+/* שורה לכל רכיב: הבסיס — אייקון בצבע האפליקציה, ועוד — פלוס בכחול, ופחות — מינוס בוורוד; עיגול מלא וסימן לבן */
 .ki-term{display:flex;align-items:center;gap:var(--sp-2)}
 .ki-op{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;color:var(--card);font-weight:800;font-size:var(--fs-3);line-height:1}
-.ki-op .ico{width:14px;height:14px;stroke-width:3}
+.ki-op .ico{width:14px;height:14px;stroke-width:2.5}.ki-plus .ico,.ki-minus .ico{stroke-width:3}
 .ki-plus{background:var(--credit)}.ki-minus{background:var(--pink)}
-.ki-base{width:22px;flex:none}
+.ki-base{background:var(--brand-fill)}
 .ki-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3)}
 .ki-col{display:flex;flex-direction:column;gap:var(--sp-3);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-3);min-width:0}
 .ki-t{text-align:center;color:var(--brand-ink);font-size:var(--fs-2);font-weight:800}
