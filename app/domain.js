@@ -494,6 +494,8 @@ function calcDistribution(sid,year){
   // החוב שעבר משנה קודמת אינו תשלום — הוא חובה, והתשלומים מכסים אותו לפני החודשים (result.debt).
   var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year&&!isDebtTxn(t);}));
   var debt=studentDebtIn(sid,year);
+  // המראה של החוב — הזיכוי שעבר משנה קודמת: נפרס ראשון, לפני התשלומים, ונמנה בנפרד (result.creditIn) לשורה שלו בכרטיס.
+  txns=txns.filter(isCreditTxn).concat(txns.filter(function(t){return !isCreditTxn(t);}));
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
   function draw(n){
@@ -516,6 +518,7 @@ function calcDistribution(sid,year){
     return result;
   }
   var used=0;
+  var cin=txns.filter(isCreditTxn).reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0);if(cin>0)result.creditIn=Math.round(cin*100)/100;
   if(debt>0){var dd=draw(debt),dp=Math.round((dd.cash+dd.cred)*100)/100;used+=dp;result.debt={req:debt,paid:dp};}
   // הדגל off מבחין בין חודש שאינו מחויב לחודש מחויב שלא שולם.
   YEAR_MONTHS.forEach(function(m){

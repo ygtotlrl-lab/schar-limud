@@ -306,6 +306,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .debt-mark{font-weight:700;color:var(--bad)}
 .debt-row{background:var(--bad-soft)}
 .debt-row .month-cell{color:var(--bad);font-weight:700}
+.credit-row{background:var(--creditl)}
+.credit-row .month-cell{color:var(--credit);font-weight:700}
+.credit-row .credit-in{color:var(--credit);font-size:var(--fs-1);font-weight:600}
 .student-name{font-weight:600}
 .sum-row{font-weight:700;background:var(--bg)}
 /* ── הגדרות ── */

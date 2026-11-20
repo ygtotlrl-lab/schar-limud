@@ -205,15 +205,16 @@ function renderDash(){
   // ושני זוגות נוספים באותו חישוב — «עד החודש · כולל מראש»: החובה עד החודש, והתשלומים — כל מה שנרשם לשנה; ו«עד סוף השנה»: כל חודשי השנה, וכל התשלומים שנרשמו לה — גם צ׳קים לחודשים הבאים — עד גובה החובה של השנה כולה.
   var nowK=dayToday().slice(0,7),endK=acadMonthKey(S.DASH_YEAR,YEAR_MONTHS[YEAR_MONTHS.length-1]);
   function paidTo(s,lim){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=lim)p+=parseFloat(t.amount)||0;});return p;}
-  // dl — עד איזה חודש החובה, pl — עד איזה חודש התשלומים (כך «עד החודש · כולל מראש»: החובה עד החודש, והתשלומים עד סוף השנה).
-  function cover(rate,dl,pl){
+  // dl — עד איזה חודש החובה, pl — עד איזה חודש התשלומים.
+  // open — «כולל מראש»: כל התשלומים שנרשמו לשנה נספרים במלואם, בלי תקרה לתלמיד, מול החובה שעד החודש — ולכן האחוז יכול לעבור את 100.
+  function cover(rate,dl,pl,open){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
       if(!slHasTuition(s))return;
       var d=prevDebt(s);
       YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=dl&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
       if(!d)return;
-      due+=d;cov+=Math.min(paidTo(s,pl),d);
+      due+=d;cov+=open?paidTo(s,pl):Math.min(paidTo(s,pl),d);
     });
     return {due:due,cov:Math.round(cov*100)/100};
   }
@@ -222,7 +223,7 @@ function renderDash(){
   var byDef=function(s){return slDefaultTuition(s);},byCard=function(s,k){return studentTuition(s,k);};
   [['2',byDef,nowK,nowK,'עד החודש'],['3',byCard,nowK,nowK,'עד החודש'],['6',byDef,nowK,endK,'עד החודש, כולל תשלומים מראש'],['7',byCard,nowK,endK,'עד החודש, כולל תשלומים מראש'],
    ['4',byDef,endK,endK,'עד סוף השנה'],['5',byCard,endK,endK,'עד סוף השנה']].forEach(function(r){
-    var c=cover(r[1],r[2],r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
+    var c=cover(r[1],r[2],r[3],r[2]!==r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
     if(stu)c.cov=Math.round((c.cov+grad(r[2]))*100)/100;
     paintRing('dk-ring'+r[0],'dk-pct'+r[0],pctNum(c.cov,c.due),c.due?(stu?'נגבה':'שולם')+' ‎'+fmt(c.cov)+'‎ מתוך ‎'+fmt(c.due)+'‎ '+r[3]+(stu?', לפי שכר ברירת המחדל':', לפי השכר שבכרטיס'):'אין עדיין חודשים שחלפו','אחוז הגבייה '+r[3]);
   });

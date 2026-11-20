@@ -365,6 +365,8 @@ function annualHTML(s,year){
   var cs=s.card_settings||{},cur=year===acadYearOf(dayToday());
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
   if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist);
+  // זיכוי שעבר משנה קודמת — המראה של החוב: שורה ראשונה בכחול, והסכום בעמודת «שולם»; הוא נפרס ראשון על החודשים ונכלל בתשלומים שלהם, ולכן אינו נוסף לסה״כ.
+  if(dist.creditIn)rows+='<tr class="credit-row"><td class="month-cell">'+stIcon(icon('credit'))+'זיכוי שעבר משנה קודמת</td><td class="req-cell">—</td><td class="paid-cell">'+fmt(dist.creditIn)+'</td><td class="bal-cell credit-in">נפרס על החודשים</td></tr>';
   // חוב שעבר משנה קודמת — שורה ראשונה באדום: חובה שהתשלומים מכסים לפני החודשים (dist.debt).
   if(dist.debt){var db=dist.debt,dbb=db.paid-db.req;tR+=db.req;tP+=db.paid;
     rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('debt'))+'חוב שעבר משנה קודמת</td><td class="req-cell">'+fmt(db.req)+'</td><td class="paid-cell">'+fmt(db.paid)+'</td><td class="bal-cell '+(dbb>=0?'amt-ok':'amt-bad')+'">'+(dbb>=0?'+':'')+fmt(dbb)+'</td></tr>';}
