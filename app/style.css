@@ -17,7 +17,7 @@
   /* כיוון «רך»: אזורים לבנים על רקע ירקרק, בלי מסגרת ובלי צל; אזור שטופל — לבן שקוף למחצה. */
   --card-soft:rgba(255,255,255,.55);
   /* הפסים — הכותרת ושורת הניווט בירוק רך, מעוגלים כלפי התוכן; הדיו עליהם — כהה לפעיל ומשני לשאר, והלשונית הפעילה בגלולה מלאה. */
-  --bar:#d3e3dc;--bar-ink:#0b2e24;--bar-ink-2:#3e5a50;--bar-pill:var(--brand-fill);--on-pill:#ffffff;
+  --bar:#d3e3dc;--bar-ink:#0b2e24;--bar-ink-2:#3e5a50;--bar-pill:var(--brand-fill);
   /* השורה הקטנה שמעל שם המסך, וקו «טופלו החודש». */
   --kicker:#1f5242;
   /* פס «בפועל / צפי» — זהב, וירוק כשהושג (כמו בתכנית שבגיוס) */
@@ -68,8 +68,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tabbar{position:fixed;bottom:0;left:0;right:0;max-width:var(--col);margin:0 auto;height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bar);border-radius:22px 22px 0 0;display:flex;overflow:hidden;z-index:var(--z-2)}
 .tab-btn{flex:1;min-width:0;background:none;border:none;padding:var(--sp-4) var(--sp-2);font-family:Heebo;font-size:var(--fs-1);color:var(--bar-ink-2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-2);transition:color var(--dur-2)}
 .tab-btn .ti{font-size:var(--fs-5);line-height:var(--lh-1)}
-.tab-btn.active{color:var(--bar-ink);font-weight:800}
-.tab-btn.active .ti{background:var(--bar-pill);color:var(--on-pill)}
+.tab-btn.active{color:var(--brand-ink);font-weight:800}
+.tab-btn.active .ti{background:var(--brand-soft);color:var(--brand-ink)}
 .tab-btn:focus-visible{outline:2px solid var(--bar-pill);outline-offset:-4px}
 /* סוף התוכן מרוחק מהשורה הצפה כראשו מהכותרת — והכרטיס האחרון אינו מוסיף את המרווח שלו. */
 .panel{display:none;padding:var(--sp-4) var(--gutter) var(--sp-6);padding-bottom:calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom))}
@@ -367,7 +367,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* העובי נקבע כאן ולא ב-icon() — גוף הפונקציה אינו נערך לאפליקציה אחת. */
 .ico{width:1.15em;height:1.15em;flex:none;stroke-width:1.6;vertical-align:-.2em}
 .btn .ico,.txn-more .ico,.acc-hdr span .ico{margin-inline-end:var(--sp-2)}
-.tab-btn .ti{display:flex;align-items:center;justify-content:center;width:48px;height:30px;border-radius:var(--r-7);transition:background var(--dur-2)}
+.tab-btn .ti{display:flex;align-items:center;justify-content:center;width:var(--tab-pill-w);height:var(--tab-pill-h);border-radius:var(--r-7);transition:background var(--dur-2)}
 .tab-btn .ti .ico{width:22px;height:22px}
 .admin-ico{display:inline-flex;align-items:center;justify-content:center}
 .sc-close .ico{width:20px;height:20px;vertical-align:middle}
