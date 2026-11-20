@@ -15,7 +15,8 @@ var MONTH_HE_SHORT=DAY_MONTHS.map(function(n){return n.length<=4?n:n.slice(0,3)+
 
 // כפתור המידע שבפינת הקובייה — פותח את ההסבר שלה (KPI_INFO).
 function kpiInfo(k){return '<button type="button" class="kpi-info" data-act="kpi-info" data-k="'+k+'" aria-label="מה מחושב כאן — '+esc(KPI_INFO[k].t)+'">'+icon('info')+'</button>';}
-function openKpiInfo(k){var x=KPI_INFO[k];if(x)openModal(x.t,'<p class="kpi-info-b">'+esc(x.b)+'</p>','',icon('info'));}
+function openKpiInfo(k){var x=KPI_INFO[k];if(!x)return;
+  openModal(x.t,'<dl class="kpi-info-b">'+[['החובה',x.due],['התשלומים',x.pay],['איך נספר',x.how]].map(function(r){return '<dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd>';}).join('')+'</dl>','',icon('info'));}
 
 function screenDashHTML() {
   return `
@@ -199,22 +200,21 @@ function renderDash(){
   // שלוש הקוביות — הנגבה של עמודת הסה״כ, והיעד — של הטבלה ועוד החוב משנים קודמות.
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
   document.getElementById('dk-tgt').textContent=yearTgt?'₪'+fmt(yearTgt):'—';
-  // שתי הטבעות שעד החודש — לכל תלמיד: החובה מתחילת השנה ועד סוף החודש הנוכחי, ועוד החוב משנים קודמות; והתשלומים באותו טווח, כולל זיכוי מיתרה,
-  // נספרים עד גובה החובה שלו בלבד — תשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר. ההבדל ביניהן — השכר:
-  // «לפי התלמידים» — שכר ברירת המחדל של השיעור; «לפי החובה» — השכר שבכרטיס (studentTuition).
-  // ושני זוגות נוספים באותו חישוב — «עד החודש · כולל מראש»: החובה עד החודש, והתשלומים — כל מה שנרשם לשנה; ו«עד סוף השנה»: כל חודשי השנה, וכל התשלומים שנרשמו לה — גם צ׳קים לחודשים הבאים — עד גובה החובה של השנה כולה.
+  // שלושה זוגות, באותו חישוב: החובה — מתחילת השנה ועד סוף הטווח, ועוד החוב שעבר משנה קודמת; והתשלומים שתאריכם עד סוף הטווח, כולל זיכוי מיתרה.
+  // «עד החודש» — שני הטווחים עד סוף החודש הנוכחי; «כולל מראש» — החובה עד החודש, והתשלומים — כל מה שנרשם לשנה; «עד סוף השנה» — השנה כולה.
+  // השכר: «לפי התלמידים» — שכר ברירת המחדל של השיעור; «לפי החובה» — השכר שבכרטיס (studentTuition).
   var nowK=dayToday().slice(0,7),endK=acadMonthKey(S.DASH_YEAR,YEAR_MONTHS[YEAR_MONTHS.length-1]);
   function paidTo(s,lim){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=lim)p+=parseFloat(t.amount)||0;});return p;}
   // dl — עד איזה חודש החובה, pl — עד איזה חודש התשלומים.
-  // open — «כולל מראש»: כל התשלומים שנרשמו לשנה נספרים במלואם, בלי תקרה לתלמיד, מול החובה שעד החודש — ולכן האחוז יכול לעבור את 100.
-  function cover(rate,dl,pl,open){
+  // כל תשלום נספר במלואו, ועודף של תלמיד אחד מכסה על חוב של אחר — כך בסוף השנה שלושת הזוגות מגיעים לאותה תוצאה.
+  function cover(rate,dl,pl){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
       if(!slHasTuition(s))return;
       var d=prevDebt(s);
       YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=dl&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
       if(!d)return;
-      due+=d;cov+=open?paidTo(s,pl):Math.min(paidTo(s,pl),d);
+      due+=d;cov+=paidTo(s,pl);
     });
     return {due:due,cov:Math.round(cov*100)/100};
   }
@@ -223,7 +223,7 @@ function renderDash(){
   var byDef=function(s){return slDefaultTuition(s);},byCard=function(s,k){return studentTuition(s,k);};
   [['2',byDef,nowK,nowK,'עד החודש'],['3',byCard,nowK,nowK,'עד החודש'],['6',byDef,nowK,endK,'עד החודש, כולל תשלומים מראש'],['7',byCard,nowK,endK,'עד החודש, כולל תשלומים מראש'],
    ['4',byDef,endK,endK,'עד סוף השנה'],['5',byCard,endK,endK,'עד סוף השנה']].forEach(function(r){
-    var c=cover(r[1],r[2],r[3],r[2]!==r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
+    var c=cover(r[1],r[2],r[3]),stu=r[1]===byDef;r=[r[0],r[1],r[3],r[4]];
     if(stu)c.cov=Math.round((c.cov+grad(r[2]))*100)/100;
     paintRing('dk-ring'+r[0],'dk-pct'+r[0],pctNum(c.cov,c.due),c.due?(stu?'נגבה':'שולם')+' ‎'+fmt(c.cov)+'‎ מתוך ‎'+fmt(c.due)+'‎ '+r[3]+(stu?', לפי שכר ברירת המחדל':', לפי השכר שבכרטיס'):'אין עדיין חודשים שחלפו','אחוז הגבייה '+r[3]);
   });
