@@ -339,10 +339,23 @@ function slDefaultTuition(s){
   var cls=s&&s.cls;
   return CLS_NO_TUITION[cls]?0:(parseInt(S.SETTINGS[CLS_TUITION_KEY[cls]||'default_tuition'],10)||0);
 }
-// השכר של התלמיד — האישי, ובלעדיו ברירת המחדל של השיעור: החיוב בכרטיס והסכום בטופס התשלום.
-function studentTuition(s){
+// שכר לתקופה (card_settings.tuition_periods) — {start, end, amount} במפתחות «שנה-חודש», ו-end ריק — מהחודש והלאה:
+// חודש שבתוך תקופה כזו — הסכום שלה, ושינוי בשכר אינו נוגע בחודשים שמחוצה לה. בחפיפה — זו שהתחילה אחרונה.
+function slTuitionPeriods(s){
+  var cs=(s&&s.card_settings)||{};
+  return (Array.isArray(cs.tuition_periods)?cs.tuition_periods:[]).map(function(p){
+    var a=parseInt(p&&p.amount,10);
+    return {start:PER.norm(p&&p.start),end:PER.norm(p&&p.end)||null,amount:a};
+  }).filter(function(p){return p.start&&isFinite(p.amount)&&p.amount>=0;}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});
+}
+// השכר של התלמיד בחודש (k — «שנה-חודש»; בלי חודש — הנוכחי): שכר לתקופה שחלה בו, אחרת האישי, ובלעדיו ברירת המחדל של השיעור.
+// החיוב בכרטיס, «לפי החובה» בלוח הבקרה והסכום בטופס התשלום.
+function studentTuition(s,k){
   var cs=(s&&s.card_settings)||{};
   if(CLS_NO_TUITION[s&&s.cls])return 0;
+  k=k||monthKeyOf(dayToday());
+  var hit=slTuitionPeriods(s).filter(function(p){return PER.has(p,k);}).pop();
+  if(hit)return hit.amount;
   return cs.monthly_tuition?parseInt(cs.monthly_tuition):slDefaultTuition(s);
 }
 
@@ -467,7 +480,6 @@ async function ensureCreditMethod(){
 // paid = cash + cred.
 function calcDistribution(sid,year){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
-  var stuT=studentTuition(s);
   var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}));
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
@@ -494,7 +506,7 @@ function calcDistribution(sid,year){
   // הדגל off מבחין בין חודש שאינו מחויב לחודש מחויב שלא שולם.
   YEAR_MONTHS.forEach(function(m){
     if(!studentInMonth(s,year,m)){result[m]={req:0,paid:0,cash:0,cred:0,off:true};return;}
-    var d=draw(stuT),paid=Math.round((d.cash+d.cred)*100)/100;
+    var stuT=studentTuition(s,acadMonthKey(year,m)),d=draw(stuT),paid=Math.round((d.cash+d.cred)*100)/100;
     used+=paid;
     result[m]={req:stuT,paid:paid,cash:Math.round(d.cash*100)/100,cred:Math.round(d.cred*100)/100,off:false};
   });
@@ -516,5 +528,5 @@ export { _slPushOf, acadMonthKey, acadYearHeb,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
          studentArchived,
-         studentTuition, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
+         studentTuition, slTuitionPeriods, monthKeyAdd, slSanitizeRows, slSendRows, slSortTxns, slSortYears,
          studentCredit, studentHandled, studentInMonth, syncAll, txnAmountHTML };

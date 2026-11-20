@@ -12,14 +12,14 @@ import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, 
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
 import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
-import { dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
+import { openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
          screenSettingsHTML, toggleAcc } from './screens/settings.js';
 import { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
-         studentBack, studentOpen, studentSearch } from './screens/student.js';
+         studentBack, studentOpen, studentSearch, tpAddRow, tpRemoveRow } from './screens/student.js';
 import { deleteTxn, openTxnEdit, renderTxnLog, saveTxn, saveTxnEdit, screenTxnHTML, txnLogLess, txnLogMore, txnMethodPick,
          updateDropdowns } from './screens/txn.js';
 
@@ -202,6 +202,7 @@ var DOM_ACTIONS = {
   'list-add':     function (el) { openListAdd(el.getAttribute('data-list')); },
   'list-save':    function (el) { return runSave(function () { return addListItem(el.getAttribute('data-list')); }, 'נוסף'); },
   // שנה וחודש מומרים למספר כאן — הם נכנסים לחישוב טווח ולא להשוואת מפתח.
+  'kpi-info':                function (el) { openKpiInfo(el.dataset.k); },
   'dash-prev-year':          function () { dashPrevYear(); },
   'dash-next-year':          function () { dashNextYear(); },
   'student-open':            function (el) { studentOpen(el.getAttribute('data-id')); },
@@ -216,6 +217,8 @@ var DOM_ACTIONS = {
   },
   'per-add':                 function (el) { PER.addRow(el); },
   'per-remove':              function (el) { var box = el.closest('[data-autosave]'); PER.removeRow(el); if (box) autosave(box); },
+  'tp-add':                  function (el) { tpAddRow(el); },
+  'tp-remove':               function (el) { var box = el.closest('[data-autosave]'); tpRemoveRow(el); if (box) autosave(box); },
   'student-open-add':        function () { openAddStudent(); },
   'student-settings-save':   function () { return runSave(saveStudentSettings); },
   'txn-save':                function () { return runSave(saveTxn, MSG_TXN_SAVED); },

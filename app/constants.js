@@ -48,6 +48,17 @@ var MSG_STUDENT_MISSING2 = 'התלמיד לא נמצא';
 
 var MSG_TUITION_POSITIVE = 'שכר לימוד חייב להיות מספר חיובי';
 
+// שכר לתקופה — הודעות העורך שבהגדרות התלמיד
+var MSG_TP_END_BEFORE = 'בשכר לתקופה — חודש הסוף מוקדם מחודש ההתחלה';
+var MSG_TP_AMOUNT = 'בשכר לתקופה — הסכום חייב להיות מספר חיובי';
+
+// הסבר הקוביות בלוח הבקרה — כפתור המידע שבכל קובייה
+var KPI_INFO = {
+  year: { t: 'כל השנה', b: 'כל מה שנגבה בשנת הלימודים, מתוך היעד של השנה כולה — כולל החודשים שעוד לא הגיעו. היעד: התלמידים הפעילים בכל חודש × שכר ברירת המחדל של השיעור.' },
+  students: { t: 'לפי התלמידים', b: 'כל מה שנגבה מתחילת השנה ועד סוף החודש הנוכחי, מתוך היעד של אותם חודשים: התלמידים הפעילים × שכר ברירת המחדל של השיעור. תשלום מראש ותשלומי «השלמת חוב בוגרים» נספרים.' },
+  due: { t: 'לפי החובה', b: 'לכל תלמיד — מה ששילם מתחילת השנה, כולל זיכוי מיתרה, עד גובה החובה שלו עד סוף החודש הנוכחי לפי השכר שבכרטיס. חוב מחודשים קודמים נשאר חוב, ותשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר.' }
+};
+
 var MSG_DEBT_POSITIVE = 'חוב קודם חייב להיות מספר חיובי';
 
 var MSG_SETTINGS_NOT_SAVED = 'ההגדרות לא נשמרו במכשיר';
@@ -147,7 +158,7 @@ export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPD
          MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PERIOD_NONE, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, MSG_PICK_DATE, MSG_PICK_STUDENT_PLAIN, MSG_SETTINGS_NOT_SAVED,
          MSG_STUDENT_DELETED, MSG_STUDENT_MISSING2,
-         MSG_STUDENT_SAVE_FAIL, MSG_TUITION_POSITIVE,
+         MSG_STUDENT_SAVE_FAIL, MSG_TUITION_POSITIVE, MSG_TP_END_BEFORE, MSG_TP_AMOUNT, KPI_INFO,
          MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_SAVE_FAIL, PUSH_TABLES,
          SL_NEVER_MIRROR_SETTINGS, TXN_FILTER_ALL, YEAR_MONTHS,
          TTL_TXN_EDIT, MSG_STUDENT_ADDED, MSG_TXN_SAVED };

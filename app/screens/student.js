@@ -6,18 +6,18 @@ import { CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, MSG_AD
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
          MSG_NAME_REQUIRED,
-         MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
+         MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TP_AMOUNT, MSG_TP_END_BEFORE, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
-import { acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
+import { acadMonthKey, acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
          monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          PER, periodText, periodsProblem, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
          studentArchived, studentCredit,
          slSortTxns, slSortYears, slStudentGroups, studentHandled, studentInMonth,
-         studentTuition } from '../domain.js';
+         monthKeyAdd, slTuitionPeriods, studentTuition } from '../domain.js';
 import { txnListHTML } from './txn.js';
 
 function screenStudentHTML() {
@@ -54,6 +54,10 @@ function screenStudentHTML() {
         <div class="frm-row sc-tu">
           <label for="sc-edit-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label>
           <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל" data-kent>
+        </div>
+        <div class="frm-row sc-tu">
+          <span class="frm-lbl">שכר לתקופה — חל רק בחודשים שבתקופה, ושאר החודשים לפי השכר שמעל</span>
+          <div id="sc-tperiods"></div>
         </div>
         <div class="frm-row sc-tu">
           <label for="sc-edit-cls">שיעור</label>
@@ -312,7 +316,47 @@ function renderStudentCard(){
   // Escape בשדה מחזיר לערך השמור — defaultValue, ולא לערך שבסימון.
   ['sc-edit-name','sc-edit-tuition','sc-edit-debt','sc-edit-debt-note'].forEach(function(id){var e=document.getElementById(id);e.defaultValue=e.value;});
   document.querySelectorAll('#acc-sc-settings .sc-tu').forEach(function(r){r.classList.toggle('hidden',!!CLS_NO_TUITION[s.cls]);});
+  document.getElementById('sc-tperiods').innerHTML=tpEditorHTML(slTuitionPeriods(s));
   document.getElementById('sc-periods').innerHTML=PER.editorHTML(slPeriods(s));renderScAnnual();
+}
+
+// ── שכר לתקופה ──
+// שורה לכל תקופה — «מ» · «עד» («והלאה» — בלי סוף) · סכום · הסרה, ו«+ שכר לתקופה»; באותה צורה של עורך התקופות (per-row).
+function tpOptions(cur,open){
+  var ks=[],k=monthKeyAdd(monthKeyOf(dayToday()),-36);
+  for(var i=0;i<=48;i++){ks.push(k);k=monthKeyAdd(k,1);}
+  if(cur&&ks.indexOf(cur)<0){ks.push(cur);ks.sort();}
+  return (open?'<option value=""'+(cur?'':' selected')+'>והלאה</option>':'')+
+    ks.reverse().map(function(x){return '<option value="'+x+'"'+(x===cur?' selected':'')+'>'+esc(monthKeyLabel(x))+'</option>';}).join('');
+}
+function tpRowHTML(p){
+  return '<div class="per-row tp-row" data-tp-row>'+
+    '<label class="per-lbl">מ<select aria-label="חודש תחילה" data-f="start">'+tpOptions(p.start,false)+'</select></label>'+
+    '<label class="per-lbl">עד<select aria-label="חודש סוף" data-f="end">'+tpOptions(p.end||'',true)+'</select></label>'+
+    '<label class="per-lbl">סכום<input aria-label="סכום חודשי" data-f="amount" type="text" inputmode="decimal" value="'+(p.amount==null?'':esc(String(p.amount)))+'" data-kent></label>'+
+    '<button type="button" data-act="tp-remove" class="per-del" aria-label="הסרת השכר לתקופה">'+icon('close')+'</button>'+
+  '</div>';
+}
+function tpEditorHTML(ps){
+  return '<div class="per-list" data-tp-list>'+(ps||[]).map(tpRowHTML).join('')+'</div>'+
+    '<button type="button" data-act="tp-add" class="per-add">+ שכר לתקופה</button>';
+}
+// שורה חדשה — החודש הנוכחי בלבד ובלי סכום: אינה נשמרת עד שממלאים סכום.
+function tpAddRow(btn){var box=btn&&btn.previousElementSibling;if(box&&box.hasAttribute('data-tp-list')){var k=monthKeyOf(dayToday());box.insertAdjacentHTML('beforeend',tpRowHTML({start:k,end:k,amount:null}));}}
+function tpRemoveRow(btn){var r=btn&&btn.closest('[data-tp-row]');if(r)r.remove();}
+// שורה בלי סכום — טיוטה שאינה נשמרת; סוף לפני התחלה וסכום שאינו מספר — הודעה, ושום דבר אינו נשמר.
+function tpRead(root){
+  var ps=[],err='';
+  (root||document).querySelectorAll('[data-tp-list] [data-tp-row]').forEach(function(r){
+    var s=PER.norm(r.querySelector('[data-f="start"]').value),e=PER.norm(r.querySelector('[data-f="end"]').value),raw=r.querySelector('[data-f="amount"]').value.trim();
+    if(!s||raw==='')return;
+    var a=parseInt(raw,10);
+    if(!isFinite(a)||a<0){err=err||MSG_TP_AMOUNT;return;}
+    if(e&&e<s){err=err||MSG_TP_END_BEFORE;return;}
+    ps.push({start:s,end:e||null,amount:a});
+  });
+  ps.sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0;});
+  return {ps:ps,err:err};
 }
 
 // ── תקופות הפעילות ──
@@ -327,11 +371,11 @@ function scYearsWithTxns(){
 }
 
 function annualHTML(s,year){
-  var cs=s.card_settings||{},stuT=studentTuition(s),cur=year===acadYearOf(dayToday());
+  var cs=s.card_settings||{},cur=year===acadYearOf(dayToday());
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
   if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist);
   YEAR_MONTHS.forEach(function(m){
-    var i=dist[m]||{req:stuT,paid:0};
+    var i=dist[m]||{req:studentTuition(s,acadMonthKey(year,m)),paid:0};
     if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(year,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
     var b=i.paid-i.req;tR+=i.req;tP+=i.paid;var bc=b>=0?'amt-ok':i.paid>0?'amt-warn':'amt-bad';
     rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
@@ -403,6 +447,8 @@ function saveStudentSettings(){
   if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast(MSG_DEBT_POSITIVE, null, 'bad');return;}
   if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
   if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
+  var tp=tpRead(document.getElementById('acc-sc-settings'));if(tp.err){toast(tp.err, null, 'bad');return;}
+  if(tp.ps.length)cs.tuition_periods=tp.ps;else delete cs.tuition_periods;
   var per=PER.read(document.getElementById('acc-sc-settings'));if(per.err){toast(per.err, null, 'bad');return;}
   var row=Object.assign({},s,{name:name,card_settings:cs,cls:cls,cycle:cycle,periods:per.ps});
   if(JSON.stringify([row.name,row.card_settings,row.cls,row.cycle,row.periods])===JSON.stringify([s.name,s.card_settings||{},s.cls,s.cycle==null?null:s.cycle,slPeriods(s)]))return;
@@ -410,7 +456,7 @@ function saveStudentSettings(){
   return true;
 }
 
-export { deleteStudent, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
+export { deleteStudent, tpAddRow, tpRemoveRow, doYearTransition, openAddStudent, openStudentsManage, openYearTransition,
          renderScAnnual, renderStudentPanel,
          saveNewStudent, saveStudentSettings, scClsChanged, screenStudentHTML, studentArchiveToggle,
          studentBack, studentOpen, studentSearch };

@@ -112,6 +112,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 /* טבעת האחוז — מתמלאת מימין לשמאל (נגד כיוון השעון), בצבע השלב */
 .kpi-ring{align-items:center;justify-content:center;padding:var(--sp-3);gap:var(--sp-2)}
 .kpi-ring .kpi-l{text-align:center}
+/* כפתור המידע — בפינה העליונה של הקובייה, קטן ועמום; ההסבר בחלון */
+.kpi-ring{position:relative}
+.kpi-info{position:absolute;top:var(--sp-2);inset-inline-end:var(--sp-2);width:28px;height:28px;display:grid;place-items:center;border:0;background:none;color:var(--text-3);border-radius:50%;cursor:pointer;padding:0}
+.kpi-info .ico{width:17px;height:17px}
+.kpi-info:hover,.kpi-info:focus-visible{background:var(--brand-soft);color:var(--brand-ink)}
+.kpi-info-b{margin:0;line-height:1.6;color:var(--text-2)}
+/* שכר לתקופה — שלושה שדות בשורה, באותה צורה של עורך התקופות */
+.per-row.tp-row{grid-template-columns:1fr 1fr 5.5rem}
+.per-row .per-lbl input{display:block;width:100%;min-width:0;height:44px;margin:0;border:1.5px solid var(--border);border-radius:var(--r-4);padding:0 var(--sp-2);font:inherit;font-size:var(--fs-3);font-weight:600;background:var(--card);color:var(--text);box-sizing:border-box}
 .ring{--p:0;--c:var(--text-3);position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
   background:conic-gradient(var(--card-2) calc((100 - var(--p)) * 1%),var(--c) 0)}
 .ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--card)}
@@ -372,3 +381,4 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .tab-btn .ti .ico{width:22px;height:22px}
 .admin-ico{display:inline-flex;align-items:center;justify-content:center}
 .sc-close .ico{width:20px;height:20px;vertical-align:middle}
+.per-row.tp-row .per-lbl select,.per-row.tp-row .per-lbl input{font-size:var(--fs-2);padding:0 var(--sp-1)}
