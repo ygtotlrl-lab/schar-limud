@@ -7,7 +7,7 @@ import { barChart } from '../../core/chart.js';
 import { KPI_INFO, KV_TABLE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
-import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, monthKeyOf, monthLabel,
+import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, isDebtTxn, monthKeyOf, studentDebtIn, monthLabel,
          slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 
 // הצורה המקוצרת נגזרת מהרשימה שבליבה — שם של עד ארבע אותיות נשאר, וארוך ממנו — שלוש וגרש.
@@ -24,8 +24,10 @@ function screenDashHTML() {
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
     <div class="kpi kpi-ring">${kpiInfo('year')}<div class="ring" id="dk-ring"><b id="dk-pct">—</b></div><span class="kpi-l">כל השנה</span></div>
-    <div class="kpi kpi-ring">${kpiInfo('students')}<div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">לפי התלמידים</span></div>
-    <div class="kpi kpi-ring">${kpiInfo('due')}<div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">לפי החובה</span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('students')}<div class="ring" id="dk-ring2"><b id="dk-pct2">—</b></div><span class="kpi-l">לפי התלמידים<small>עד החודש</small></span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('due')}<div class="ring" id="dk-ring3"><b id="dk-pct3">—</b></div><span class="kpi-l">לפי החובה<small>עד החודש</small></span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('studentsYear')}<div class="ring" id="dk-ring4"><b id="dk-pct4">—</b></div><span class="kpi-l">לפי התלמידים<small>עד סוף השנה</small></span></div>
+    <div class="kpi kpi-ring kpi-pair">${kpiInfo('dueYear')}<div class="ring" id="dk-ring5"><b id="dk-pct5">—</b></div><span class="kpi-l">לפי החובה<small>עד סוף השנה</small></span></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -91,14 +93,14 @@ function dashNotesInput(){
 
 // ── לוח הבקרה ──
 // כל חודש מציג את סך התנועות לפי תאריך התנועה, בלי פריסה — השאלה כאן היא «כמה נגבה בחודש הזה».
-// תנועה בסעיף CREDIT_METHOD אינה כסף שהתקבל ואינה נכנסת לסכום.
+// תנועה בסעיף CREDIT_METHOD או DEBT_METHOD אינה כסף שהתקבל ואינה נכנסת לסכום.
 function txnMonth(t){return dayNoon(String(t.txn_date)).getMonth();}
 
 // {student_client_id:{monthIdx:סכום}} — תנועות בפועל בלבד, בלי זיכויים.
 function actualByMonth(year){
   var map={};
   S.TRANSACTIONS.forEach(function(t){
-    if(isCreditTxn(t)||!t.txn_date||acadYearOf(t.txn_date)!==year)return;
+    if(isCreditTxn(t)||isDebtTxn(t)||!t.txn_date||acadYearOf(t.txn_date)!==year)return;
     var a=parseFloat(t.amount)||0;if(!a)return;
     var m=txnMonth(t);if(isNaN(m))return;
     if(!map[t.student_client_id])map[t.student_client_id]={};
@@ -190,37 +192,39 @@ function renderDash(){
   var yearCnt=S.STUDENTS.filter(function(s){return slHasTuition(s)&&YEAR_MONTHS.some(function(m){return studentInMonth(s,S.DASH_YEAR,m);});}).length;
   tf+='<td class="num tot" title="תלמידים שהיו פעילים בשלב כלשהו בשנה זו">'+(yearCnt||'—')+'</td></tr>';
   document.getElementById('dash-tfoot').innerHTML=tf;
-  // חוב משנים קודמות (card_settings.prev_debt) — נכנס לשנה הנוכחית בלבד: מוסיף ליעד השנתי ולחובה שעד החודש בשתי הטבעות.
-  var curYear=S.DASH_YEAR===acadYearOf(dayToday());
-  function prevDebt(s){return curYear?(parseInt((s.card_settings||{}).prev_debt,10)||0):0;}
+  // חוב שעבר משנה קודמת — תנועות בסעיף DEBT_METHOD בשנה המוצגת: מוסיף ליעד השנתי ולחובה שבטבעות.
+  function prevDebt(s){return studentDebtIn(s.client_id,S.DASH_YEAR);}
   var debtSum=S.STUDENTS.reduce(function(a,s){return a+(slHasTuition(s)?prevDebt(s):0);},0),yearTgt=grandTgt+debtSum;
   // שלוש הקוביות — הנגבה של עמודת הסה״כ, והיעד — של הטבלה ועוד החוב משנים קודמות.
   document.getElementById('dk-got').textContent='₪'+fmt(grand);
   document.getElementById('dk-tgt').textContent=yearTgt?'₪'+fmt(yearTgt):'—';
   // האחוז — טבעת בצבע שלב ההתקדמות, כמו המד בגיוס: מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 — היעד הושג, ירוק (כמו «אחוז גבייה» בטבלה).
-  paintRing('dk-ring','dk-pct',pctNum(grand,yearTgt),ofTargetTitle(grand,yearTgt)+(debtSum?' (כולל חוב משנים קודמות ‎'+fmt(debtSum)+'‎)':''),'אחוז גבייה שנתי');
+  paintRing('dk-ring','dk-pct',pctNum(grand,yearTgt),ofTargetTitle(grand,yearTgt)+(debtSum?' (כולל חוב שעבר משנה קודמת ‎'+fmt(debtSum)+'‎)':''),'אחוז גבייה שנתי');
   // שתי הטבעות שעד החודש — לכל תלמיד: החובה מתחילת השנה ועד סוף החודש הנוכחי, ועוד החוב משנים קודמות; והתשלומים באותו טווח, כולל זיכוי מיתרה,
   // נספרים עד גובה החובה שלו בלבד — תשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר. ההבדל ביניהן — השכר:
   // «לפי התלמידים» — שכר ברירת המחדל של השיעור; «לפי החובה» — השכר שבכרטיס (studentTuition).
-  var nowK=dayToday().slice(0,7);
-  function paidTD(s){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=nowK)p+=parseFloat(t.amount)||0;});return p;}
-  function toDate(rate){
+  // ושתי טבעות עד סוף השנה, באותו חישוב: כל חודשי השנה, וכל התשלומים שנרשמו לה — גם צ׳קים לחודשים הבאים — עד גובה החובה של השנה כולה.
+  var nowK=dayToday().slice(0,7),endK=acadMonthKey(S.DASH_YEAR,YEAR_MONTHS[YEAR_MONTHS.length-1]);
+  function paidTo(s,lim){var p=0;S.TRANSACTIONS.forEach(function(t){if(t.student_client_id===s.client_id&&t.txn_date&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===S.DASH_YEAR&&monthKeyOf(t.txn_date)<=lim)p+=parseFloat(t.amount)||0;});return p;}
+  function cover(rate,lim){
     var due=0,cov=0;
     S.STUDENTS.forEach(function(s){
       if(!slHasTuition(s))return;
       var d=prevDebt(s);
-      YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=nowK&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
+      YEAR_MONTHS.forEach(function(m){var k=acadMonthKey(S.DASH_YEAR,m);if(k<=lim&&studentInMonth(s,S.DASH_YEAR,m))d+=rate(s,k);});
       if(!d)return;
-      due+=d;cov+=Math.min(paidTD(s),d);
+      due+=d;cov+=Math.min(paidTo(s,lim),d);
     });
     return {due:due,cov:Math.round(cov*100)/100};
   }
   // «השלמת חוב בוגרים» — גביית חובות ישנים: נכנסת לנגבה של «לפי התלמידים» ולא ליעד, כמו בטבלה.
-  var grad=S.STUDENTS.filter(function(s){return !slHasTuition(s);}).reduce(function(a,s){return a+paidTD(s);},0);
-  var byStu=toDate(function(s){return slDefaultTuition(s);});byStu.cov=Math.round((byStu.cov+grad)*100)/100;
-  paintRing('dk-ring2','dk-pct2',pctNum(byStu.cov,byStu.due),byStu.due?'נגבה ‎'+fmt(byStu.cov)+'‎ מתוך ‎'+fmt(byStu.due)+'‎ עד החודש, לפי שכר ברירת המחדל':'אין עדיין חודשים שחלפו','אחוז הגבייה עד החודש');
-  var byDue=toDate(function(s,k){return studentTuition(s,k);});
-  paintRing('dk-ring3','dk-pct3',pctNum(byDue.cov,byDue.due),byDue.due?'שולם ‎'+fmt(byDue.cov)+'‎ מתוך החובה ‎'+fmt(byDue.due)+'‎ עד החודש, לפי השכר שבכרטיס':'אין עדיין חודשים שחלפו','אחוז החובה ששולם');
+  function grad(lim){return S.STUDENTS.filter(function(s){return !slHasTuition(s);}).reduce(function(a,s){return a+paidTo(s,lim);},0);}
+  var byDef=function(s){return slDefaultTuition(s);},byCard=function(s,k){return studentTuition(s,k);};
+  [['2',byDef,nowK,'עד החודש'],['3',byCard,nowK,'עד החודש'],['4',byDef,endK,'עד סוף השנה'],['5',byCard,endK,'עד סוף השנה']].forEach(function(r){
+    var c=cover(r[1],r[2]),stu=r[1]===byDef;
+    if(stu)c.cov=Math.round((c.cov+grad(r[2]))*100)/100;
+    paintRing('dk-ring'+r[0],'dk-pct'+r[0],pctNum(c.cov,c.due),c.due?(stu?'נגבה':'שולם')+' ‎'+fmt(c.cov)+'‎ מתוך ‎'+fmt(c.due)+'‎ '+r[3]+(stu?', לפי שכר ברירת המחדל':', לפי השכר שבכרטיס'):'אין עדיין חודשים שחלפו','אחוז הגבייה '+r[3]);
+  });
 
   // הגרף — אחוז הגבייה של כל חודש, והקו המקווקו — יעד הגבייה (90%); מעל העמודה — האחוז, ומתחתיו הסכום שנגבה, מקוצר.
   document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){

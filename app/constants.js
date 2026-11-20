@@ -54,12 +54,13 @@ var MSG_TP_AMOUNT = 'בשכר לתקופה — הסכום חייב להיות מ
 
 // הסבר הקוביות בלוח הבקרה — כפתור המידע שבכל קובייה
 var KPI_INFO = {
-  year: { t: 'כל השנה', b: 'כל מה שנגבה בשנת הלימודים, מתוך היעד של השנה כולה — כולל החודשים שעוד לא הגיעו. היעד: התלמידים הפעילים בכל חודש × שכר ברירת המחדל של השיעור, ועוד החוב משנים קודמות.' },
-  students: { t: 'לפי התלמידים', b: 'לכל תלמיד — מה ששילם מתחילת השנה ועד סוף החודש הנוכחי, כולל זיכוי מיתרה, עד גובה מה שהיה עליו לשלם: שכר ברירת המחדל של השיעור על החודשים שעברו, ועוד החוב משנים קודמות. תשלום מראש אינו נספר; תשלומי «השלמת חוב בוגרים» נספרים.' },
-  due: { t: 'לפי החובה', b: 'כמו «לפי התלמידים», אבל לפי השכר שבכרטיס של כל תלמיד: מה ששילם מתחילת השנה ועד סוף החודש הנוכחי, כולל זיכוי מיתרה, עד גובה החובה שלו — החודשים שעברו ועוד החוב משנים קודמות. תשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר.' }
+  year: { t: 'כל השנה', b: 'כל מה שנגבה בשנת הלימודים, מתוך היעד של השנה כולה — כולל החודשים שעוד לא הגיעו. היעד: התלמידים הפעילים בכל חודש × שכר ברירת המחדל של השיעור, ועוד החוב שעבר משנה קודמת.' },
+  students: { t: 'לפי התלמידים — עד החודש', b: 'לכל תלמיד — מה ששילם מתחילת השנה ועד סוף החודש הנוכחי, כולל זיכוי מיתרה, עד גובה מה שהיה עליו לשלם: שכר ברירת המחדל של השיעור על החודשים שעברו, ועוד החוב שעבר משנה קודמת. תשלום מראש אינו נספר; תשלומי «השלמת חוב בוגרים» נספרים.' },
+  due: { t: 'לפי החובה — עד החודש', b: 'כמו «לפי התלמידים», אבל לפי השכר שבכרטיס של כל תלמיד: מה ששילם מתחילת השנה ועד סוף החודש הנוכחי, כולל זיכוי מיתרה, עד גובה החובה שלו — החודשים שעברו ועוד החוב שעבר משנה קודמת. תשלום מראש לחודשים הבאים אינו נספר ואינו מכסה על תלמיד אחר.' },
+  studentsYear: { t: 'לפי התלמידים — עד סוף השנה', b: 'כמו «לפי התלמידים», אבל על השנה כולה: לכל תלמיד — כל התשלומים שנרשמו לשנה, גם צ׳קים לחודשים הבאים, עד גובה מה שעליו לשלם בכל השנה. כך רואים כמה מהשנה כבר מובטח, ושהאחוז של עד החודש לא נשען על תשלומים מראש.' },
+  dueYear: { t: 'לפי החובה — עד סוף השנה', b: 'כמו «לפי החובה», אבל על השנה כולה: לכל תלמיד — כל התשלומים שנרשמו לשנה, גם צ׳קים לחודשים הבאים, עד גובה החובה שלו בכל השנה לפי השכר שבכרטיס, ועוד החוב שעבר משנה קודמת.' }
 };
 
-var MSG_DEBT_POSITIVE = 'חוב קודם חייב להיות מספר חיובי';
 
 var MSG_SETTINGS_NOT_SAVED = 'ההגדרות לא נשמרו במכשיר';
 
@@ -72,6 +73,7 @@ var MSG_VALUE_EXISTS = 'הערך כבר קיים ברשימה';
 var MSG_ITEM_SAVE_FAIL = 'השמירה במכשיר נכשלה — הפריט לא נוסף';
 
 var MSG_CREDIT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום ניצול יתרת זכות';
+var MSG_DEBT_ITEM_LOCKED = '» הוא סעיף מערכת ואינו נמחק — בלעדיו אי אפשר לרשום חוב שעבר משנה קודמת';
 
 var MSG_ITEM_MISSING = 'הפריט לא נמצא';
 
@@ -138,6 +140,8 @@ var YEAR_MONTHS=[8,9,10,11,0,1,2,3,4,5,6,7];
 // יתרת זכות אינה חוב שלילי ואינה מקוזזת; זיכוי מיתרה מקטין חוב אך אינו כסף שהתקבל
 // הסיווג לפי המחרוזת שעל התנועה ולא לפי קיום הפריט ברשימה — מחיקת הפריט אינה משנה סיווג היסטורי
 var CREDIT_METHOD='זוכה על חשבון יתרת זכות';
+// המראה של הזיכוי — חוב שעבר משנה קודמת: תנועה שמוסיפה לחובה ואינה כסף שהתקבל; סעיף מערכת באדום, ונרשם כמו הזיכוי (בדרך כלל ב-1.9).
+var DEBT_METHOD='חוב שעבר משנה קודמת';
 
 // מפתחות שאסור להם להגיע לאחסון המקומי; נאכפת במשיכה, בכתיבה המקומית ובשער הדיסק
 // סוד חדש נכנס לרשימה הזו ולא למנגנון חדש
@@ -149,8 +153,8 @@ var TTL_TXN_EDIT = 'עריכת תשלום — ';
 var MSG_STUDENT_ADDED = 'תלמיד נוסף';
 var MSG_TXN_SAVED = 'תשלום נשמר';
 
-export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_NAME, CLS_PICK, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
-         MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DEBT_POSITIVE, MSG_DELETED_OK,
+export { MSG_ADD_METHOD, MSG_METHOD_LABEL, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_VALUE_REQUIRED, MSG_YEAR_ROLL_TITLE, CLS_CYCLE_ADD, CLS_LIST, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_NAME, CLS_PICK, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, MSG_DEBT_ITEM_LOCKED, KV_TABLE, LK_METHOD, MSG_CLS_REQUIRED, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED,
+         MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED, MSG_DELETED_OK,
          MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON,
          MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE, MSG_DEL_STUDENT_TITLE,
          MSG_DEL_TXN_BODY, MSG_DEL_TXN_TITLE, MSG_END_BEFORE_START, 

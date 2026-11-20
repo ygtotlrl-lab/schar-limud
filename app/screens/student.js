@@ -2,16 +2,16 @@
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
-import { CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
+import { CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
-         MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM, MSG_DEBT_POSITIVE,
+         MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM,
          MSG_NAME_REQUIRED,
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TP_AMOUNT, MSG_TP_END_BEFORE, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
-import { acadMonthKey, acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
+import { acadMonthKey, acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, isDebtTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,
          monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendStuTag, pendingCid,
          PER, periodText, periodsProblem, releaseCid, slArchiveGroups, slCycleFor,
          slCycleOf, slLocalWrite, slPeriods, slSchoolYear, slYearApply, slYearPlan,
@@ -66,14 +66,6 @@ function screenStudentHTML() {
         <div class="frm-row" id="sc-cycle-row">
           <label for="sc-edit-cycle">מחזור</label>
           <select id="sc-edit-cycle"></select>
-        </div>
-        <div class="frm-row sc-tu">
-          <label for="sc-edit-debt">חוב משנים קודמות (הזנה ידנית, ריק = אין)</label>
-          <input id="sc-edit-debt" type="text" inputmode="decimal" placeholder="0" data-kent>
-        </div>
-        <div class="frm-row sc-tu">
-          <label for="sc-edit-debt-note">הערה לחוב הקודם</label>
-          <input aria-label="למשל: יתרת תשפ&quot;ה" id="sc-edit-debt-note" type="text" placeholder="למשל: יתרת תשפ&quot;ה" data-kent>
         </div>
         <div class="frm-row sc-tu">
           <span class="frm-lbl">תקופות פעילות</span>
@@ -144,7 +136,7 @@ function grpToDate(rows){
   var y=acadYearOf(dayToday()),m=curMonth(),req=0,paid=0,ids={},end=monthKeyOf(dayToday());
   rows.forEach(function(s){ids[s.client_id]=1;
     for(var i=0;i<YEAR_MONTHS.length;i++){if(studentInMonth(s,y,YEAR_MONTHS[i]))req+=slDefaultTuition(s);if(YEAR_MONTHS[i]===m)break;}});
-  S.TRANSACTIONS.forEach(function(t){if(ids[t.student_client_id]&&t.txn_date&&!isCreditTxn(t)&&acadYearOf(t.txn_date)===y&&String(t.txn_date).slice(0,7)<=end)paid+=parseFloat(t.amount)||0;});
+  S.TRANSACTIONS.forEach(function(t){if(ids[t.student_client_id]&&t.txn_date&&!isCreditTxn(t)&&!isDebtTxn(t)&&acadYearOf(t.txn_date)===y&&String(t.txn_date).slice(0,7)<=end)paid+=parseFloat(t.amount)||0;});
   return {req:Math.round(req*100)/100,paid:Math.round(paid*100)/100};
 }
 // הסיכום — של השיעור כולו, בכל הרשימה: אותו מספר מעל הקו ומתחתיו, בלי תלות ב«טופל» ובחיפוש.
@@ -308,13 +300,12 @@ function renderStudentCard(){
   var meta=[];if(CLS_NAME[s.cls])meta.push(CLS_NAME[s.cls]);var cyl=cycleLabel(slCycleOf(s));if(cyl)meta.push(cyl);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
   document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
-  document.getElementById('sc-edit-debt').value=cs.prev_debt||'';document.getElementById('sc-edit-debt-note').value=cs.prev_debt_note||'';
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(slCycleOf(s));
   document.getElementById('sc-cycle-row').classList.toggle('hidden',!!CLS_NO_CYCLE[s.cls]);
   // «השלמת חוב בוגרים» — בלי שכר, שיעור, חוב ותקופות: השם בלבד.
   // Escape בשדה מחזיר לערך השמור — defaultValue, ולא לערך שבסימון.
-  ['sc-edit-name','sc-edit-tuition','sc-edit-debt','sc-edit-debt-note'].forEach(function(id){var e=document.getElementById(id);e.defaultValue=e.value;});
+  ['sc-edit-name','sc-edit-tuition'].forEach(function(id){var e=document.getElementById(id);e.defaultValue=e.value;});
   document.querySelectorAll('#acc-sc-settings .sc-tu').forEach(function(r){r.classList.toggle('hidden',!!CLS_NO_TUITION[s.cls]);});
   document.getElementById('sc-tperiods').innerHTML=tpEditorHTML(slTuitionPeriods(s));
   document.getElementById('sc-periods').innerHTML=PER.editorHTML(slPeriods(s));renderScAnnual();
@@ -374,6 +365,9 @@ function annualHTML(s,year){
   var cs=s.card_settings||{},cur=year===acadYearOf(dayToday());
   var dist=calcDistribution(s.client_id,year),rows='',tR=0,tP=0;
   if(CLS_NO_TUITION[s.cls])return freeAnnualHTML(s,year,dist);
+  // חוב שעבר משנה קודמת — שורה ראשונה באדום: חובה שהתשלומים מכסים לפני החודשים (dist.debt).
+  if(dist.debt){var db=dist.debt,dbb=db.paid-db.req;tR+=db.req;tP+=db.paid;
+    rows+='<tr class="debt-row"><td class="month-cell">'+stIcon(icon('debt'))+'חוב שעבר משנה קודמת</td><td class="req-cell">'+fmt(db.req)+'</td><td class="paid-cell">'+fmt(db.paid)+'</td><td class="bal-cell '+(dbb>=0?'amt-ok':'amt-bad')+'">'+(dbb>=0?'+':'')+fmt(dbb)+'</td></tr>';}
   YEAR_MONTHS.forEach(function(m){
     var i=dist[m]||{req:studentTuition(s,acadMonthKey(year,m)),paid:0};
     if(i.off){rows+='<tr class="month-off"><td class="month-cell">'+monthLabel(year,m)+'</td><td class="off-cell req-cell" colspan="3">לא היה בישיבה</td></tr>';return;}
@@ -381,15 +375,11 @@ function annualHTML(s,year){
     rows+='<tr><td class="month-cell">'+monthLabel(year,m)+'</td><td class="req-cell">'+fmt(i.req)+'</td><td class="paid-cell">'+fmt(i.paid)+'</td><td class="bal-cell '+bc+'">'+(b>=0?'+':'')+fmt(b)+'</td></tr>';
   });
   var tb=tP-tR,tf='<tr class="sum-row"><td>סה"כ</td><td class="req-cell">'+fmt(tR)+'</td><td class="paid-cell">'+fmt(tP)+'</td><td class="bal-cell '+(tb>=0?'amt-ok':'amt-bad')+'">'+(tb>=0?'+':'')+fmt(tb)+'</td></tr>';
-  // חוב משנים קודמות מוזן ידנית ואינו נגרר אוטומטית — המנהל קובע מה נגרר; מוצג בשנה הנוכחית בלבד,
-  // ואינו מתווסף לסה"כ השנה — כדי שיובחן חוב שנולד השנה מחוב שנגרר.
-  var pd=parseInt(cs.prev_debt)||0;
-  if(cur&&pd>0)tf+='<tr class="debt-row"><td>&#128336; חוב משנים קודמות</td><td class="req-cell">'+fmt(pd)+'</td><td></td><td class="bal-cell amt-bad">&#8722;'+fmt(pd)+(cs.prev_debt_note?' <span class="debt-note">('+esc(cs.prev_debt_note)+')</span>':'')+'</td></tr>';
   var html='<div class="table-scroll"><table class="tbl"><thead><tr><th>חודש</th><th>דרישה</th><th>שולם</th><th>יתרה</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+tf+'</tfoot></table></div>';
   // יתרת זכות מוצגת בשורה נפרדת ובצבע נפרד — אינה נכנסת ל«סה״כ שולם» ואינה מקזזת את שורת החוב.
   var cr=distCredit(dist);
-  if(cr>0)html+='<div class="credit-note"><span>&#128142; יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
-    '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'».</div>';
+  if(cr>0)html+='<div class="credit-note"><span>'+stIcon(icon('credit'))+'יתרת זכות</span><span>&#8362;'+fmt(cr)+'</span></div>'+
+    '<div class="credit-sub">שולם מעבר לסך החיוב בטווח החודשים של התלמיד בשנה זו. אינה חוב שלילי ואינה מקוזזת מסך החוב. לניצולה בשנה הבאה — רשום תשלום באמצעי «'+esc(CREDIT_METHOD)+'»; וחוב שנשאר — באמצעי «'+esc(DEBT_METHOD)+'».</div>';
   var yt=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===s.client_id&&acadYearOf(t.txn_date)===year;}), true);
   html+='<div class="sc-part"><div class="sc-sub-title">תשלומים בשנה זו</div>'+(txnListHTML(yt,false)||'<div class="empty">אין תשלומים בשנה זו</div>')+'</div>';
   return html;
@@ -442,11 +432,8 @@ function saveStudentSettings(){
   var tuitionVal=parseInt(tuition,10);
   if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}
   if(tuition)cs.monthly_tuition=tuitionVal;else delete cs.monthly_tuition;
-  var debtRaw=document.getElementById('sc-edit-debt').value,debtNote=document.getElementById('sc-edit-debt-note').value.trim();
-  var debtVal=parseInt(debtRaw);
-  if(debtRaw&&(!isFinite(debtVal)||debtVal<0)){toast(MSG_DEBT_POSITIVE, null, 'bad');return;}
-  if(debtRaw&&debtVal>0)cs.prev_debt=debtVal;else delete cs.prev_debt;
-  if(debtNote)cs.prev_debt_note=debtNote;else delete cs.prev_debt_note;
+  // השדה הישן «חוב משנים קודמות» ירד — החוב נרשם כתנועה בסעיף המערכת DEBT_METHOD.
+  delete cs.prev_debt;delete cs.prev_debt_note;
   var tp=tpRead(document.getElementById('acc-sc-settings'));if(tp.err){toast(tp.err, null, 'bad');return;}
   if(tp.ps.length)cs.tuition_periods=tp.ps;else delete cs.tuition_periods;
   var per=PER.read(document.getElementById('acc-sc-settings'));if(per.err){toast(per.err, null, 'bad');return;}

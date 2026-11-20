@@ -3,13 +3,13 @@ import { MSG_SAVED_LOCAL, uniqHas } from '../../core/util.js';
 import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
-import { CLS_NAME, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
+import { CLS_NAME, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, MSG_DEBT_ITEM_LOCKED, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_ADD_METHOD, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_METHOD_LABEL, MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_REQUIRED,
          MSG_VALUE_SAVE_FAIL } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
-import { isCreditValue, pendLkTag, slLocalWrite, slLookups } from '../domain.js';
+import { isCreditValue, isDebtValue, pendLkTag, slLocalWrite, slLookups } from '../domain.js';
 
 function screenSettingsHTML() {
   return `
@@ -65,11 +65,12 @@ function renderSettingsLists(){renderListItems(LK_METHOD,'set-methods-list');}
 // הסידור בגרירה מהידית, והסדר נכתב לכל השורות מה-DOM הסופי — במנגנון שבליבה.
 dragDef(LK_METHOD, lookupDragApply);
 
-// סעיף הזיכוי נגרר כמו כל אמצעי, אך מוצג נעול ובלי כפתור מחיקה — מחיקתו מסתירה אותו מהטופס ומונעת רישום זיכויים חדשים.
+// סעיף הזיכוי, והמראה שלו — החוב שעבר משנה קודמת — נגררים כמו כל אמצעי, אך מוצג נעול ובלי כפתור מחיקה — מחיקתו מסתירה אותו מהטופס ומונעת רישום זיכויים חדשים.
 // הסיווג ההיסטורי אינו נשען על הפריט — הוא נקרא מהמחרוזת ששמורה על התנועה.
 function renderListItems(kind,elId){document.getElementById(elId).innerHTML=(slLookups(kind).map(function(i){
   var head='<div class="set-list-item" data-drag="'+esc(kind)+'" data-id="'+esc(i.client_id)+'"><span class="grip" data-grip aria-hidden="true">&#10303;</span><span class="lk-label">'+esc(i.label)+'</span>';
   if(isCreditValue(i.label))return head+'<span class="pill credit" title="סעיף מערכת — משמש לסימון ניצול יתרת זכות ואינו נספר כהכנסה. לא ניתן למחיקה.">'+icon('lock')+'סעיף מערכת</span></div>';
+  if(isDebtValue(i.label))return head+'<span class="pill debt" title="סעיף מערכת — משמש לרישום חוב שעבר משנה קודמת ואינו נספר כהכנסה. לא ניתן למחיקה.">'+icon('lock')+'סעיף מערכת</span></div>';
   return head+pendLkTag(i)+'<button class="btn sm danger ic" data-act="list-del" data-id="'+esc(i.client_id)+'" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button></div>';
 }).join(''))||'<div class="empty">ריק</div>';}
 
@@ -100,6 +101,7 @@ function deleteListItem(key){
   // חסימה מפורשת ולא כשל שקט — הכפתור עשוי להופיע מרינדור ישן.
   var it=(MIRROR.sl_lookups||[]).filter(function(x){return idEq(x.client_id,key);})[0];
   if(it&&isCreditValue(it.label)){toast('«'+CREDIT_METHOD+MSG_CREDIT_ITEM_LOCKED,4200, 'warn');return;}
+  if(it&&isDebtValue(it.label)){toast('«'+DEBT_METHOD+MSG_DEBT_ITEM_LOCKED,4200, 'warn');return;}
   ask(MSG_DEL_ITEM_TITLE,MSG_DEL_ITEM_BODY,MSG_CONFIRM, null, null, true).then(function(yes){
     if(!yes)return;
     if(!it){toast(MSG_ITEM_MISSING, null, 'warn');return;}

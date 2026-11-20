@@ -3,14 +3,14 @@ import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
 import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
-import { CREDIT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
+import { CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
          MSG_PICK_STUDENT_PLAIN, TXN_FILTER_ALL, TTL_TXN_EDIT } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
-import { acadYearOf, hasCreditItem, isCreditTxn, isCreditValue, pendTxnTag, pendingCid, releaseCid,
+import { acadYearOf, hasCreditItem, hasDebtItem, isCreditTxn, isCreditValue, isDebtTxn, isDebtValue, pendTxnTag, pendingCid, releaseCid,
          slLocalWrite, slLookups, slSortTxns, studentInMonth, studentTuition, txnAmountHTML } from '../domain.js';
 
 function screenTxnHTML() {
@@ -73,6 +73,7 @@ function methodGrid(target,cur){
   var ml=slLookups(LK_METHOD).map(function(m){return m.label;});
   // סעיף הזיכוי מוזרק תמיד, גם כשאינו ברשימה — אחרת מחיקה אחת בהגדרות משביתה בשקט את ניצול יתרת הזכות.
   if(!hasCreditItem())ml.push(CREDIT_METHOD);
+  if(!hasDebtItem())ml.push(DEBT_METHOD);
   return methodGridHTML({target:target,list:ml,cur:cur,label:'אמצעי התשלום',ico:function(l){return icon(methodIco(l));}});
 }
 function txnMethodChips(){
@@ -94,9 +95,10 @@ function updateDropdowns(){
 function txnMethodHint(){
   var sel=document.getElementById('txn-method'),h=document.getElementById('txn-method-hint');
   if(!sel||!h)return;
-  var on=isCreditValue(sel.value);
-  h.classList.toggle('hidden',!on);
+  var on=isCreditValue(sel.value),db=isDebtValue(sel.value);
+  h.classList.toggle('hidden',!on&&!db);
   if(on)h.innerHTML='<span class="credit-mark">'+stIcon(icon('credit'))+'ניצול יתרת זכות</span> — התנועה תקטין את חוב התלמיד אך <b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
+  else if(db)h.innerHTML='<span class="debt-mark">'+stIcon(icon('debt'))+'חוב שעבר משנה קודמת</span> — התנועה תוסיף לחוב התלמיד בשנה זו ו<b>לא תיספר כגבייה או כהכנסה</b> בדשבורד.';
 }
 
 // ── תשלומים — רישום, יומן ומחיקה רכה ──
@@ -124,20 +126,20 @@ function txnLogMore(){S.TXN_LOG_LEVEL=Math.min(2,(S.TXN_LOG_LEVEL||0)+1);renderT
 function txnLogLess(){S.TXN_LOG_LEVEL=0;renderTxnLog();}
 
 // אייקון לאמצעי התשלום — לפי מילה בשם, כי הרשימה נערכת בהגדרות (כמו בגיוס).
-// האייקון של אמצעי — הזיכוי מיתרה ב-repeat, ושאר האמצעים לפי השם; אחד לבורר ולקבלה.
-function methodIco(m){return isCreditValue(m)?'repeat':methodIcon(m);}
+// האייקון של אמצעי — הזיכוי מיתרה ב-repeat, והחוב שעבר — בחצים ההפוכים (repeatBack), ושאר האמצעים לפי השם; אחד לבורר ולקבלה.
+function methodIco(m){return isCreditValue(m)?'repeat':isDebtValue(m)?'repeatBack':methodIcon(m);}
 
 function txnDay(d){var p=String(d||'').split('-');return p.length<3?(d||'—'):p[2]+'.'+p[1]+'.'+p[0];}
 
 // «קבלה» — רכיב הליבה (receiptHTML), ביומן ובכרטיס התלמיד: השם ביומן, וההערה מתחתיו · ובסוף השורה — עריכה (תאריך · סכום · אמצעי · הערה, ומחיקה).
-// זיכוי מיתרה — במסגרת מקווקוות בגוון הזיכוי, והסכום בכחול.
+// זיכוי מיתרה — במסגרת מקווקוות בגוון הזיכוי, והסכום בכחול; והמראה שלו, חוב שעבר — באדום.
 function txnListHTML(txns,withName){
   return receiptHTML(txns.map(function(t){
-    var cr=isCreditTxn(t),meth=cr?CREDIT_METHOD:(t.payment_method||'');
+    var cr=isCreditTxn(t),db=isDebtTxn(t),meth=cr?CREDIT_METHOD:db?DEBT_METHOD:(t.payment_method||'');
     var st=withName?S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);}):null;
     var who=withName?'<b><span class="student-name">'+esc(st?st.name:'#'+t.student_client_id)+'</span>'+pendTxnTag(t)+'</b>'+(t.note?'<small>'+esc(t.note)+'</small>':'')
                     :'<small>'+(t.note?esc(t.note):'')+'</small>'+pendTxnTag(t);
-    return {day:txnDay(t.txn_date),amt:txnAmountHTML(t),who:who,method:meth,ico:icon(methodIco(meth)),dashed:cr,cls:cr?'credit':'',
+    return {day:txnDay(t.txn_date),amt:txnAmountHTML(t),who:who,method:meth,ico:icon(methodIco(meth)),dashed:cr||db,cls:cr?'credit':db?'debt':'',
       tail:'<button class="txn-x" data-act="txn-edit" data-id="'+esc(t.client_id)+'" aria-label="עריכת התשלום" title="עריכת התשלום">'+icon('edit')+'</button>'};
   }));
 }
@@ -160,7 +162,7 @@ function txnById(key){return (MIRROR.sl_transactions||[]).filter(function(x){ret
 function openTxnEdit(key){
   var t=txnById(key);if(!t){toast(MSG_PAY_MISSING, null, 'warn');return;}
   var st=S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);});
-  var cur=isCreditTxn(t)?CREDIT_METHOD:(t.payment_method||'');
+  var cur=isCreditTxn(t)?CREDIT_METHOD:isDebtTxn(t)?DEBT_METHOD:(t.payment_method||'');
   var body='<div data-ks><div class="frm-2">'
     +'<div class="frm-row"><label for="te-amount">סכום (&#8362;)</label><input id="te-amount" type="text" inputmode="decimal" value="'+esc(t.amount)+'"></div>'
     +'<div class="frm-row"><label for="te-date">תאריך</label><input id="te-date" type="date" value="'+esc(t.txn_date||'')+'"></div></div>'

@@ -11,7 +11,7 @@ import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, combo
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, MSG_STUDENT_ADDED, MSG_TXN_SAVED } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
-import { _slPushOf, acadYearHeb, acadYearOf, ensureCreditMethod, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
+import { _slPushOf, acadYearHeb, acadYearOf, ensureSystemMethods, PER, slApplyMirror, slHandledToggle, slKeyOf, slLocalWrite, slLookups, slSanitizeRows, slSendRows, syncAll } from './domain.js';
 import { openKpiInfo, dashNextYear, dashNotesInput, dashNotesSave, dashPrevYear, renderDash,
          screenDashHTML } from './screens/dash.js';
 import { addListItem, deleteListItem, openListAdd, renderSettingsLists, renderSettingsPanel, saveDefaultTuition,
@@ -290,7 +290,7 @@ function slBoot(){
   shellBare(false);
   slApplyMirror();
   refreshUI();
-  syncAll().then(function(){ ensureCreditMethod(); });
+  syncAll().then(function(){ ensureSystemMethods(); });
   window.bootOk();
 }
 

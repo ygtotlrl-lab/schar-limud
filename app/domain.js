@@ -9,7 +9,7 @@ import { logAction } from '../core/backup.js';
 import { hebYearLabelFull } from '../core/hebrew.js';
 import { esc, pullRender, toast } from '../core/ui.js';
 import { periodsEngine } from '../core/periods.js';
-import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_TUITION_KEY, CREDIT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
+import { CLS_CYCLE_ADD, CLS_LIST, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, KV_TABLE, LK_METHOD, MSG_END_BEFORE_START,
          MSG_LOAD_FAIL_POST, MSG_PERIOD_NONE, MSG_PERIOD_OPEN_LAST, MSG_PERIOD_OVERLAP, SL_NEVER_MIRROR_SETTINGS,
          YEAR_MONTHS } from './constants.js';
 import { S, shell } from './state.js';
@@ -365,6 +365,12 @@ function isCreditValue(v){return String(v==null?'':v).trim()===CREDIT_METHOD;}
 
 function isCreditTxn(t){return !!t&&isCreditValue(t.payment_method);}
 
+// המראה של הזיכוי — חוב שעבר משנה קודמת: לפי המחרוזת שעל התנועה, כמו הזיכוי.
+function isDebtValue(v){return String(v==null?'':v).trim()===DEBT_METHOD;}
+function isDebtTxn(t){return !!t&&isDebtValue(t.payment_method);}
+// החוב שעבר לשנה — סך תנועות החוב של התלמיד בשנת הלימודים.
+function studentDebtIn(sid,year){return S.TRANSACTIONS.reduce(function(a,t){return a+(t.student_client_id===sid&&isDebtTxn(t)&&t.txn_date&&acadYearOf(t.txn_date)===year?(parseFloat(t.amount)||0):0);},0);}
+
 // העודף יושב בתוצאת calcDistribution תחת 'credit' — שאר המפתחות הם אינדקסי חודש 0–11, ואין התנגשות
 function distCredit(d){return (d&&d.credit)||0;}
 
@@ -372,6 +378,7 @@ function distCredit(d){return (d&&d.credit)||0;}
 function studentCredit(sid,year){return distCredit(calcDistribution(sid,year));}
 
 function hasCreditItem(){return slLookups(LK_METHOD).some(function(i){return isCreditValue(i.label);});}
+function hasDebtItem(){return slLookups(LK_METHOD).some(function(i){return isDebtValue(i.label);});}
 
 var SYNC_LABELS=['תלמידים','תשלומים','הגדרות','רשימות'];
 
@@ -463,24 +470,30 @@ function slSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
 
-async function ensureCreditMethod(){
+// שני סעיפי המערכת — הזיכוי מיתרה והחוב שעבר משנה קודמת — נזרעים אחרי סנכרון תקין, כל אחד כשאינו ברשימה.
+async function ensureSystemMethods(){
   if(S._creditSeedDone||!S._lastSyncOk||!navigator.onLine)return;
-  if(hasCreditItem()){S._creditSeedDone=true;return;}
+  var need=[];if(!hasCreditItem())need.push(CREDIT_METHOD);if(!hasDebtItem())need.push(DEBT_METHOD);
   S._creditSeedDone=true;
+  if(!need.length)return;
   try{
     // כתיבה מקומית עם client_id ודחיפה ב-upsert — insert ישיר יוצר שורה שנייה בכל ניסיון חוזר אחרי תשובה שאבדה.
     // המזהה נגזר מהסוג והתווית — שני מכשירים שזורעים את הסעיף מגיעים לאותה שורה.
-    var row={client_id:LK_METHOD+':'+CREDIT_METHOD,kind:LK_METHOD,label:CREDIT_METHOD,sort:slLookups(LK_METHOD).length+1,deleted:false,deleted_at:null,deleted_by:null};
-    if(!slLocalWrite('sl_lookups',row)){S._creditSeedDone=false;return;}
+    for(var i=0;i<need.length;i++){
+      var row={client_id:LK_METHOD+':'+need[i],kind:LK_METHOD,label:need[i],sort:slLookups(LK_METHOD).length+1,deleted:false,deleted_at:null,deleted_by:null};
+      if(!slLocalWrite('sl_lookups',row)){S._creditSeedDone=false;return;}
+    }
     await syncAll();
-  }catch(e){S._creditSeedDone=false;console.warn('[credit]',e);}
+  }catch(e){S._creditSeedDone=false;console.warn('[system-methods]',e);}
 }
 
 // הפריסה היא תור תשלומים לפי תאריך ולא בריכה — כך כל שקל יודע מאיזו תנועה בא, ואפשר לפצל cash מול cred.
 // paid = cash + cred.
 function calcDistribution(sid,year){
   var s=S.STUDENTS.find(function(x){return idEq(x.client_id, sid);});if(!s)return{};
-  var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year;}));
+  // החוב שעבר משנה קודמת אינו תשלום — הוא חובה, והתשלומים מכסים אותו לפני החודשים (result.debt).
+  var txns=slSortTxns(S.TRANSACTIONS.filter(function(t){return t.student_client_id===sid&&acadYearOf(t.txn_date)===year&&!isDebtTxn(t);}));
+  var debt=studentDebtIn(sid,year);
   var total=txns.reduce(function(a,t){return a+(parseFloat(t.amount)||0);},0),result={};
   var idx=0,left=0,EPS=1e-6;
   function draw(n){
@@ -503,6 +516,7 @@ function calcDistribution(sid,year){
     return result;
   }
   var used=0;
+  if(debt>0){var dd=draw(debt),dp=Math.round((dd.cash+dd.cred)*100)/100;used+=dp;result.debt={req:debt,paid:dp};}
   // הדגל off מבחין בין חודש שאינו מחויב לחודש מחויב שלא שולם.
   YEAR_MONTHS.forEach(function(m){
     if(!studentInMonth(s,year,m)){result[m]={req:0,paid:0,cash:0,cred:0,off:true};return;}
@@ -518,12 +532,13 @@ function calcDistribution(sid,year){
 // זיכוי מיתרה מסומן אחרת מתקבול — כדי שלא ייקרא ככסף שהתקבל בסריקה מהירה.
 function txnAmountHTML(t){
   if(isCreditTxn(t))return'<span class="amt-credit" title="זיכוי על חשבון יתרת זכות — אינו כסף שהתקבל">'+stIcon(icon('credit'))+'&#8362;'+fmt(t.amount)+'</span>';
+  if(isDebtTxn(t))return'<span class="amt-debt" title="חוב שעבר משנה קודמת — מוסיף לחובה ואינו כסף שהתקבל">'+stIcon(icon('debt'))+'&#8362;'+fmt(t.amount)+'</span>';
   return'<span class="txn-amt">&#8362;'+fmt(t.amount)+'</span>';
 }
 
 export { _slPushOf, acadMonthKey, acadYearHeb,
          acadYearOf, calcDistribution, countInMonth, slDefaultTuition, slHasTuition, distCredit,
-         enrollText, ensureCreditMethod, fmt, hasCreditItem, isCreditTxn,
+         enrollText, ensureSystemMethods, fmt, hasCreditItem, hasDebtItem, isCreditTxn, isDebtTxn, isDebtValue, studentDebtIn,
          isCreditValue, monthKeyLabel, monthKeyOf, monthLabel, pcCascadeDelete, pendLkTag, pendStuKey, pendStuTag, pendTxnTag,
          pendingCid, PER, releaseCid, slApplyMirror, slHandledToggle, slKeyOf, slLookups,
          slLocalWrite, periodText, periodsProblem, slPeriods, slStudentGroups, cycleLabel, slArchiveGroups, slCycleFor, slCycleOf, slSchoolYear, slYearApply, slYearPlan,
