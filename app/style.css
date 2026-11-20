@@ -114,11 +114,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .kpi-ring .kpi-l{text-align:center}
 /* כפתור המידע — בפינה העליונה של הקובייה, קטן ועמום; ההסבר בחלון */
 .kpi-ring{position:relative}
-.kpi-info{position:absolute;top:var(--sp-1);inset-inline-end:var(--sp-1);width:24px;height:24px;display:grid;place-items:center;border:0;background:none;color:var(--text-3);opacity:.6;border-radius:50%;cursor:pointer;padding:0}
-.kpi-info:hover,.kpi-info:focus-visible{opacity:1}
-.kpi-info .ico{width:13px;height:13px;stroke-width:1.75}
-/* בטלפון הטבעת קטנה מעט — שיהיה אוויר בינה לבין כפתור המידע שבפינה */
-@media (max-width:560px){.dash-kpis .ring{width:56px;height:56px}.dash-kpis .ring::before{inset:6px}}
+.kpi-info{position:absolute;top:var(--sp-2);inset-inline-end:var(--sp-2);width:28px;height:28px;display:grid;place-items:center;border:0;background:none;color:var(--text-3);border-radius:50%;cursor:pointer;padding:0}
+.kpi-info .ico{width:17px;height:17px}
 .kpi-info:hover,.kpi-info:focus-visible{background:var(--brand-soft);color:var(--brand-ink)}
 .kpi-info-b{margin:0;line-height:1.6;color:var(--text-2)}
 /* שכר לתקופה — שלושה שדות בשורה, באותה צורה של עורך התקופות */
