@@ -361,6 +361,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .credit-row{background:var(--creditl)}
 .credit-row .month-cell{color:var(--credit);font-weight:700}
 .credit-row .credit-in{color:var(--credit);font-size:var(--fs-1);font-weight:600}
+/* שמות היתרות שעברו ארוכים — נשברים לשתי שורות, כך שהטבלה נשארת ברוחב המסך בטלפון ואינה נגללת לצד */
+.credit-row .month-cell,.debt-row .month-cell{white-space:normal;min-width:7em}
+.credit-row .credit-in{white-space:normal;line-height:1.25}
 .student-name{font-weight:600}
 .sum-row{font-weight:700;background:var(--bg)}
 /* ── הגדרות ── */
