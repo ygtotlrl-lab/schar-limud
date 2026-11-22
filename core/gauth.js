@@ -148,7 +148,7 @@ async function _gsiButton(sb, done) {
   host.innerHTML = '';
   self.google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with',
     locale: 'he', width: Math.min(312, host.clientWidth || 312), logo_alignment: 'center' });
-  if (mine) mine.hidden = true;
+  if (mine) mine.style.display = 'none'; // כפתור אחד — של Google, עם החשבון שכבר מחובר במכשיר
   return true;
 }
 
@@ -284,13 +284,16 @@ async function gauthUsersOpen() {
   openModal('משתמשים', '<div class="ga-list" id="ga-list"><div class="ga-empty">טוען…</div></div>',
     '<button class="btn" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
   // הרשימה והמכשירים במקביל; המכשירים — תוספת, ובלעדיהם הרשימה מוצגת בלי פעמונים מלאים
-  var both = await Promise.all([_gate({ action: 'users_list' }), pushDevices()]);
+  var both;
+  try { both = await Promise.all([_gate({ action: 'users_list' }), pushDevices()]); }
+  catch (e) { both = [{ error: String(e && e.message || e) }, {}]; }
   var r = both[0];
   _devs = both[1] || {};
   var l = document.getElementById('ga-list');
-  if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">' + (r && r.error === 'perm' ? 'רק מנהל רואה את המשתמשים' : 'אין חיבור לשרת — נסו שוב') + '</div>'; return; }
+  if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">' + (r && r.error === 'perm' ? 'רק מנהל רואה את המשתמשים' : 'אין חיבור לשרת — נסו שוב') + (r && r.error && r.error !== 'perm' ? '<br><small>' + esc(String(r.error)) + '</small>' : '') + '</div>'; return; }
   _rows = r.rows;
-  if (l) l.innerHTML = _listHTML();
+  // תקלה בציור — מוצגת בחלון, ולא «טוען…» שנשאר
+  try { if (l) l.innerHTML = _listHTML(); } catch (e) { console.error('[gauth] users', e); if (l) l.innerHTML = '<div class="ga-empty">שגיאה בהצגת הרשימה: ' + esc(String(e && e.message || e)) + '</div>'; }
 }
 function gauthUserEdit(id) {
   var u = _rows.filter(function (x) { return x.client_id === id; })[0] || { client_id: '', login: '', full_name: '', role: 'junior', active: true, notify: false };
@@ -326,7 +329,8 @@ async function gauthUserSave() {
 // מפת הפעולות — האפליקציה פורשת אותה לתוך DOM_ACTIONS שלה (כולל פעולות ההתראות)
 var GAUTH_ACTIONS = Object.assign({}, PUSH_ACTIONS, {
   'ga-account': function () { gauthAccountOpen(); },
-  'ga-users': function () { return gauthUsersOpen(); },
+  // החלון מציג את הטעינה בעצמו — בלי «שומר…» על השורה שנלחצה
+  'ga-users': function () { gauthUsersOpen(); },
   'ga-user-edit': function (el) { gauthUserEdit(el.getAttribute('data-id') || ''); },
   'ga-user-save': function () { return gauthUserSave(); },
   'ga-signout': function () { closeModal(); return gauthSignOut(false); }
