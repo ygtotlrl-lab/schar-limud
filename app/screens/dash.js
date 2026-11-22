@@ -198,7 +198,7 @@ function renderDash(){
     slStudentGroups(list).forEach(function(g){
     rows+='<tr class="grp"><td class="stu" colspan="14">'+esc(g.label||'ללא שיעור')+'</td></tr>';
     g.rows.forEach(function(s){
-      var mm=actual[s.client_id]||{},tot=0,cellsHTML='';
+      var mm=actual[s.client_id]||{},tot=0,cellsHTML='',defT=slDefaultTuition(s);
       YEAR_MONTHS.forEach(function(m){
         var v=mm[m]||0;tot+=v;colT[m]=Math.round(((colT[m]||0)+v)*100)/100;
         // חודש מחוץ לטווח מוצג כ-'·' רק כשאין בו תנועה — כך סכום העמודה שווה בדיוק לסך תנועות החודש.
@@ -206,8 +206,8 @@ function renderDash(){
           cellsHTML+='<td class="num mo off" title="מחוץ לתקופות הפעילות של התלמיד">·</td>';return;
         }
         var extra=v&&!studentInMonth(s,S.DASH_YEAR,m)?' title="תנועה בחודש שמחוץ לתקופות הפעילות של התלמיד"':'';
-        // סכום שמתחת לחובה של החודש (השכר שבכרטיס) — באדום: תשלום חלקי, או חודש שלא הושלם.
-        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<studentTuition(s,acadMonthKey(S.DASH_YEAR,m))?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
+        // סכום שמתחת לשכר ברירת המחדל של השיעור — באדום: הנחה, תשלום חלקי, או חודש שלא הושלם (גם כשהיעד לפי החובה).
+        cellsHTML+='<td class="num mo '+(v?'paid':'zero')+(v&&v<defT?' amt-bad':'')+'"'+extra+'>'+(v?fmt(v):'—')+'</td>';
       });
       grand=Math.round((grand+tot)*100)/100;
       rows+='<tr><td class="stu">'+esc(s.name)+'</td>'+cellsHTML+'<td class="num tot">'+(tot?fmt(tot):'—')+'</td></tr>';
