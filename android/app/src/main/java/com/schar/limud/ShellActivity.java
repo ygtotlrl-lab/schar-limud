@@ -34,6 +34,12 @@ public abstract class ShellActivity extends Activity {
     // ריק בכוונה — נדרס רק כשיש גשר מוצהר.
     protected void installBridge() { }
 
+    // גשר ההתראות — ריק בכוונה, נדרס רק באפליקציה שמצהירה android.push.
+    protected void installPush() { }
+
+    // גשר הכניסה עם Google — ריק בכוונה, נדרס רק באפליקציה שמצהירה android.google.
+    protected void installGoogle() { }
+
     // נקרא בכל ניווט, בתחילתו ובסופו; ריק בכוונה כברירת מחדל.
     protected void onShellNavigation(String url) { }
 
@@ -110,6 +116,8 @@ public abstract class ShellActivity extends Activity {
         });
 
         installBridge();
+        installPush();
+        installGoogle();
 
         // restoreState מחזיר null כשאין היסטוריה לשחזר — אז, וגם בהפעלה קרה רגילה, נטען האתר.
         if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {

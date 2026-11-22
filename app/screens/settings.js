@@ -10,6 +10,7 @@ import { CLS_NAME, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, MSG_DEBT_ITEM_LO
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { isCreditValue, isDebtValue, pendLkTag, slLocalWrite, slLookups } from '../domain.js';
+import { gauthCardHTML } from '../../core/gauth.js';
 
 function screenSettingsHTML() {
   return `
@@ -35,6 +36,7 @@ function screenSettingsHTML() {
       </div>
       <div id="set-methods-list"></div>
     </div>
+    <div id="gaCardSlot"></div>
     <!-- אזור מצב — שני האלמנטים האחרונים במסך, בסדר הזה -->
   </div>
 </div>
@@ -44,6 +46,8 @@ function screenSettingsHTML() {
 function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.getElementById('acc-icon-'+key),o=b.classList.toggle('open');ic.innerHTML=icon(o?'up':'down');}
 
 function renderSettingsPanel(){
+  var slot=document.getElementById('gaCardSlot');
+  if(slot)slot.innerHTML=gauthCardHTML(); // החשבון — המשתמש, «משתמשים» למנהל, התראות ויציאה
   document.querySelectorAll('.tuition-inp[data-key]').forEach(function(el){el.value=el.defaultValue=S.SETTINGS[el.getAttribute('data-key')]||'';});
   renderSettingsLists();
 }

@@ -319,3 +319,27 @@ self.addEventListener('fetch', function (event) {
 self.addEventListener('message', function (event) {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
+// ── התראות (Web Push) ──
+// השער (sh-gate) שולח { title, body, url, tag }; הסמל — אייקון ה-192 שברשימת הקליפה, והתג מחליף התראה קודמת באותו נושא.
+function swPushIcon() {
+  for (var i = 0; i < CORE.length; i++) if (/icon-192/.test(CORE[i])) return new URL(CORE[i], self.location).href;
+  return undefined;
+}
+self.addEventListener('push', function (event) {
+  var m = {};
+  try { m = event.data ? event.data.json() : {}; } catch (e) { m = { body: event.data ? event.data.text() : '' }; }
+  var opt = { body: m.body || '', icon: swPushIcon(), badge: swPushIcon(), dir: 'rtl', lang: 'he', data: { url: m.url || '' } };
+  if (m.tag) { opt.tag = m.tag; opt.renotify = true; }
+  event.waitUntil(self.registration.showNotification(m.title || self.APP.name, opt));
+});
+// לחיצה — חלון פתוח של האפליקציה עולה לחזית, ובלעדיו נפתח חדש בכתובת האפליקציה
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var scope = self.registration.scope;
+  var url = new URL((event.notification.data && event.notification.data.url) || '', scope).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) if (list[i].url.indexOf(scope) === 0 && 'focus' in list[i]) return list[i].focus();
+    return self.clients.openWindow(url);
+  }));
+});

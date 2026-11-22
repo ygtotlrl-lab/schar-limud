@@ -2,6 +2,11 @@
 // כולם באותה רשת (24) ובאותו עובי קו — אמוג׳י מתחלף בין מערכות ההפעלה ואינו נשמע לצבע.
 import { iconSet, shellIcon } from '../core/icons.js';
 var PATHS = {
+  // הכניסה, המשתמשים וההתראות — הליבה מציירת אותם (shellIcon)
+  bell:     '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+  user:     '<circle cx="12" cy="8.5" r="3.8"/><path d="M5 20c.8-3.8 3.6-6 7-6s6.2 2.2 7 6"/>',
+  power:    '<path d="M12 3.5v8"/><path d="M7 6.5a7 7 0 1 0 10 0"/>',
+  logout:   '<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h10"/>',
   save:     '<path d="M5 4h11.5L20 7.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/>',
   // אייקוני המצב — טוסט · כותרת · כפתור עסוק · סרגל הסנכרון (stIcon בליבה)
   good:     '<circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.8 2.8L16.2 9.6"/>',
@@ -48,5 +53,6 @@ var icon = iconSet(PATHS);
 shellIcon('close', icon('close')); // ✕ של המעטפת והליבה — מהסט של האפליקציה
 shellIcon('refresh', icon('refresh')); // באנר העדכון
 ['good', 'bad', 'warn', 'off', 'wait'].forEach(function (n) { shellIcon(n, icon(n)); }); // אייקוני המצב
+['bell', 'user', 'power', 'logout', 'plus', 'save'].forEach(function (n) { shellIcon(n, icon(n)); }); // הכניסה והמשתמשים וההתראות
 
 export { icon };

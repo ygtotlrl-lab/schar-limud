@@ -1,6 +1,8 @@
 // נוצר מהתצורה — app.config.js, ב-node tools/gen-app.mjs: אין לערוך ביד
 plugins {
     id 'com.android.application'
+    // google-services.json שלצד הקובץ — הרישום של האפליקציה הזו
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -11,8 +13,8 @@ android {
         applicationId "com.schar.limud"
         minSdk 21
         targetSdk 34
-        versionCode 29
-        versionName "15.0"
+        versionCode 30
+        versionName "16.0"
     }
 
     buildTypes {
@@ -33,4 +35,11 @@ dependencies {
     implementation 'androidx.core:core:1.13.1'
     // WebViewCompat.addWebMessageListener — רשימת המקורות של גשר השיתוף נאכפת ב-WebView עצמו, לכל frame
     implementation 'androidx.webkit:webkit:1.11.0'
+    // ההתראות — FCM
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
+    // הכניסה עם Google — Credential Manager, ואסימון הזהות של Google
+    implementation 'androidx.credentials:credentials:1.3.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.3.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }

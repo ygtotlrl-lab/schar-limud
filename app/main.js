@@ -6,8 +6,8 @@ import { lsOpen } from '../core/storage.js';
 import { MIRROR, mirrorKey, mirrorTables } from '../core/mirror.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
-import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown,
-         dragMove, dragUp, modalDismiss, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+import { GAUTH_ACTIONS, gauthClientOpts, gauthGate, gauthHeaders, gauthUser } from '../core/gauth.js';
+import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMore, comboPick, dragCancel, dragDown, dragMove, dragUp, esc, modalDismiss, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { KV_TABLE, MSG_CHANGE_NOT_SAVED, PUSH_TABLES, SL_NEVER_MIRROR_SETTINGS, MSG_STUDENT_ADDED, MSG_TXN_SAVED } from './constants.js';
 import { S, shell } from './state.js';
 import { icon } from './icons.js';
@@ -30,6 +30,8 @@ appConfigure({
   get BK_CFG() { return BK_CFG; },
   get DEV_CFG() { return DEV_CFG; },
   get DOM_ACTIONS() { return DOM_ACTIONS; },
+  get GAUTH_CFG() { return GAUTH_CFG; },
+  get NOTIFY_CFG() { return NOTIFY_CFG; },
   get ERA_CFG() { return ERA_CFG; },
   get LOOKUP_CFG() { return LOOKUP_CFG; },
   get LS_CFG() { return LS_CFG; },
@@ -40,6 +42,17 @@ appConfigure({
   get RTY_CFG() { return RTY_CFG; },
   get saveRefresh() { return saveRefresh; }
 });
+
+// הכניסה עם Google (core/gauth.js) — הלקוח של האפליקציה; וההתראות (core/push.js) — המשתמש מזוהה מול השער באסימון הסשן
+var GAUTH_CFG = {
+  sb: function () { return S.SB; },
+  // כרטיס החשבון — בצורת שאר הכרטיסים של המסך
+  card: function (title, inner) { return '<div class="card ga-card"><div class="card-hdr"><h3>' + esc(title) + '</h3></div><div class="card-body">' + inner + '</div></div>'; }
+};
+var NOTIFY_CFG = {
+  auth: async function () { return { headers: await gauthHeaders() }; },
+  user: function () { return gauthUser(); }
+};
 
 // הרשימות לסידור — השורות והכתיבה של שכר הלימוד, והסידור בליבה; הכתיבה המקומית כבר דורכת את הדחיפה.
 var LOOKUP_CFG = {
@@ -166,7 +179,8 @@ function mountView() {
 
 mountView();
 
-S.SB = sbWatch(supabase.createClient(self.APP.supabase.url,self.APP.supabase.key));
+// הלקוח — עם הסשן של האפליקציה (core/gauth.js), לפני הכניסה ולפני הסנכרון
+S.SB = sbWatch(supabase.createClient(self.APP.supabase.url,self.APP.supabase.key,gauthClientOpts()));
 
 // אין להמתין כאן לרשת — הכתיבה כבר במראה ובתור, והסנכרון מרנדר שוב כשהוא מביא משהו חדש.
 // מסך ההגדרות מרונדר רק כשהפאנל פעיל — אחרת כל סנכרון בונה רשימות שאיש אינו רואה.
@@ -230,6 +244,7 @@ var DOM_ACTIONS = {
   'tuition-save':            function (el) { return runSave(function () { return saveDefaultTuition(el); }); },
 };
 
+Object.assign(DOM_ACTIONS, GAUTH_ACTIONS);
 actWire(DOM_ACTIONS);
 
 // הלשוניות במעטפת הסטטית — האייקון נכנס מכאן, כי index.html אינו נושא את הסט.
@@ -296,10 +311,12 @@ function slBoot(){
   slApplyMirror();
   refreshUI();
   syncAll().then(function(){ ensureSystemMethods(); });
-  window.bootOk();
 }
 
 // האחסון נפתח לפני כל קריאה ממנו — אחרי שה-CFG הוגדרו, כי המרשם קורא אותם.
 // העלייה בקריאה ולא ב-DOMContentLoaded — האירוע אינו ממתין ל-await שבראש המודול, ומאזין שנרשם אחריו אינו נקרא.
 await lsOpen();
+window.bootOk();
+// הכניסה — מסך הכניסה מעל הכל, עד שנכנס משתמש מהרשימה; והסנכרון רק אחריה
+await gauthGate();
 slBoot();

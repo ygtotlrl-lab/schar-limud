@@ -190,3 +190,67 @@ body:has(.card-win){overflow:hidden}
 .per-del .ico{width:14px;height:14px}
 .per-add{width:100%;min-height:44px;font:inherit;font-size:var(--fs-3);font-weight:600;border:1.5px dashed var(--border);background:var(--card);color:var(--text-2);cursor:pointer;padding:var(--sp-3);border-radius:var(--r-4)}
 .per-del:focus-visible,.per-add:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+
+/* ── הכניסה, המשתמשים וההתראות (core/gauth.js · core/push.js) — בצבע האפליקציה, דרך האסימונים ── */
+#ga-screen{position:fixed;inset:0;z-index:var(--z-7);background:var(--bg);display:flex;align-items:center;justify-content:center;padding:var(--gutter,24px);color:var(--text)}
+#ga-screen.ga-hidden{display:none}
+#ga-screen .ga-box{width:100%;max-width:360px;background:var(--card);border-radius:20px;padding:32px 24px;text-align:center}
+#ga-screen .ga-ico{width:72px;height:72px;border-radius:18px;margin:0 auto 14px;display:block}
+#ga-screen .ga-name{font-size:1.35rem;font-weight:800;color:var(--brand-ink);margin-bottom:4px}
+#ga-screen .ga-sub{font-size:.9rem;color:var(--text-2);margin-bottom:22px}
+#ga-screen .ga-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--border);border-radius:999px;background:#fff;color:#1f1f1f;font:inherit;font-weight:600;padding:12px 16px;cursor:pointer}
+#ga-screen .ga-gsi{display:flex;justify-content:center;min-height:0}
+#ga-screen .ga-gsi:empty{display:none}
+#ga-screen .ga-btn svg{width:20px;height:20px}
+#ga-screen .ga-btn[disabled]{opacity:.6;cursor:default}
+#ga-screen .ga-err{margin-top:14px;font-size:.88rem;color:var(--bad);line-height:1.5;min-height:1.2em}
+.ga-card .ga-me{display:flex;align-items:center;gap:var(--sp-4);padding-bottom:var(--sp-5);margin-bottom:var(--sp-3);border-bottom:1px solid var(--border)}
+.ga-av{flex:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--brand-ink);font-weight:800;font-size:1rem}
+.ga-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ga-who b{font-weight:700;color:var(--text)}
+.ga-who small{color:var(--text-2);direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ga-role{flex:none;font-size:.78rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:3px 10px}
+.ga-rows{display:flex;flex-direction:column}
+.ga-row{display:flex;align-items:center;gap:var(--sp-4);width:100%;min-height:52px;padding:var(--sp-3) 0;background:none;border:0;border-bottom:1px solid var(--border);font:inherit;color:var(--text);text-align:right;cursor:pointer}
+.ga-row:last-child{border-bottom:0}
+.ga-ri{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--brand-ink)}
+.ga-ri svg{width:18px;height:18px}
+.ga-rl{flex:1;font-weight:600}
+.ga-chev{flex:none;width:8px;height:8px;border-left:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(45deg);margin-inline-end:4px}
+.ga-row.is-out .ga-ri{background:var(--bad-soft,var(--brand-soft));color:var(--bad)}
+.ga-row.is-out .ga-rl{color:var(--bad)}
+.ga-row:active{opacity:.7}
+.ga-list{display:flex;flex-direction:column;gap:var(--sp-3)}
+.ga-empty{color:var(--text-2);text-align:center;padding:var(--sp-6)}
+.ga-ur{display:flex;align-items:center;gap:var(--sp-4);width:100%;text-align:right;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:var(--sp-4) var(--sp-5);font:inherit;color:var(--text);cursor:pointer}
+.ga-ur.is-off{opacity:.55}
+.ga-ur-n{flex:1;display:flex;flex-direction:column;min-width:0}
+.ga-ur-n small{color:var(--text-2);direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis}
+.ga-ur-r{font-size:.8rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:2px 10px}
+/* הפעמון — ריק: סומן ועוד לא הפעיל; מלא בצבע האפליקציה: הפעיל במכשיר אחד לפחות, והמספר — כשיש יותר */
+.ga-bell{position:relative;display:inline-flex;color:var(--text-3)}
+.ga-bell svg{width:18px;height:18px}
+.ga-bell.is-on{color:var(--brand-ink)}
+.ga-bell.is-on svg{fill:currentColor}
+.ga-bell i{position:absolute;top:-6px;left:-8px;font-style:normal;font-size:.68rem;font-weight:700;line-height:1;background:var(--brand-fill);color:var(--on-brand);border-radius:999px;padding:2px 5px}
+.modal-body .ga-sw{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-5);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;border:1px solid var(--border);border-radius:14px;font-weight:600;color:var(--text);cursor:pointer}
+.modal-body .ga-sw span{display:inline-flex;align-items:center;gap:var(--sp-4)}
+.modal-body .ga-sw svg{width:18px;height:18px;color:var(--brand-ink)}
+.modal-body input.ga-swi{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:42px;height:24px;margin:0;padding:0;border:0;border-radius:999px;background:var(--border);cursor:pointer;transition:background .15s}
+.modal-body input.ga-swi::after{content:"";position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:right .15s}
+.modal-body input.ga-swi:checked{background:var(--brand-fill)}
+.modal-body input.ga-swi:checked::after{right:21px}
+.modal-body input.ga-swi:disabled{opacity:.5;cursor:default}
+.ga-err2{color:var(--bad);font-size:.88rem;min-height:1.2em;margin-top:var(--sp-3)}
+.push-st-l{display:flex;align-items:center;gap:var(--sp-4);font-size:1.05rem;color:var(--brand-ink);margin-bottom:var(--sp-4)}
+.push-st-l svg{width:22px;height:22px}
+.push-st p{margin:0 0 var(--sp-3);color:var(--text-2);line-height:1.6}
+.push-st .push-fix{color:var(--text)}
+/* הכרטיס שמזמין להפעיל — צף מעל שורת הניווט, פעם אחת בכל מכשיר */
+.push-prompt{position:fixed;left:var(--gutter,16px);right:var(--gutter,16px);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:var(--z-6);max-width:520px;margin:0 auto;display:flex;align-items:center;gap:var(--sp-5);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:var(--sp-5);box-shadow:0 6px 24px rgba(0,0,0,.12)}
+.push-prompt-ic{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink)}
+.push-prompt-ic svg{width:22px;height:22px}
+.push-prompt-t{flex:1;display:flex;flex-direction:column;min-width:0}
+.push-prompt-t span{color:var(--text-2);font-size:.9rem}
+.push-prompt-b{display:flex;gap:var(--sp-3);flex:none}
+@media (max-width:480px){.push-prompt{flex-wrap:wrap}.push-prompt-b{width:100%;justify-content:flex-end}}

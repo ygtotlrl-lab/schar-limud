@@ -25,6 +25,24 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 //@@end
+//@@push
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.NotificationManagerCompat;
+import com.google.firebase.messaging.FirebaseMessaging;
+//@@end
+//@@google
+import androidx.core.content.ContextCompat;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialException;
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+//@@end
 //@@print
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -45,6 +63,144 @@ public class MainActivity extends ShellActivity {
 
     @Override
     protected String accentColor() { return "@@ACCENT@@"; }
+//@@push
+
+    // ── התראות (FCM) ──
+    // הדף שואל את המעטפת על האסימון (op: token), ובלחיצה על «הפעלה» — גם על ההרשאה (op: enable, אנדרואיד 13+);
+    // הגשר מוגבל למקור של האפליקציה, כמו גשר השיתוף, והתשובה — { perm, token }. ההתראה עצמה — ShellPushService.
+    private static final String PUSH_ORIGIN = "@@ORIGIN@@";
+    private static final Set<String> PUSH_ORIGINS = new HashSet<>(Arrays.asList(PUSH_ORIGIN));
+    private static final int REQ_PUSH = 7301;
+    private JavaScriptReplyProxy pushReply;
+
+    @Override
+    protected void installPush() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return;
+        WebViewCompat.addWebMessageListener(
+            webView, "AndroidPush", PUSH_ORIGINS,
+            new WebViewCompat.WebMessageListener() {
+                @Override
+                public void onPostMessage(@NonNull WebView view, @NonNull WebMessageCompat message,
+                                          @NonNull Uri sourceOrigin, boolean isMainFrame,
+                                          @NonNull JavaScriptReplyProxy replyProxy) {
+                    if (!isMainFrame || !PUSH_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
+                    String op = "";
+                    try { op = new JSONObject(String.valueOf(message.getData())).optString("op"); } catch (Exception e) { op = ""; }
+                    pushReply = replyProxy;
+                    // התראות שנחסמו — רק הגדרות הטלפון מבטלות חסימה: המסך של האפליקציה שם
+                    if ("settings".equals(op)) { pushSettings(); pushPost(replyProxy, "", ""); return; }
+                    // ההרשאה נשאלת רק מלחיצה של המשתמש — בכניסה (token) רק נבדק אם כבר ניתנה
+                    if ("enable".equals(op) && Build.VERSION.SDK_INT >= 33
+                            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, REQ_PUSH);
+                        return;
+                    }
+                    pushAnswer();
+                }
+            });
+    }
+
+    private void pushSettings() {
+        Intent i;
+        if (Build.VERSION.SDK_INT >= 26) {
+            i = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+        } else {
+            i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+        }
+        try { startActivity(i); } catch (Exception e) { toastUi("לא נמצאו הגדרות ההתראות"); }
+    }
+
+    private boolean pushAllowed() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
+        return NotificationManagerCompat.from(this).areNotificationsEnabled();
+    }
+
+    private void pushAnswer() {
+        final JavaScriptReplyProxy r = pushReply;
+        if (r == null) return;
+        if (!pushAllowed()) { pushPost(r, "denied", ""); return; }
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            String t = task.isSuccessful() ? task.getResult() : null;
+            pushPost(r, "granted", t == null ? "" : t);
+        });
+    }
+
+    private void pushPost(final JavaScriptReplyProxy r, final String perm, final String token) {
+        runOnUiThread(() -> {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("perm", perm);
+                o.put("token", token);
+                r.postMessage(o.toString());
+            } catch (Exception e) { /* הדף ממתין עד 20 שניות, ואז ממשיך בלי אסימון */ }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_PUSH) pushAnswer();
+    }
+//@@end
+//@@google
+
+    // ── כניסה עם Google ──
+    // Google חוסמת כניסה בתוך WebView — הכניסה כאן, בחלון של המערכת (Credential Manager), והדף מקבל אסימון זהות
+    // ל-signInWithIdToken של Supabase. הלקוח — לקוח ה-Web של הפרויקט (הקהל של האסימון); לקוח האנדרואיד נבדק בחתימה.
+    private static final String GOOGLE_ORIGIN = "@@ORIGIN@@";
+    private static final Set<String> GOOGLE_ORIGINS = new HashSet<>(Arrays.asList(GOOGLE_ORIGIN));
+    private static final String GOOGLE_CLIENT = "@@GOOGLE@@";
+
+    @Override
+    protected void installGoogle() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return;
+        WebViewCompat.addWebMessageListener(
+            webView, "AndroidGoogle", GOOGLE_ORIGINS,
+            new WebViewCompat.WebMessageListener() {
+                @Override
+                public void onPostMessage(@NonNull WebView view, @NonNull WebMessageCompat message,
+                                          @NonNull Uri sourceOrigin, boolean isMainFrame,
+                                          @NonNull JavaScriptReplyProxy replyProxy) {
+                    if (!isMainFrame || !GOOGLE_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
+                    googleSignIn(replyProxy);
+                }
+            });
+    }
+
+    private void googleSignIn(final JavaScriptReplyProxy r) {
+        GetSignInWithGoogleOption opt = new GetSignInWithGoogleOption.Builder(GOOGLE_CLIENT).build();
+        GetCredentialRequest req = new GetCredentialRequest.Builder().addCredentialOption(opt).build();
+        CredentialManager.create(this).getCredentialAsync(this, req, null, ContextCompat.getMainExecutor(this),
+            new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                @Override
+                public void onResult(GetCredentialResponse res) {
+                    try {
+                        GoogleIdTokenCredential c = GoogleIdTokenCredential.createFrom(res.getCredential().getData());
+                        googlePost(r, c.getIdToken(), false);
+                    } catch (Exception e) {
+                        googlePost(r, "", false);
+                    }
+                }
+                @Override
+                public void onError(GetCredentialException e) {
+                    googlePost(r, "", e instanceof GetCredentialCancellationException);
+                }
+            });
+    }
+
+    private void googlePost(final JavaScriptReplyProxy r, final String token, final boolean cancel) {
+        runOnUiThread(() -> {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("token", token);
+                o.put("cancel", cancel);
+                r.postMessage(o.toString());
+            } catch (Exception e) { /* הדף ממתין, ואז ממשיך בלי כניסה */ }
+        });
+    }
+//@@end
 //@@share
 
     // המקור היחיד שרשאי להגיע לגשר השיתוף — גשר על דף שנטען מרחוק נגיש לכל מי שמגיש את הדף.
