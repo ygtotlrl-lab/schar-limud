@@ -69,7 +69,7 @@ function screenDashHTML() {
   <div class="dash-kpis">
     <div class="kpi"><b id="dk-got" class="kpi-n">—</b><span class="kpi-l">נגבה השנה</span></div>
     <div class="kpi"><b id="dk-tgt" class="kpi-n">—</b><span class="kpi-l">יעד</span></div>
-    <button type="button" class="kpi kpi-btn" data-act="disc-list" aria-label="רשימת ההנחות"><b id="dk-disc" class="kpi-n">—</b><span class="kpi-l">הנחות<small>יעד ${DISCOUNT_GOAL}%</small></span></button>
+    <button type="button" class="kpi kpi-btn" data-act="disc-list" aria-label="רשימת ההנחות"><b id="dk-disc" class="kpi-n">—</b><span class="kpi-l">הנחות <small>(יעד ${DISCOUNT_GOAL}%)</small></span></button>
   </div>
   <div class="kpi-cards">${kpiCardHTML('students',[2,6,4])}${kpiCardHTML('due',[3,7,5])}</div>
   <div class="card">
@@ -283,11 +283,17 @@ function renderDash(){
   });
 
   // הגרף — אחוז הגבייה של כל חודש, והקו המקווקו — יעד הגבייה (90%); מעל העמודה — האחוז, ומתחתיו הסכום שנגבה, מקוצר.
-  document.getElementById('dash-chart').innerHTML=barChart(YEAR_MONTHS.map(function(m){
+  var chRows=YEAR_MONTHS.map(function(m){
     var v=colT[m]||0,t=tgt[m]||0,p=t>0?v/t*100:0;
     return {lab:MONTH_HE_SHORT[m],val:p,tgt:t>0?COLLECT_GOAL:0,end:pctText(v,t)+(v?'\n'+fmtK(v):''),
             txt:MONTH_HE_SHORT[m]+': '+pctText(v,t)+' — נגבה '+fmt(v)+' מתוך יעד '+fmt(t)};
-  }),'אחוז הגבייה החודשי מול יעד הגבייה');
+  }),chEl=document.getElementById('dash-chart');
+  chEl.innerHTML=barChart(chRows,'אחוז הגבייה החודשי מול יעד הגבייה');
+  // כל עמודה בצבע שלב ההתקדמות, כמו הטבעות — מתחת ל-25 אדום · מתחת ל-50 חרדל · מתחת ל-90 כחול · מ-90 ירוק.
+  chEl.querySelectorAll('.brow').forEach(function(el,i){
+    var p=chRows[i]&&chRows[i].val;
+    if(p>0)el.classList.add(p<25?'st-1':p<50?'st-2':p<90?'st-3':'st-4');
+  });
   renderDashNotes();
 }
 

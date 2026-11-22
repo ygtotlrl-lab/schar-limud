@@ -168,7 +168,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .disc-part{display:flex;justify-content:space-between;gap:var(--sp-3);font-size:var(--fs-1);color:var(--text-2);margin-top:var(--sp-1);font-variant-numeric:tabular-nums}
 .disc-tot{display:flex;justify-content:space-between;align-items:center;padding-top:var(--sp-4);font-weight:800;color:var(--text)}
 .disc-tot .amt-bad{color:var(--bad)}.disc-tot .amt-ok{color:var(--ok)}
-.kpi-l small{display:block;font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
+/* «הנחות (יעד 10%)» בשורה אחת — כך הסכום והתווית בגובה הקוביות הסמוכות. */
+.kpi-l small{font-size:var(--fs-1);font-weight:600;color:var(--text-3)}
 /* שכר לתקופה — שלושה שדות בשורה, באותה צורה של עורך התקופות */
 .per-row.tp-row{grid-template-columns:1fr 1fr 5.5rem}
 .per-row .per-lbl input{display:block;width:100%;min-width:0;height:44px;margin:0;border:1.5px solid var(--border);border-radius:var(--r-4);padding:0 var(--sp-2);font:inherit;font-size:var(--fs-3);font-weight:600;background:var(--card);color:var(--text);box-sizing:border-box}
@@ -283,6 +284,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 .dash-chart .btrack{position:absolute;inset:0;height:auto;background:none;border-radius:0;display:flex;align-items:flex-end;overflow:visible}
 .dash-chart .btrack i{width:100%;height:var(--bar-w);border-radius:var(--r-3) var(--r-3) 0 0;background:var(--brand-fill)}
 .dash-chart .btrack.tgt i{background:none;border-top:2px dashed var(--text-3);border-radius:0;opacity:1}
+.dash-chart .brow.st-1 .btrack:not(.tgt) i{background:var(--bad)}.dash-chart .brow.st-2 .btrack:not(.tgt) i{background:var(--gold)}.dash-chart .brow.st-3 .btrack:not(.tgt) i{background:var(--credit)}.dash-chart .brow.st-4 .btrack:not(.tgt) i{background:var(--ok)}
 /* ── תנועות ── */
 .txn-amt{font-weight:700;color:var(--ok)}
 /* «קבלה» — היומן ותשלומי הכרטיס, כמו תשלומי החודש בגיוס: קבוצה לכל יום, הסכום בראש ובירוק, האמצעי באייקון בקצה. */
