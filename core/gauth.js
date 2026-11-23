@@ -298,7 +298,10 @@ async function gauthUsersOpen() {
   var l = document.getElementById('ga-list');
   if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">' + (r && r.error === 'perm' ? 'רק מנהל רואה את המשתמשים' : 'אין חיבור לשרת — נסו שוב') + (r && r.error && r.error !== 'perm' ? '<br><small>' + esc(String(r.error)) + '</small>' : '') + '</div>'; return; }
   // א״ב לפי השם — בכל האפליקציות אותו סדר
-  _rows = r.rows.slice().sort(function (a, b) { return String(a.full_name || a.login).localeCompare(String(b.full_name || b.login), 'he'); });
+  // המנהלים בראש, ואחריהם לפי א״ב
+  _rows = r.rows.slice().sort(function (a, b) {
+    return ((b.role === 'admin') - (a.role === 'admin')) || String(a.full_name || a.login).localeCompare(String(b.full_name || b.login), 'he');
+  });
   // תקלה בציור — מוצגת בחלון, ולא «טוען…» שנשאר
   try { if (l) l.innerHTML = _listHTML(); } catch (e) { console.error('[gauth] users', e); if (l) l.innerHTML = '<div class="ga-empty">שגיאה בהצגת הרשימה: ' + esc(String(e && e.message || e)) + '</div>'; }
 }

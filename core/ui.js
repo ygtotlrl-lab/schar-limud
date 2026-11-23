@@ -898,6 +898,27 @@ function lookupDragApply(list, kind) {
 }
 
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
+// ── מספור אוטומטי בשדה טקסט חופשי ──
+// בכל textarea: שורה שנפתחת ב«1. » (או «1) », «- », «• ») — Enter פותח את השורה הבאה במספר הבא (או באותו סימן);
+// Enter בשורה שיש בה רק המספר — מסיים את הרשימה ומוחק אותו. Shift+Enter — שורה רגילה. השינוי יורה input, כדי שהשמירה תתפוס אותו.
+function listAutoKey(e) {
+  if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented) return;
+  var t = e.target;
+  if (!t || t.tagName !== 'TEXTAREA' || t.readOnly || t.disabled || t.selectionStart !== t.selectionEnd) return;
+  var v = t.value, pos = t.selectionStart, ls = v.lastIndexOf('\n', pos - 1) + 1, line = v.slice(ls, pos);
+  var m = /^(\s*)(?:(\d+)([.)])|([-•]))\s+(.*)$/.exec(line);
+  if (!m) return;
+  e.preventDefault();
+  if (!m[5].trim() && v.slice(pos).split('\n')[0].trim() === '') {
+    t.setRangeText('', ls, pos, 'end');
+  } else {
+    var mark = m[2] ? (+m[2] + 1) + m[3] : m[4];
+    t.setRangeText('\n' + m[1] + mark + ' ', pos, pos, 'end');
+  }
+  t.dispatchEvent(new Event('input', { bubbles: true }));
+}
+if (typeof document !== 'undefined' && !self.__listAuto) { self.__listAuto = true; document.addEventListener('keydown', listAutoKey); }
+
 export { actRun, actWire, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef, comboFocus,
          comboHTML, comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel,
          dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
