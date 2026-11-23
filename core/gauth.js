@@ -13,7 +13,7 @@ import { PUSH_ACTIONS, bellHTML, pushDevices, pushPrompt, pushRefresh, pushSignO
 
 var AUTH_IDLE_MS = 30 * 864e5;          // ניתוק אחרי 30 יום בלי שימוש — בתוכנית החינמית אין זמן קצוב לסשן בשרת
 var AUTH_TOUCH_MS = 60 * 60 * 1000;     // חותמת השימוש נכתבת לכל היותר פעם בשעה
-var MSG_NOT_LISTED = 'הכתובת {1} אינה ברשימת המשתמשים של האפליקציה. המנהל קיבל הודעה.';
+var MSG_NOT_LISTED = 'הכתובת {1} אינה ברשימת המשתמשים של האפליקציה.';
 var MSG_SIGNIN_FAIL = 'הכניסה לא הושלמה — נסו שוב';
 var MSG_NEEDS_NET = 'הכניסה הראשונה דורשת חיבור לרשת';
 
@@ -276,13 +276,13 @@ function _listHTML() {
   return _rows.map(function (u) {
     return '<button type="button" class="ga-ur' + (u.active ? '' : ' is-off') + '" data-act="ga-user-edit" data-id="' + esc(u.client_id) + '">' +
       '<span class="ga-ur-n"><b>' + esc(u.full_name || u.login) + '</b><small>' + esc(u.login) + '</small></span>' +
-      bellHTML(u.notify, _devs[u.client_id]) +
-      '<span class="ga-ur-r">' + esc(u.active ? ROLE_LABELS[u.role] || u.role : 'מושבת') + '</span></button>';
+      '<span class="ga-ur-r">' + esc(u.active ? ROLE_LABELS[u.role] || u.role : 'מושבת') + '</span>' +
+      bellHTML(true, _devs[u.client_id]) + '</button>';
   }).join('');
 }
 async function gauthUsersOpen() {
-  openModal('משתמשים', '<div class="ga-list" id="ga-list"><div class="ga-empty">טוען…</div></div>',
-    '<button class="btn" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
+  openModal('משתמשים', '<div class="ga-list" id="ga-list"><div class="ga-empty"><span class="view-spin" role="status" aria-label="טוען"></span></div></div>',
+    '<button class="btn ga-pri" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
   // הרשימה והמכשירים במקביל; המכשירים — תוספת, ובלעדיהם הרשימה מוצגת בלי פעמונים מלאים
   var both;
   try { both = await Promise.all([_gate({ action: 'users_list' }), pushDevices()]); }
@@ -296,7 +296,7 @@ async function gauthUsersOpen() {
   try { if (l) l.innerHTML = _listHTML(); } catch (e) { console.error('[gauth] users', e); if (l) l.innerHTML = '<div class="ga-empty">שגיאה בהצגת הרשימה: ' + esc(String(e && e.message || e)) + '</div>'; }
 }
 function gauthUserEdit(id) {
-  var u = _rows.filter(function (x) { return x.client_id === id; })[0] || { client_id: '', login: '', full_name: '', role: 'junior', active: true, notify: false };
+  var u = _rows.filter(function (x) { return x.client_id === id; })[0] || { client_id: '', login: '', full_name: '', role: 'junior', active: true, notify: true };
   var me = _user && _user.client_id === u.client_id;
   openModal(u.client_id ? 'עריכת משתמש' : 'הוספת משתמש',
     '<input type="hidden" id="ga-id" value="' + esc(u.client_id) + '">' +
@@ -304,10 +304,9 @@ function gauthUserEdit(id) {
     '<label for="ga-login">כתובת Google *</label><input type="email" id="ga-login" dir="ltr" value="' + esc(u.login) + '" placeholder="name@gmail.com">' +
     '<label for="ga-role">תפקיד</label><select id="ga-role"' + (me ? ' disabled' : '') + '>' +
       ['admin', 'manager', 'junior'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ROLE_LABELS[r] + '</option>'; }).join('') + '</select>' +
-    '<label class="ga-sw"><span>' + _ic('bell') + 'מקבל התראות</span><input type="checkbox" class="ga-swi" id="ga-notify"' + (u.notify ? ' checked' : '') + '></label>' +
     '<label class="ga-sw"><span>' + _ic('power') + 'פעיל</span><input type="checkbox" class="ga-swi" id="ga-active"' + (u.active ? ' checked' : '') + (me ? ' disabled' : '') + '></label>' +
     '<div class="ga-err2" id="ga-err2"></div>',
-    '<button class="btn out" data-act="ga-users">חזרה</button><button class="btn" data-act="ga-user-save">' + _ic('save') + 'שמירה</button>', _ic('user'));
+    '<button class="btn out" data-act="ga-users">חזרה</button><button class="btn ga-pri" data-act="ga-user-save">' + _ic('save') + 'שמירה</button>', _ic('user'));
 }
 var SAVE_ERR = { bad_request: 'כתובת לא תקינה', dup: 'הכתובת כבר ברשימה', self: 'אי אפשר להוריד את עצמך מניהול', perm: 'רק מנהל מנהל משתמשים' };
 async function gauthUserSave() {
@@ -316,7 +315,7 @@ async function gauthUserSave() {
     full_name: document.getElementById('ga-name').value.trim(),
     login: document.getElementById('ga-login').value.trim().toLowerCase(),
     role: document.getElementById('ga-role').value,
-    notify: document.getElementById('ga-notify').checked,
+    notify: true,
     active: document.getElementById('ga-active').checked
   };
   var r = await _gate({ action: 'users_save', row: row });

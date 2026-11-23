@@ -229,7 +229,7 @@ body:has(.card-win){overflow:hidden}
 .ga-ur-n small{color:var(--text-2);direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis}
 .ga-ur-r{font-size:.8rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:2px 10px}
 /* הפעמון — ריק: סומן ועוד לא הפעיל; מלא בצבע האפליקציה: הפעיל במכשיר אחד לפחות, והמספר — כשיש יותר */
-.ga-bell{position:relative;display:inline-flex;color:var(--text-3)}
+.ga-bell{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;color:var(--text-3)}
 .ga-bell svg{width:18px;height:18px}
 .ga-bell.is-on{color:var(--brand-ink)}
 .ga-bell.is-on svg{fill:currentColor}
@@ -243,15 +243,24 @@ body:has(.card-win){overflow:hidden}
 .modal-body input.ga-swi:checked::after{right:21px}
 .modal-body input.ga-swi:disabled{opacity:.5;cursor:default}
 .ga-err2{color:var(--bad);font-size:.88rem;min-height:1.2em;margin-top:var(--sp-3)}
-.push-st-l{display:flex;align-items:center;gap:var(--sp-4);font-size:1.05rem;color:var(--brand-ink);margin-bottom:var(--sp-4)}
-.push-st-l svg{width:22px;height:22px}
+.push-st-l{display:inline-block;font-size:.85rem;font-weight:700;color:var(--text-2);background:var(--card-2,var(--border));border-radius:999px;padding:3px 12px;margin-bottom:var(--sp-4)}
+.push-st-l.is-on{color:var(--brand-ink);background:var(--brand-soft)}
 .push-st p{margin:0 0 var(--sp-3);color:var(--text-2);line-height:1.6}
 .push-st .push-fix{color:var(--text)}
 /* הכרטיס שמזמין להפעיל — צף מעל שורת הניווט, פעם אחת בכל מכשיר */
 .push-prompt{position:fixed;left:var(--gutter,16px);right:var(--gutter,16px);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:var(--z-6);max-width:520px;margin:0 auto;display:flex;align-items:center;gap:var(--sp-5);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:var(--sp-5);box-shadow:0 6px 24px rgba(0,0,0,.12)}
 .push-prompt-ic{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink)}
-.push-prompt-ic svg{width:22px;height:22px}
+.push-prompt-ic svg{display:block;width:22px;height:22px;margin:0}
 .push-prompt-t{flex:1;display:flex;flex-direction:column;min-width:0}
 .push-prompt-t span{color:var(--text-2);font-size:.9rem}
 .push-prompt-b{display:flex;gap:var(--sp-3);flex:none}
+.push-prompt-b button{width:auto;flex:none;white-space:nowrap}
 @media (max-width:480px){.push-prompt{flex-wrap:wrap}.push-prompt-b{width:100%;justify-content:flex-end}}
+
+/* כפתורי החלון של הליבה — אייקון ותווית בשורה אחת, ממורכזים ובמרווח; והראשי בצבע האפליקציה, כמו «אישור» בחלון השאלה */
+.veil-modal .sheet-ft button,.push-prompt-b button{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-3);white-space:nowrap}
+.veil-modal .sheet-ft button svg,.push-prompt-b button svg{flex:none;width:18px;height:18px;margin:0}
+.veil-modal .sheet-ft .ga-pri,.push-prompt-b .ga-pri{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill)}
+.ga-empty .view-spin{display:inline-block}
+/* פס הגלילה שומר את מקומו גם במסך קצר — אחרת הוא מופיע ונעלם בין המסכים, והכותרת ושורת הניווט קופצות לצד */
+html{scrollbar-gutter:stable}
