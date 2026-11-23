@@ -10,12 +10,13 @@ import { stIcon } from './icons.js';
 function busy(btn, on, label) {
   if (!btn) return;
   if (on) {
-    if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
+    if (btn._busyTxt === undefined) { btn._busyTxt = btn.innerHTML; btn._busyW = btn.style.minWidth; btn.style.minWidth = btn.offsetWidth + 'px'; }
     btn.disabled = true; btn.classList.add('is-busy');
-    btn.innerHTML = label || (stIcon('wait') + 'שומר…');
+    // ספינר בלי מילים, והכפתור שומר על רוחבו — «שומר…» היה מקפיץ את הכפתור ואת השורה
+    btn.innerHTML = label || '<span class="busy-spin" role="status" aria-label="שומר"></span>';
   } else {
     btn.disabled = false; btn.classList.remove('is-busy');
-    if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
+    if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; btn.style.minWidth = btn._busyW || ''; }
   }
 }
 // הדגל נדרש גם לאלמנט שאינו כפתור — disabled אינו קיים על div או על שורת טבלה.

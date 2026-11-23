@@ -6,12 +6,15 @@
 // החלון «התראות במכשיר הזה» והכרטיס שמזמין להפעיל — כאן, אחידים בכל האפליקציות; האייקונים — מהסט של האפליקציה (shellIcon).
 
 import { app } from './util.js';
-import { lsGet, lsSet } from './storage.js';
+import { lsGet, lsSet, lsSpace } from './storage.js';
 import { closeModal, esc, openModal, toast } from './ui.js';
 import { shellIcon } from './icons.js';
 
 // המקור משותף לכל האפליקציות — המפתחות נושאים את מזהה האפליקציה
 function _k(name) { return 'push_' + name + '_' + self.APP.id; }
+// המפתחות נרשמים במרשם — מפתח שאינו במרשם נמחק בכל עלייה, וההתראות היו «כבויות» אחרי כל עדכון
+var PUSH_KEYS = ['on', 'asked', 'dev', 'blocked', 'vapid'];
+lsSpace({ keys: function () { return PUSH_KEYS.map(_k); }, owns: function (k) { return PUSH_KEYS.map(_k).indexOf(k) >= 0; } });
 function _gateUrl() { return self.APP.supabase.url + '/functions/v1/sh-gate'; }
 function _cfg() { return app.NOTIFY_CFG || {}; }
 function _me() { try { return _cfg().user ? _cfg().user() : null; } catch (e) { return null; } }
@@ -100,9 +103,10 @@ async function _token(ask) {
   var reg = await navigator.serviceWorker.ready;
   var sub = await reg.pushManager.getSubscription();
   if (!sub) {
-    var v = await _post({ action: 'vapid' });
-    if (!v || !v.key) return null;
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(v.key) });
+    // המפתח הציבורי — נשמר במכשיר אחרי הפעם הראשונה, וההפעלה אינה ממתינה לשרת פעמיים
+    var key = lsGet(_k('vapid'));
+    if (!key) { var v = await _post({ action: 'vapid' }); if (!v || !v.key) return null; key = v.key; lsSet(_k('vapid'), key); }
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(key) });
   }
   return { kind: 'web', push: JSON.stringify(sub) };
 }
@@ -177,9 +181,8 @@ function _bodyHTML() {
   var on = pushIsOn(), sup = pushSupported(), blocked = pushBlocked(), me = _me();
   var state = !sup ? 'לא נתמך' : blocked ? 'חסומות בהגדרות המכשיר' : on ? 'פועלות' : 'כבויות';
   // בהנהלה — רק מי שסומן «מקבל התראות» מקבל; בשאר האפליקציות — כל המשתמשים
-  var why = (!sup || blocked) ? '' : (me && me.notify === false)
-    ? 'לא סומנת «מקבל התראות» — המכשיר יירשם, וההתראות יגיעו כשהמנהל יסמן אותך.'
-    : on ? 'כשמשהו קורה באפליקציה — תקפוץ כאן התראה.' : 'הפעלה — וכל מה שקורה באפליקציה יקפוץ כאן כהתראה.';
+  // ההסבר — רק כשיש מה להסביר: בהנהלה, למי שלא סומן «מקבל התראות»
+  var why = (sup && !blocked && me && me.notify === false) ? 'לא סומנת «מקבל התראות» — המכשיר יירשם, וההתראות יגיעו כשהמנהל יסמן אותך.' : '';
   var fix = blocked ? '<p class="push-fix">' + (_shell()
       ? 'כדי לבטל את החסימה — «פתיחת הגדרות ההתראות», ושם מפעילים את ההתראות של האפליקציה.'
       : 'כדי לבטל את החסימה — לוחצים על סמל המנעול שליד הכתובת בדפדפן, ומאפשרים «התראות».') + '</p>' : '';

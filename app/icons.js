@@ -52,6 +52,7 @@ var PATHS = {
 var icon = iconSet(PATHS);
 shellIcon('close', icon('close')); // ✕ של המעטפת והליבה — מהסט של האפליקציה
 shellIcon('refresh', icon('refresh')); // באנר העדכון
+shellIcon('share', icon('share')); // ייצוא התמונה (core/snap.js)
 ['good', 'bad', 'warn', 'off', 'wait'].forEach(function (n) { shellIcon(n, icon(n)); }); // אייקוני המצב
 ['bell', 'user', 'power', 'logout', 'plus', 'save'].forEach(function (n) { shellIcon(n, icon(n)); }); // הכניסה והמשתמשים וההתראות
 

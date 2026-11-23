@@ -9,7 +9,7 @@ import { BAL_CREDIT, BAL_CREDIT_IN, BAL_CREDIT_OUT, BAL_DEBT, BAL_DEBT_IN, BAL_D
          MSG_SETTINGS_NOT_SAVED, MSG_STUDENT_MISSING2, MSG_TP_AMOUNT, MSG_TP_END_BEFORE, MSG_TUITION_POSITIVE, YEAR_MONTHS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
-import { snapShare } from '../snap.js';
+import { snapShare } from '../../core/snap.js';
 import { stIcon } from '../../core/icons.js';
 import { bar } from '../../core/chart.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, calcDistribution, isCreditTxn, isDebtTxn, slDefaultTuition, cycleLabel, distCredit, enrollText, fmt,

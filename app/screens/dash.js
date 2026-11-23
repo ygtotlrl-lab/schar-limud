@@ -7,7 +7,7 @@ import { barChart } from '../../core/chart.js';
 import { CLS_NAME, DISCOUNT_GOAL, DISC_INSTEAD, DISC_NONE, DISC_TITLE, DISC_TOTAL, KPI_COLS, KPI_GEN, KPI_INFO, KPI_TODAY, KV_TABLE, SNAP_APP, SNAP_DISC_MAX, SNAP_SHARE, MSG_CHANGE_NOT_SAVED, YEAR_MONTHS } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
-import { snapShare } from '../snap.js';
+import { snapShare } from '../../core/snap.js';
 import { acadMonthKey, acadYearHeb, acadYearOf, countInMonth, fmt, isCreditTxn, isDebtTxn, monthKeyOf, studentDebtIn, studentCreditIn, monthLabel,
          slDefaultTuition, slHasTuition, slLocalWrite, slStudentGroups, studentInMonth, studentTuition } from '../domain.js';
 

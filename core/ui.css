@@ -264,3 +264,32 @@ body:has(.card-win){overflow:hidden}
 .ga-empty .view-spin{display:inline-block}
 /* פס הגלילה שומר את מקומו גם במסך קצר — אחרת הוא מופיע ונעלם בין המסכים, והכותרת ושורת הניווט קופצות לצד */
 html{scrollbar-gutter:stable}
+/* חלונות הליבה (החשבון, המשתמשים, ההתראות) — הכפתורים בשורה וברוחב התוכן, גם באפליקציה שבה כפתורי החלון נפרשים לכל הרוחב */
+.veil-modal .sheet-ft:has(.ga-pri){flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:var(--sp-4)}
+.veil-modal .sheet-ft:has(.ga-pri) .btn{width:auto;flex:0 0 auto;min-height:40px;padding:var(--sp-3) var(--sp-6);border-radius:999px;font-weight:700}
+.veil-modal .sheet-ft:has(.ga-pri) .btn.out{background:transparent;color:var(--brand-ink);border:1.5px solid var(--brand-fill)}
+.veil-modal .sheet-ft:has(.ga-users-add){justify-content:stretch}
+.veil-modal .sheet-ft .ga-users-add{flex:1 1 auto}
+/* ספינר ההמתנה של כפתור שכותב — בצבע הכפתור עצמו */
+.busy-spin{display:inline-block;width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-top-color:transparent;opacity:.85;animation:view-spin .8s linear infinite;vertical-align:middle}
+@media (prefers-reduced-motion:reduce){.busy-spin{animation-duration:2.4s}}
+/* ── בורר התאריך הכפול (core/datepair.js) — לועזי ועברי, שלושה גלגלים; הצבעים — אסימוני האפליקציה ── */
+.dp-row{display:flex;align-items:center;gap:var(--sp-3)}
+.dp-trg{flex:1;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);width:100%;cursor:pointer;
+  background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm,12px);
+  padding:var(--sp-4) var(--sp-5);font-family:inherit;font-size:var(--fs-4,1rem);min-height:44px;text-align:start}
+.dp-trg .ico{width:20px;height:20px;color:var(--text-2);flex:none}
+.dp-ph{color:var(--text-3)}
+.dp-clr{flex:none;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);cursor:pointer}
+.dp-clr .ico{width:16px;height:16px}
+.dp-pop{position:relative;display:flex;gap:var(--sp-3);height:200px;overflow:hidden;margin-top:var(--sp-3);padding:0 var(--sp-3);
+  border:1px solid var(--border);border-radius:var(--radius-sm,12px);background:var(--card)}
+.dp-pop[hidden]{display:none}
+.dp-pop::before{content:"";position:absolute;inset-inline:var(--sp-3);top:80px;height:40px;border-radius:var(--radius-sm,12px);background:var(--brand-soft);pointer-events:none}
+.dp-col{position:relative;flex:1;height:200px;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.dp-col:nth-child(2){flex:1.6}
+.dp-col::-webkit-scrollbar{display:none}
+.dp-pad{height:80px}
+.dp-it{height:40px;line-height:40px;text-align:center;scroll-snap-align:center;font-size:var(--fs-4,1rem);color:var(--text-3);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.dp-it.on{color:var(--text);font-weight:700}

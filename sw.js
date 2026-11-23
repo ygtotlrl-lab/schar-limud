@@ -1,7 +1,7 @@
 // sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
 // מכאן נגזרת גרסת האפליקציה שבבאנר.
-var CACHE_NAME = self.APP.id + '-v370';
+var CACHE_NAME = self.APP.id + '-v371';
 
 var CORE = [
   './',
@@ -28,7 +28,7 @@ var CORE = [
   './app/constants.js',
   './app/icons.js',
   './app/state.js',
-  './app/snap.js',
+  './core/snap.js',
   './app/domain.js',
   './app/screens/dash.js',
   './app/screens/settings.js',

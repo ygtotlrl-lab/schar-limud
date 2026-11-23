@@ -6,7 +6,7 @@
 // הלקוח — app.GAUTH_CFG.sb(); האייקונים — מהסט של האפליקציה (shellIcon).
 
 import { app } from './util.js';
-import { lsGet, lsSet, lsRemove } from './storage.js';
+import { lsGet, lsSet, lsRemove, lsSpace } from './storage.js';
 import { closeModal, esc, openModal, toast } from './ui.js';
 import { shellIcon } from './icons.js';
 import { PUSH_ACTIONS, bellHTML, pushDevices, pushPrompt, pushRefresh, pushSignOut } from './push.js';
@@ -19,6 +19,9 @@ var MSG_NEEDS_NET = 'הכניסה הראשונה דורשת חיבור לרשת'
 
 function _app() { return self.APP || {}; }
 function _k(n) { return 'gauth_' + n + '_' + _app().id; }
+// המפתחות נרשמים במרשם — מפתח שאינו במרשם נמחק בכל עלייה
+var GAUTH_KEYS = ['user', 'seen'];
+lsSpace({ keys: function () { return GAUTH_KEYS.map(_k); }, owns: function (k) { return GAUTH_KEYS.map(_k).indexOf(k) >= 0; } });
 function _ic(n) { return shellIcon(n); }
 function _sb() { return app.GAUTH_CFG && app.GAUTH_CFG.sb ? app.GAUTH_CFG.sb() : null; }
 function gauthRequired() { var a = _app().auth; return !!(a && a.required === true); }
@@ -261,7 +264,10 @@ function gauthAccountOpen() {
 }
 
 // ── ניהול המשתמשים — מנהל בלבד, דרך השער (הטבלה נכתבת רק במפתח השירות) ──
-var ROLE_LABELS = { admin: 'מנהל', manager: 'צוות בכיר', junior: 'צוות' };
+var ROLE_LABELS_BASE = { admin: 'מנהל', manager: 'צוות בכיר', junior: 'צוות' };
+// התפקידים והשמות — מהתצורה של האפליקציה (GAUTH_CFG.roles · GAUTH_CFG.roleLabels), ובלעדיה שלושת התפקידים
+function _roles() { var r = app.GAUTH_CFG && app.GAUTH_CFG.roles; return Array.isArray(r) && r.length ? r : ['admin', 'manager', 'junior']; }
+var ROLE_LABELS = new Proxy({}, { get: function (_, k) { var o = (app.GAUTH_CFG && app.GAUTH_CFG.roleLabels) || {}; return o[k] || ROLE_LABELS_BASE[k]; } });
 var _rows = [], _devs = {};
 async function _gate(body) {
   var k = _app().supabase.key;
@@ -282,7 +288,7 @@ function _listHTML() {
 }
 async function gauthUsersOpen() {
   openModal('משתמשים', '<div class="ga-list" id="ga-list"><div class="ga-empty"><span class="view-spin" role="status" aria-label="טוען"></span></div></div>',
-    '<button class="btn ga-pri" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
+    '<button class="btn ga-pri ga-users-add" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
   // הרשימה והמכשירים במקביל; המכשירים — תוספת, ובלעדיהם הרשימה מוצגת בלי פעמונים מלאים
   var both;
   try { both = await Promise.all([_gate({ action: 'users_list' }), pushDevices()]); }
@@ -291,21 +297,22 @@ async function gauthUsersOpen() {
   _devs = both[1] || {};
   var l = document.getElementById('ga-list');
   if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">' + (r && r.error === 'perm' ? 'רק מנהל רואה את המשתמשים' : 'אין חיבור לשרת — נסו שוב') + (r && r.error && r.error !== 'perm' ? '<br><small>' + esc(String(r.error)) + '</small>' : '') + '</div>'; return; }
-  _rows = r.rows;
+  // א״ב לפי השם — בכל האפליקציות אותו סדר
+  _rows = r.rows.slice().sort(function (a, b) { return String(a.full_name || a.login).localeCompare(String(b.full_name || b.login), 'he'); });
   // תקלה בציור — מוצגת בחלון, ולא «טוען…» שנשאר
   try { if (l) l.innerHTML = _listHTML(); } catch (e) { console.error('[gauth] users', e); if (l) l.innerHTML = '<div class="ga-empty">שגיאה בהצגת הרשימה: ' + esc(String(e && e.message || e)) + '</div>'; }
 }
 function gauthUserEdit(id) {
-  var u = _rows.filter(function (x) { return x.client_id === id; })[0] || { client_id: '', login: '', full_name: '', role: 'junior', active: true, notify: true };
+  var u = _rows.filter(function (x) { return x.client_id === id; })[0] || { client_id: '', login: '', full_name: '', role: _roles()[_roles().length - 1], active: true, notify: true };
   var me = _user && _user.client_id === u.client_id;
   openModal(u.client_id ? 'עריכת משתמש' : 'הוספת משתמש',
-    '<input type="hidden" id="ga-id" value="' + esc(u.client_id) + '">' +
+    '<div class="ga-form"><input type="hidden" id="ga-id" value="' + esc(u.client_id) + '">' +
     '<label for="ga-name">שם</label><input type="text" id="ga-name" value="' + esc(u.full_name) + '">' +
     '<label for="ga-login">כתובת Google *</label><input type="email" id="ga-login" dir="ltr" value="' + esc(u.login) + '" placeholder="name@gmail.com">' +
     '<label for="ga-role">תפקיד</label><select id="ga-role"' + (me ? ' disabled' : '') + '>' +
-      ['admin', 'manager', 'junior'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ROLE_LABELS[r] + '</option>'; }).join('') + '</select>' +
+      _roles().map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ROLE_LABELS[r] + '</option>'; }).join('') + '</select>' +
     '<label class="ga-sw"><span>' + _ic('power') + 'פעיל</span><input type="checkbox" class="ga-swi" id="ga-active"' + (u.active ? ' checked' : '') + (me ? ' disabled' : '') + '></label>' +
-    '<div class="ga-err2" id="ga-err2"></div>',
+    '<div class="ga-err2" id="ga-err2"></div></div>',
     '<button class="btn out" data-act="ga-users">חזרה</button><button class="btn ga-pri" data-act="ga-user-save">' + _ic('save') + 'שמירה</button>', _ic('user'));
 }
 var SAVE_ERR = { bad_request: 'כתובת לא תקינה', dup: 'הכתובת כבר ברשימה', self: 'אי אפשר להוריד את עצמך מניהול', perm: 'רק מנהל מנהל משתמשים' };
