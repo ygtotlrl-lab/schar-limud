@@ -218,6 +218,36 @@ function hebrewDate(jsDate){
   return h.dayLabel+' '+h.monthName+' '+h.yearLabelFull;
 }
 
+// המופע הבא של תאריך לפי הלוח העברי — מהיום ואילך (בתוך שנה עברית), כתאריך ISO; null — תאריך פגום
+// אדר בשנה מעוברת — אדר ב׳, ואדר א׳ / ב׳ בשנה רגילה — אדר; יום ל׳ שאינו בחודש — כ״ט.
+// מפת השנה הקרובה (יום·חודש ⟵ התאריך הראשון) נבנית פעם אחת ליום, ולכן רשימה ארוכה אינה מחשבת שוב.
+var _hebNextBase='', _hebNextMap=null;
+function _hebNextTable(base){
+  if(_hebNextBase===base&&_hebNextMap) return _hebNextMap;
+  var m={};
+  for(var i=0;i<386;i++){
+    var iso=dayAdd(base,i), h=hebDate(dayNoon(iso));
+    if(!h.ok) continue;
+    var k=h.day+'|'+h.monthName;
+    if(!m[k]) m[k]=iso;
+  }
+  _hebNextBase=base; _hebNextMap=m;
+  return m;
+}
+function hebNext(iso, from){
+  if(!iso) return null;
+  var ev=hebDate(dayNoon(String(iso).slice(0,10)));
+  if(!ev.ok) return null;
+  var t=_hebNextTable(dayIso(dayNoon(from||new Date())));
+  var ms=ev.monthName==='אדר'?['אדר','אדר ב׳']:(ev.monthName==='אדר א׳'||ev.monthName==='אדר ב׳')?[ev.monthName,'אדר']:[ev.monthName];
+  var best=null;
+  [ev.day].concat(ev.day===30?[29]:[]).forEach(function(day,j){
+    if(best&&j) return;
+    ms.forEach(function(mn){ var x=t[day+'|'+mn]; if(x&&(!best||x<best)) best=x; });
+  });
+  return best;
+}
+
 // ייצוא בשם ולא default — שם שנעלם נשבר בטעינה, ו-default היה נבלע בשקט.
 export { HEB_DOW, HEB_MONTHS, HEB_MONTHS_LEAP, hebDate, hebDayLabel, hebGematria, hebIsLeap,
-         hebMonthNames, hebToGreg, hebYearInfo, hebYearLabelFull, hebrewDate };
+         hebMonthNames, hebNext, hebToGreg, hebYearInfo, hebYearLabelFull, hebrewDate };
