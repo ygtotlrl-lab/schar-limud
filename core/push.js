@@ -137,8 +137,21 @@ async function pushTest() {
   var r = await _post({ action: 'test' });
   return r && r.push ? r.push : null;
 }
-// אחרי כל כניסה — אסימון שהתחלף נרשם מחדש בשקט, על שם המשתמש שנכנס; בלי שאלה למשתמש
+// שם המכשיר להתראת הכניסה — אפליקציה מותקנת או הדפדפן ומערכת ההפעלה
+function _devName() {
+  var u = navigator.userAgent || '';
+  var os = /Android/.test(u) ? 'אנדרואיד' : /iPhone|iPad/.test(u) ? 'אייפון' : /Windows/.test(u) ? 'Windows' : /Mac OS/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
+  if (_shell()) return 'האפליקציה המותקנת' + (os ? ' · ' + os : '');
+  var br = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'דפדפן';
+  return br + (os ? ' · ' + os : '');
+}
+// הכניסה נרשמת בשער (seen) — כניסה ראשונה של חשבון, או חשבון מוכר במכשיר חדש: התראה ומייל לבעלים
+async function pushSeen() {
+  try { await _post({ action: 'seen', device: pushDevice(), devname: _devName() }); } catch (e) { /* */ }
+}
+// אחרי כל כניסה — הכניסה נרשמת, ואסימון שהתחלף נרשם מחדש בשקט, על שם המשתמש שנכנס; בלי שאלה למשתמש
 async function pushRefresh() {
+  pushSeen();
   if (!pushIsOn()) return false;
   try {
     var t = await _token(false);
