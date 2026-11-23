@@ -282,6 +282,7 @@ html{scrollbar-gutter:stable}
 .dp-ph{color:var(--text-3)}
 .dp-clr{flex:none;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);cursor:pointer}
 .dp-clr .ico{width:16px;height:16px}
+.dp-clr[hidden]{display:none}
 .dp-pop{position:relative;display:flex;gap:var(--sp-3);height:200px;overflow:hidden;margin-top:var(--sp-3);padding:0 var(--sp-3);
   border:1px solid var(--border);border-radius:var(--radius-sm,12px);background:var(--card)}
 .dp-pop[hidden]{display:none}
