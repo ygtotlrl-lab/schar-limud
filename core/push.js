@@ -174,33 +174,42 @@ function bellHTML(notify, devices) {
 var MSG_PUSH = {
   ok: 'ההתראות הופעלו במכשיר הזה', off: 'ההתראות כובו במכשיר הזה',
   denied: 'ההתראות חסומות בהגדרות המכשיר', unsupported: 'המכשיר או הדפדפן אינם תומכים בהתראות',
-  fail: 'ההפעלה נכשלה — בדקו את החיבור ונסו שוב', test: 'נשלחה התראת בדיקה', testNone: 'לא נמצא מכשיר רשום — הפעילו שוב את ההתראות'
+  fail: 'ההפעלה נכשלה — בדקו את החיבור ונסו שוב', test: 'נשלחה התראת בדיקה', testNone: 'לא נמצא מכשיר רשום — הפעילו שוב את ההתראות',
+  testKey: 'המכשיר רשום, אבל השליחה לטלפונים עוד לא הוגדרה בשרת'
 };
 function _ic(n) { return shellIcon(n); }
+// המצב — שבב בכותרת; והפעולות — שורות כמו בכרטיס החשבון (אייקון בעיגול · שם · חץ), בלי כפתורים בתחתית
+function _row(act, ic, label, cls) {
+  return '<button type="button" class="ga-row' + (cls ? ' ' + cls : '') + '" data-act="' + act + '">' +
+    '<span class="ga-ri">' + _ic(ic) + '</span><span class="ga-rl">' + esc(label) + '</span><span class="ga-chev" aria-hidden="true"></span></button>';
+}
+function _stateHTML() {
+  var on = pushIsOn(), sup = pushSupported(), blocked = pushBlocked();
+  var state = !sup ? 'לא נתמך' : blocked ? 'חסומות' : on ? 'פועלות' : 'כבויות';
+  return '<span class="push-st-l' + (on && !blocked ? ' is-on' : blocked ? ' is-bad' : '') + '">' + esc(state) + '</span>';
+}
 function _bodyHTML() {
   var on = pushIsOn(), sup = pushSupported(), blocked = pushBlocked(), me = _me();
-  var state = !sup ? 'לא נתמך' : blocked ? 'חסומות בהגדרות המכשיר' : on ? 'פועלות' : 'כבויות';
-  // בהנהלה — רק מי שסומן «מקבל התראות» מקבל; בשאר האפליקציות — כל המשתמשים
-  // ההסבר — רק כשיש מה להסביר: בהנהלה, למי שלא סומן «מקבל התראות»
-  var why = (sup && !blocked && me && me.notify === false) ? 'לא סומנת «מקבל התראות» — המכשיר יירשם, וההתראות יגיעו כשהמנהל יסמן אותך.' : '';
-  var fix = blocked ? '<p class="push-fix">' + (_shell()
-      ? 'כדי לבטל את החסימה — «פתיחת הגדרות ההתראות», ושם מפעילים את ההתראות של האפליקציה.'
-      : 'כדי לבטל את החסימה — לוחצים על סמל המנעול שליד הכתובת בדפדפן, ומאפשרים «התראות».') + '</p>' : '';
-  return '<div class="push-st"><span class="push-st-l' + (on && !blocked ? ' is-on' : '') + '">' + esc(state) + '</span>' + (why ? '<p>' + esc(why) + '</p>' : '') + fix + '</div>';
+  if (!sup) return '<div class="push-st"><p>המכשיר או הדפדפן אינם תומכים בהתראות.</p></div>';
+  if (blocked) return '<div class="push-st"><p class="push-fix">' + (_shell()
+      ? 'ההתראות חסומות בהגדרות המכשיר. כדי לבטל את החסימה — פותחים את הגדרות ההתראות ומפעילים את ההתראות של האפליקציה.'
+      : 'ההתראות חסומות בדפדפן. כדי לבטל את החסימה — לוחצים על סמל המנעול שליד הכתובת, ומאפשרים «התראות».') + '</p>' +
+    (_shell() ? '<div class="ga-rows">' + _row('push-settings', 'power', 'פתיחת הגדרות ההתראות', 'is-pri') + '</div>' : '') + '</div>';
+  // בהנהלה — רק מי שסומן «מקבל התראות» מקבל; ההסבר — רק למי שלא סומן
+  var why = (me && me.notify === false) ? '<p>לא סומנת «מקבל התראות» — המכשיר יירשם, וההתראות יגיעו כשהמנהל יסמן אותך.</p>' : '';
+  return '<div class="push-st">' + why + '<div class="ga-rows">' + (on
+    ? _row('push-test', 'bell', 'שליחת התראת בדיקה') + _row('push-off', 'power', 'כיבוי ההתראות', 'is-out')
+    : _row('push-on', 'power', 'הפעלת ההתראות', 'is-pri')) + '</div></div>';
 }
-function _footHTML() {
-  if (!pushSupported()) return '<button class="btn out" data-act="modal-close">סגירה</button>';
-  if (pushBlocked()) return '<button class="btn out" data-act="modal-close">סגירה</button>' +
-    (_shell() ? '<button class="btn ga-pri" data-act="push-settings">פתיחת הגדרות ההתראות</button>' : '');
-  return pushIsOn()
-    ? '<button class="btn out" data-act="push-off">כיבוי</button><button class="btn ga-pri" data-act="push-test">שליחת בדיקה</button>'
-    : '<button class="btn out" data-act="modal-close">ביטול</button><button class="btn ga-pri" data-act="push-on">הפעלה</button>';
+function pushModal() {
+  openModal('התראות במכשיר הזה', _bodyHTML(), '', _ic('bell'));
+  var t = document.getElementById('modal-title');
+  if (t) t.insertAdjacentHTML('beforeend', _stateHTML());
 }
-function pushModal() { openModal('התראות במכשיר הזה', _bodyHTML(), _footHTML(), _ic('bell')); }
 async function _act(kind) {
   if (kind === 'test') {
     var r = await pushTest();
-    toast(r && (r.ok || 0) > 0 ? MSG_PUSH.test : MSG_PUSH.testNone, null, r && r.ok ? 'good' : 'warn');
+    toast(r && (r.ok || 0) > 0 ? MSG_PUSH.test : r && r.nokey ? MSG_PUSH.testKey : MSG_PUSH.testNone, null, r && r.ok ? 'good' : 'warn');
     return;
   }
   if (kind === 'off') { await pushDisable(); toast(MSG_PUSH.off, null, 'good'); closeModal(); return; }
@@ -222,8 +231,8 @@ function pushPrompt() {
   el.setAttribute('role', 'dialog');
   el.innerHTML = '<div class="push-prompt-ic">' + _ic('bell') + '</div>' +
     '<div class="push-prompt-t"><b>התראות מהאפליקציה</b><span>להפעיל אותן במכשיר הזה?</span></div>' +
-    '<div class="push-prompt-b"><button class="btn out" data-act="push-later">לא עכשיו</button>' +
-    '<button class="btn ga-pri" data-act="push-on">הפעלה</button></div>';
+    '<div class="push-prompt-b"><button class="push-later" data-act="push-later">לא עכשיו</button>' +
+    '<button class="push-go" data-act="push-on">' + _ic('power') + 'הפעלה</button></div>';
   document.body.appendChild(el);
   return true;
 }

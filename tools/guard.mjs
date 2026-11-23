@@ -102,6 +102,23 @@ else {
   }
 }
 
+// ── הייבוא — כל מודול שמיובא קיים בעץ וברשימת המטמון ──
+// ייבוא של קובץ שאינו בעץ מפיל את העלייה כולה — והתחביר תקין גם כך.
+{
+  const coreFiles = existsSync(coreDir) ? readdirSync(coreDir).filter(f => f.endsWith('.js')).map(f => 'core/' + f) : [];
+  const urls = block ? [...block[1].matchAll(/['"]([^'"]+)['"]/g)].map(m => m[1]) : [];
+  for (const f of appFiles.concat(coreFiles)) {
+    const src = readFileSync(join(ROOT, f), 'utf8');
+    for (const m of src.matchAll(/(?:^|[^.\w])(?:import|export)\s[^'"]*?from\s*['"](\.{1,2}\/[^'"]+)['"]|import\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g)) {
+      const rel = m[1] || m[2];
+      const tgt = join(dirname(join(ROOT, f)), rel).slice(ROOT.length + 1);
+      checked++;
+      if (!existsSync(join(ROOT, tgt))) { fails.push(`${f} — מייבא «${rel}», שאינו קיים בעץ`); continue; }
+      if (block && !urls.includes('./' + tgt)) fails.push(`sw.js — «./${tgt}» מיובא ואינו ברשימת המטמון`);
+    }
+  }
+}
+
 // ── נתונים שנגזרו — tools/gen-data.mjs --check, כשהכלי קיים ──
 // מקור שנערך בלי הרצת המחולל, או app/data.js שנערך ביד — האפליקציה מציגה נתון שאינו המקור.
 if (existsSync(join(ROOT, 'tools', 'gen-data.mjs'))) {

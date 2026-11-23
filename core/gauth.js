@@ -264,9 +264,9 @@ function gauthAccountOpen() {
 }
 
 // ── ניהול המשתמשים — מנהל בלבד, דרך השער (הטבלה נכתבת רק במפתח השירות) ──
-var ROLE_LABELS_BASE = { admin: 'מנהל', manager: 'צוות בכיר', junior: 'צוות' };
-// התפקידים והשמות — מהתצורה של האפליקציה (GAUTH_CFG.roles · GAUTH_CFG.roleLabels), ובלעדיה שלושת התפקידים
-function _roles() { var r = app.GAUTH_CFG && app.GAUTH_CFG.roles; return Array.isArray(r) && r.length ? r : ['admin', 'manager', 'junior']; }
+var ROLE_LABELS_BASE = { admin: 'מנהל', junior: 'משתמש', manager: 'משתמש' };
+// התפקידים — מנהל ומשתמש (GAUTH_CFG.roles · GAUTH_CFG.roleLabels גוברים)
+function _roles() { var r = app.GAUTH_CFG && app.GAUTH_CFG.roles; return Array.isArray(r) && r.length ? r : ['admin', 'junior']; }
 var ROLE_LABELS = new Proxy({}, { get: function (_, k) { var o = (app.GAUTH_CFG && app.GAUTH_CFG.roleLabels) || {}; return o[k] || ROLE_LABELS_BASE[k]; } });
 var _rows = [], _devs = {};
 async function _gate(body) {
