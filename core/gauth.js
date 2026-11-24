@@ -201,8 +201,18 @@ async function gauthGate() {
     }
     _screen(true);
     await new Promise(function (resolve) {
-      _gsiButton(sb, resolve);
-      var b = document.getElementById('ga-go');
+      // בדפדפן — הכפתור של Google בלבד: עד שהספרייה נטענת — ספינר, ולא הכפתור שלנו; לחיצה עליו בזמן הטעינה
+      // הייתה עוזבת את הדף ל-Google בהפניה, ושם מוצגת כתובת השרת ולא כתובת האתר. הכפתור שלנו — רק כשהספרייה לא נטענה.
+      var b = document.getElementById('ga-go'), host = document.getElementById('ga-gsi');
+      if (!_native() && _clientId()) {
+        b.style.display = 'none';
+        if (host && !host.firstChild) host.innerHTML = '<span class="busy-spin" role="status" aria-label="טוען"></span>';
+      }
+      _gsiButton(sb, resolve).then(function (ok) {
+        if (ok) return;
+        if (host && host.querySelector('.busy-spin')) host.innerHTML = '';
+        b.style.display = '';
+      });
       b.onclick = async function () {
         b.disabled = true; _err('');
         try { if (await _signIn(sb)) resolve(); } finally { b.disabled = false; }
