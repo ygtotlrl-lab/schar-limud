@@ -13,7 +13,9 @@ function busy(btn, on, label) {
     if (btn._busyTxt === undefined) { btn._busyTxt = btn.innerHTML; btn._busyW = btn.style.minWidth; btn.style.minWidth = btn.offsetWidth + 'px'; }
     btn.disabled = true; btn.classList.add('is-busy');
     // ספינר בלי מילים, והכפתור שומר על רוחבו — «שומר…» היה מקפיץ את הכפתור ואת השורה
-    btn.innerHTML = label || '<span class="busy-spin" role="status" aria-label="שומר"></span>';
+    // שורה עם מקום לאייקון (ga-ri, או data-busy-slot) — הספינר נכנס במקום האייקון, והתווית נשארת
+    var spin = label || '<span class="busy-spin" role="status" aria-label="שומר"></span>', slot = btn.querySelector('[data-busy-slot], .ga-ri');
+    if (slot) slot.innerHTML = spin; else btn.innerHTML = spin;
   } else {
     btn.disabled = false; btn.classList.remove('is-busy');
     if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; btn.style.minWidth = btn._busyW || ''; }

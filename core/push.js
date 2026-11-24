@@ -20,14 +20,18 @@ function _cfg() { return app.NOTIFY_CFG || {}; }
 function _me() { try { return _cfg().user ? _cfg().user() : null; } catch (e) { return null; } }
 
 // מזהה המכשיר — אקראי, נוצר פעם אחת; השער מחליף בו את האסימון הקודם של אותו מכשיר
+// המזהה נשמר גם ב-localStorage: עלייה שבה המסד לא נפתח בזמן (מצב זיכרון) הייתה יוצרת מזהה חדש — התראת «כניסה ממכשיר חדש» ושורה כפולה בהתראות
+function _rawGet(k) { try { return self.localStorage.getItem(k); } catch (e) { return null; } }
+function _rawSet(k, v) { try { self.localStorage.setItem(k, v); } catch (e) { /* */ } }
 function pushDevice() {
-  var d = lsGet(_k('dev'));
+  var k = _k('dev'), d = lsGet(k) || _rawGet(k);
   if (!d) {
     var b = new Uint8Array(12);
     crypto.getRandomValues(b);
     d = Array.from(b).map(function (x) { return (x + 0x100).toString(16).slice(1); }).join('');
-    lsSet(_k('dev'), d);
   }
+  if (lsGet(k) !== d) lsSet(k, d);
+  if (_rawGet(k) !== d) _rawSet(k, d);
   return d;
 }
 
