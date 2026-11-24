@@ -4,6 +4,37 @@ import { MSG_COMBO_MORE, MSG_NO_DIALOG, MSG_NO_MATCH, MSG_SW_TIMEOUT, MSG_UNSAVE
 import { lsGet, lsGuardToast, lsSet } from './storage.js';
 import { stIcon } from './icons.js';
 
+// ── שדה סכום (data-amt) — פסיקים באלפים תוך כדי הקלדה, ו-₪ בקצה (ב-ui.css) ──
+// הערך נקרא ב-readNum, שמסיר את הפסיקים; ערך שנכתב מהקוד — דרך amtSet, וערך שהגיע עם הציור — מעוצב מעצמו.
+function amtFmt(v) {
+  var s = String(v == null ? '' : v).replace(/,/g, '').trim();
+  if (!/^-?\d*\.?\d*$/.test(s)) return String(v == null ? '' : v);
+  var neg = s.charAt(0) === '-', p = (neg ? s.slice(1) : s).split('.');
+  var i = p[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (neg ? '-' : '') + i + (p.length > 1 ? '.' + p[1] : '');
+}
+function amtSet(el, v) { if (el) el.value = amtFmt(v); }
+function amtSync(root) {
+  var l = (root || document).querySelectorAll('input[data-amt]');
+  for (var k = 0; k < l.length; k++) if (document.activeElement !== l[k]) { var f = amtFmt(l[k].value); if (f !== l[k].value) l[k].value = f; }
+}
+if (typeof document !== 'undefined') {
+  // בשלב הלכידה — לפני מטפלי האפליקציה, שקוראים את הערך; הסמן נשאר אחרי אותה ספרה
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el || !el.matches || !el.matches('input[data-amt]')) return;
+    var pos = el.selectionStart == null ? el.value.length : el.selectionStart;
+    var before = el.value.slice(0, pos).replace(/[^\d.\-]/g, '').length, nv = amtFmt(el.value);
+    if (nv === el.value) return;
+    el.value = nv;
+    var i = 0, n = 0;
+    while (i < nv.length && n < before) { if (/[\d.\-]/.test(nv.charAt(i))) n++; i++; }
+    try { el.setSelectionRange(i, i); } catch (e1) { /* */ }
+  }, true);
+  if (typeof MutationObserver === 'function')
+    new MutationObserver(function () { amtSync(); }).observe(document.documentElement, { childList: true, subtree: true });
+}
+
 // ── כפתור עסוק ──
 // ההשבתה בנקודת הניתוב ולא באתר הקריאה — מטפל שמחזיר הבטחה מסמן המתנה; מטפל סינכרוני נגמר לפני שלחיצה שנייה נוחתת.
 // התווית היא פרמטר — יש פעולות רשת שאינן שמירה, ו«שומר…» עליהן מתאר פעולה שאינה מתרחשת.
@@ -921,7 +952,7 @@ function listAutoKey(e) {
 }
 if (typeof document !== 'undefined' && !self.__listAuto) { self.__listAuto = true; document.addEventListener('keydown', listAutoKey); }
 
-export { actRun, actWire, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef, comboFocus,
+export { actRun, actWire, amtFmt, amtSet, amtSync, ask, busy, cardWinHTML, closeAsk, closeModal, comboDef, comboFocus,
          comboHTML, comboInput, comboMake, comboMore, comboPick, comboSet, comboValue, dragCancel,
          dragDef, dragDown, dragMove, dragOrder, dragUp, esc, ksKey, lookupDragApply, lookupList,
          lookupSeed, lsToast, methodGridHTML, methodIcon, methodPick, modalDismiss, openModal, pullRender,

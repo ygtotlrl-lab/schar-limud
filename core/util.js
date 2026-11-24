@@ -10,7 +10,8 @@ import { toast } from './ui.js';
 function readNum(inp, dflt) {
   var d = (dflt === undefined) ? 0 : dflt;
   if (!inp) return d;
-  var raw = String(inp.value == null ? '' : inp.value).trim();
+  // פסיקי האלפים של שדה סכום (data-amt) אינם חלק מהמספר
+  var raw = String(inp.value == null ? '' : inp.value).replace(/,/g, '').trim();
   if (raw === '') return d;
   var n = Number(raw);
   return isFinite(n) ? n : d;
