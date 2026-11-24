@@ -410,7 +410,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);direc
 
 .sc-hdr{background:var(--card);color:var(--text);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--border)}
 .sc-meta{font-size:var(--fs-3);color:var(--text-2)}
-.sc-head{display:flex;gap:var(--sp-5);align-items:center;justify-content:space-between}
+/* השם והמצב תופסים את השורה, והשיתוף צמוד ל-✕ בקצה — space-between היה מניח אותו באמצע */
+.sc-head{display:flex;gap:var(--sp-2);align-items:center}
+.sc-head .sc-meta{flex:1;margin-inline-end:var(--sp-3)}
 .sc-meta{min-width:0}
 .sc-part{margin-top:var(--sp-5)}
 .sc-sub-title{font-size:var(--fs-3);font-weight:700;color:var(--text-2);margin-bottom:var(--sp-3);padding:0 var(--sp-2)}
