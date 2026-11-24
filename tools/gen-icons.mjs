@@ -668,4 +668,40 @@ for (const [d, scale] of DENS) {
     throw new Error(`${d}: שוליים L=${L}/R=${R} · T=${T}/B=${B} בתוכן ${cw}×${chh} — ⛔ נדרש L=R ו-T=B`);
   put(join(dir, 'ic_launcher_foreground.png'), encodePng(fg, fg, px));
 }
+// ── ההתראה ומסך הפתיחה — נכסים משלהם, לא חזית המשגר ──
+// הסמל הקטן (שורת המצב) — הסמל בלבד, בלבן על שקוף, 20dp מתוך 24dp: חזית המשגר נושאת שוליים של adaptive-icon,
+// ובשורת המצב הייתה יוצאת זעירה; אנדרואיד צובע אותו לבד, ולכן רק האלפא קובעת.
+const STAT_DP = 24, STAT_INNER = 20;
+// מסך הפתיחה: האריח המלא, בצבעיו, במרכז קנבס של 288dp — בלי רקע אייקון אנדרואיד מציג רק את מה שבעיגול של 192dp,
+// והאריח (128dp) נכנס בו כולו, על הלבן של המסך; כך אין עיגול שחותך את האריח ואין הפוך צבעים.
+const SPLASH_DP = 288, SPLASH_TILE = 128;
+for (const [d, scale] of DENS) {
+  const dir = join(RES, 'drawable-' + d);
+  mkdirSync(dir, { recursive: true });
+  const c = Math.round(STAT_DP * scale), n = Math.round(STAT_INNER * scale);
+  const ma = markAspect();
+  const W = ma.w >= ma.h ? n : Math.max(1, Math.round(n * ma.w / ma.h));
+  const H = ma.w >= ma.h ? Math.max(1, Math.round(n * ma.h / ma.w)) : n;
+  const r = markRender(W, H), sp = Buffer.alloc(c * c * 4);
+  // מה שבסמל צבוע בצבע האריח (סוגר הארנק, חור) הוא חור בצללית — אחרת הוא נבלע בלבן ופרטי הסמל נעלמים
+  if (r.c && APP.art !== 'master') {
+    const rgb = flatten(r.c), bg = svgMaster().bg.rgb || [0, 0, 0];
+    const full = Math.hypot(255 - bg[0], 255 - bg[1], 255 - bg[2]) || 1;
+    for (let k = 0; k < W * H; k++) if (r.a[k] > 0)
+      // סף רך: קרוב לצבע האריח — חור; גוון שני של הסמל (תכלת על כחול) — נשאר מלא, ולא דהוי
+      r.a[k] *= Math.max(0, Math.min(1, (Math.hypot(rgb[k*4] - bg[0], rgb[k*4+1] - bg[1], rgb[k*4+2] - bg[2]) / full - 0.04) / 0.06));
+  }
+  const ox = Math.floor((c - W) / 2), oy = Math.floor((c - H) / 2);
+  for (let k = 0; k < c * c; k++) { sp[k*4] = 255; sp[k*4+1] = 255; sp[k*4+2] = 255; }
+  // שקיפות שבמאסטר (פס בגוון חלש) — בצללית היא הייתה יוצאת דהויה; כל מה שנושא דיו — מלא
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) sp[((y + oy) * c + x + ox) * 4 + 3] = Math.round(Math.min(1, r.a[y * W + x] / 0.5) * 255);
+  put(join(dir, 'ic_stat.png'), encodePng(c, c, sp));
+  const S = Math.round(SPLASH_DP * scale), T = Math.round(SPLASH_TILE * scale), t = tile(T, null), px = Buffer.alloc(S * S * 4);
+  const o = Math.floor((S - T) / 2);
+  for (let y = 0; y < T; y++) t.copy(px, ((y + o) * S + o) * 4, y * T * 4, (y + 1) * T * 4);
+  put(join(dir, 'ic_splash.png'), encodePng(S, S, px));
+}
+// הסמל הגדול בהתראה — האריח בצבעיו; מתוך adaptive-icon אנדרואיד אינו מפענח תמונה, וההתראה יצאה בלי סמל
+mkdirSync(join(RES, 'drawable-nodpi'), { recursive: true });
+put(join(RES, 'drawable-nodpi', 'ic_notify_large.png'), encodePng(192, 192, tile(192, null)));
 console.log(`gen-icons — ${wrote} קבצים נכתבו (${basename(ROOT)})`);

@@ -261,14 +261,14 @@ function filePaths() {
 </paths>
 `;
 }
-// ערכת מסך הפתיחה — כמקובל באנדרואיד: האייקון המלא במרכז, על רקע לבן, ואחריה ערכת המעטפת.
+// ערכת מסך הפתיחה — האריח המלא בצבעיו (ic_splash, מ-gen-icons) במרכז, על רקע לבן, בלי עיגול סביבו; ואחריה ערכת המעטפת.
 function splashTheme(A) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <!-- ${MARK} -->
 <resources>
     <style name="Theme.Shell.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#FFFFFF</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
         <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
     </style>
 </resources>
