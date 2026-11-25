@@ -1,7 +1,7 @@
 // sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
 // מכאן נגזרת גרסת האפליקציה שבבאנר.
-var CACHE_NAME = self.APP.id + '-v384';
+var CACHE_NAME = self.APP.id + '-v385';
 
 var CORE = [
   './',
@@ -12,6 +12,8 @@ var CORE = [
   './core/ui.css',
   './core/fonts/heebo-hebrew.woff2',
   './core/fonts/heebo-latin.woff2',
+  './core/fonts/frank-ruhl-libre-hebrew.woff2',
+  './core/fonts/frank-ruhl-libre-latin.woff2',
   './core/chart.css',
   './app/style.css',
   './core/util.js',
