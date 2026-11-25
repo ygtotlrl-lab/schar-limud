@@ -1,5 +1,8 @@
 -- migrations/000_schema.sql — שכר לימוד: הסכימה החיה
 
+-- תקופות הפעילות — מערך { start, end } ב-YYYY-MM, ו-end ריק לתקופה פתוחה; CHECK אינו יכול להריץ שאילתה, ולכן הבדיקה בפונקציה.
+-- בלי חפיפה, ותקופה פתוחה אחת לכל היותר — האחרונה: שתיים פתוחות הן שני חיובים לאותו חודש.
+
 -- ── שכר לימוד ──
 
 -- תקופות הפעילות — מערך { start, end } ב-YYYY-MM, ו-end ריק לתקופה פתוחה; CHECK אינו יכול להריץ שאילתה, ולכן הבדיקה בפונקציה.
@@ -174,5 +177,15 @@ alter table public.sl_users enable row level security;
 drop policy if exists sl_users_select on public.sl_users;
 create policy sl_users_select on public.sl_users as permissive for select to authenticated using (sl_is_user());
 
+drop trigger if exists sl_lookups_history on public.sl_lookups;
+create trigger sl_lookups_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_lookups FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
+drop trigger if exists sl_settings_history on public.sl_settings;
+create trigger sl_settings_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_settings FOR EACH ROW EXECUTE FUNCTION sh_history_log('key');
+drop trigger if exists sl_students_history on public.sl_students;
+create trigger sl_students_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_students FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
+drop trigger if exists sl_transactions_history on public.sl_transactions;
+create trigger sl_transactions_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_transactions FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
 drop trigger if exists sl_transactions_notify on public.sl_transactions;
 create trigger sl_transactions_notify AFTER INSERT ON public.sl_transactions FOR EACH ROW EXECUTE FUNCTION sl_transactions_notify();
+drop trigger if exists sl_users_history on public.sl_users;
+create trigger sl_users_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_users FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
