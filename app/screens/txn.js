@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, dayToday, readNum } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
+import { amtSet, ask, closeModal, comboDef, comboHTML, comboSet, comboValue, esc, methodGridHTML, methodIcon, methodPick, openModal, receiptHTML, toast } from '../../core/ui.js';
 import { BAL_CREDIT, BAL_DEBT, HINT_CREDIT, HINT_DEBT, HINT_NOT_INCOME, CREDIT_METHOD, DEBT_METHOD, LK_METHOD, MSG_CONFIRM, MSG_DEL_NOT_SAVED, MSG_DEL_TXN_BODY,
          MSG_DEL_TXN_TITLE, MSG_NEED_AMOUNT, MSG_PAY_DELETED, MSG_PAY_EDITED, MSG_PAY_MISSING,
          MSG_PAY_SAVE_FAIL, MSG_PICK_DATE,
@@ -25,8 +25,8 @@ function screenTxnHTML() {
       </div>
       <div class="frm-2">
         <div class="frm-row">
-          <label for="txn-amount">סכום (&#8362;)</label>
-          <input id="txn-amount" type="text" inputmode="decimal" placeholder="0">
+          <label for="txn-amount">סכום</label>
+          <input id="txn-amount" type="text" inputmode="decimal" placeholder="0" data-amt>
         </div>
         <div class="frm-row">
           <label for="txn-date">תאריך</label>
@@ -63,7 +63,7 @@ function studentOpts(a){return a.map(function(s){return{value:s.client_id,label:
 // בחירת תלמיד קובעת את הסכום בשכר הלימוד שלו בכל בחירה — ערך שנשאר מתלמיד קודם הוא סכום שגוי שנראה נכון.
 comboDef('student',{val:true,items:function(){return studentOpts(S.STUDENTS.filter(function(s){return studentInMonth(s);}));},pick:function(it){
   var at=document.getElementById('txn-amount'),st=it?S.STUDENTS.find(function(s){return idEq(s.client_id,it.value);}):null;
-  if(at)at.value=st?(studentTuition(st)||''):'';
+  if(at)amtSet(at,st?(studentTuition(st)||''):'');
 }});
 comboDef('txn-filter',{val:true,items:function(){return [{value:'',label:TXN_FILTER_ALL}].concat(studentOpts(S.STUDENTS));},pick:function(){renderTxnLog();}});
 
@@ -168,7 +168,7 @@ function openTxnEdit(key){
   var st=S.STUDENTS.find(function(s){return idEq(s.client_id,t.student_client_id);});
   var cur=isCreditTxn(t)?CREDIT_METHOD:isDebtTxn(t)?DEBT_METHOD:(t.payment_method||'');
   var body='<div data-ks><div class="frm-2">'
-    +'<div class="frm-row"><label for="te-amount">סכום (&#8362;)</label><input id="te-amount" type="text" inputmode="decimal" value="'+esc(t.amount)+'"></div>'
+    +'<div class="frm-row"><label for="te-amount">סכום</label><input id="te-amount" type="text" inputmode="decimal" data-amt value="'+esc(t.amount)+'"></div>'
     +'<div class="frm-row"><label for="te-date">תאריך</label><input id="te-date" type="date" value="'+esc(t.txn_date||'')+'"></div></div>'
     +'<div class="frm-row"><span class="frm-lbl" id="te-method-lbl">אמצעי תשלום</span><input id="te-method" type="hidden" value="'+esc(cur)+'">'
     +methodGrid('te-method',cur)+'</div>'

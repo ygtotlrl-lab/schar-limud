@@ -1,7 +1,7 @@
 // app/screens/student.js — רשימת התלמידים וכרטיס התלמיד
 import { MSG_SAVED_LOCAL, dayNoon, dayToday } from '../../core/util.js';
 import { idEq, schedulePush, tombKill } from '../../core/sync.js';
-import { ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
+import { amtSet, ask, cardWinHTML, esc, openModal, toast, uiNoDialog } from '../../core/ui.js';
 import { BAL_CREDIT, BAL_CREDIT_IN, BAL_CREDIT_OUT, BAL_DEBT, BAL_DEBT_IN, BAL_DEBT_OUT, BAL_MOVED, BAL_SPREAD, SNAP_APP, SNAP_CARD, SNAP_TXNS, SNAP_TXN_MAX, SNAP_YEAR, CLS_NAME, CLS_NO_CYCLE, CLS_NO_TUITION, CLS_PICK, CREDIT_METHOD, DEBT_METHOD, MSG_ADD_STUDENT, MSG_CHANGE_NOT_SAVED, MSG_CLS_REQUIRED,
          MSG_DEL_NOT_SAVED, MSG_DEL_STUDENT_ANON, MSG_DEL_STUDENT_POST, MSG_DEL_STUDENT_PRE,
          MSG_DEL_STUDENT_TITLE, MSG_STUDENTS_MANAGE, MSG_STUDENTS_UPDATED, MSG_YEAR_ROLL_TITLE, MSG_STUDENT_DELETED, MSG_STUDENT_SAVE_FAIL, MSG_YEAR_ROLL_DONE, MSG_YEAR_UNSET, MSG_CONFIRM,
@@ -55,7 +55,7 @@ function screenStudentHTML() {
         </div>
         <div class="frm-row sc-tu">
           <label for="sc-edit-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label>
-          <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל" data-kent>
+          <input aria-label="ברירת מחדל" id="sc-edit-tuition" type="text" inputmode="decimal" data-amt placeholder="ברירת מחדל" data-kent>
         </div>
         <div class="frm-row sc-tu">
           <span class="frm-lbl">שכר לתקופה — חל רק בחודשים שבתקופה, ושאר החודשים לפי השכר שמעל</span>
@@ -199,7 +199,7 @@ function openAddStudent(){
   // מזהי השדות הם אלה ש-saveNewStudent קוראת — שינוי שם כאן שובר את השמירה.
   var body=''
     +'<div class="frm-row"><label for="new-st-name">שם</label><input aria-label="שם התלמיד" id="new-st-name" type="text" placeholder="שם התלמיד"></div>'
-    +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
+    +'<div class="frm-row"><label for="new-st-tuition">שכ"ל חודשי (ריק = ברירת מחדל)</label><input aria-label="ברירת מחדל" id="new-st-tuition" data-amt type="text" inputmode="decimal" placeholder="ברירת מחדל"></div>'
     +'<div class="frm-row"><label for="new-st-cls">שיעור</label><select id="new-st-cls">'+clsOptions('')+'</select></div>'
     +'<div class="frm-row frm-row-last"><span class="frm-lbl">תקופות פעילות</span>'+PER.editorHTML([])+'</div>'
     +'<div class="range-hint-sm">החיוב מחושב רק לחודשים שבתקופה (כולל).</div>';
@@ -208,7 +208,7 @@ function openAddStudent(){
   openModal(MSG_ADD_STUDENT, body, foot);
 }
 
-function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value,cls=document.getElementById('new-st-cls').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}if(CLS_PICK.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}var per=PER.read(document.getElementById('modal'));if(per.err){toast(per.err, null, 'bad');return;}var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;
+function saveNewStudent(){var name=document.getElementById('new-st-name').value.trim(),tuition=document.getElementById('new-st-tuition').value.replace(/,/g,'').trim(),cls=document.getElementById('new-st-cls').value;if(!name){toast(MSG_NAME_REQUIRED, null, 'bad');return;}if(CLS_PICK.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}var per=PER.read(document.getElementById('modal'));if(per.err){toast(per.err, null, 'bad');return;}var cs={};var tuitionVal=parseInt(tuition,10);if(tuition&&(!isFinite(tuitionVal)||tuitionVal<0)){toast(MSG_TUITION_POSITIVE, null, 'bad');return;}if(tuition)cs.monthly_tuition=tuitionVal;
   var cid=pendingCid('student',[name,tuition,cls,JSON.stringify(per.ps)].join(' '));
   var row={client_id:cid,name:name,card_settings:cs,periods:per.ps,handled:null,cls:cls,cycle:slCycleFor(cls)||null,deleted:false,deleted_at:null,deleted_by:null};
   if(!slLocalWrite('sl_students',row)){toast(MSG_STUDENT_SAVE_FAIL,5000, 'bad');return;}
@@ -311,7 +311,7 @@ function renderStudentCard(){
   var cs=s.card_settings||{};
   var meta=[];if(CLS_NAME[s.cls])meta.push(CLS_NAME[s.cls]);var cyl=cycleLabel(slCycleOf(s));if(cyl)meta.push(cyl);meta.push(studentInMonth(s)?'פעיל':'לא פעיל');var er=enrollText(s);if(er)meta.push(er);
   document.getElementById('sc-meta').textContent=meta.join(' • ');
-  document.getElementById('sc-edit-name').value=s.name;document.getElementById('sc-edit-tuition').value=cs.monthly_tuition||'';
+  document.getElementById('sc-edit-name').value=s.name;amtSet(document.getElementById('sc-edit-tuition'),cs.monthly_tuition||'');
   document.getElementById('sc-edit-cls').innerHTML=clsOptions(s.cls);
   document.getElementById('sc-edit-cycle').innerHTML=cycleOptions(slCycleOf(s));
   document.getElementById('sc-cycle-row').classList.toggle('hidden',!!CLS_NO_CYCLE[s.cls]);
@@ -336,7 +336,7 @@ function tpRowHTML(p){
   return '<div class="per-row tp-row" data-tp-row>'+
     '<label class="per-lbl">מ<select aria-label="חודש תחילה" data-f="start">'+tpOptions(p.start,false)+'</select></label>'+
     '<label class="per-lbl">עד<select aria-label="חודש סוף" data-f="end">'+tpOptions(p.end||'',true)+'</select></label>'+
-    '<label class="per-lbl">סכום<input aria-label="סכום חודשי" data-f="amount" type="text" inputmode="decimal" value="'+(p.amount==null?'':esc(String(p.amount)))+'" data-kent></label>'+
+    '<label class="per-lbl">סכום<input aria-label="סכום חודשי" data-f="amount" data-amt type="text" inputmode="decimal" value="'+(p.amount==null?'':esc(String(p.amount)))+'" data-kent></label>'+
     '<button type="button" data-act="tp-remove" class="per-del" aria-label="הסרת השכר לתקופה">'+icon('close')+'</button>'+
   '</div>';
 }
@@ -351,7 +351,7 @@ function tpRemoveRow(btn){var r=btn&&btn.closest('[data-tp-row]');if(r)r.remove(
 function tpRead(root){
   var ps=[],err='';
   (root||document).querySelectorAll('[data-tp-list] [data-tp-row]').forEach(function(r){
-    var s=PER.norm(r.querySelector('[data-f="start"]').value),e=PER.norm(r.querySelector('[data-f="end"]').value),raw=r.querySelector('[data-f="amount"]').value.trim();
+    var s=PER.norm(r.querySelector('[data-f="start"]').value),e=PER.norm(r.querySelector('[data-f="end"]').value),raw=r.querySelector('[data-f="amount"]').value.replace(/,/g,'').trim();
     if(!s||raw==='')return;
     var a=parseInt(raw,10);
     if(!isFinite(a)||a<0){err=err||MSG_TP_AMOUNT;return;}
@@ -450,7 +450,7 @@ function saveStudentSettings(){
     if(!slLocalWrite('sl_students',Object.assign({},s,{name:name}))){toast(MSG_SETTINGS_NOT_SAVED,5000, 'bad');return;}
     return true;
   }
-  var tuition=document.getElementById('sc-edit-tuition').value,cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
+  var tuition=document.getElementById('sc-edit-tuition').value.replace(/,/g,'').trim(),cls=document.getElementById('sc-edit-cls').value,cycle=CLS_NO_CYCLE[cls]?null:(parseInt(document.getElementById('sc-edit-cycle').value,10)||null);
   if(CLS_PICK.indexOf(cls)<0){toast(MSG_CLS_REQUIRED, null, 'bad');return;}
   var cs=Object.assign({},s.card_settings||{});
   // אימות מפורש — שדה טקסט מעביר קלט פגום כמות שהוא, ו-parseInt בלי אימות כותב NaN לתוך card_settings.

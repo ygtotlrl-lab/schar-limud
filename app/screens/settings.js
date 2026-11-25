@@ -2,7 +2,7 @@
 import { MSG_SAVED_LOCAL, uniqHas } from '../../core/util.js';
 import { idEq, newClientId, schedulePush, tombKill } from '../../core/sync.js';
 import { MIRROR } from '../../core/mirror.js';
-import { ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
+import { amtSet, ask, dragDef, esc, lookupDragApply, openModal, toast } from '../../core/ui.js';
 import { CLS_NAME, CLS_TUITION_KEY, CREDIT_METHOD, DEBT_METHOD, MSG_DEBT_ITEM_LOCKED, KV_TABLE, LK_METHOD, MSG_CONFIRM, MSG_CREDIT_ITEM_LOCKED,
          MSG_DELETED_OK, MSG_DEL_ITEM_BODY, MSG_DEL_ITEM_TITLE, MSG_DEL_NOT_SAVED,
          MSG_ADD_METHOD, MSG_ITEM_MISSING, MSG_ITEM_SAVE_FAIL, MSG_METHOD_LABEL, MSG_VALUE_BAD, MSG_VALUE_EXISTS, MSG_VALUE_REQUIRED,
@@ -21,11 +21,11 @@ function screenSettingsHTML() {
       <div class="card-body">
         <div class="tuition-row">
           <label for="set-def-tuition">שיעורים א׳–ג׳</label>
-          <input id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-key="default_tuition" data-kent>
+          <input id="set-def-tuition" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-amt data-chg="tuition" data-key="default_tuition" data-kent>
         </div>
         <div class="tuition-row">
           <label for="set-def-tuition-s">${esc(CLS_NAME.s)}</label>
-          <input id="set-def-tuition-s" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-chg="tuition" data-key="${CLS_TUITION_KEY.s}" data-kent>
+          <input id="set-def-tuition-s" type="text" inputmode="decimal" class="tuition-inp" placeholder="לא הוגדר" data-amt data-chg="tuition" data-key="${CLS_TUITION_KEY.s}" data-kent>
         </div>
       </div>
     </div>
@@ -48,14 +48,14 @@ function toggleAcc(key){var b=document.getElementById('acc-'+key),ic=document.ge
 function renderSettingsPanel(){
   var slot=document.getElementById('gaCardSlot');
   if(slot)slot.innerHTML=gauthCardHTML(); // החשבון — המשתמש, «משתמשים» למנהל, התראות ויציאה
-  document.querySelectorAll('.tuition-inp[data-key]').forEach(function(el){el.value=el.defaultValue=S.SETTINGS[el.getAttribute('data-key')]||'';});
+  document.querySelectorAll('.tuition-inp[data-key]').forEach(function(el){amtSet(el,S.SETTINGS[el.getAttribute('data-key')]||'');el.defaultValue=el.value;});
   renderSettingsLists();
 }
 
 // אין לחסום שמירה כשאין רשת — המיזוג מכריע על ההגדרה לפי updated_at כמו על כל שורה.
 // שדה לכל שיעור שיש לו ברירת מחדל משלו — המפתח ב-data-key.
 function saveDefaultTuition(el){
-  var key=el.getAttribute('data-key'),v=el.value.trim();
+  var key=el.getAttribute('data-key'),v=el.value.replace(/,/g,'').trim();
   if(!v||isNaN(v)){toast(MSG_VALUE_BAD, null, 'bad');return;}
   if(Number(v)===Number(S.SETTINGS[key]))return;
   var cur=(MIRROR[KV_TABLE]||[]).filter(function(r){return r&&r.key===key;})[0];
