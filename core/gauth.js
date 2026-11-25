@@ -74,6 +74,7 @@ function _screen(show) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'ga-screen';
+    el.className = 'ga-screen'; // העיצוב במחלקה — אין מזהה בבורר
     el.innerHTML = '<div class="ga-box">' +
       (_icon() ? '<img class="ga-ico" alt="" src="' + esc(_icon()) + '">' : '') +
       '<div class="ga-name">' + esc(_app().name || '') + '</div>' +
