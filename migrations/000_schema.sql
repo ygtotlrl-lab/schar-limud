@@ -43,7 +43,8 @@ create table if not exists public.sl_lookups (
   deleted boolean default false,
   deleted_at timestamp with time zone,
   deleted_by text,
-  constraint sl_lookups_pkey PRIMARY KEY (client_id)
+  constraint sl_lookups_pkey PRIMARY KEY (client_id),
+  constraint sl_lookups_label_req CHECK ((COALESCE(deleted, false) OR (label <> ''::text)))
 );
 
 create table if not exists public.sl_settings (
@@ -74,7 +75,8 @@ create table if not exists public.sl_students (
   constraint sl_students_pkey PRIMARY KEY (client_id),
   constraint sl_students_cls_check CHECK ((cls = ANY (ARRAY['a'::text, 'b'::text, 'g'::text, 's'::text, 'd'::text]))),
   constraint sl_students_handled_check CHECK ((handled ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text)),
-  constraint sl_students_periods_check CHECK (sl_students_periods_ok(periods))
+  constraint sl_students_periods_check CHECK (sl_students_periods_ok(periods)),
+  constraint sl_students_name_req CHECK ((deleted OR (name <> ''::text)))
 );
 
 create table if not exists public.sl_transactions (
@@ -90,7 +92,9 @@ create table if not exists public.sl_transactions (
   updated_at bigint not null,
   student_client_id text,
   constraint sl_transactions_pkey PRIMARY KEY (client_id),
-  constraint sl_transactions_student_client_id_fkey FOREIGN KEY (student_client_id) REFERENCES sl_students(client_id) ON DELETE RESTRICT
+  constraint sl_transactions_student_client_id_fkey FOREIGN KEY (student_client_id) REFERENCES sl_students(client_id) ON DELETE RESTRICT,
+  constraint sl_transactions_amount_check CHECK ((amount > (0)::numeric)),
+  constraint sl_transactions_student_req CHECK ((deleted OR (student_client_id IS NOT NULL)))
 );
 
 create table if not exists public.sl_users (
