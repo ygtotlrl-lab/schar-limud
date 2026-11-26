@@ -14,6 +14,7 @@ import { PUSH_ACTIONS, bellHTML, pushDevices, pushPrompt, pushRefresh, pushSignO
 var AUTH_IDLE_MS = 30 * 864e5;          // ניתוק אחרי 30 יום בלי שימוש — בתוכנית החינמית אין זמן קצוב לסשן בשרת
 var AUTH_TOUCH_MS = 60 * 60 * 1000;     // חותמת השימוש נכתבת לכל היותר פעם בשעה
 var MSG_NOT_LISTED = 'הכתובת {1} אינה ברשימת המשתמשים של האפליקציה.';
+var MSG_SESSION_RENEW = 'החיבור פג — יש להיכנס שוב.';
 var MSG_SIGNIN_FAIL = 'הכניסה לא הושלמה — נסו שוב';
 var MSG_NEEDS_NET = 'הכניסה הראשונה דורשת חיבור לרשת';
 
@@ -159,6 +160,8 @@ async function _gsiButton(sb, done) {
 // השורה של המשתמש — המסד מחזיר אותה רק למי שברשימה ופעיל; בלעדיה — חסימה: השער רושם, מתריע ומנתק בשרת
 async function _row(sb, email) {
   var r = await sb.from(_usersTable()).select('client_id,login,full_name,role,active,notify').eq('login', email).maybeSingle();
+  // אסימון שהמסד אינו מכיר (מפתחות החתימה של הפרויקט הוחלפו) — אינו תקלת רשת: מחדשים את הסשן, ובלי הצלחה — כניסה מחדש
+  if (r.error && (r.status === 401 || /jwt/i.test(String(r.error.message || '') + String(r.error.code || '')))) return { jwt: true };
   if (r.error) return { net: true };
   return { row: r.data && r.data.active ? r.data : null };
 }
@@ -182,6 +185,7 @@ async function gauthGate() {
   var sb = _sb();
   _wireTouch();
   if (_idleExpired()) await gauthSignOut(true);
+  var renewed = false;
   for (;;) {
     var s = null;
     try { s = (await sb.auth.getSession()).data.session; } catch (e) { s = null; }
@@ -191,9 +195,18 @@ async function gauthGate() {
       // בלי רשת — העותק שבמכשיר, אם הוא של אותה כתובת
       if (!navigator.onLine && c && c.login === email) { _user = c; _touch(); return _ready(); }
       var got = await _row(sb, email);
+      if (got.jwt) {
+        var ok = false;
+        if (!renewed) { renewed = true; try { ok = !(await sb.auth.refreshSession()).error; } catch (e) { ok = false; } }
+        if (ok) continue;
+        console.warn('[gauth] session rejected — sign in again');
+        await gauthSignOut(true);
+        _screen(true);
+        _err(MSG_SESSION_RENEW);
+      }
       if (got.net && c && c.login === email) { _user = c; _touch(); return _ready(); }
       if (got.row) { _user = got.row; _cache(_user); lsSet(_k('seen'), String(Date.now())); return _ready(); }
-      if (!got.net) {
+      if (!got.net && !got.jwt) {
         await _blocked(s);
         await gauthSignOut(true);
         _screen(true);
