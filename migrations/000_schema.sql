@@ -183,7 +183,7 @@ drop policy if exists sl_transactions_users on public.sl_transactions;
 create policy sl_transactions_users on public.sl_transactions as permissive for all to authenticated using (sl_is_user()) with check (sl_is_user());
 alter table public.sl_users enable row level security;
 drop policy if exists sl_users_select on public.sl_users;
-create policy sl_users_select on public.sl_users as permissive for select to authenticated using (sl_is_user());
+create policy sl_users_select on public.sl_users as permissive for select to authenticated using (sl_is_user() and login = lower(auth.jwt() ->> 'email'));
 
 drop trigger if exists sl_lookups_history on public.sl_lookups;
 create trigger sl_lookups_history AFTER INSERT OR DELETE OR UPDATE ON public.sl_lookups FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
