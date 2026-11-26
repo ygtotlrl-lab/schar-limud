@@ -701,7 +701,4 @@ for (const [d, scale] of DENS) {
   for (let y = 0; y < T; y++) t.copy(px, ((y + o) * S + o) * 4, y * T * 4, (y + 1) * T * 4);
   put(join(dir, 'ic_splash.png'), encodePng(S, S, px));
 }
-// הסמל הגדול בהתראה — האריח בצבעיו; מתוך adaptive-icon אנדרואיד אינו מפענח תמונה, וההתראה יצאה בלי סמל
-mkdirSync(join(RES, 'drawable-nodpi'), { recursive: true });
-put(join(RES, 'drawable-nodpi', 'ic_notify_large.png'), encodePng(192, 192, tile(192, null)));
 console.log(`gen-icons — ${wrote} קבצים נכתבו (${basename(ROOT)})`);

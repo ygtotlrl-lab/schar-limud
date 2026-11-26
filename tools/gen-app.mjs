@@ -107,6 +107,13 @@ ${A.android.push === true ? `
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="alerts" />
+        <!-- התראה שהמערכת מציגה (האפליקציה סגורה) — הסמל הקטן וצבע האפליקציה, כמו זו שהמעטפת בונה -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notify_accent" />
 ` : ''}${share ? `
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -275,6 +282,16 @@ function splashTheme(A) {
 `;
 }
 
+// צבע ההתראה — צבע האפליקציה, לברירת המחדל שבמניפסט (התראה שהמערכת מציגה)
+function notifyColors(A) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- נוצר מהתצורה — app.config.js, ב-node tools/gen-app.mjs: אין לערוך ביד -->
+<resources>
+    <color name="notify_accent">${A.android.accent}</color>
+</resources>
+`;
+}
+
 export const TARGETS = {
   [`${JAVA}/ShellActivity.java`]: javaFile('ShellActivity'),
   [`${JAVA}/MainActivity.java`]: javaFile('MainActivity'),
@@ -287,7 +304,8 @@ export const TARGETS = {
   'android/settings.gradle': settingsGradle,
   [`${RES}/drawable/ic_launcher_background.xml`]: launcherBg,
   [`${RES}/values/themes.xml`]: splashTheme,
-  ...(APP.android.share ? { [`${RES}/xml/file_paths.xml`]: filePaths } : {})
+  ...(APP.android.share ? { [`${RES}/xml/file_paths.xml`]: filePaths } : {}),
+  ...(APP.android.push === true ? { [`${RES}/values/colors.xml`]: notifyColors } : {})
 };
 
 function get(path) {
