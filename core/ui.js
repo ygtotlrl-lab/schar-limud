@@ -188,8 +188,9 @@ function swFieldDirty(el) {
   if (t === 'checkbox' || t === 'radio') return el.checked !== el.defaultChecked;
   return el.value !== el.defaultValue;
 }
+// כשהדף ברקע — הקשה אחרונה אינה עבודה: אף אחד אינו מסתכל, ורק מה שהרענון היה מאבד (דיאלוג, שדה) עוצר אותו.
 function swBusy() {
-  if (Date.now() - _swKeyAt < SW_IDLE_MS) return true;
+  if (!document.hidden && Date.now() - _swKeyAt < SW_IDLE_MS) return true;
   if (document.body.classList.contains('locked')) return true;
   var a = document.activeElement;
   if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && !(a.type === 'hidden')) return true;
@@ -229,8 +230,11 @@ function swRegister() {
     reg.addEventListener('updatefound', function () {
       var nw = reg.installing;
       if (!nw) return;
+      // העובד החדש משתלט מעצמו (skipWaiting), וההשתלטות מחליטה — רענון שקט, או הבאנר באמצע עבודה; הבאנר כאן — רק לעובד שנתקע בהמתנה.
       nw.addEventListener('statechange', function () {
-        if (nw.state === 'installed' && navigator.serviceWorker.controller) swShowUpdate();
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          setTimeout(function () { if (reg.waiting === nw) swShowUpdate(); }, SW_APPLY_MS);
+        }
       });
     });
     // הבאנר יורד כשהעובד מפסיק להמתין — ולא כשהעובד החדש כבר שולט, שם הדף עדיין מריץ את הישן והלחיצה היא הרענון.
@@ -242,6 +246,12 @@ function swRegister() {
     }
     checkForUpdate();
     setInterval(checkForUpdate, 30 * 60 * 1000);
+    // ברקע — כשעוברים לאפליקציה אחרת או מכבים את המסך: העדכון נבדק ויורד, ועדכון שחיכה לסוף העבודה נטען בלי שאיש רואה;
+    // ובחזרה — בדיקה נוספת, כי דף ברקע במכשיר נייד מושהה ואינו בודק.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && _swTaken && !swBusy()) { swReload(); return; }
+      checkForUpdate();
+    });
   }).catch(function (err) { console.warn('[sw] registration failed:', err); });
 }
 window.addEventListener('load', swRegister);
