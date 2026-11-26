@@ -1,0 +1,36 @@
+# deploy-functions — פריסת פונקציות השרת מהריפו: כל דחיפה ל-main שנוגעת ב-supabase/functions/ פורסת את כל הפונקציות שבריפו
+# לפרויקט שב-app.config.js, ב-API של Supabase ובלי כלי חיצוני; המפתח — הסוד הארגוני SUPABASE_ACCESS_TOKEN.
+# הבדיקה בקוד הפונקציה עצמה — verify_jwt כבוי.
+name: deploy-functions
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: פריסה
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -eu
+          test -n "$TOKEN" || { echo "::error::חסר הסוד SUPABASE_ACCESS_TOKEN"; exit 1; }
+          REF=$(grep -oE 'https://[a-z0-9]+\.supabase\.co' app.config.js | head -1 | sed -E 's#https://([a-z0-9]+)\..*#\1#')
+          test -n "$REF" || { echo "::error::אין כתובת פרויקט ב-app.config.js"; exit 1; }
+          for d in supabase/functions/*/; do
+            S=$(basename "$d")
+            CODE=$(curl -sS -o out.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$REF/functions/deploy?slug=$S" \
+              -H "Authorization: Bearer $TOKEN" \
+              -F "metadata={\"entrypoint_path\":\"index.ts\",\"name\":\"$S\",\"verify_jwt\":false};type=application/json" \
+              -F "file=@${d}index.ts;filename=index.ts;type=application/typescript")
+            echo "$S ⟵ $REF: $CODE"; cat out.json; echo
+            case "$CODE" in 2*) ;; *) echo "::error::הפריסה של $S נכשלה"; exit 1;; esac
+          done
