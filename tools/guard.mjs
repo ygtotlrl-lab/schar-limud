@@ -127,6 +127,17 @@ if (existsSync(join(ROOT, 'tools', 'gen-data.mjs'))) {
   if (r.status !== 0) fails.push('tools/gen-data.mjs --check — ' + ((r.stderr || '').trim().split('\n')[0].replace(/^❌ /, '') || 'נכשל'));
 }
 
+// ── מקורות הגיבוי — נגזרים, לא מוקלדים ──
+// שם טבלה שמוקלד ברשימת המקורות נשמט כשטבלה נוספת לסנכרון, והיא אינה מגובה בשקט.
+{
+  const mainSrc = existsSync(join(ROOT, 'app', 'main.js')) ? readFileSync(join(ROOT, 'app', 'main.js'), 'utf8') : '';
+  const sm = /\bsources:\s*function\s*\(\)\s*\{([\s\S]*?)\n\s*\}/.exec(mainSrc);
+  if (sm) {
+    checked++;
+    if (/\bname:\s*['"]/.test(sm[1])) fails.push('app/main.js — מקורות הגיבוי מקלידים שם טבלה; נגזרים מרשימת הטבלאות שהאפליקציה דוחפת');
+  }
+}
+
 if (fails.length) {
   for (const f of fails) console.error(`❌ ${f}`);
   console.error(`\nהשומר נפל: ${fails.length} מתוך ${checked} — מתקנים ומריצים שוב לפני push.`);

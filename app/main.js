@@ -101,13 +101,9 @@ var BK_CFG = {
   secrets: function () { return SL_NEVER_MIRROR_SETTINGS; },
   // שליפה בעמודים חייבת סדר יציב — בלי ORDER BY פוסטגרס אינו מבטיח אותו
   // אין כאן id: order על עמודה שאינה בסכימה מחזיר 42703, שנקרא «סכימה מיושנת» ומציג באנר עדכון
+  // המקורות — הטבלאות שהאפליקציה דוחפת (PUSH_TABLES), ולא רשימה שמוקלדת שנית: טבלה שנוספה לסנכרון נכנסת לגיבוי מעצמה.
   sources: function () {
-    return [
-      { name: 'sl_students',     order: 'client_id', ts: 'updated_at' },
-      { name: 'sl_transactions', order: 'client_id', ts: 'updated_at' },
-      { name: KV_TABLE,          order: 'key',       ts: 'updated_at' },
-      { name: 'sl_lookups',      order: 'client_id', ts: 'updated_at' }
-    ];
+    return PUSH_TABLES.map(function (t) { return { name: t, order: t === KV_TABLE ? 'key' : 'client_id', ts: 'updated_at' }; });
   }
 };
 
