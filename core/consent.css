@@ -1,0 +1,11 @@
+/* core/consent.css — דף האישור של המחבר של קלוד (`oauth/consent`), באסימוני האפליקציה; הדף נטען אחרי core/ui.css ו-app/style.css */
+.cs-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text);padding:var(--sp-6) max(var(--sp-5), env(safe-area-inset-right, 0px)) var(--sp-6) max(var(--sp-5), env(safe-area-inset-left, 0px))}
+.cs-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-6);padding:var(--sp-7) var(--sp-6);width:100%;max-width:380px;text-align:center}
+.cs-logo{width:56px;height:56px;border-radius:14px}
+.cs-title{font-size:var(--fs-5);color:var(--brand-ink);margin:var(--sp-4) 0 var(--sp-2)}
+.cs-body p{color:var(--text-2);font-size:var(--fs-2);line-height:1.6;margin:var(--sp-2) 0}
+.cs-body b{color:var(--text);font-weight:600}
+.cs-row{display:flex;gap:var(--sp-3);margin-top:var(--sp-6)}
+.cs-row .btn{flex:1}
+.cs-gsi{display:flex;justify-content:center;margin-top:var(--sp-5);min-height:44px}
+.cs-err{color:var(--bad)}
