@@ -17,6 +17,10 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.core.splashscreen.SplashScreen;
+import android.content.ClipData;
+import android.provider.MediaStore;
+import androidx.core.content.FileProvider;
+import java.io.File;
 
 // tools/java/ShellActivity.java.in — מעטפת ה-WebView, הליבה המשותפת
 public abstract class ShellActivity extends Activity {
@@ -45,6 +49,8 @@ public abstract class ShellActivity extends Activity {
 
     protected WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
+    // התמונה שהמצלמה כותבת — כשהבורר נפתח למצלמה; בלי מצלמה — null.
+    private Uri cameraUri;
     // נדלק כשדף אמיתי כלשהו צויר — כך שגיאה מאוחרת אינה מוחקת אפליקציה חיה.
     private boolean loadedOnce = false;
 
@@ -105,6 +111,15 @@ public abstract class ShellActivity extends Activity {
             public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb, FileChooserParams params) {
                 if (filePathCallback != null) { filePathCallback.onReceiveValue(null); }
                 filePathCallback = cb;
+                cameraUri = null;
+                // createIntent מתעלם מ-capture שבדף ופותח את הקבצים — ולכן דף שמבקש מצלמה לתמונה מקבל את המצלמה עצמה.
+                if (params.isCaptureEnabled() && acceptsImage(params)) {
+                    Intent cam = cameraIntent();
+                    if (cam != null) {
+                        try { startActivityForResult(cam, FILE_CHOOSER_REQUEST); return true; }
+                        catch (Exception e) { cameraUri = null; }
+                    }
+                }
                 try {
                     startActivityForResult(params.createIntent(), FILE_CHOOSER_REQUEST);
                 } catch (Exception e) {
@@ -210,9 +225,42 @@ public abstract class ShellActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_REQUEST && filePathCallback != null) {
-            filePathCallback.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            // מהמצלמה — התמונה בקובץ שהוכן לה, ו-data ריק; ביטול — אין קובץ.
+            Uri[] res = cameraUri != null
+                ? (resultCode == RESULT_OK ? new Uri[]{ cameraUri } : null)
+                : WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            filePathCallback.onReceiveValue(res);
             filePathCallback = null;
+            cameraUri = null;
+        }
+    }
+
+    // הדף מבקש תמונה — סוג ריק, או סוג שמתחיל ב-image.
+    private static boolean acceptsImage(WebChromeClient.FileChooserParams params) {
+        String[] types = params.getAcceptTypes();
+        if (types == null || types.length == 0) return true;
+        for (String t : types) if (t == null || t.isEmpty() || t.startsWith("image")) return true;
+        return false;
+    }
+
+    // המצלמה כותבת לקובץ במטמון «shared» (שה-FileProvider חושף), והקודמים נמחקים — המטמון אינו גדל.
+    // בלי הרשאת CAMERA: אפליקציית המצלמה מצלמת, והמעטפת רק מקבלת את הקובץ.
+    private Intent cameraIntent() {
+        try {
+            File dir = new File(getCacheDir(), "shared");
+            if (!dir.exists() && !dir.mkdirs()) return null;
+            File[] old = dir.listFiles();
+            if (old != null) for (File o : old) if (o.getName().startsWith("camera-")) o.delete();
+            File f = new File(dir, "camera-" + System.currentTimeMillis() + ".jpg");
+            cameraUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", f);
+            Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            i.putExtra(MediaStore.EXTRA_OUTPUT, cameraUri);
+            i.setClipData(ClipData.newRawUri("", cameraUri));
+            i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            return i;
+        } catch (Exception e) {
+            cameraUri = null;
+            return null;
         }
     }
 
