@@ -102,26 +102,30 @@ async function _token(ask) {
   if (Notification.permission !== 'granted') {
     if (!ask) return null;
     var p = await Notification.requestPermission();
-    if (p !== 'granted') return p === 'denied' ? 'denied' : null;
+    // החלון של הדפדפן נסגר בלי בחירה — לא חסימה, ואפשר לבקש שוב
+    if (p !== 'granted') return p === 'denied' ? 'denied' : 'dismissed';
   }
   var reg = await navigator.serviceWorker.ready;
   var sub = await reg.pushManager.getSubscription();
   if (!sub) {
     // המפתח הציבורי — נשמר במכשיר אחרי הפעם הראשונה, וההפעלה אינה ממתינה לשרת פעמיים
     var key = lsGet(_k('vapid'));
-    if (!key) { var v = await _post({ action: 'vapid' }); if (!v || !v.key) return null; key = v.key; lsSet(_k('vapid'), key); }
+    if (!key) { var v = await _post({ action: 'vapid' }); if (!v || !v.key) { var er = new Error('לא התקבל מפתח מהשרת'); er.name = 'שרת'; throw er; } key = v.key; lsSet(_k('vapid'), key); }
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64ToBytes(key) });
   }
   return { kind: 'web', push: JSON.stringify(sub) };
 }
 
-// 'ok' · 'denied' (ההרשאה נחסמה במכשיר) · 'unsupported' · 'fail'
+// 'ok' · 'denied' (ההרשאה נחסמה במכשיר) · 'dismissed' (חלון הדפדפן נסגר בלי בחירה) · 'unsupported' ·
+// 'device' (הרישום במכשיר נכשל — והשגיאה עצמה ב-_lastErr, ומוצגת בהודעה) · 'fail' (השרת לא אישר את הרישום)
+var _lastErr = '';
 async function pushEnable() {
   if (!pushSupported()) return 'unsupported';
   var t;
-  try { t = await _token(true); } catch (e) { console.warn('[push] token', e); t = null; }
-  if (t === 'denied') return 'denied';
-  if (!t) return 'fail';
+  _lastErr = '';
+  try { t = await _token(true); } catch (e) { console.warn('[push] token', e); _lastErr = String((e && (e.name + ': ' + e.message)) || e); t = null; }
+  if (t === 'denied' || t === 'dismissed') return t;
+  if (!t) return 'device';
   var r = await _post({ action: 'reg', device: pushDevice(), kind: t.kind, push: t.push });
   if (!r || !r.ok) return 'fail';
   lsSet(_k('on'), '1');
@@ -191,7 +195,9 @@ function bellHTML(notify, devices) {
 var MSG_PUSH = {
   ok: 'ההתראות הופעלו במכשיר הזה', off: 'ההתראות כובו במכשיר הזה',
   denied: 'ההתראות חסומות בהגדרות המכשיר', unsupported: 'המכשיר או הדפדפן אינם תומכים בהתראות',
-  fail: 'ההפעלה נכשלה — בדקו את החיבור ונסו שוב', test: 'נשלחה התראת בדיקה', testNone: 'לא נמצא מכשיר רשום — הפעילו שוב את ההתראות',
+  fail: 'ההפעלה נכשלה — בדקו את החיבור ונסו שוב',
+  dismissed: 'לא נבחר «אפשר» בחלון של הדפדפן — לחצו שוב «הפעלת ההתראות» ובחרו «אפשר»',
+  device: 'הדפדפן לא הצליח להירשם להתראות', test: 'נשלחה התראת בדיקה', testNone: 'לא נמצא מכשיר רשום — הפעילו שוב את ההתראות',
   testKey: 'המכשיר רשום, אבל השליחה לטלפונים עוד לא הוגדרה בשרת'
 };
 function _ic(n) { return shellIcon(n); }
@@ -232,7 +238,8 @@ async function _act(kind) {
   if (kind === 'off') { await pushDisable(); toast(MSG_PUSH.off, null, 'good'); closeModal(); return; }
   var res = await pushEnable();
   _promptHide();
-  toast(MSG_PUSH[res] || MSG_PUSH.fail, null, res === 'ok' ? 'good' : 'warn');
+  // כשל ברישום במכשיר — עם השגיאה של הדפדפן, כדי שאפשר יהיה לאבחן מצילום מסך
+  toast((MSG_PUSH[res] || MSG_PUSH.fail) + (res === 'device' && _lastErr ? ' (' + _lastErr + ')' : ''), null, res === 'ok' ? 'good' : 'warn');
   pushModal();
 }
 
