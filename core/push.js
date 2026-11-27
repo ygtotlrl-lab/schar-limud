@@ -3,7 +3,7 @@
 // מי שמקבל — לפי «מקבל התראות» בטבלת המשתמשים, בשרת; כאן רק נרשם המכשיר, על שם המשתמש המחובר.
 // זהות המשתמש מול השער — מהאפליקציה (app.NOTIFY_CFG.auth): בהנהלה אסימון השער, ובכניסה עם Google — אסימון הסשן;
 // ומי המשתמש ואם סומן — app.NOTIFY_CFG.user().
-// החלון «התראות במכשיר הזה» והכרטיס שמזמין להפעיל — כאן, אחידים בכל האפליקציות; האייקונים — מהסט של האפליקציה (shellIcon).
+// החלון «התראות» והכרטיס שמזמין להפעיל — כאן, אחידים בכל האפליקציות; האייקונים — מהסט של האפליקציה (shellIcon).
 
 import { app } from './util.js';
 import { lsGet, lsSet, lsSpace } from './storage.js';
@@ -191,7 +191,7 @@ function bellHTML(notify, devices) {
     shellIcon('bell') + (n > 1 ? '<i>' + n + '</i>' : '') + '</span>';
 }
 
-// ── החלון «התראות במכשיר הזה» ──
+// ── החלון «התראות» ──
 var MSG_PUSH = {
   ok: 'ההתראות הופעלו במכשיר הזה', off: 'ההתראות כובו במכשיר הזה',
   denied: 'ההתראות חסומות בהגדרות המכשיר', unsupported: 'המכשיר או הדפדפן אינם תומכים בהתראות',
@@ -225,7 +225,7 @@ function _bodyHTML() {
     : _row('push-on', 'power', 'הפעלת ההתראות', 'is-pri')) + '</div></div>';
 }
 function pushModal() {
-  openModal('התראות במכשיר הזה', _bodyHTML(), '', _ic('bell'));
+  openModal('התראות', _bodyHTML(), '', _ic('bell'));
   var t = document.getElementById('modal-title');
   if (t) t.insertAdjacentHTML('beforeend', _stateHTML());
 }

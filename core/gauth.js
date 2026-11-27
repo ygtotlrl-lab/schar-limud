@@ -271,7 +271,7 @@ function _accountInner() {
       '<span class="ga-role">' + esc(ROLE_LABELS[_user.role] || '') + '</span></div>' +
     '<div class="ga-rows">' +
       (gauthIsAdmin() ? row('ga-users', 'user', 'משתמשים') : '') +
-      row('push-open', 'bell', 'התראות במכשיר הזה') +
+      row('push-open', 'bell', 'התראות') +
       row('ga-signout', 'logout', 'יציאה', 'is-out') +
     '</div>';
 }
